@@ -11,7 +11,7 @@ Object.assign(STR.zh, { saveFail: "這個瀏覽器無法儲存進度。" });
 const SAVE_DEFAULTS = [];
 const defaultSave = () => Object.assign({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1, unlocked: { six: true },
   gunLv: { six: 1, long12: 1, carronade: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0,
-  wrecks: [] }, ...SAVE_DEFAULTS.map(fn => fn()));   // wrecks: the player's own sunken cargo [{ x, y, value }], kept across sessions
+  wrecks: [], salvage: [] }, ...SAVE_DEFAULTS.map(fn => fn()));   // wrecks: the player's own sunken cargo [{ x, y, value }], kept across sessions
 // Give every mount exactly as many guns as the ship has ports, using only guns the captain owns.
 function fitMounts(s) {
   const d = defaultSave(), ship = Object.hasOwn(SHIPS, s.ship) ? s.ship : "sloop";
@@ -59,12 +59,23 @@ function sanitizeCore(raw) {
   const unlocked = Object.fromEntries(GUN_ORDER.filter(id => id === "six" || (has(raw.unlocked, id) && raw.unlocked[id] === true)).map(id => [id, true]));
   const gunLv = Object.fromEntries(GUN_ORDER.map(id => [id, toInt(has(raw.gunLv, id) ? raw.gunLv[id] : 1, 1, GUN_MAX, 1)]));
   const yard = Object.fromEntries(Object.keys(YARD).map(k => [k, toInt(raw[k], 1, YARD[k].max, 1)]));
-  const wrecks = (Array.isArray(raw.wrecks) ? raw.wrecks : []).map(cleanWreck).filter(Boolean).slice(-MAX_WRECKS);   // newest last
+  // salvage: wreck cargo scooped up but not yet sold. The hold isn't saved, so if the game closed before docking it goes
+  // back into the sea where it was found instead of vanishing.
+  const salvage = (Array.isArray(raw.salvage) ? raw.salvage : []).map(cleanWreck).filter(Boolean);
+  const wrecks = (Array.isArray(raw.wrecks) ? raw.wrecks : []).map(cleanWreck).filter(Boolean).concat(salvage).slice(-MAX_WRECKS);   // newest last
   return fitMounts({ ...keep, v: 2, gold: toInt(raw.gold, 0, Number.MAX_SAFE_INTEGER, 0),
     ship: typeof raw.ship === "string" && Object.hasOwn(SHIPS, raw.ship) ? raw.ship : "sloop",
-    ...yard, unlocked, gunLv, sunk: toInt(raw.sunk, 0, Number.MAX_SAFE_INTEGER, 0), wrecks });
+    ...yard, unlocked, gunLv, sunk: toInt(raw.sunk, 0, Number.MAX_SAFE_INTEGER, 0), wrecks, salvage: [] });
 }
 // Core fields first, then each module's own. A module check that throws is skipped and reported, never fatal.
+// Quitting to the title drops the hold without a reload, so put any unsold salvage back at sea there too.
+function restoreSalvage() {
+  const back = Array.isArray(save.salvage) ? save.salvage : [];
+  if (!back.length) return;
+  save = { ...save, salvage: [], wrecks: save.wrecks.concat(back).slice(-MAX_WRECKS) };
+  if (S && typeof addCrate === "function") for (const w of back) addCrate(w.x, w.y, w.value, w);
+  persist();
+}
 function sanitizeSave(raw) {
   let s = sanitizeCore(isObj(raw) ? raw : {});
   for (const fn of SAVE_SANITIZERS) {

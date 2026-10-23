@@ -134,6 +134,7 @@ function sink(s, killer) {
     // the hold's cargo stays where the ship went down, and survives closing the game
     lastLost = Math.round(cargo);
     if (lastLost > 0) { const w = { x: Math.round(s.x), y: Math.round(s.y), value: lastLost }; save.wrecks.push(w); addCrate(w.x, w.y, w.value, w); }
+    save.salvage = [];   // whatever was salvaged went down again inside the new wreck
     cargo = 0; persist();
     toast(t(lastLost > 0 ? "toastSunkWreck" : "toastSunk"));
     S.time.delayedCall(1700, () => {

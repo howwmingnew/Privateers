@@ -21,9 +21,12 @@ Object.assign(STR.zh, {
 
 const vicEl = document.createElement("div");
 vicEl.id = "victory"; vicEl.hidden = true;
-vicEl.innerHTML = `<div class="sheet victory" role="dialog" aria-modal="true" aria-labelledby="vTitle"></div>`;
+vicEl.innerHTML = `<div class="sheet victory" role="dialog" aria-modal="true" aria-labelledby="vTitle" tabindex="-1"></div>`;
 document.body.append(vicEl);
-let vicNgArmed = false, vicNgT;
+// The ending lands mid-fight with the escorts, while the player is still hammering fire, so the choices ignore presses
+// for a moment and focus starts on the page itself rather than on a button that Space / A would click straight away.
+const VIC_GRACE_MS = 1200;
+let vicNgArmed = false, vicNgT, vicShownAt = 0;
 // A compass rose in ink: the one ornament on the page.
 function drawRose(cv) {
   const c = cv.getContext("2d"), R = cv.width / 2, ink = "#2a1d10", sepia = "#9a7442";
@@ -70,7 +73,7 @@ function showVictory() {
   paused = true;
   document.getElementById("joy").hidden = true; joyVec = { x: 0, y: 0, m: 0 };
   vicNgArmed = false; renderVictory();
-  vicEl.hidden = false; vicEl.querySelector("[data-v=keep]").focus();
+  vicEl.hidden = false; vicShownAt = performance.now(); vicEl.firstElementChild.focus();
   sfx("victory");
   if (typeof Snd !== "undefined") Snd.music("harbor");
 }
@@ -82,7 +85,7 @@ function closeVictory() {
 }
 vicEl.addEventListener("click", ev => {
   const b = ev.target.closest("[data-v]");
-  if (!b) return;
+  if (!b || performance.now() - vicShownAt < VIC_GRACE_MS) return;
   sfx("uiClick");
   if (b.dataset.v === "keep") { closeVictory(); return; }
   if (!vicNgArmed) {   // New Game+ starts the ship and gold over, so it takes a second press
