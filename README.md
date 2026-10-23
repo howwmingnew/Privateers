@@ -4,9 +4,11 @@
 
 A top-down pirate naval battle browser game, inspired by *Privateers: Pirate Wars*. Built with Phaser 3 as a single `index.html`.
 
+**▶ 線上試玩 / Play online：<https://howwmingnew.github.io/Privateers/>**
+
 ## 怎麼玩
 
-用瀏覽器直接打開 `index.html` 就能玩，不需要安裝或建置。
+打開上面的線上網址就能玩；也可以把專案下載下來，用瀏覽器打開 `index.html`。不需要安裝或建置。
 
 - **移動**：在畫面上拖曳（手機和桌機都可以），或用 WASD / 方向鍵。
 - **開火**：敵船靠近舷側時，會出現瞄準線。砲彈會沿著瞄準線直線飛行。放開手（或按空白鍵）就開火。
@@ -22,3 +24,4 @@ A top-down pirate naval battle browser game, inspired by *Privateers: Pirate War
 - Phaser 3.80.1（從 cdnjs 載入）
 - 所有圖形都用程式繪製，沒有外部素材
 - 存檔使用瀏覽器的 localStorage
+- 部署在 GitHub Pages，直接發布 `main` 分支根目錄；push 後約 1～2 分鐘自動更新
