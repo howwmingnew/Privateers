@@ -104,6 +104,7 @@ function sink(s, killer) {
     // half the hold stays where the ship went down, and survives closing the game; the plunder streak is lost
     lastLost = Math.round(cargo * WRECK_KEEP); streak = 0;
     if (lastLost > 0) { const w = { x: Math.round(s.x), y: Math.round(s.y), value: lastLost }; save.wrecks.push(w); addCrate(w.x, w.y, w.value, w); }
+    save.salvage = [];   // whatever was salvaged went down again inside the new wreck
     cargo = 0; persist();
     toast(t(lastLost > 0 ? "toastSunkHalf" : "toastSunk"));
     S.time.delayedCall(1700, () => {

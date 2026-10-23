@@ -1,7 +1,7 @@
 "use strict";
 // ---------- Captain's log: lifetime stats (kept in save.stats) and the ledger page that shows them ----------
 Object.assign(STR.en, {
-  logEyebrow: "Kept by the captain", logTitle: "Captain's log", close: "Close",
+  logEyebrow: "Kept by the captain", logTitle: "Captain's log", close: "Close", logEnding: "Read the ending again",
   logVoyage: "The voyage", logSunk: "Ships sunk", logAch: "Achievements {n} / {m}",
   st_time: "Time played", st_gold: "Gold earned", st_sorties: "Sorties", st_longest: "Longest sortie", st_deaths: "Ships lost",
   st_wrecks: "Wrecks recovered", st_bounties: "Bounties claimed", st_ng: "New Game+ cycles", st_total: "All ships sunk",
@@ -10,7 +10,7 @@ Object.assign(STR.en, {
   achHidden: "Hidden achievement", achHiddenDs: "Keep sailing to find out.",
 });
 Object.assign(STR.zh, {
-  logEyebrow: "船長親筆", logTitle: "航海日誌", close: "關閉",
+  logEyebrow: "船長親筆", logTitle: "航海日誌", close: "關閉", logEnding: "重看結局",
   logVoyage: "航程", logSunk: "擊沉紀錄", logAch: "成就 {n} / {m}",
   st_time: "遊戲時間", st_gold: "累計賺得金幣", st_sorties: "出航次數", st_longest: "最長一次出航", st_deaths: "沉船次數",
   st_wrecks: "撈回殘骸", st_bounties: "完成懸賞", st_ng: "新遊戲+ 次數", st_total: "總擊沉數",
@@ -75,6 +75,7 @@ function renderLog() {
     <header><div><div class="eyebrow">${t("logEyebrow")}</div><h1 id="logTitle">${t("logTitle")}</h1></div>
       <button class="btn closebtn" type="button" data-log="close">${t("close")}</button></header>
     <p class="msg">${t("rankLbl")} <em>${t("rank_" + c.rank)}</em>${save.ngPlus ? ` · ${t("ngLbl", { n: save.ngPlus })}` : ""}</p>
+    ${c.won ? `<p><button class="btn" type="button" data-log="ending">${t("logEnding")}</button></p>` : ""}
     <section><h2>${t("logVoyage")}</h2><dl class="logstats">${statRows([
       ["st_time", fmtDur(st.time)], ["st_gold", fmt(st.gold)], ["st_sorties", fmt(st.sorties)], ["st_longest", fmtDur(st.longest)],
       ["st_deaths", fmt(st.deaths)], ["st_wrecks", fmt(st.wrecks)], ["st_bounties", `${c.bounty} / ${BOUNTIES.length}` + (st.bounties > c.bounty ? ` (${st.bounties})` : "")],
@@ -92,6 +93,9 @@ function closeLog() {
   logEl.hidden = true; sfx("uiClick");
   document.querySelector("[data-camp=log]")?.focus();
 }
-logEl.addEventListener("click", ev => { if (ev.target === logEl || ev.target.closest("[data-log=close]")) closeLog(); });
+logEl.addEventListener("click", ev => {
+  if (ev.target.closest("[data-log=ending]")) { logEl.hidden = true; showVictory(); return; }   // re-read the epilogue and credits
+  if (ev.target === logEl || ev.target.closest("[data-log=close]")) closeLog();
+});
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !logEl.hidden) { ev.stopPropagation(); closeLog(); } }, true);
 onHook("lang", () => { if (!logEl.hidden) renderLog(); });

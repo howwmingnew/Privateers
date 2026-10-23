@@ -19,7 +19,7 @@ body.on-pause #hint, body.on-pause #joy { display: none !important; }
 .title-card { width: min(100%, 680px); max-height: 100%; overflow-y: auto; text-align: center; display: grid; justify-items: center; gap: 10px; padding: 8px 0; }
 .crest { width: calc(84px * var(--ts)); height: calc(84px * var(--ts)); filter: drop-shadow(0 4px 10px rgba(0,0,0,.5)); }
 .logo { margin: 0; display: grid; gap: 4px; font-weight: 400; line-height: 1; }
-.logo-en { font-family: var(--f-display); font-size: calc(clamp(42px, 12vw, 78px) * var(--ts)); letter-spacing: .07em; color: var(--foam);
+.logo-en { font-family: var(--f-display); font-size: min(calc(clamp(42px, 12vw, 78px) * var(--ts)), 12.5vw);   /* the larger text sizes must still fit a phone */ letter-spacing: .07em; color: var(--foam);
   text-shadow: 0 3px 0 rgba(8,34,45,.9), 0 0 28px rgba(0,0,0,.55); }
 .logo-zh { font-family: "Noto Serif TC", var(--f-display); font-weight: 600; font-size: calc(26px * var(--ts)); letter-spacing: .6em; padding-left: .6em;
   color: #f0c766; display: flex; align-items: center; justify-content: center; gap: 14px; text-shadow: 0 2px 6px rgba(0,0,0,.6); }
@@ -27,7 +27,7 @@ body.on-pause #hint, body.on-pause #joy { display: none !important; }
 .logo-zh::after { transform: scaleX(-1); }
 .tagline { margin: 2px 0 6px; display: grid; gap: 2px; font-size: calc(15px * var(--ts)); color: rgba(246,241,227,.85); text-shadow: 0 1px 4px #000; }
 .tagline [lang="zh-Hant"] { font-family: "Noto Sans TC", var(--f-ui); font-size: .92em; letter-spacing: .08em; }
-.menu { display: grid; gap: 10px; width: min(100%, calc(300px * var(--ts))); margin-top: 6px; }
+.menu { display: grid; gap: 10px; width: min(100%, calc(300px * var(--ts)), calc(100vw - 32px)); margin-top: 6px; }
 .mbtn { font-family: var(--f-display); font-size: calc(22px * var(--ts)); padding: 9px 16px; min-height: 48px; border-radius: 3px; cursor: pointer;
   color: var(--foam); background: rgba(8,34,45,.72); border: 1px solid rgba(240,199,102,.4); transition: background .15s, border-color .15s; }
 .mbtn:hover, .mbtn:focus-visible { background: rgba(15,63,82,.9); border-color: #f0c766; }

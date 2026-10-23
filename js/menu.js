@@ -166,7 +166,7 @@ function toTitle() {
   paused = true; wasDocked = false;
   for (const b of balls) b.spr.destroy();
   balls.length = 0;
-  cargo = 0; canDock = false;
+  cargo = 0; canDock = false; restoreSalvage();   // js/save.js: unsold wreck cargo goes back to sea
   if (player.alive) {
     Object.assign(player, { x: PORT.x + 140, y: PORT.y, rot: 0, speed: 0, burnT: 0, hp: player.maxHp });
     player.spr.setPosition(player.x, player.y).setRotation(0).clearTint();

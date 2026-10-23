@@ -33,7 +33,7 @@ function boot(seed = {}, { failWrites = false } = {}) {
   return { run, json, store, errors, domReady: () => domReady.forEach(fn => fn()) };
 }
 const v2 = o => JSON.stringify({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1, unlocked: { six: true },
-  gunLv: { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0, wrecks: [], ...o });
+  gunLv: { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0, wrecks: [], salvage: [], ...o });
 const loadWith = (o, opts) => boot({ [SAVE_KEY]: typeof o === "string" ? o : v2(o) }, opts);
 
 test("fresh browser gets the default save", () => {
@@ -47,7 +47,7 @@ test("sanitising is idempotent and keeps a valid save as it is", () => {
   const g = boot();
   const rich = { v: 2, gold: 1234, ship: "brig", hull: 4, sails: 3, hold: 5, unlocked: { six: true, long12: true, fire: true },
     gunLv: { six: 3, long12: 2, carronade: 1, chain: 2, fire: 4 }, bow: ["long12"], left: ["six", "fire", "long12"], right: ["long12", "six", "six"], stern: [],
-    sunk: 17, wrecks: [{ x: 3000, y: 1200, value: 80 }] };
+    sunk: 17, wrecks: [{ x: 3000, y: 1200, value: 80 }], salvage: [] };
   const once = g.json(`sanitizeSave(${JSON.stringify(rich)})`);
   assert.deepEqual(once, rich);
   assert.deepEqual(g.json(`sanitizeSave(sanitizeSave(${JSON.stringify(rich)}))`), once);
@@ -302,4 +302,10 @@ test("combat strings exist in both languages, and the trade-in pays back 60% of 
   assert.equal(g.run("shipNetCost('brig')"), g.run("SHIPS.brig.cost") - Math.round(0.6 * spend));
   g.run(`save = fitMounts({ ...defaultSave(), ship: "sloop", hull: 15, sails: 10, hold: 12 })`);
   assert.equal(g.run("shipNetCost('schooner')"), 0, "the credit never exceeds the price");
+});
+
+test("salvage scooped from a wreck but never sold goes back to sea on the next load", () => {
+  const g = loadWith({ wrecks: [{ x: 100, y: 100, value: 5 }], salvage: [{ x: 200, y: 300, value: 80 }, { x: "bad" }] });
+  assert.deepEqual(g.json("save.wrecks"), [{ x: 100, y: 100, value: 5 }, { x: 200, y: 300, value: 80 }]);
+  assert.deepEqual(g.json("save.salvage"), []);
 });

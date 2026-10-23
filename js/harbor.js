@@ -4,7 +4,7 @@ function dock(kind) {
   runHook("dock", kind, cargo);   // kind "outpost" docks at the Hulk Outpost (js/campaign.js)
   paused = true; docked = true;
   const { sold, bonus } = sellHold(kind);   // the hold sells at the sortie's plunder-streak price (js/plunder.js)
-  save.gold += sold; cargo = 0;
+  save.gold += sold; cargo = 0; save.salvage = [];   // salvage aboard is sold now
   applyPlayerStats(true);
   player.speed = 0; player.burnT = 0;
   persist();
