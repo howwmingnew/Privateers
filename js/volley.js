@@ -60,7 +60,7 @@ function releaseVolley(s, key, v, guns) {
     const p = s.fixed ? fortMuzzle(s, ang) : m, life = g.range * 1.08 / g.speed;
     balls.push({ spr: S.add.image(p.x, p.y, "ball").setDepth(7), x: p.x, y: p.y, vx: Math.cos(ang) * g.speed, vy: Math.sin(ang) * g.speed,
       life, life0: life, dmg: g.dmg, burn: 0, fromPlayer: false, owner: s });
-    S.fx.smoke.emitParticleAt(p.x + Math.cos(ang) * 6, p.y + Math.sin(ang) * 6, 3);
+    vfxMuzzle(p.x, p.y, ang);
   });
   Snd.play("cannonFar", { x: s.x, y: s.y });
   v.aims = null; v.cd = guns[0].interval * rand(0.9, 1.1);

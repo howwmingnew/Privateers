@@ -170,5 +170,8 @@ function fireshipBoom(s) {
   const hit = enemies.filter(o => o.alive && o !== s && dist(o, s) < BOOM_R);
   if (player.alive && !docked && dist(player, s) < BOOM_R) hit.push(player);
   for (const o of hit) hurt(o, o.maxHp * (o.boss ? BOOM_BOSS_K : BOOM_K), 0, s.rammed ? s : s.killedBy || s);
-  if (dist(player, s) < 500) S.cameras.main.shake(220, 0.008);
+  if (dist(player, s) < 500) camShake(220, 0.008);
 }
+// The default hull js/art.js draws for an enemy is its archetype (this replaces art.js's interim guess by level), so
+// applyShipArt(e) after tagging e.boss keeps the class. manowar draws as the "line" hull.
+function enemyClassFor(e) { return e.arch ? (e.arch === "manowar" ? "line" : e.arch === "fort" ? "brig" : e.arch) : e.merchant ? "fluyt" : "brig"; }

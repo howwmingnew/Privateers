@@ -31,7 +31,7 @@ function drawMini() {
   mctx.strokeStyle = "#ff5a3c"; mctx.lineWidth = 2.5;
   for (const c of crates) if (c.wreck) { const x = c.x * k, y = c.y * k;
     mctx.beginPath(); mctx.moveTo(x - 5, y - 5); mctx.lineTo(x + 5, y + 5); mctx.moveTo(x + 5, y - 5); mctx.lineTo(x - 5, y + 5); mctx.stroke(); }
-  for (const e of enemies) if (e.alive) { mctx.fillStyle = threatColor(e.L); mctx.beginPath(); mctx.arc(e.x * k, e.y * k, 3, 0, TAU); mctx.fill(); }
+  for (const e of enemies) if (e.alive) threatMark(mctx, e.x * k, e.y * k, threatTier(e.L));   // shape per tier (js/art.js)
   const px = player.x * k, py = player.y * k;
   mctx.translate(px, py); mctx.rotate(player.rot); mctx.fillStyle = "#fff";
   mctx.beginPath(); mctx.moveTo(7, 0); mctx.lineTo(-5, -4.5); mctx.lineTo(-5, 4.5); mctx.closePath(); mctx.fill();

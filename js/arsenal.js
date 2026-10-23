@@ -49,9 +49,7 @@ function tickStatus(s, dt) {
   for (let i = b.length - 1; i >= 0; i--) { const f = b[i]; f.t -= dt; if (f.t <= 0) b.splice(i, 1); else { dps += f.dps; left = Math.max(left, f.t); } }
   s.burnT = left; s.burnDps = dps;
   if (!dps) return;
-  s.hp -= dps * dt;
-  s.burnFx = (s.burnFx || 0) - dt;
-  if (s.burnFx <= 0) { s.burnFx = 0.1 / b.length; S.fx.spark.emitParticleAt(s.x + rand(-20, 20), s.y + rand(-8, 8), 1); }
+  s.hp -= dps * dt;   // the flames themselves are drawn by vfxShip() while s.burnT > 0
   s.burnSnd = (s.burnSnd || 0) - dt; if (s.burnSnd <= 0) { s.burnSnd = rand(0.2, 0.45); Snd.play("burn", { x: s.x, y: s.y }); }
   if (s.hp <= 0) sink(s, s.burnSrc);
 }

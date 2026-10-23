@@ -10,8 +10,9 @@ function fire(s, targets, dt) { enemyFire(s, targets, dt); }
 const AIM_SHOW_PAD = 1.15;   // aim lines appear when an enemy is within (range x this) of a mount's firing arc
 let prevKeyActive = false, engagedPrev = false, releaseTips = 0;
 function muzzle(s, m, i, n) {
-  const a = s.rot + m.ang, p = s.rot + m.perp, off = n === 1 ? 0 : -m.span / 2 + m.span * i / (n - 1);
-  return { x: s.x + Math.cos(p) * off + Math.cos(a) * m.out, y: s.y + Math.sin(p) * off + Math.sin(a) * m.out, a };
+  const g = (s.mounts && s.mounts[m.key]) || m;   // per-hull out/span from applyShipArt, else the MOUNTS defaults
+  const a = s.rot + m.ang, p = s.rot + m.perp, off = n === 1 ? 0 : -g.span / 2 + g.span * i / (n - 1);
+  return { x: s.x + Math.cos(p) * off + Math.cos(a) * g.out, y: s.y + Math.sin(p) * off + Math.sin(a) * g.out, a };
 }
 // Is an enemy inside this mount's firing arc? Only then are its aim lines shown and can it fire.
 function mountEngaged(m) {
@@ -20,16 +21,17 @@ function mountEngaged(m) {
   const r = Math.max(...arr.map(g => g.range)) * AIM_SHOW_PAD, normal = player.rot + m.ang;
   return enemies.some(e => e.alive && dist(e, player) < r && Math.abs(angDiff(Math.atan2(e.y - player.y, e.x - player.x), normal)) < ARC);
 }
-// Would a straight shot from (x, y) at angle a, length len, pass through an enemy hull right now?
+// Would a straight shot from (x, y) at angle a, length len, pass through an enemy hull right now? Returns that enemy.
+// Only ships the player can see count: a "will hit" line must never point at something off screen.
 function lineHits(x, y, a, len) {
   const c = Math.cos(a), sn = Math.sin(a);
   for (const e of enemies) {
-    if (!e.alive) continue;
-    const ex = e.x - x, ey = e.y - y, along = ex * c + ey * sn;
-    if (along < -30 || along > len + 30 || Math.abs(ex * sn - ey * c) > 45) continue;   // cheap reject
-    for (let d = Math.max(0, along - 40); d <= Math.min(len, along + 40); d += 6) if (hitShip(e, x + c * d, y + sn * d)) return true;
+    if (!e.alive || !onScreen(e.x, e.y, 0)) continue;
+    const ext = (e.hl ?? 28) + (e.hw ?? 13), ex = e.x - x, ey = e.y - y, along = ex * c + ey * sn;
+    if (along < -ext || along > len + ext || Math.abs(ex * sn - ey * c) > ext + 2) continue;   // cheap reject
+    for (let d = Math.max(0, along - ext); d <= Math.min(len, along + ext); d += 5) if (hitShip(e, x + c * d, y + sn * d)) return e;
   }
-  return false;
+  return null;
 }
 // Fire every loaded cannon on each engaged mount. Called when the player lets go.
 function playerFire() {
@@ -46,44 +48,45 @@ function playerFire() {
         const m = muzzle(player, mount, i, arr.length), life = g.range / g.speed;   // each gun has its own ball speed
         balls.push({ spr: S.add.image(m.x, m.y, "ball").setDepth(7), x: m.x, y: m.y,
           vx: Math.cos(m.a) * g.speed, vy: Math.sin(m.a) * g.speed, life, life0: life, dmg: g.dmg, burn: g.burn, chain: g.chain, fromPlayer: true, owner: player });
-        S.fx.smoke.emitParticleAt(m.x + Math.cos(m.a) * 6, m.y + Math.sin(m.a) * 6, 3);
+        vfxMuzzle(m.x, m.y, m.a);
         Snd.play("cannon", { pan: Math.cos(m.a) * 0.35 });
       });
     });
   }
-  if (shots) S.cameras.main.shake(70, 0.002);
+  if (shots) camShake(70, Math.min(0.005, 0.0015 + 0.0003 * shots));   // a bigger broadside kicks harder
 }
 
-// ship hit test: capsule along the hull axis
+// ship hit test: capsule along the hull axis, sized to the drawn hull by applyShipArt (s.hl / s.hw)
 function hitShip(s, x, y) {
-  const dx = x - s.x, dy = y - s.y, c = Math.cos(s.rot), sn = Math.sin(s.rot);
-  const hl = s.hl ?? 28, along = clamp(dx * c + dy * sn, -hl, hl);   // s.hl / s.hw: per-hull capsule (art, forts)
+  const dx = x - s.x, dy = y - s.y, c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28;
+  const along = clamp(dx * c + dy * sn, -hl, hl);
   return Math.hypot(dx - c * along, dy - sn * along) < (s.hw ?? 13);
 }
 function floatText(x, y, str, color, size = 16) {
   const txt = S.add.text(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
     .setOrigin(0.5).setDepth(10);
-  S.tweens.add({ targets: txt, y: y - 34, alpha: 0, duration: 900, ease: "Cubic.easeOut", onComplete: () => txt.destroy() });
+  labelText(txt);   // counter-scaled so it stays readable when zoomed out
+  S.tweens.add({ targets: txt, y: y - 34 * labelScale(), alpha: 0, duration: 900, ease: "Cubic.easeOut", onComplete: () => txt.destroy() });
 }
 function hurt(s, dmg, burn, src, ball) {
   if (!s.alive) return;
   dmg = onHit(s, dmg, burn, src, ball);   // raking, fires, chain shot, merchants and convoys raising the alarm (js/arsenal.js)
   s.hp -= dmg;
-  s.spr.setTint(0xffb4a0); S.time.delayedCall(90, () => s.spr && s.spr.clearTint());
+  vfxFlash(s);
   if (onScreen(s.x, s.y)) {
     const byPlayer = src === player;
     floatText(s.x + rand(-10, 10), s.y - 22, Math.round(dmg), s.isPlayer ? "#ff8a75" : byPlayer ? "#fff4d6" : "#a9c3cb", byPlayer || s.isPlayer ? 16 : 13);
   }
   Snd.play("hit", { x: s.x, y: s.y, big: s.isPlayer });
   if (!s.isPlayer && src) { s.attacker = src; s.angry = 8; s.ignore.delete(src); }
-  if (s.isPlayer) S.cameras.main.shake(90, 0.004);
+  if (s.isPlayer) camShake(90, 0.004);
   if (s.hp <= 0) sink(s, src);
 }
 // A crate floating on the sea. AI loot is temporary; a player wreck is saved and never expires.
 function addCrate(x, y, value, wreck) {
   const c = { spr: S.add.image(x, y, wreck ? "wreck" : "crate").setDepth(2), x, y, value, t: 0, wreck: wreck || null, label: null };
-  if (wreck) c.label = S.add.text(x, y - 26, t("wreckLabel"), { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#ffd8cf", stroke: "#0b2530", strokeThickness: 4 })
-    .setOrigin(0.5).setDepth(9);
+  if (wreck) c.label = labelText(S.add.text(x, y - 26, t("wreckLabel"), { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#ffd8cf", stroke: "#0b2530", strokeThickness: 4 })
+    .setOrigin(0.5).setDepth(9));
   crates.push(c);
   return c;
 }
@@ -95,8 +98,7 @@ function sink(s, killer) {
   Snd.play("sink", { x: s.x, y: s.y, big: s.isPlayer });
   if (s.isPlayer) Snd.play("defeat"); else if (killer === player) Snd.play("victory", { delay: 0.25 });
   if (s.badge) { s.badge.destroy(); s.badge = null; }
-  S.tweens.add({ targets: s.spr, alpha: 0, scale: 0.6, angle: s.spr.angle + 25, duration: 1300, ease: "Quad.easeIn",
-    onComplete: () => { if (!s.isPlayer) { s.spr.destroy(); s.dead = true; } } });
+  vfxSink(s, killer);   // list, darken, go under; sets s.dead for AI ships when done (js/vfx.js)
   if (s.isPlayer) {
     // half the hold stays where the ship went down, and survives closing the game; the plunder streak is lost
     lastLost = Math.round(cargo * WRECK_KEEP); streak = 0;
@@ -106,7 +108,7 @@ function sink(s, killer) {
     S.time.delayedCall(1700, () => {
       cargo = 0;
       Object.assign(player, { x: PORT.x + 140, y: PORT.y, rot: 0, speed: 0, alive: true, burnT: 0 });
-      player.spr.setAlpha(1).setScale(1).setAngle(0).setPosition(player.x, player.y);
+      vfxRespawn(player); player.spr.setPosition(player.x, player.y);
       dock("sunk");
     });
   } else {

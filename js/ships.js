@@ -15,6 +15,7 @@ function applyPlayerStats(full) {
   player.maxSpeed = yardVal("sails");
   player.cap = yardVal("hold");
   player.guns = playerGuns();
+  applyShipArt(player, save.ship, "player");   // hull art, hitbox, muzzles and view follow the ship in the save
 }
 function makePlayer(sc) {
   const p = makeShip(sc, "ship-player", PORT.x + 140, PORT.y);
@@ -46,16 +47,16 @@ function spawnEnemy(sc) {
 function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
   const e = makeShip(sc, "ship-" + faction, x, y);
   Object.assign(e, { L, faction, angry: 0, thinkT: 0, wander: null, target: null, chaseFrom: null, retarget: rand(0, 0.5), attacker: null, ignore: new Map() });
-  outfitEnemy(e, cls);
   e.badge = sc.add.text(x, y - 36, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#1b1410", padding: { x: 5, y: 1 } })
     .setOrigin(0.5).setDepth(9);
+  outfitEnemy(e, cls);   // numbers, guns, and the class's art + hitbox via applyShipArt (js/art.js)
   refreshBadge(e);
   enemies.push(e);
   return e;
 }
 function refreshBadge(e) {
-  const c = threatColor(e.L);
-  e.badge.setText(t("badge", { n: e.L, g: fmt(e.loot) })).setBackgroundColor(c).setColor(c === "#d9493a" ? "#fff6ea" : "#1b1410");
+  const tier = threatTier(e.L), c = tier.color;   // glyph + colour, so threat reads without colour vision
+  e.badge.setText(tier.glyph + " " + t("badge", { n: e.L, g: fmt(e.loot) })).setBackgroundColor(c).setColor(c === "#d9493a" ? "#fff6ea" : "#1b1410");
 }
 
 // ---------- Steering & AI ----------
@@ -177,10 +178,15 @@ function move(s, dt) {
   if (s.fixed) { s.vx = s.vy = s.speed = 0; return; }   // shore batteries stand on their island
   s.vx = Math.cos(s.rot) * s.speed; s.vy = Math.sin(s.rot) * s.speed;
   s.x = clamp(s.x + s.vx * dt, 60, W - 60); s.y = clamp(s.y + s.vy * dt, 60, H - 60);
-  // islands are solid
+  // islands are solid to the whole hull: the hit capsule (s.hl / s.hw, cutter to man-o'-war) is kept off the rock
   const solid = islands.concat([{ x: PORT.x, y: PORT.y, r: PORT_ISLAND_R / 0.9 }]);
+  const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28, hw = s.hw ?? 13;
   for (const isl of solid) {
-    const dx = s.x - isl.x, dy = s.y - isl.y, d = Math.hypot(dx, dy), R = isl.r * 0.9 + 18;
-    if (d < R && d > 0.01) { s.x = isl.x + dx / d * R; s.y = isl.y + dy / d * R; s.speed *= 0.9; }
+    const R = isl.r * 0.9 + hw + 5, ix = isl.x - s.x, iy = isl.y - s.y;
+    if (Math.abs(ix) > R + hl || Math.abs(iy) > R + hl) continue;
+    const k = clamp(ix * c + iy * sn, -hl, hl), qx = s.x + c * k - isl.x, qy = s.y + sn * k - isl.y, d = Math.hypot(qx, qy);
+    if (d < R && d > 0.01) { s.x += qx / d * (R - d); s.y += qy / d * (R - d); s.speed *= 0.9; }
   }
 }
+// Radius two hulls keep between them (half capsule length + beam): 20 px for the old one-size hull, more for big ships.
+const shipRadius = s => ((s.hl ?? 28) + (s.hw ?? 13)) / 2;
