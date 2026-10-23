@@ -1,7 +1,6 @@
 "use strict";
 // ---------- HUD ----------
-let toastTimer;
-function toast(msg) { const el = document.getElementById("toast"); el.textContent = msg; el.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("on"), 2400); }
+// toast(): js/notices.js (held while the ledger is open)
 function hud(force) {
   const $ = id => document.getElementById(id);
   $("hpFill").style.width = clamp(player.hp / player.maxHp, 0, 1) * 100 + "%";

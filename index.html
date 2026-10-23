@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="css/campaign.css">
 <link rel="stylesheet" href="css/vfx.css">
 <link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/ledger.css">
 <link rel="stylesheet" href="css/combat.css">
 </head>
 <body>
@@ -46,7 +47,9 @@
       <div class="gold-big"><span class="eyebrow" data-i18n="gold">Gold</span><b id="pGold">0</b></div>
     </header>
     <p class="msg" id="pMsg"></p>
-    <div class="stats" id="pStats"></div>
+    <!-- two columns on wide screens (css/ledger.css): the ship and the bounty on the left, the shop on the right -->
+    <div class="lcol lcol-l"><div class="stats" id="pStats"></div></div>
+    <div class="lcol lcol-r">
     <section>
       <h2 data-i18n="broadside">Broadside</h2>
       <p class="hint-s" data-i18n="slotHint">Tap a gun port to swap in another cannon you own.</p>
@@ -65,6 +68,7 @@
       <p class="hint-s" data-i18n="shipsHint">A new ship starts with hull, sails and hold back at Lv 1. Your cannons move aboard.</p>
       <div class="list" id="ships"></div>
     </section>
+    </div>
     <footer>
       <span class="foot-l"><button class="lang on-sheet" type="button" data-lang-toggle>中文</button>
       <button class="textbtn" type="button" data-menu="howto" data-i18n="m_howto">How to play</button>
@@ -210,9 +214,12 @@
 <script src="js/tutorial.js"></script>
 <script src="js/menu.js"></script>
 <script src="js/hud.js"></script>
+<script src="js/notices.js"></script>
 <script src="js/world-seas.js"></script>
 <script src="js/campaign.js"></script>
 <script src="js/campaign-ui.js"></script>
+<script src="js/bounty-rec.js"></script>
+<script src="js/ledger-nav.js"></script>
 <script src="js/logbook.js"></script>
 <script src="js/achievements.js"></script>
 <script src="js/victory.js"></script>

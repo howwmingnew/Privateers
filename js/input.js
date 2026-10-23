@@ -136,8 +136,8 @@ function padSnapshot() {
   const p = readPad();
   if (!p) return null;
   const b = i => (p.buttons[i] ? p.buttons[i].value : 0) > 0.5;
-  const s = { lx: p.leftStick.x, ly: p.leftStick.y, a: b(0), b: b(1), rt: b(7), start: b(9), up: b(12), down: b(13), left: b(14), right: b(15) };
-  if (s.a || s.b || s.rt || s.start || s.up || s.down || s.left || s.right || Math.hypot(s.lx, s.ly) > 0.35) setDevice("pad");
+  const s = { lx: p.leftStick.x, ly: p.leftStick.y, a: b(0), b: b(1), y: b(3), lb: b(4), rb: b(5), rt: b(7), start: b(9), up: b(12), down: b(13), left: b(14), right: b(15) };
+  if (s.a || s.b || s.y || s.lb || s.rb || s.rt || s.start || s.up || s.down || s.left || s.right || Math.hypot(s.lx, s.ly) > 0.35) setDevice("pad");
   return s;
 }
 // At sea: stick to padVec, buttons fire / step the sail / pause. `pressed(k)` is true on the frame a button goes down.

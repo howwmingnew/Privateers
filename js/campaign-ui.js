@@ -91,6 +91,7 @@ function posterHtml(b) {
     <p class="p-story">${t("intro_" + b.id)}</p>
     <dl class="p-facts">
       <div><dt>${t("pTarget")}</dt><dd>Lv ${b.L + levelBonus()} ${t("cls_" + b.cls)}${escorts}</dd></div>
+      ${recLine(b)}
       <div><dt>${t("pSeen")}</dt><dd>${t("pWhere", { sea, dir: dirWord(b.ang) })}</dd></div>
       <div><dt>${t("pReward")}</dt><dd><b>${t("pGold", { n: fmt(bountyReward(b)) })}</b> · ${prize}</dd></div>
     </dl></div>`;
@@ -165,7 +166,7 @@ onHook("mini", (c, k, u) => {
     c.beginPath(); c.rect(x - 3.5 * u, y - 3.5 * u, 7 * u, 7 * u); c.fill(); c.stroke();
   }
   const b = activeBounty();
-  if (!b) return;
+  if (!b || (bountyHeld && !docked)) return;   // the first voyage: no bounty until the tutorial is done (js/campaign.js)
   const p = bossShip && bossShip.alive ? bossShip : lairOf(b), x = p.x * k, y = p.y * k, pulse = 1 + 0.25 * Math.sin(performance.now() / 260);
   c.strokeStyle = "rgba(240,199,102,.85)"; c.lineWidth = 1.5 * u; c.beginPath(); c.arc(x, y, 10 * u * pulse, 0, TAU); c.stroke();
   c.fillStyle = "#1b1410"; c.beginPath(); c.arc(x, y, 7.5 * u, 0, TAU); c.fill();
