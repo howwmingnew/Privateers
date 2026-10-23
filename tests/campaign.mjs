@@ -102,8 +102,9 @@ console.log("Fresh campaign (desktop, en)");
   await o.shot("desktop-en-2-banner");
 
   // bounty 1, with the arrow (boss off screen) and the tag / boss bar (boss close)
-  // the previous step left the camera out west, where Red Ned's lair is; snap it home so the boss is truly off screen
-  await page.evaluate(() => { sendHome(), dock("return"); setSail(); S.cameras.main.centerOn(player.x, player.y); });
+  // the previous step left the camera out west, where Red Ned's lair is; snap it home so the boss is truly off screen.
+  // A fresh save is still on its first voyage, which holds the bounty back (js/campaign.js): call the tutorial done.
+  await page.evaluate(() => { save.tutorialDone = true; sendHome(), dock("return"); setSail(); S.cameras.main.centerOn(player.x, player.y); });
   await page.waitForTimeout(400);
   const arrow =await page.evaluate(() => ({ arrow: !bossArrow.hidden, mini: !!activeBounty() }));
   check(arrow.arrow, "edge arrow points at the bounty while it is off screen");
@@ -158,6 +159,10 @@ console.log("Fresh campaign (desktop, en)");
   const vic = await page.evaluate(() => ({ shown: !vicEl.hidden, paused, txt: vicEl.textContent }));
   check(vic.shown && vic.paused && /Free Port Stands/.test(vic.txt) && /Time played/.test(vic.txt), "victory screen after Admiral Thorne, with the captain's stats");
   await o.shot("desktop-en-7-victory");
+  // a fire key still held from the last broadside must not dismiss the ending: presses inside the grace period are ignored
+  await page.click("[data-v=keep]"); await page.waitForTimeout(100);
+  check(await page.evaluate(() => !vicEl.hidden), "a press right as the victory screen opens does not skip it");
+  await page.waitForTimeout(1300);
   await page.click("[data-v=keep]"); await page.waitForTimeout(200);
   const keep = await page.evaluate(() => ({ hidden: vicEl.hidden, paused, docked, won: save.campaign.won }));
   check(keep.hidden && !keep.paused && !keep.docked && keep.won, "Keep sailing: back at sea, campaign marked won");
@@ -200,6 +205,7 @@ console.log("Fresh campaign (desktop, en)");
   await page.waitForTimeout(3200);
   const die = await page.evaluate(() => ({ vic: !vicEl.hidden, docked }));
   check(die.vic && die.docked, "sunk right after the final kill: the victory screen still shows, over the harbor");
+  await page.waitForTimeout(1300);   // past the victory screen's input grace
   await page.click("[data-v=ng]"); await page.waitForTimeout(150); await page.click("[data-v=ng]"); await page.waitForTimeout(300);
   const ng2 = await page.evaluate(() => ({ ng: save.ngPlus, vic: vicEl.hidden, docked, bounty: save.campaign.bounty }));
   check(ng2.ng === 2 && ng2.vic && ng2.docked && ng2.bounty === 0, "New Game+ (victory screen) starts cycle 2 in the harbor");

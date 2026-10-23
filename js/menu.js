@@ -166,7 +166,7 @@ function toTitle() {
   paused = true; wasDocked = false;
   for (const b of balls) b.spr.destroy();
   balls.length = 0;
-  cargo = 0; canDock = false;
+  cargo = 0; canDock = false; restoreSalvage();   // js/save.js: unsold wreck cargo goes back to sea
   if (player.alive) {
     Object.assign(player, { x: PORT.x + 140, y: PORT.y, rot: 0, speed: 0, burnT: 0, hp: player.maxHp });
     player.spr.setPosition(player.x, player.y).setRotation(0).clearTint();
@@ -255,6 +255,7 @@ function focusFirst(root, preferPrimary = true) {
 }
 // Move to the nearest visible control in a direction; with nothing visible that way, scroll the panel instead.
 function moveFocus(root, dx, dy) {
+  if (root === sheetEl) return ledgerMove(dx, dy);   // the ledger: every shop control, the sticky footer last (js/ledger-nav.js)
   const els = focusables(root), cur = document.activeElement, sc = scrollerOf(root);
   const box = sc ? sc.getBoundingClientRect() : null;
   const seen = el => { if (!box) return true; const r = el.getBoundingClientRect(); return r.bottom > box.top + 4 && r.top < box.bottom - 4; };
@@ -298,9 +299,12 @@ window.addEventListener("keydown", e => {
   if (k === "Escape") { e.preventDefault(); goBack(); return; }
   if (isP && pauseOpen && !panels.length) { e.preventDefault(); resumeGame(); return; }
   if (k === "Tab") { trapTab(e, root); return; }
-  if (root === sheetEl) {                              // the ledger keeps native arrow scrolling
+  if (root === sheetEl) {                              // the bare ledger keeps native arrow scrolling
     // Space is the fire key, so on the bare sheet it does nothing; Enter (never a fire key) moves to Set sail
     if (press && document.activeElement === sheetEl) { e.preventDefault(); if (k === "Enter") $m("sail").focus({ preventScroll: true }); }
+    // from a control, arrows walk the shop like the D-pad does
+    const d = DIRS[k], at = document.activeElement;
+    if (d && k.length > 1 && at !== sheetEl && sheetEl.contains(at)) { e.preventDefault(); ledgerMove(d[0], d[1]); }
     return;
   }
   const dir = DIRS[k], a = document.activeElement;
@@ -321,6 +325,7 @@ function padTick(dt) {
     const quiet = docked && performance.now() - portOpenedAt < 650;   // A is also fire: ignore it as the ledger appears
     if (pressed("a") && root && !quiet) { if (a && root.contains(a) && a.matches("button")) a.click(); else focusFirst(root); }
     if (pressed("b")) goBack();
+    ledgerPad(pressed);   // Y = Set sail, LB / RB = shop sections (js/ledger-nav.js)
   }
   padPrev = s;
 }

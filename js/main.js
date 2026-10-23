@@ -122,7 +122,8 @@ function step(dt) {
     if (player.alive && d < 150 && room > 0) { const k = Math.min(1, 260 * dt / Math.max(d, 1)); c.x += (player.x - c.x) * k; c.y += (player.y - c.y) * k; }
     if (player.alive && d < 32) {
       if (room > 0) { const take = Math.min(room, c.value); cargo += take; c.value -= take; floatText(c.x, c.y - 10, t("fCargo", { n: fmt(take) }), "#f0c766", 17); Snd.play("pickup");
-        if (c.wreck) { c.wreck.value = c.value; if (c.value <= 0) save.wrecks = save.wrecks.filter(w => w !== c.wreck); persist(); }
+        if (c.wreck) { c.wreck.value = c.value; if (c.value <= 0) save.wrecks = save.wrecks.filter(w => w !== c.wreck);
+          save.salvage = [...(save.salvage || []), { x: Math.round(c.x), y: Math.round(c.y), value: take }]; persist(); }
         runHook("pickup", c, take); }
       else if (S.time.now - lastHoldToast > 3000) { lastHoldToast = S.time.now; toast(t("toastFull")); Snd.play("denied"); }
     }
