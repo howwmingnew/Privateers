@@ -62,7 +62,7 @@ function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
   return e;
 }
 function refreshBadge(e) {
-  const tier = threatTier(e.L), c = tier.color;   // glyph + colour, so threat reads without colour vision
+  const tier = threatTier(e.threatL ?? e.L), c = tier.color;   // glyph + colour (by how hard it fights, js/archetypes.js), readable without colour vision
   e.badge.setText(tier.glyph + " " + t("badge", { n: e.L, g: fmt(e.loot) })).setBackgroundColor(c).setColor(c === "#d9493a" ? "#fff6ea" : "#1b1410");
 }
 

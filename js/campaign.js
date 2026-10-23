@@ -54,7 +54,7 @@ Object.assign(STR.zh, {
 // Escorts with `guns`/`hpMul` are stand-ins for archetypes that do not exist yet (a fireship has no guns at all).
 const FIRE_RAIDER = { cls: "fireship", hpMul: 0.6, guns: 1 };
 const BOUNTIES = [
-  { id: "ned",    L: 3,  cls: "cutter",  faction: "pirate", hpMul: 3, speed: 1.15, ang: Math.PI,        r: ringMid(3), reward: 400,   escorts: [] },
+  { id: "ned",    L: 3,  cls: "cutter",  faction: "pirate", hpMul: 2.5, speed: 0.9, ang: Math.PI,      r: ringMid(3), reward: 400,   escorts: [] },   // a stock sloop must be able to catch and sink him (cutters are fast)
   { id: "carey",  L: 5,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: -Math.PI / 2,   r: ringMid(5), reward: 1500,  escorts: [{ cls: "brig" }] },
   { id: "saint",  L: 7,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: Math.PI * 0.75, r: ringMid(7), reward: 4000,  escorts: [FIRE_RAIDER, FIRE_RAIDER, FIRE_RAIDER] },
   { id: "hale",   L: 9,  cls: "frigate", faction: "navy",   hpMul: 3,              ang: 0,              r: ringMid(9), reward: 10000, escorts: [{ cls: "frigate" }, { cls: "frigate" }] },

@@ -32,7 +32,7 @@ function drawMini() {
   mctx.strokeStyle = "#ff5a3c"; mctx.lineWidth = 2.5 * u;
   for (const c of crates) if (c.wreck) { const x = c.x * k, y = c.y * k, r = 5 * u;
     mctx.beginPath(); mctx.moveTo(x - r, y - r); mctx.lineTo(x + r, y + r); mctx.moveTo(x + r, y - r); mctx.lineTo(x - r, y + r); mctx.stroke(); }
-  for (const e of enemies) if (e.alive && !e.boss) threatMark(mctx, e.x * k, e.y * k, threatTier(e.L), 4 * u);   // shape per tier (js/art.js)
+  for (const e of enemies) if (e.alive && !e.boss) threatMark(mctx, e.x * k, e.y * k, threatTier(e.threatL ?? e.L), 4 * u);   // shape per tier (js/art.js)
   runHook("mini", mctx, k, u);   // the bounty's skull, the outpost (js/campaign-ui.js)
   const px = player.x * k, py = player.y * k;
   mctx.translate(px, py); mctx.rotate(player.rot); mctx.scale(u, u); mctx.fillStyle = "#fff";

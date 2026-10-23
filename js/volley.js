@@ -13,6 +13,13 @@ const EMOUNT = { bow: MOUNTS[0], left: MOUNTS[1], right: MOUNTS[2], stern: MOUNT
 Object.assign(STR.en, { volleyTip: "Red glow: a broadside is about to fire. Turn bow or stern into it!" });
 Object.assign(STR.zh, { volleyTip: "紅光：敵艦要齊射了。把船首或船尾轉向它！" });
 let volleyTips = 0;   // the first volleys laid on the player each session say what the red fan means
+// One warning at a time at the player: a pack's volleys come VOLLEY_GAP s apart instead of all at once, so each can be
+// read and dodged, and three ships hit like a little under two (ships fighting each other are not held back).
+const VOLLEY_GAP = 1.1;
+let playerVolleyAt = -1e9;
+// Combat clock (s): simulated time, advanced by step()'s dt in combatTick. Phaser's scene clock keeps running while the game
+// is paused (and ignores time scaling), so combat timers count on this instead.
+let simT = 0;
 
 // Where ship t will be in T s if it keeps its speed and turns at w rad/s, scaled toward its current spot by `lead`.
 function predictAt(t, T, w, lead) {
@@ -40,9 +47,12 @@ function enemyFire(s, targets, dt) {
     if (v.cd > 0) v.cd -= dt;
     if (v.warn > 0) { v.warn -= dt; if (v.warn <= 0) releaseVolley(s, key, v, guns); continue; }
     if (v.cd > 0 || !tg || !tg.alive || dist(s, tg) > guns[0].range || !bears(s, key, tg, ARC)) continue;
+    const now = simT;
+    if (tg.isPlayer && now - playerVolleyAt < VOLLEY_GAP) continue;   // another ship's warning is still up: wait a moment
     const aims = layGuns(s, tg, guns), a = aims[0];
     if (Math.hypot(a.x - s.x, a.y - s.y) > guns[0].range) continue;   // it will have sailed out of reach: hold fire
     v.warn = VOLLEY_WARN; v.tgt = tg; v.aims = aims;
+    if (tg.isPlayer) playerVolleyAt = now;
     if (tg.isPlayer && volleyTips < 2 && onScreen(s.x, s.y)) { volleyTips++; toast(t("volleyTip")); }
   }
 }
@@ -116,6 +126,7 @@ function trackTurns(dt, ships) {
   }
 }
 function combatTick(dt) {
+  simT += dt;
   const ships = enemies.filter(e => e.alive); if (player.alive) ships.push(player);
   trackTurns(dt, ships);
   for (const e of ships) {

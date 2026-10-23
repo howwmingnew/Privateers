@@ -66,11 +66,24 @@ function outfitEnemy(e, key, b = {}) {
   for (const m in e.guns) if (e.guns[m].length) e.vol[m] = { cd: rand(0.4, 1.8), warn: 0, aims: null };
   e.range = A.bow && !n ? bow.range : A.plan === "kite" ? bow.range : main.range;
   if (!A.bow && !n && !A.turret) e.range = 200;   // fireship: no guns, only how close it means to get
+  e.threatL = threatLevelOf(e);
   if (typeof applyShipArt === "function" && !e.fixed) {   // js/art.js draws the class; manowar uses the "line" hull
     applyShipArt(e, k === "manowar" ? "line" : k, typeof liveryFor === "function" ? liveryFor(e) : e.faction);
     e.cls = k;
   }
   return e;
+}
+// The level a ship fights like, for its threat badge: the brig level whose power (enemyPower) matches this hull and its
+// heaviest battery, so a bounty ship with 3x hull reads well above its Lv, a cutter a little below. A fireship has no
+// guns; its ram is the threat, so it reads at its level.
+function threatLevelOf(e) {
+  let side = 0;
+  for (const k in e.guns) side = Math.max(side, e.guns[k].reduce((a, g) => a + g.dmg / (g.interval + VOLLEY_WARN), 0));
+  if (!side) return e.L;
+  const p = Math.sqrt(e.maxHp * side * ENEMY_FIRE_K);
+  let L = 1;
+  while (L < 40 && enemyPower(L + 1) <= p * 1.0001) L++;
+  return L;
 }
 // js/campaign.js spawns a boss or escort as an ordinary ship and then tags it (e.boss = bounty id or e.escortOf,
 // e.cls = the bounty's class), scaling HP / speed by hand and fitting stand-in guns. Re-take the class once, with the
@@ -90,6 +103,7 @@ function campaignOutfit(e) {
 // archTactic -> TAC.desired (heading) and TAC.thr (throttle), given the target, its distance d and bearing toT.
 const TAC = { desired: null, thr: 0.55 };
 const STEER_LEAD = 1.2;   // s ahead that a broadside ship steers for (half that for green crews)
+const KITE_RUN = 2.5, KITE_REST = 6;   // a cutter's sheer-off: how long it may run, and how long it then stays to fight
 const tac = (desired, thr) => { TAC.desired = desired; TAC.thr = thr; return TAC; };
 const nearSide = (e, toT) => Math.abs(angDiff(toT + Math.PI / 2, e.rot)) < Math.abs(angDiff(toT - Math.PI / 2, e.rot)) ? 1 : -1;
 function archTactic(e, tg, d, toT, now) {
@@ -110,9 +124,14 @@ function archTactic(e, tg, d, toT, now) {
       const tt = Math.min(1.5, d / Math.max(60, e.speed));
       return tac(Math.atan2(tg.y + (tg.vy || 0) * tt * 0.8 - e.y, tg.x + (tg.vx || 0) * tt * 0.8 - e.x), 1);
     }
-    case "kite": {  // hold off near bow-gun range, bow on, slightly off the line; back off when crowded, then turn again
-      if (e.kiteOut) { if (d > R * 0.92) e.kiteOut = false; return tac(toT + Math.PI + (e.kiteSide || 1) * 0.5, 1); }
-      if (d < R * 0.55) { e.kiteOut = true; e.kiteSide = nearSide(e, toT); return tac(toT + Math.PI, 1); }
+    case "kite": {  // hold off near bow-gun range, bow on, slightly off the line. Crowded, it sheers off on a diagonal
+      // (side gun bearing) for at most KITE_RUN s, then turns to fight and won't run again for KITE_REST s: a cutter
+      // that is not faster than its target must not flee for ever
+      if (e.kiteUntil > simT) { if (d > R * 0.92) e.kiteUntil = 0; return tac(toT + Math.PI + e.kiteSide * 1.1, 1); }
+      if (d < R * 0.55 && !(e.kiteRest > simT)) {
+        e.kiteUntil = simT + KITE_RUN; e.kiteRest = simT + KITE_REST; e.kiteSide = nearSide(e, toT);
+        return tac(toT + Math.PI + e.kiteSide * 1.1, 1);
+      }
       return tac(toT + (e.kiteSide || 1) * 0.18, d > R * 0.9 ? 1 : 0.35);
     }
     case "orbit": { // a steady circle at 0.68 x range, keeping the same broadside on the target
