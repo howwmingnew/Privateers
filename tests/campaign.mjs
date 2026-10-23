@@ -190,12 +190,14 @@ console.log("Fresh campaign (desktop, en)");
   const before = await page.evaluate(() => ({ seed: save.seed, gunLv: save.gunLv, unlocked: save.unlocked, ach: Object.keys(save.ach).length, stats: save.stats.bounties }));
   await page.click("[data-camp=ng]"); await page.waitForTimeout(150); await page.click("[data-camp=ng]"); await page.waitForTimeout(300);
   const ng = await page.evaluate(() => ({ ng: save.ngPlus, bounty: save.campaign.bounty, gold: save.gold, ship: save.ship, seed: save.seed, islandSeed,
-    gunLv: save.gunLv, unlocked: save.unlocked, ach: Object.keys(save.ach).length, stats: save.stats.bounties, poster: document.querySelector("#wanted .poster .p-facts")?.textContent }));
+    gunLv: save.gunLv, unlocked: save.unlocked, ach: Object.keys(save.ach).length, stats: save.stats.bounties, poster: document.querySelector("#wanted .poster")?.textContent, rec: bountyRecLv(BOUNTIES[0]),
+    recBase: (() => { const ng = save.ngPlus; save.ngPlus = 0; const r = bountyRecLv(BOUNTIES[0]); save.ngPlus = ng; return r; })() }));
   check(ng.ng === 1 && ng.bounty === 0 && ng.gold === 0 && ng.ship === "sloop", "New Game+ (poster): campaign, gold and ship start over");
   check(ng.seed !== before.seed && ng.islandSeed === ng.seed, "New Game+ rolls a new map");
   check(JSON.stringify(ng.gunLv) === JSON.stringify(before.gunLv) && JSON.stringify(ng.unlocked) === JSON.stringify(before.unlocked), "New Game+ keeps guns and their levels");
   check(ng.ach === before.ach && ng.stats === before.stats, "New Game+ keeps achievements and lifetime stats");
-  check(/Lv 6/.test(ng.poster || ""), `New Game+ poster shows Red Ned at Lv 6: "${ng.poster}"`);
+  // the poster's one level is its Recommended line (boss + escorts), and New Game+ must raise it
+  check(ng.rec > ng.recBase && (ng.poster || "").includes(`Ship Lv ${ng.rec} `), `New Game+ poster recommends a higher Ship Lv for Red Ned (${ng.recBase} -> ${ng.rec}): "${ng.poster}"`);
   await o.shot("desktop-en-8-ngplus");
   const lv = await page.evaluate(() => { setSail(); const s = enemies.filter(e => e.alive && isOrdinary(e));
     return { bad: s.filter(e => e.L !== ringAt(dist(e, PORT)) + 3).length, min: Math.min(...s.map(e => e.L)), boss: enemies.find(e => e.boss)?.L }; });

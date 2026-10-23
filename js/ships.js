@@ -68,7 +68,8 @@ const LOOT_SEEN_R = 650;   // px from the player inside which an enemy's badge s
 function refreshBadge(e) {
   const tier = threatTier(e.threatL ?? e.L), c = tier.color;   // glyph + colour (by how hard it fights, js/archetypes.js), readable without colour vision
   // the plunder aboard only reads through the spyglass, so a distant fleet is a tidy row of levels, not a price list
-  const label = e.lootSeen ? t("badge", { n: e.L, g: fmt(e.loot) }) : t("badgeLv", { n: e.L });
+  // the number is how hard it fights (threatL), the same figure its colour and glyph compare with your Ship Lv
+  const n = e.threatL ?? e.L, label = e.lootSeen ? t("badge", { n, g: fmt(e.loot) }) : t("badgeLv", { n });
   e.badge.setText(tier.glyph + " " + label).setBackgroundColor(c).setColor(c === "#d9493a" ? "#fff6ea" : "#1b1410");
 }
 
@@ -81,12 +82,12 @@ function steer(s, desired, thr, dt) {
   if (s.isPlayer) {
     if (desired == null && thr === 0) {
       if (s.helmThr > 0) { s.coastT = COAST_T; s.coastV = s.speed * COAST_K; }
-      if (s.coastT > 0) { s.coastT -= dt; thr = Math.min(s.coastV, s.speed) / s.maxSpeed; }
+      if (s.coastT > 0) { s.coastT -= dt; thr = Math.min(s.coastV, s.speed) / Math.max(1, s.maxSpeed); }
     } else s.coastT = 0;
     s.helmThr = desired == null ? 0 : thr;
   }
   const torn = s.chainT > 0;
-  const turn = s.turnRate * (torn ? CHAIN_TURN : 1) * dt * (0.45 + 0.55 * Math.min(1, s.speed / s.maxSpeed + 0.2));
+  const turn = s.turnRate * (torn ? CHAIN_TURN : 1) * dt * (0.45 + 0.55 * Math.min(1, s.speed / Math.max(1, s.maxSpeed) + 0.2));
   if (desired != null) s.rot += clamp(angDiff(desired, s.rot), -turn, turn);
   const target = thr * s.maxSpeed * (torn ? CHAIN_SPEED : 1);
   s.speed += clamp(target - s.speed, -s.maxSpeed * 1.1 * dt, s.maxSpeed * 0.7 * dt);
@@ -155,7 +156,8 @@ function think(e, dt) {
   if (tg) {
     const d = dist(e, tg), toT = Math.atan2(tg.y - e.y, tg.x - e.x);
     const range = e.range ?? 250;
-    const chased = Math.hypot(e.x - e.chaseFrom.x, e.y - e.chaseFrom.y);
+    const cf = e.chaseFrom || (e.chaseFrom = { x: e.x, y: e.y });   // a target set without its chase origin must not stop the game loop
+    const chased = Math.hypot(e.x - cf.x, e.y - cf.y);
     // an ordinary ship breaks off once its quarry has fled two or more rings shallower than the ring it calls home
     const shoal = tg === player && !e.boss && !e.escortOf && e.ring && ringAt(dist(player, PORT)) <= e.ring - 2;
     if ((chased > LEASH && d > range) || d > GIVE_UP_DIST || shoal) giveUp(e, tg, now);

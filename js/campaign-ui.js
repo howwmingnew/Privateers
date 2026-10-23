@@ -90,7 +90,7 @@ function posterHtml(b) {
       <div><div class="p-wanted">${t("wanted")}</div><div class="p-name">${bossName(b)}</div><div class="p-sub">${t("sunkOrTaken")}</div></div></div>
     <p class="p-story">${t("intro_" + b.id)}</p>
     <dl class="p-facts">
-      <div><dt>${t("pTarget")}</dt><dd>Lv ${b.L + levelBonus()} ${t("cls_" + b.cls)}${escorts}</dd></div>
+      <div><dt>${t("pTarget")}</dt><dd>${t("cls_" + b.cls)}${escorts}</dd></div>
       ${recLine(b)}
       <div><dt>${t("pSeen")}</dt><dd>${t("pWhere", { sea, dir: dirWord(b.ang) })}</dd></div>
       <div><dt>${t("pReward")}</dt><dd><b>${t("pGold", { n: fmt(bountyReward(b)) })}</b> · ${prize}</dd></div>

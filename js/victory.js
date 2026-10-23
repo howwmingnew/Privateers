@@ -25,8 +25,10 @@ vicEl.innerHTML = `<div class="sheet victory" role="dialog" aria-modal="true" ar
 document.body.append(vicEl);
 // The ending lands mid-fight with the escorts, while the player is still hammering fire, so the choices ignore presses
 // for a moment and focus starts on the page itself rather than on a button that Space / A would click straight away.
-const VIC_GRACE_MS = 1200;
-let vicNgArmed = false, vicNgT, vicShownAt = 0;
+// A pad's A is also its fire button, so a press counts only once the player has also stopped pressing for VIC_CALM_MS:
+// hammering fire never closes the ending, a deliberate press after a pause does.
+const VIC_GRACE_MS = 1200, VIC_CALM_MS = 600;
+let vicNgArmed = false, vicNgT, vicShownAt = 0, vicLastTry = 0;
 // A compass rose in ink: the one ornament on the page.
 function drawRose(cv) {
   const c = cv.getContext("2d"), R = cv.width / 2, ink = "#2a1d10", sepia = "#9a7442";
@@ -85,7 +87,9 @@ function closeVictory() {
 }
 vicEl.addEventListener("click", ev => {
   const b = ev.target.closest("[data-v]");
-  if (!b || performance.now() - vicShownAt < VIC_GRACE_MS) return;
+  const now = performance.now();
+  if (!b) return;
+  if (now - vicShownAt < VIC_GRACE_MS || now - vicLastTry < VIC_CALM_MS) { vicLastTry = now; return; }
   sfx("uiClick");
   if (b.dataset.v === "keep") { closeVictory(); return; }
   if (!vicNgArmed) {   // New Game+ starts the ship and gold over, so it takes a second press

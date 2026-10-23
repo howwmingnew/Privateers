@@ -12,7 +12,7 @@ Object.assign(STR.en, {
     <ul class="legend"><li><i class="sw-aim hit"></i><span><b>Red</b>: loaded, and the shot will hit.</span></li>
     <li><i class="sw-aim miss"></i><span><b>Yellow</b>: loaded, but the shot will miss.</span></li>
     <li><i class="sw-aim reload"></i><span><b>Faint</b>: reloading. The line grows back as the gun reloads.</span></li></ul>`,
-  ht_badges: `<h3>Level badges</h3><p>Every ship shows its level and the gold it carries. The colour compares it with your <b>Ship Lv</b>, shown under the map.</p>
+  ht_badges: `<h3>Level badges</h3><p>Every ship's <b>Lv</b> is how hard it fights, on the same scale as your <b>Ship Lv</b> under the map; the colour and mark compare the two. Ships close to you also show the gold they carry. A Wanted poster's <b>Recommended</b> level counts the bounty's escorts too.</p>
     <ul class="legend"><li><i class="sw-badge" style="--c:#86c46f">Lv 1</i><span>Weaker than you</span></li>
     <li><i class="sw-badge" style="--c:#e8c25a">Lv 2</i><span>About even</span></li>
     <li><i class="sw-badge" style="--c:#e88a3a">Lv 3</i><span>One level stronger</span></li>
@@ -38,7 +38,7 @@ Object.assign(STR.zh, {
     <ul class="legend"><li><i class="sw-aim hit"></i><span><b>紅色</b>：已裝填，這一發會命中。</span></li>
     <li><i class="sw-aim miss"></i><span><b>黃色</b>：已裝填，但這一發會落空。</span></li>
     <li><i class="sw-aim reload"></i><span><b>淡色</b>：裝填中，線會隨著裝填進度慢慢變長。</span></li></ul>`,
-  ht_badges: `<h3>等級標籤</h3><p>每艘船都會標出等級和船上的金幣。顏色是和你的<b>船艦 Lv</b>（在地圖下方）比較的結果。</p>
+  ht_badges: `<h3>等級標籤</h3><p>每艘船標示的 <b>Lv</b> 代表它的戰力，和地圖下方你的<b>船艦 Lv</b> 用同一套標準；顏色和符號就是兩者比較的結果。靠近你的船還會顯示船上的金幣。懸賞海報上的<b>建議等級</b>則把護衛艦也算進去。</p>
     <ul class="legend"><li><i class="sw-badge" style="--c:#86c46f">Lv 1</i><span>比你弱</span></li>
     <li><i class="sw-badge" style="--c:#e8c25a">Lv 2</i><span>旗鼓相當</span></li>
     <li><i class="sw-badge" style="--c:#e88a3a">Lv 3</i><span>比你強一級</span></li>
