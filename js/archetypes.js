@@ -181,6 +181,12 @@ function maybeConvoy(sc, lead, room = 3) {
     if (i === n) e.escort = cv;
   });
 }
+// Ships a convoy may add beside its lead: what the lead's ring is still short of its quota (the ring census of
+// js/world-seas.js, which already counts the lead), or the room under the ship count without it.
+function convoyRoom(lead) {
+  if (typeof seaCensus === "function" && player) { const c = seaCensus(); return (c.quota[lead.ring] || 0) - (c.count[lead.ring] || 0); }
+  return ENEMY_COUNT - enemies.filter(o => o.alive && !o.boss && !o.escortOf && !o.fixed).length;
+}
 // Idle heading for a convoy ship that is not the lead: keep its station, at the lead's pace. null = roam as usual.
 function convoyIdle(e) {
   const cv = e.convoy;

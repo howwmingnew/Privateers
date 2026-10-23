@@ -44,8 +44,9 @@ function spawnEnemy(sc, at) {
   if (!ok) return null;
   const L = levelAt(Math.hypot(x - PORT.x, y - PORT.y)), faction = at && at.faction ? at.faction : pickFaction();
   const e = makeEnemy(sc, x, y, L, faction);
-  // placed ships (bosses, escorts, the tutorial's target) sail alone; a convoy only takes room left under the ship count
-  if (e.merchant && !at) maybeConvoy(sc, e, ENEMY_COUNT - enemies.filter(o => o.alive && !o.boss && !o.escortOf).length);
+  // placed ships (bosses, escorts, the tutorial's target) sail alone; a convoy only fills what its own ring is short of
+  // its quota (js/world-seas.js), so it never starves the other rings
+  if (e.merchant && !at) maybeConvoy(sc, e, convoyRoom(e));
   return e;
 }
 // One enemy of level L and faction at (x, y); its class (js/archetypes.js) is picked by level and faction unless given.
