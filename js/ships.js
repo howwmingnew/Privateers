@@ -6,7 +6,7 @@ function makeShip(sc, tex, x, y) {
 }
 function playerGuns() {
   const mk = id => { const g = GUNS[id], m = gunLvMul(save.gunLv[id]);
-    return { id, dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, range: g.range, interval: 60 / g.rpm, cd: 0 }; };
+    return { id, dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, chain: !!g.chain, range: g.range, speed: g.speed || BALL_SPEED, interval: 60 / g.rpm, cd: 0 }; };
   return Object.fromEntries(MOUNTS.map(({ key }) => [key, save[key].map(mk)]));
 }
 function applyPlayerStats(full) {
@@ -42,33 +42,48 @@ function spawnEnemy(sc, at) {
          !islands.some(i => Math.hypot(i.x - x, i.y - y) < i.r * 1.3 + 40);
   }
   if (!ok) return null;
-  const d = Math.hypot(x - PORT.x, y - PORT.y), L = levelAt(d);
-  const merchant = at ? at.faction === "merchant" : Math.random() < 0.35;
-  const tex = merchant ? "ship-merchant" : at ? "ship-" + at.faction : (Math.random() < 0.5 ? "ship-pirate" : "ship-navy");
-  const st = enemyStats(L, merchant);
-  const e = makeShip(sc, tex, x, y);
-  Object.assign(e, { L, ring: ringAt(d), merchant, maxHp: st.hp, hp: st.hp, maxSpeed: st.speed, loot: Math.round(st.loot * lootMul()), aimLead: st.lead, aimSpread: st.spread, angry: 0, thinkT: 0, wander: null, turnRate: 1.7,
-    faction: merchant ? "merchant" : tex === "ship-pirate" ? "pirate" : "navy",
-    target: null, chaseFrom: null, retarget: rand(0, 0.5), attacker: null, ignore: new Map() });
-  const mk = () => ({ dmg: st.dmg, burn: 0, range: st.range, interval: st.interval, cd: rand(0.5, 2.2) });
-  e.guns = { left: Array.from({ length: st.per }, mk), right: Array.from({ length: st.per }, mk) };
+  const L = levelAt(Math.hypot(x - PORT.x, y - PORT.y)), faction = at && at.faction ? at.faction : pickFaction();
+  const e = makeEnemy(sc, x, y, L, faction);
+  // placed ships (bosses, escorts, the tutorial's target) sail alone; a convoy only fills what its own ring is short of
+  // its quota (js/world-seas.js), so it never starves the other rings
+  if (e.merchant && !at) maybeConvoy(sc, e, convoyRoom(e));
+  return e;
+}
+// One enemy of level L and faction at (x, y); its class (js/archetypes.js) is picked by level and faction unless given.
+// A campaign boss or escort re-takes its bounty's class next frame (js/volley.js campaignOutfit).
+function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
+  const e = makeShip(sc, "ship-" + faction, x, y);
+  Object.assign(e, { L, ring: ringAt(Math.hypot(x - PORT.x, y - PORT.y)), faction, angry: 0, thinkT: 0, wander: null, target: null, chaseFrom: null,
+    retarget: rand(0, 0.5), attacker: null, ignore: new Map() });
   e.badge = sc.add.text(x, y - 36, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#1b1410", padding: { x: 5, y: 1 } })
     .setOrigin(0.5).setDepth(9);
+  outfitEnemy(e, cls);   // numbers, guns, and the class's art + hitbox via applyShipArt (js/art.js)
   refreshBadge(e);
-  applyShipArt(e);   // class + livery art and hitbox (js/art.js)
   enemies.push(e);
   return e;
 }
 function refreshBadge(e) {
-  const tier = threatTier(e.L), c = tier.color;   // glyph + colour, so threat reads without colour vision
+  const tier = threatTier(e.threatL ?? e.L), c = tier.color;   // glyph + colour (by how hard it fights, js/archetypes.js), readable without colour vision
   e.badge.setText(tier.glyph + " " + t("badge", { n: e.L, g: fmt(e.loot) })).setBackgroundColor(c).setColor(c === "#d9493a" ? "#fff6ea" : "#1b1410");
 }
 
 // ---------- Steering & AI ----------
+// Letting go of the helm (which is also how touch fires) doesn't brake the player's ship at once: it holds its heading at
+// COAST_K of its speed for COAST_T s, then slows, so firing doesn't make you a sitting target. Chain shot (s.chainT)
+// costs a ship speed and turn while its rigging is torn.
+const COAST_T = 1.2, COAST_K = 0.8;
 function steer(s, desired, thr, dt) {
-  const turn = s.turnRate * dt * (0.45 + 0.55 * Math.min(1, s.speed / s.maxSpeed + 0.2));
+  if (s.isPlayer) {
+    if (desired == null && thr === 0) {
+      if (s.helmThr > 0) { s.coastT = COAST_T; s.coastV = s.speed * COAST_K; }
+      if (s.coastT > 0) { s.coastT -= dt; thr = Math.min(s.coastV, s.speed) / s.maxSpeed; }
+    } else s.coastT = 0;
+    s.helmThr = desired == null ? 0 : thr;
+  }
+  const torn = s.chainT > 0;
+  const turn = s.turnRate * (torn ? CHAIN_TURN : 1) * dt * (0.45 + 0.55 * Math.min(1, s.speed / s.maxSpeed + 0.2));
   if (desired != null) s.rot += clamp(angDiff(desired, s.rot), -turn, turn);
-  const target = thr * s.maxSpeed;
+  const target = thr * s.maxSpeed * (torn ? CHAIN_SPEED : 1);
   s.speed += clamp(target - s.speed, -s.maxSpeed * 1.1 * dt, s.maxSpeed * 0.7 * dt);
 }
 function avoidIslands(s, desired) {
@@ -97,6 +112,7 @@ function isHostile(e, o) {
   const g = o.isPlayer ? "player" : o.faction;
   if (e.faction === "pirate") return g !== "pirate";
   if (e.faction === "navy") return g === "pirate" || g === "player";
+  if (e.escort) return g === "pirate";   // a convoy's escort brig keeps pirates off its fluyts
   return false;
 }
 const ignoring = (e, o, now) => (e.ignore.get(o) || 0) > now;
@@ -119,6 +135,7 @@ function giveUp(e, tg, now) {
   if (onScreen(e.x, e.y)) floatText(e.x, e.y - 48, t("gaveUp"), "#c9d6da", 14);
 }
 function think(e, dt) {
+  if (e.fixed) return fortThink(e, dt);   // shore batteries (js/forts.js) only pick targets
   const now = S.time.now / 1000;
   e.angry = Math.max(0, e.angry - dt);
   if (e.target && (!isHostile(e, e.target) || ignoring(e, e.target, now))) e.target = null;
@@ -132,19 +149,12 @@ function think(e, dt) {
   const tg = e.target;
   if (tg) {
     const d = dist(e, tg), toT = Math.atan2(tg.y - e.y, tg.x - e.x);
-    const range = e.guns.left[0]?.range ?? 250;
+    const range = e.range ?? 250;
     const chased = Math.hypot(e.x - e.chaseFrom.x, e.y - e.chaseFrom.y);
     if ((chased > LEASH && d > range) || d > GIVE_UP_DIST) giveUp(e, tg, now);
-    else if (e.merchant) { desired = toT + Math.PI + Math.sin(now * 1.1 + e.L) * 0.5; thr = 1; }
-    else if (d > range * 0.85) { desired = toT; thr = 1; }
-    else {
-      // present a broadside: run perpendicular to the target, side chosen by current heading
-      const a1 = toT + Math.PI / 2, a2 = toT - Math.PI / 2;
-      desired = Math.abs(angDiff(a1, e.rot)) < Math.abs(angDiff(a2, e.rot)) ? a1 : a2;
-      if (d < range * 0.45) desired += (desired === a1 ? 0.35 : -0.35);
-      thr = 0.75;
-    }
+    else ({ desired, thr } = archTactic(e, tg, d, toT, now));   // each class's battle plan (js/archetypes.js)
   }
+  if (desired == null) { const c = convoyIdle(e); if (c) ({ desired, thr } = c); }
   if (desired == null && e.merchant) {
     // merchants run from any pirate or the player that comes close, even before a shot is fired
     let threat = null, td = 480;
@@ -173,12 +183,18 @@ function think(e, dt) {
 }
 
 function move(s, dt) {
+  if (s.fixed) { s.vx = s.vy = s.speed = 0; return; }   // shore batteries stand on their island
   s.vx = Math.cos(s.rot) * s.speed; s.vy = Math.sin(s.rot) * s.speed;
   s.x = clamp(s.x + s.vx * dt, 60, W - 60); s.y = clamp(s.y + s.vy * dt, 60, H - 60);
-  // islands are solid
+  // islands are solid to the whole hull: the hit capsule (s.hl / s.hw, cutter to man-o'-war) is kept off the rock
   const solid = islands.concat([{ x: PORT.x, y: PORT.y, r: PORT_ISLAND_R / 0.9 }]);
+  const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28, hw = s.hw ?? 13;
   for (const isl of solid) {
-    const dx = s.x - isl.x, dy = s.y - isl.y, d = Math.hypot(dx, dy), R = isl.r * 0.9 + 18;
-    if (d < R && d > 0.01) { s.x = isl.x + dx / d * R; s.y = isl.y + dy / d * R; s.speed *= 0.9; }
+    const R = isl.r * 0.9 + hw + 5, ix = isl.x - s.x, iy = isl.y - s.y;
+    if (Math.abs(ix) > R + hl || Math.abs(iy) > R + hl) continue;
+    const k = clamp(ix * c + iy * sn, -hl, hl), qx = s.x + c * k - isl.x, qy = s.y + sn * k - isl.y, d = Math.hypot(qx, qy);
+    if (d < R && d > 0.01) { s.x += qx / d * (R - d); s.y += qy / d * (R - d); s.speed *= 0.9; }
   }
 }
+// Radius two hulls keep between them (half capsule length + beam): 20 px for the old one-size hull, more for big ships.
+const shipRadius = s => ((s.hl ?? 28) + (s.hw ?? 13)) / 2;

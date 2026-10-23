@@ -3,15 +3,15 @@
 function dock(kind) {
   runHook("dock", kind, cargo);   // kind "outpost" docks at the Hulk Outpost (js/campaign.js)
   paused = true; docked = true;
-  const sold = cargo;
-  save.gold += cargo; cargo = 0; save.salvage = [];   // salvage aboard is sold now
+  const { sold, bonus } = sellHold(kind);   // the hold sells at the sortie's plunder-streak price (js/plunder.js)
+  save.gold += sold; cargo = 0; save.salvage = [];   // salvage aboard is sold now
   applyPlayerStats(true);
   player.speed = 0; player.burnT = 0;
   persist();
   // keep the message as a key so it re-renders when the language changes
   if (kind === "welcome") portMsg = [save.sunk === 0 ? "welcome" : "welcomeBack"];
-  else if (kind === "sunk") portMsg = lastLost > 0 ? ["sunkWreck", { n: fmt(lastLost) }] : ["sunkMsg"];
-  else portMsg = sold > 0 ? ["sold", { n: fmt(sold) }] : ["empty"];
+  else if (kind === "sunk") portMsg = lastLost > 0 ? ["sunkWreckHalf", { n: fmt(lastLost) }] : ["sunkMsg"];
+  else portMsg = sold > 0 ? (bonus > 0 ? ["soldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["sold", { n: fmt(sold) }]) : ["empty"];
   renderPort();
   document.getElementById("port").hidden = false;
   document.querySelector("#port .sheet").scrollTop = 0;   // the result message is at the top; never open scrolled past it
@@ -32,7 +32,9 @@ function resetEnemies(sc) {
   enemies.length = 0;
   for (const b of balls) b.spr.destroy();
   balls.length = 0;
-  for (let i = 0; i < ENEMY_COUNT; i++) spawnEnemy(sc);
+  // fill up to the sea's ship count (a convoy is several ships from one spawn)
+  for (let i = 0; i < ENEMY_COUNT * 2 && enemies.filter(e => e.alive && !e.boss && !e.escortOf).length < ENEMY_COUNT; i++) spawnEnemy(sc);
+  seaReset(sc);   // shore batteries and their treasure (js/forts.js)
 }
 
 let portMsg = ["welcome"];
@@ -56,14 +58,14 @@ function renderPort() {
   // armory
   $("armory").innerHTML = GUN_ORDER.map(id => {
     const g = GUNS[id], lv = save.gunLv[id], m = gunLvMul(lv), owned = save.unlocked[id];
-    const dmgTxt = t("dmg", { n: Math.round(g.dmg * m) }) + (g.burn ? t("burn", { n: Math.round(g.burn * m * 3) }) : "");
+    const dmgTxt = t("dmg", { n: Math.round(g.dmg * m) }) + (g.burn ? t("burn", { n: Math.round(g.burn * m * BURN_T) }) : "");
     let btn;
     if (!owned) btn = `<button class="btn" type="button" data-act="buy" data-id="${id}" ${save.gold < g.cost ? "disabled" : ""}>${t("buy", { n: fmt(g.cost) })}</button>`;
     else if (lv >= GUN_MAX) btn = `<button class="btn max" type="button" disabled>${t("max")}</button>`;
     else { const c = gunUpCost(id); btn = `<button class="btn" type="button" data-act="up" data-id="${id}" ${save.gold < c ? "disabled" : ""}>${t("upgrade", { n: fmt(c) })}</button>`; }
     const next = owned && lv < GUN_MAX ? ` <span class="up">→ ${Math.round(g.dmg * gunLvMul(lv + 1))}</span>` : "";
     return `<div class="item"><div class="nm">${t("gf_" + id)}<small>${owned ? "Lv " + lv : t("notOwned")}</small></div>${btn}
-      <div class="ds">${dmgTxt}${next} · ${t("range", { n: g.range })} · ${t("rpm", { n: g.rpm })} · ${t("gn_" + id)}</div></div>`;
+      <div class="ds">${dmgTxt}${next} · ${t("range", { n: g.range })} · ${t("rpm", { n: g.rpm })}${g.chain ? t("chainFx", { n: CHAIN_T }) : ""} · ${t("gn_" + id)}</div></div>`;
   }).join("");
   // shipwright
   $("yard").innerHTML = Object.entries(YARD).map(([k, y]) => {
@@ -77,11 +79,12 @@ function renderPort() {
   // ships: the current one and every bigger one (buying replaces the current ship)
   $("ships").innerHTML = SHIP_ORDER.slice(SHIP_ORDER.indexOf(save.ship)).map(id => {
     const sh = SHIPS[id], lock = shipLock(id);   // Letters of Marque gate (js/campaign.js): null, or why not yet
+    const credit = id === save.ship ? 0 : tradeInCredit(id), net = sh.cost - credit;   // trade-in (js/plunder.js)
     const btn = id === save.ship ? `<button class="btn max" type="button" disabled>${t("yourShip")}</button>`
       : lock ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("locked")}</button>`
-      : `<button class="btn" type="button" data-act="ship" data-id="${id}" ${save.gold < sh.cost ? "disabled" : ""}>${shipArmed === id ? t("shipArm") : t("buy", { n: fmt(sh.cost) })}</button>`;
+      : `<button class="btn" type="button" data-act="ship" data-id="${id}" ${save.gold < net ? "disabled" : ""}>${shipArmed === id ? t("shipArm") : t("buy", { n: fmt(net) })}</button>`;
     const ds = t("shipDs", { b: sh.slots.bow, s: sh.slots.left, t: sh.slots.stern,
-      hp: YARD.hull.show(yardVal("hull", 1, sh)), kn: YARD.sails.show(yardVal("sails", 1, sh)), cargo: fmt(yardVal("hold", 1, sh)) });
+      hp: YARD.hull.show(yardVal("hull", 1, sh)), kn: YARD.sails.show(yardVal("sails", 1, sh)), cargo: fmt(yardVal("hold", 1, sh)) }) + (credit > 0 && !lock ? t("tradeIn", { n: fmt(credit) }) : "");
     return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${ds}${lock ? `<span class="lock">${lock}</span>` : ""}</div></div>`;
   }).join("");
   runHook("renderPort");   // wanted poster, outpost layout (js/campaign.js)
@@ -111,15 +114,16 @@ document.getElementById("port").addEventListener("click", ev => {
       shipArmTimer = setTimeout(() => {
         shipArmed = null;   // relabel in place rather than re-render, so keyboard focus stays put
         const el = document.querySelector(`[data-act="ship"][data-id="${id}"]`);
-        if (el) el.textContent = t("buy", { n: fmt(SHIPS[id].cost) });
+        if (el) el.textContent = t("buy", { n: fmt(shipNetCost(id)) });
       }, 3000);
       renderPort(); document.querySelector(`[data-act="ship"][data-id="${id}"]`)?.focus();
       Snd.play("uiClick");
       return;
     }
     shipArmed = null;
-    save = fitMounts({ ...save, gold: save.gold - SHIPS[id].cost, ship: id, hull: 1, sails: 1, hold: 1 });
-    portMsg = ["boughtShip", { ship: t("s_" + id) }];
+    const credit = tradeInCredit(id);   // 60% of the old ship's refit comes back (js/plunder.js)
+    save = fitMounts({ ...save, gold: save.gold - SHIPS[id].cost + credit, ship: id, hull: 1, sails: 1, hold: 1 });
+    portMsg = credit > 0 ? ["boughtShipTrade", { ship: t("s_" + id), n: fmt(credit) }] : ["boughtShip", { ship: t("s_" + id) }];
   }
   applyPlayerStats(true); persist(); renderPort(); hud(true);
   Snd.play(act === "buy" || act === "ship" ? "buy" : act === "up" || act === "yard" ? "upgrade" : "uiClick", { big: act === "ship" });

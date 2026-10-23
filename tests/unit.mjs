@@ -33,7 +33,7 @@ function boot(seed = {}, { failWrites = false } = {}) {
   return { run, json, store, errors, domReady: () => domReady.forEach(fn => fn()) };
 }
 const v2 = o => JSON.stringify({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1, unlocked: { six: true },
-  gunLv: { six: 1, long12: 1, carronade: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0, wrecks: [], salvage: [], ...o });
+  gunLv: { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0, wrecks: [], salvage: [], ...o });
 const loadWith = (o, opts) => boot({ [SAVE_KEY]: typeof o === "string" ? o : v2(o) }, opts);
 
 test("fresh browser gets the default save", () => {
@@ -46,7 +46,7 @@ test("fresh browser gets the default save", () => {
 test("sanitising is idempotent and keeps a valid save as it is", () => {
   const g = boot();
   const rich = { v: 2, gold: 1234, ship: "brig", hull: 4, sails: 3, hold: 5, unlocked: { six: true, long12: true, fire: true },
-    gunLv: { six: 3, long12: 2, carronade: 1, fire: 4 }, bow: ["long12"], left: ["six", "fire", "long12"], right: ["long12", "six", "six"], stern: [],
+    gunLv: { six: 3, long12: 2, carronade: 1, chain: 2, fire: 4 }, bow: ["long12"], left: ["six", "fire", "long12"], right: ["long12", "six", "six"], stern: [],
     sunk: 17, wrecks: [{ x: 3000, y: 1200, value: 80 }], salvage: [] };
   const once = g.json(`sanitizeSave(${JSON.stringify(rich)})`);
   assert.deepEqual(once, rich);
@@ -113,9 +113,9 @@ test("hostile numbers are coerced into range", () => {
     [{ gold: [7] }, s => assert.equal(s.gold, 0)],
     [{ hull: 99, sails: -3, hold: "7" }, s => { assert.equal(s.hull, 15); assert.equal(s.sails, 1); assert.equal(s.hold, 7); }],
     [{ hull: "NaN", sails: {}, hold: true }, s => { assert.equal(s.hull, 1); assert.equal(s.sails, 1); assert.equal(s.hold, 1); }],
-    [{ gunLv: { six: '1<img src=x onerror="alert(1)">', long12: 50, carronade: 0, fire: "3" } },
-      s => assert.deepEqual(s.gunLv, { six: 1, long12: 10, carronade: 1, fire: 3 })],
-    [{ gunLv: "lots" }, s => assert.deepEqual(s.gunLv, { six: 1, long12: 1, carronade: 1, fire: 1 })],
+    [{ gunLv: { six: '1<img src=x onerror="alert(1)">', long12: 50, carronade: 0, chain: -2, fire: "3" } },
+      s => assert.deepEqual(s.gunLv, { six: 1, long12: 10, carronade: 1, chain: 1, fire: 3 })],
+    [{ gunLv: "lots" }, s => assert.deepEqual(s.gunLv, { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 })],
     [{ sunk: -5 }, s => assert.equal(s.sunk, 0)],
     [{ sunk: "12" }, s => assert.equal(s.sunk, 12)],
   ];
@@ -159,7 +159,7 @@ test("prototype keys in a save don't pollute anything", () => {
   const s = g.json("save");
   assert.equal(s.gold, 10);
   assert.deepEqual(s.unlocked, { six: true });
-  assert.deepEqual(s.gunLv, { six: 1, long12: 1, carronade: 1, fire: 1 });
+  assert.deepEqual(s.gunLv, { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 });
   assert.deepEqual(s.wrecks, [{ x: 1, y: 2, value: 3 }]);
   assert.equal(g.run("Object.getPrototypeOf(save) === Object.prototype"), true);
   assert.equal(g.run("['__proto__', 'constructor', 'prototype'].some(k => Object.hasOwn(save, k))"), false);
@@ -237,6 +237,71 @@ test("every string exists in both languages", () => {
   assert.deepEqual(en.filter(k => !zh.includes(k)), [], "missing in zh");
   assert.deepEqual(zh.filter(k => !en.includes(k)), [], "missing in en");
   assert.ok(g.run("Object.values(STR.zh).every(v => typeof v === 'string' && v.trim() !== '')"));
+});
+
+// ---------- Combat, guns and economy tables (js/data.js, js/arsenal.js, js/plunder.js) ----------
+const COMBAT_SRC = ["js/volley.js", "js/arsenal.js", "js/plunder.js"].map(f => [f, readFileSync(new URL("../" + f, import.meta.url), "utf8")]);
+
+test("chain shot is a full gun: armoury order, save defaults, sanitiser, old saves", () => {
+  const g = boot();
+  assert.ok(g.json("GUN_ORDER").includes("chain"));
+  assert.equal(g.json("defaultSave().gunLv.chain"), 1);
+  const old = loadWith({ gunLv: { six: 2, long12: 1, carronade: 1, fire: 1 }, unlocked: { six: true, chain: true }, left: ["chain"] }).json("save");
+  assert.equal(old.gunLv.chain, 1, "a save from before chain shot gets Lv 1");
+  assert.deepEqual(old.left, ["chain"], "an owned chain gun stays mounted");
+  assert.equal(loadWith({ unlocked: { six: true }, left: ["chain"] }).json("save").left[0], "six", "not owned: back to the 6-pounder");
+  const gun = g.json("GUNS.chain");
+  for (const k of ["dmg", "range", "rpm", "speed", "cost", "upBase"]) assert.ok(gun[k] > 0, k);
+});
+
+test("no damage gun beats the next best by more than 40% in DPS for the same gold", () => {
+  const g = boot();
+  const worst = g.run(`(() => {
+    const ids = GUN_ORDER.filter(id => !GUNS[id].chain), invest = (id, L) => { let c = GUNS[id].cost; for (let l = 1; l < L; l++) c += Math.round(GUNS[id].upBase * 1.55 ** (l - 1)); return c; };
+    const dps = (id, L) => { const g = GUNS[id], r = g.rpm / 60; return (g.dmg * r + (g.burn ? Math.min(BURN_MAX, r * BURN_T) * g.burn : 0)) * gunLvMul(L); };
+    let w = 0;
+    for (let B = 300; B <= 40000; B *= 1.25) {
+      const d = ids.map(id => { let L = 0; for (let l = 1; l <= GUN_MAX; l++) if (invest(id, l) <= B) L = l; return L ? dps(id, L) : 0; }).filter(Boolean).sort((a, b) => b - a);
+      if (d.length > 1) w = Math.max(w, d[0] / d[1]);
+    }
+    return w; })()`);
+  assert.ok(worst <= 1.4, `best/next-best DPS at equal spend ${worst.toFixed(2)}`);
+});
+
+test("a new ship is never a downgrade from the previous one at a typical refit", () => {
+  const g = boot();
+  const ships = g.json("SHIP_ORDER");
+  const at = (ship, hull, hold) => g.json(`(() => { save = fitMounts({ ...defaultSave(), ship: "${ship}", hull: ${hull}, hold: ${hold} });
+    return { p: playerPower(), hp: yardVal("hull"), hold: yardVal("hold") }; })()`);
+  for (let i = 1; i < ships.length; i++) {
+    const old = at(ships[i - 1], 5, 4), nw = at(ships[i], 1, 1);
+    for (const k of ["p", "hp", "hold"]) assert.ok(nw[k] >= old[k], `${ships[i]} Lv1 ${k} ${nw[k]} vs ${ships[i - 1]} hull 5 / hold 4 ${old[k]}`);
+  }
+});
+
+test("ship rating: a fresh sloop is Lv 2, and fires are counted once however many incendiaries", () => {
+  const g = boot();
+  assert.equal(g.run("shipRating()"), 2);
+  // 14 incendiaries on a ship of the line: impact for each gun at its uptime, but burning only BURN_MAX fires at once
+  const dps = g.run(`save = fitMounts({ ...defaultSave(), ship: "line", unlocked: { six: true, fire: true }, left: Array(5).fill("fire"), right: Array(5).fill("fire"), bow: ["fire", "fire"], stern: ["fire", "fire"] }),
+    playerPower() ** 2 / yardVal("hull")`);
+  const g1 = g.json("GUNS.fire"), impact = 14 * g1.dmg * g1.rpm / 60 * g.run("MOUNT_UPTIME");
+  assert.ok(Math.abs(dps - (impact + g.run("BURN_MAX") * g1.burn)) < 1e-6, `dps ${dps}`);
+});
+
+test("combat strings exist in both languages, and the trade-in pays back 60% of the yard", () => {
+  const g = boot();
+  for (const [f, code] of COMBAT_SRC) g.run(code);
+  const en = g.json("Object.keys(STR.en)"), zh = g.json("Object.keys(STR.zh)");
+  assert.deepEqual(en.filter(k => !zh.includes(k)), [], "missing in zh");
+  assert.deepEqual(zh.filter(k => !en.includes(k)), [], "missing in en");
+  g.run(`save = fitMounts({ ...defaultSave(), ship: "schooner", hull: 3, sails: 1, hold: 2 })`);
+  const spend = g.run("YARD.hull.cost(1) + YARD.hull.cost(2) + YARD.hold.cost(1)");
+  assert.equal(g.run("yardSpend()"), spend);
+  assert.equal(g.run("tradeInCredit('brig')"), Math.round(0.6 * spend));
+  assert.equal(g.run("shipNetCost('brig')"), g.run("SHIPS.brig.cost") - Math.round(0.6 * spend));
+  g.run(`save = fitMounts({ ...defaultSave(), ship: "sloop", hull: 15, sails: 10, hold: 12 })`);
+  assert.equal(g.run("shipNetCost('schooner')"), 0, "the credit never exceeds the price");
 });
 
 test("salvage scooped from a wreck but never sold goes back to sea on the next load", () => {

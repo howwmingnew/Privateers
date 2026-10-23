@@ -94,7 +94,7 @@ const NEAR_SHARE = 0.6;
 const NEAR_REACH = 2600;   // near-ring ships spawn within about this of the player (never inside 750, see spawnEnemy)
 const NEAR_LOST = 3000;    // ...and are moved up again once they fall this far behind
 const SPARE_GONE = 1500;   // an over-quota ship this far off, out of sight, makes room for a ring that is short
-const isOrdinary = e => !e.boss && !e.escortOf;
+const isOrdinary = e => !e.boss && !e.escortOf && !e.fixed;   // shore batteries (js/forts.js) keep to their own rules
 const playerRing = () => ringAt(dist(player, PORT));
 function nearRings() { const c = clamp(playerRing(), 2, MAX_RING - 1); return [c - 1, c, c + 1]; }
 function ringQuotas(near) {

@@ -10,7 +10,7 @@ Object.assign(STR.zh, { saveFail: "這個瀏覽器無法儲存進度。" });
 // (Scripts loaded after this file register late; their SAVE_SANITIZERS check fills the fields in for that first load.)
 const SAVE_DEFAULTS = [];
 const defaultSave = () => Object.assign({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1, unlocked: { six: true },
-  gunLv: { six: 1, long12: 1, carronade: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0,
+  gunLv: { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0,
   wrecks: [], salvage: [] }, ...SAVE_DEFAULTS.map(fn => fn()));   // wrecks: the player's own sunken cargo [{ x, y, value }], kept across sessions
 // Give every mount exactly as many guns as the ship has ports, using only guns the captain owns.
 function fitMounts(s) {

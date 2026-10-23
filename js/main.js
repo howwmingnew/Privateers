@@ -69,16 +69,15 @@ function step(dt) {
   const ships = enemies.filter(e => e.alive); if (player.alive) ships.push(player);
   for (const s of ships) move(s, dt);
   for (let i = 0; i < ships.length; i++) for (let j = i + 1; j < ships.length; j++) {
-    const a = ships[i], b = ships[j], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
-    if (d < 40 && d > 0.01) { const p = (40 - d) / 2; a.x -= dx / d * p; a.y -= dy / d * p; b.x += dx / d * p; b.y += dy / d * p; }
+    const a = ships[i], b = ships[j];
+    if (a.fixed || b.fixed) continue;   // shore batteries aren't shoved; their island keeps ships off
+    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy), r = shipRadius(a) + shipRadius(b);   // sized per hull
+    if (d < r && d > 0.01) { const p = (r - d) / 2; a.x -= dx / d * p; a.y -= dy / d * p; b.x += dx / d * p; b.y += dy / d * p; }
   }
   for (const s of ships) {
     s.spr.setPosition(s.x, s.y).setRotation(s.rot);
     vfxShip(s, dt);   // wake, damage smoke/flames, badge, player halo
-    if (s.burnT > 0) { s.burnT -= dt; s.hp -= s.burnDps * dt; s.burnFx -= dt;
-      if (s.burnFx <= 0) { s.burnFx = 0.08; S.fx.spark.emitParticleAt(s.x + rand(-20, 20), s.y + rand(-8, 8), 1); }
-      s.burnSnd = (s.burnSnd || 0) - dt; if (s.burnSnd <= 0) { s.burnSnd = rand(0.2, 0.45); Snd.play("burn", { x: s.x, y: s.y }); }
-      if (s.hp <= 0) sink(s, s.burnSrc); }
+    tickStatus(s, dt);   // stacked fires and torn rigging (js/arsenal.js)
   }
   // --- firing ---
   const living = enemies.filter(e => e.alive);
@@ -88,6 +87,7 @@ function step(dt) {
   if (tip) { releaseTips++; toast(t(tip)); }
   engagedPrev = engaged;
   for (const e of living) fire(e, e.target && isHostile(e, e.target) ? [e.target] : [], dt);
+  combatTick(dt);   // turn tracking for enemy gunners, fireship rams, shore batteries, streak chip (js/volley.js)
   // --- audio: ears on the player, combat music while a hostile ship is close ---
   Snd.setListener(player.x, player.y);
   Snd.setMotion(player.alive ? player.speed / player.maxSpeed : 0);
@@ -108,7 +108,7 @@ function step(dt) {
     if (!b.fromPlayer && player.alive && hitShip(player, b.x, b.y)) hit = player;
     if (!hit) for (const e of living) if (e !== b.owner && e.alive && hitShip(e, b.x, b.y)) { hit = e; break; }
     const onRock = !hit && islands.some(isl => Math.hypot(isl.x - b.x, isl.y - b.y) < isl.r * 0.9);
-    if (hit) { vfxHit(b.x, b.y); hurt(hit, b.dmg, b.burn, b.owner); }
+    if (hit) { vfxHit(b.x, b.y); hurt(hit, b.dmg, b.burn, b.owner, b); }
     if (hit || onRock || b.life <= 0) {
       if (!hit) vfxSplash(b.x, b.y, onRock);
       if (!hit && !onRock) Snd.play("splash", { x: b.x, y: b.y });
@@ -196,6 +196,7 @@ function drawOverlays() {
     bg.fillStyle(0x08222d, 0.8); bg.fillRect(x - lk, y - lk, w + 2 * lk, h + 2 * lk);
     bg.fillStyle(0xd45a43, 1); bg.fillRect(x, y, w * clamp(player.hp / player.maxHp, 0, 1), h);
   }
+  drawVolleyWarnings(bg);   // red glow on gun ports about to fire (js/volley.js)
 }
 
 // ---------- Boot ----------

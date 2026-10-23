@@ -49,17 +49,22 @@ Object.assign(STR.zh, {
   outpostNote: "用舊船殼改成的交易站，可以賣貨和修船。造船廠和軍械庫都在安全港。",
 });
 
-// [PLACEHOLDER] rewards, multipliers and escort strength: retune with .review/design/play.mjs once archetypes land.
+// [PLACEHOLDER] rewards, multipliers and escort strength. Retuned with the archetypes (js/archetypes.js) by
+// .review/combat/bossfight.mjs (the bot's own aim / dodge, one sortie): Red Ned falls to a stock sloop with one hull
+// upgrade that dodges about half the volleys (7/8 at 60%, 5/8 at 35%); Hale to a frigate rated ~10 (6/8); the
+// finale to a refitted ship of the line rated ~13 (5/6). The deep-water classes carry more hull than the stand-ins
+// these multipliers were first set against, so the late ones are lower.
 // Lair: polar from the harbor (screen y points south), placed mid-ring so its level is the bounty's level.
-// Escorts with `guns`/`hpMul` are stand-ins for archetypes that do not exist yet (a fireship has no guns at all).
+// Escort `guns`/`hpMul` were stand-ins from before the archetypes; js/archetypes.js campaignOutfit gives each escort
+// its real class (the fire-raiders are fireships), so only `cls` matters now.
 const FIRE_RAIDER = { cls: "fireship", hpMul: 0.6, guns: 1 };
 const BOUNTIES = [
-  { id: "ned",    L: 3,  cls: "cutter",  faction: "pirate", hpMul: 3, speed: 1.15, ang: Math.PI,        r: ringMid(3), reward: 400,   escorts: [] },
+  { id: "ned",    L: 3,  cls: "cutter",  faction: "pirate", hpMul: 2.5, speed: 0.9,  ang: Math.PI,        r: ringMid(3), reward: 400,   escorts: [] },
   { id: "carey",  L: 5,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: -Math.PI / 2,   r: ringMid(5), reward: 1500,  escorts: [{ cls: "brig" }] },
   { id: "saint",  L: 7,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: Math.PI * 0.75, r: ringMid(7), reward: 4000,  escorts: [FIRE_RAIDER, FIRE_RAIDER, FIRE_RAIDER] },
-  { id: "hale",   L: 9,  cls: "frigate", faction: "navy",   hpMul: 3,              ang: 0,              r: ringMid(9), reward: 10000, escorts: [{ cls: "frigate" }, { cls: "frigate" }] },
-  { id: "thorne", L: 10, cls: "manowar", faction: "navy",   hpMul: 4, speed: 0.85, guns: 5, ang: Math.PI / 4, r: 3800, reward: 20000, final: true,
-    escorts: [{ cls: "frigate" }, { cls: "frigate" }, { cls: "frigate" }] },
+  { id: "hale",   L: 9,  cls: "frigate", faction: "navy",   hpMul: 2,              ang: 0,              r: ringMid(9), reward: 10000, escorts: [{ cls: "brig" }, { cls: "brig" }] },
+  { id: "thorne", L: 10, cls: "manowar", faction: "navy",   hpMul: 2, speed: 0.85, guns: 5, ang: Math.PI / 4, r: 3800, reward: 20000, final: true,
+    escorts: [{ cls: "frigate" }, { cls: "brig" }, { cls: "brig" }] },
 ];
 const LAIR_LEASH = 380;   // an idle boss (or escort) further than this from its lair heads back to it
 const ASSIST_MS = 20000;  // a boss someone else sinks still pays if the player hit it this recently
