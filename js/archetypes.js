@@ -79,7 +79,8 @@ function outfitEnemy(e, key, b = {}) {
 function campaignOutfit(e) {
   e.campaignFit = true;
   const b = e.boss && typeof BOUNTIES !== "undefined" ? BOUNTIES.find(x => x.id === e.boss) : null;
-  const key = Object.hasOwn(ARCH, e.cls) ? e.cls : e.arch, frac = e.maxHp > 0 ? clamp(e.hp / e.maxHp, 0, 1) : 1;
+  const want = b ? b.cls : e.cls === "line" ? "manowar" : e.cls;   // applyShipArt may have renamed it to its hull art
+  const key = Object.hasOwn(ARCH, want) ? want : e.arch, frac = e.maxHp > 0 ? clamp(e.hp / e.maxHp, 0, 1) : 1;
   outfitEnemy(e, key, b ? { hpMul: b.hpMul, speedMul: b.speed || 1 } : {});
   e.hp = e.maxHp * frac;
   if (e.badge) refreshBadge(e);
