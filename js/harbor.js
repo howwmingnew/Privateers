@@ -13,12 +13,15 @@ function dock(kind) {
   else portMsg = sold > 0 ? ["sold", { n: fmt(sold) }] : ["empty"];
   renderPort();
   document.getElementById("port").hidden = false;
+  Snd.music("harbor"); Snd.ambience("harbor");
+  if (kind === "return") { Snd.play("bell"); if (sold > 0) Snd.play("coin", { amount: sold, delay: 0.45 }); }
   document.getElementById("joy").hidden = true; joyVec = { x: 0, y: 0, m: 0 };
 }
 function setSail() {
   document.getElementById("port").hidden = true;
   docked = false; paused = false; canDock = false;
   resetEnemies(S);
+  Snd.play("sail"); Snd.music("sea"); Snd.ambience("sea");
 }
 // Every departure starts from a fresh sea: no ship left waiting outside the harbor, no shot still in flight.
 function resetEnemies(sc) {
@@ -105,6 +108,7 @@ document.getElementById("port").addEventListener("click", ev => {
         if (el) el.textContent = t("buy", { n: fmt(SHIPS[id].cost) });
       }, 3000);
       renderPort(); document.querySelector(`[data-act="ship"][data-id="${id}"]`)?.focus();
+      Snd.play("uiClick");
       return;
     }
     shipArmed = null;
@@ -112,15 +116,19 @@ document.getElementById("port").addEventListener("click", ev => {
     portMsg = ["boughtShip", { ship: t("s_" + id) }];
   }
   applyPlayerStats(true); persist(); renderPort(); hud(true);
+  Snd.play(act === "buy" || act === "ship" ? "buy" : act === "up" || act === "yard" ? "upgrade" : "uiClick", { big: act === "ship" });
   // keep focus on the same control after re-render (keyboard users)
   const sel = act === "slot" ? `[data-act="slot"][data-side="${b.dataset.side}"][data-i="${b.dataset.i}"]`
     : act === "ship" ? `#ships [data-act="ship"]:not(:disabled), #sail` : null;
   if (sel) document.querySelector(sel)?.focus();
 });
+// Not enough gold: a disabled button never receives a click, so listen for the press itself.
+document.getElementById("port").addEventListener("pointerdown", ev => { const b = ev.target.closest("[data-act]"); if (b && b.disabled) Snd.play("denied"); });
 document.getElementById("sail").addEventListener("click", setSail);
 const resetBtn = document.getElementById("reset");
 let resetArmed = false;
 resetBtn.addEventListener("click", () => {
+  Snd.play("uiClick");
   if (!resetArmed) { resetArmed = true; resetBtn.textContent = t("resetArm"); setTimeout(() => { resetArmed = false; resetBtn.textContent = t("reset"); }, 3000); return; }
   save = defaultSave(); persist(); resetArmed = false; resetBtn.textContent = t("reset");
   for (let i = crates.length - 1; i >= 0; i--) if (crates[i].wreck) { crates[i].spr.destroy(); crates[i].label?.destroy(); crates.splice(i, 1); }

@@ -30,6 +30,7 @@ const STR = {
     g_fire: "Incendiary", gf_fire: "Incendiary Gun", gn_fire: "Sets hulls burning for 3 s",
     y_hull: "Hull", y_sails: "Sails", y_hold: "Cargo hold",
     u_hp: "{n} HP", u_kn: "{n} kn", u_cargo: "{n} cargo",
+    muted: "Sound off · press M to turn it back on", unmuted: "Sound on",
   },
   zh: {
     hull: "船體", cargo: "貨艙", gold: "金幣", shipLv: "船艦 Lv {n}", ledger: "港口帳簿", harbor: "安全港", harborMap: "安全港",
@@ -59,6 +60,7 @@ const STR = {
     g_fire: "燃燒砲", gf_fire: "燃燒砲", gn_fire: "讓船體燃燒 3 秒",
     y_hull: "船體", y_sails: "船帆", y_hold: "貨艙",
     u_hp: "{n} HP", u_kn: "{n} 節", u_cargo: "{n} 貨物",
+    muted: "已關閉聲音 · 按 M 重新開啟", unmuted: "已開啟聲音",
   },
 };
 const LANG_KEY = "privateers-lang";

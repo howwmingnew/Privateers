@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privateers Sound Test</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f3f52'/><path d='M9 12h4l6-5v18l-6-5H9z' fill='%23f0c766'/><path d='M22 11c2 3 2 7 0 10' stroke='%23f6f1e3' stroke-width='2' fill='none' stroke-linecap='round'/></svg>">
+<style>
+  :root { --bg: #0f2a35; --panel: #163947; --line: #2a5566; --ink: #f6f1e3; --dim: #a9c3cb; --gold: #f0c766; --red: #d9493a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 "Barlow Semi Condensed", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); margin: 0 0 10px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+  button { font: inherit; color: var(--ink); background: #1f4b5c; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+  button:hover { background: #276076; } button:active { transform: translateY(1px); }
+  button.on { background: var(--gold); color: #1b1410; border-color: var(--gold); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin-top: 10px; }
+  label { display: flex; gap: 8px; align-items: center; color: var(--dim); }
+  input[type=range] { width: 160px; accent-color: var(--gold); }
+  input[type=number] { width: 90px; font: inherit; background: #0c2129; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+  output, .mono { font-variant-numeric: tabular-nums; color: var(--ink); min-width: 3.5em; }
+  #status { color: var(--dim); }
+  #meter { height: 10px; background: #0c2129; border-radius: 5px; overflow: hidden; margin-top: 8px; }
+  #meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #86c46f, var(--gold) 75%, var(--red)); }
+  .note { color: var(--dim); font-size: 13px; margin: 6px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Privateers sound test · 音效測試</h1>
+  <p id="status">Click anywhere to start audio · 點一下任何地方啟動音訊</p>
+  <div id="meter"><i></i></div>
+  <p class="note mono" id="dbg"></p>
+
+  <section>
+    <h2>Effects · 音效</h2>
+    <div class="grid" id="sfx"></div>
+    <div class="row">
+      <label>x <input id="px" type="range" min="-1800" max="1800" step="50" value="0"><output id="pxo">0</output></label>
+      <label>y <input id="py" type="range" min="-1800" max="1800" step="50" value="0"><output id="pyo">0</output></label>
+      <label><input id="pos" type="checkbox"> positional · 有位置</label>
+      <label><input id="big" type="checkbox"> big · 大</label>
+      <label>gold · 金幣 <input id="amt" type="number" min="1" value="300"></label>
+    </div>
+    <div class="row">
+      <button id="volley" type="button">Broadside ×8 · 齊射 ×8</button>
+      <button id="battle" type="button">Distant battle · 遠方海戰</button>
+    </div>
+    <p class="note">The listener sits at (0, 0). Positional sounds fade and lose their highs with distance, and pan by x. · 聽者在 (0, 0)，有位置的音效會隨距離變小變悶，並依 x 左右定位。</p>
+  </section>
+
+  <section>
+    <h2>Music · 音樂</h2>
+    <div class="row" id="themes"></div>
+    <div class="row">
+      <label>combat intensity · 戰鬥強度 <input id="int" type="range" min="0" max="1" step="0.05" value="0"><output id="into">0</output></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ambience · 環境音</h2>
+    <div class="row" id="ambs"></div>
+    <div class="row">
+      <label>ship speed · 船速 <input id="mot" type="range" min="0" max="1" step="0.05" value="0"><output id="moto">0</output></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Mixer · 混音</h2>
+    <div class="row" id="vols"></div>
+    <div class="row">
+      <button id="mute" type="button">Mute · 靜音</button>
+      <button id="pause" type="button">Pause all · 全部暫停</button>
+    </div>
+  </section>
+</main>
+<script src="../js/util.js"></script>
+<script src="../js/audio.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const LABEL = { master: "Master · 總音量", music: "Music · 音樂", sfx: "Effects · 音效", ambient: "Ambience · 環境音",
+  sea: "At sea · 海上", harbor: "Harbour · 港口", off: "Off · 關閉" };
+function button(parent, text, onClick) { const b = document.createElement("button"); b.type = "button"; b.textContent = text; b.addEventListener("click", onClick); parent.append(b); return b; }
+function pick(group, el) { for (const b of group.children) b.classList.toggle("on", b === el); }
+
+const pos = () => $("pos").checked ? { x: +$("px").value, y: +$("py").value } : {};
+for (const name of Snd.names) button($("sfx"), name, () => Snd.play(name, { ...pos(), big: $("big").checked, amount: +$("amt").value || 1 }));
+for (const [id, out] of [["px", "pxo"], ["py", "pyo"]]) $(id).addEventListener("input", () => { $(out).textContent = $(id).value; $("pos").checked = true; });
+$("volley").addEventListener("click", () => { for (let i = 0; i < 8; i++) setTimeout(() => Snd.play("cannon", { pan: 0.35 }), i * 70); });
+$("battle").addEventListener("click", () => {
+  for (let i = 0; i < 14; i++) setTimeout(() => {
+    const x = (Math.random() * 2 - 1) * 1400, y = (Math.random() * 2 - 1) * 900;
+    Snd.play(Math.random() < 0.7 ? "cannonFar" : "hit", { x, y }); if (Math.random() < 0.4) Snd.play("splash", { x: x + 80, y });
+  }, i * 180 + Math.random() * 120);
+});
+
+for (const th of [...Snd.themes, "off"]) { const b = button($("themes"), LABEL[th] || th, () => { Snd.music(th === "off" ? null : th); pick($("themes"), b); }); }
+for (const k of ["sea", "harbor", "off"]) { const b = button($("ambs"), LABEL[k], () => { Snd.ambience(k === "off" ? null : k); pick($("ambs"), b); }); }
+$("int").addEventListener("input", () => { Snd.setIntensity(+$("int").value); $("into").textContent = $("int").value; });
+$("mot").addEventListener("input", () => { Snd.setMotion(+$("mot").value); $("moto").textContent = $("mot").value; });
+
+for (const busName of Snd.buses) {
+  const lab = document.createElement("label"), r = document.createElement("input"), o = document.createElement("output");
+  r.type = "range"; r.min = 0; r.max = 1; r.step = 0.05; r.value = Snd.getVolume(busName); o.textContent = (+r.value).toFixed(2);
+  r.addEventListener("input", () => { Snd.setVolume(busName, +r.value); o.textContent = (+r.value).toFixed(2); });
+  lab.append(LABEL[busName], r, o); $("vols").append(lab);
+}
+const syncMute = () => $("mute").classList.toggle("on", Snd.isMuted());
+$("mute").addEventListener("click", () => { Snd.toggleMute(); syncMute(); }); syncMute();
+let paused = false;
+$("pause").addEventListener("click", () => { paused = !paused; paused ? Snd.pauseAll("test") : Snd.resumeAll("test"); $("pause").classList.toggle("on", paused); });
+
+let peakHold = 0;
+(function frame() {
+  const d = Snd.debug(), pk = Snd.meter().peak;
+  peakHold = Math.max(pk, peakHold * 0.97);
+  $("meter").firstElementChild.style.width = Math.min(100, peakHold * 100) + "%";
+  $("status").textContent = d.state === "locked" ? "Click anywhere to start audio · 點一下任何地方啟動音訊" : `Audio ${d.state} · 音訊狀態 ${d.state}`;
+  $("dbg").textContent = `peak ${pk > 0 ? (20 * Math.log10(pk)).toFixed(1) + " dBFS" : "-inf"} · voices ${d.voices} · theme ${d.theme || "-"} · ${d.section || ""} · intensity ${d.intensity} · ambience ${d.ambience || "-"} · strings cached ${d.strings}`;
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

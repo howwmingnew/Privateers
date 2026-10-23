@@ -27,6 +27,7 @@ function fire(s, targets, dt) {
       balls.push({ spr, x: mx, y: my, vx: Math.cos(ang) * BALL_SPEED + s.vx * 0.3, vy: Math.sin(ang) * BALL_SPEED + s.vy * 0.3,
         life, life0: life, dmg: g.dmg, burn: g.burn, fromPlayer: !!s.isPlayer, owner: s });
       S.fx.smoke.emitParticleAt(mx + Math.cos(normal) * 6, my + Math.sin(normal) * 6, 3);
+      Snd.play("cannonFar", { x: mx, y: my });
       g.cd = g.interval * rand(0.85, 1.15);
     });
   }
@@ -76,6 +77,7 @@ function playerFire() {
         balls.push({ spr: S.add.image(m.x, m.y, "ball").setDepth(7), x: m.x, y: m.y,
           vx: Math.cos(m.a) * BALL_SPEED, vy: Math.sin(m.a) * BALL_SPEED, life, life0: life, dmg: g.dmg, burn: g.burn, fromPlayer: true, owner: player });
         S.fx.smoke.emitParticleAt(m.x + Math.cos(m.a) * 6, m.y + Math.sin(m.a) * 6, 3);
+        Snd.play("cannon", { pan: Math.cos(m.a) * 0.35 });
       });
     });
   }
@@ -102,6 +104,7 @@ function hurt(s, dmg, burn, src) {
     const byPlayer = src === player;
     floatText(s.x + rand(-10, 10), s.y - 22, Math.round(dmg), s.isPlayer ? "#ff8a75" : byPlayer ? "#fff4d6" : "#a9c3cb", byPlayer || s.isPlayer ? 16 : 13);
   }
+  Snd.play("hit", { x: s.x, y: s.y, big: s.isPlayer });
   if (!s.isPlayer && src) { s.attacker = src; s.angry = 8; s.ignore.delete(src); }
   if (s.isPlayer) S.cameras.main.shake(90, 0.004);
   if (s.hp <= 0) sink(s, src);
@@ -119,6 +122,8 @@ function sink(s, killer) {
   if (!s.alive) return;
   s.alive = false; s.speed = 0; s.hp = 0;
   S.fx.spark.explode(26, s.x, s.y); S.fx.smoke.explode(14, s.x, s.y);
+  Snd.play("sink", { x: s.x, y: s.y, big: s.isPlayer });
+  if (s.isPlayer) Snd.play("defeat"); else if (killer === player) Snd.play("victory", { delay: 0.25 });
   if (s.badge) { s.badge.destroy(); s.badge = null; }
   S.tweens.add({ targets: s.spr, alpha: 0, scale: 0.6, angle: s.spr.angle + 25, duration: 1300, ease: "Quad.easeIn",
     onComplete: () => { if (!s.isPlayer) { s.spr.destroy(); s.dead = true; } } });

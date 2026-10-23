@@ -73,7 +73,7 @@ function applyLang() {
   for (const c of crates) c.label?.setText(t("wreckLabel"));
 }
 document.querySelectorAll("[data-lang-toggle]").forEach(el => el.addEventListener("click", () => {
-  lang = lang === "zh" ? "en" : "zh";
+  lang = lang === "zh" ? "en" : "zh"; Snd.play("uiClick");
   try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
   applyLang();
 }));
