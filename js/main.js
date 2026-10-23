@@ -37,17 +37,19 @@ class Main extends Phaser.Scene {
     player.spr.setPosition(player.x, player.y);
     cam.centerOn(player.x, player.y);
     hud(true);
-    dock("welcome");
+    shellBoot(this);   // title screen first; it docks at the harbor on Continue / New game (js/menu.js)
   }
   update(_, deltaMs) {
     const dt = Math.min(deltaMs / 1000, 0.05);
     const v = this.cameras.main.worldView;
+    if (!seaFrozen) this.seaT = (this.seaT || 0) + deltaMs;   // own clock: time.now keeps running while paused
     for (const [ts, k] of [[this.sea1, 1], [this.sea2, 0.6]]) {
       const tw = Math.ceil(v.width + 128), th = Math.ceil(v.height + 128);
       if (ts.width !== tw || ts.height !== th) ts.setSize(tw, th);
       ts.setPosition(v.x - 64, v.y - 64);
-      ts.tilePositionX = (v.x - 64) / ts.tileScaleX + this.time.now * 0.004 * k; ts.tilePositionY = (v.y - 64) / ts.tileScaleY + this.time.now * 0.002 * k;
+      ts.tilePositionX = (v.x - 64) / ts.tileScaleX + this.seaT * 0.004 * k; ts.tilePositionY = (v.y - 64) / ts.tileScaleY + this.seaT * 0.002 * k;
     }
+    shellTick(dt);     // pause / menus / gamepad / tutorial (js/menu.js)
     if (!paused) step(dt);
     drawOverlays();
     hudT -= dt; if (hudT <= 0) { hud(); hudT = 0.1; }
@@ -56,20 +58,8 @@ class Main extends Phaser.Scene {
 }
 
 function step(dt) {
-  const K = S.keys;
-  // --- player input ---
-  if (player.alive) {
-    let kx = (K.D.isDown || K.RIGHT.isDown) - (K.A.isDown || K.LEFT.isDown);
-    let ky = (K.S.isDown || K.DOWN.isDown) - (K.W.isDown || K.UP.isDown);
-    let ix = joyVec.x, iy = joyVec.y, m = joyVec.m;
-    const keyActive = !!(kx || ky);
-    if (prevKeyActive && !keyActive) playerFire();      // letting go of the keys fires, like letting go of the stick
-    prevKeyActive = keyActive;
-    if (kx || ky) { ix = kx; iy = ky; m = 1; }
-    if (m > 0.2) { steer(player, Math.atan2(iy, ix), Math.min(1, m * 1.25), dt);
-      if (!moved) { moved = true; document.getElementById("hint").style.opacity = 0; } }
-    else steer(player, null, 0, dt);
-  }
+  // --- player input: touch stick, mouse, keyboard sail and turn, gamepad (js/input.js) ---
+  if (player.alive) playerInput(dt);
   // --- AI ---
   for (const e of enemies) if (e.alive) think(e, dt);
   // --- movement ---
@@ -92,7 +82,8 @@ function step(dt) {
   const living = enemies.filter(e => e.alive);
   for (const g of Object.values(player.guns).flat()) g.cd = Math.max(0, g.cd - dt);   // reload
   const engaged = player.alive && MOUNTS.some(mountEngaged);
-  if (engaged && !engagedPrev && releaseTips < 3 && (joyVec.m > 0 || prevKeyActive)) { releaseTips++; toast(t("releaseTip")); }
+  const tip = engaged && !engagedPrev && releaseTips < 3 && fireTipKey();
+  if (tip) { releaseTips++; toast(t(tip)); }
   engagedPrev = engaged;
   for (const e of living) fire(e, e.target && isHostile(e, e.target) ? [e.target] : [], dt);
   // --- cannonballs ---
@@ -182,6 +173,7 @@ function boot() {
   new Phaser.Game({
     type: Phaser.AUTO, parent: "game", backgroundColor: "#155a73",
     scale: { mode: Phaser.Scale.RESIZE, width: "100%", height: "100%" },
+    input: { gamepad: true },
     render: { antialias: true }, scene: [Main],
   });
 }

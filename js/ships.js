@@ -26,8 +26,10 @@ function makePlayer(sc) {
 const SPAWN_R_MIN = SAFE_R + 120, SPAWN_R_MAX = Math.hypot(PORT.x - 150, PORT.y - 150);
 const levelAt = d => clamp(1 + Math.floor((d - SAFE_R) / ZONE_STEP), 1, 14);
 const ringOf = L => ({ r0: Math.max(SPAWN_R_MIN, SAFE_R + (L - 1) * ZONE_STEP), r1: SAFE_R + L * ZONE_STEP });
-function spawnEnemy(sc) {
-  let x, y, ok = false;
+// `at` = { x, y, merchant } places one exactly (the tutorial's easy first target); otherwise a random spot.
+function spawnEnemy(sc, at) {
+  let x, y, ok = !!at;
+  if (at) ({ x, y } = at);
   for (let t = 0; t < 40 && !ok; t++) {
     // radius (not area) is uniform, so every ring gets a similar share and low levels stay common near the harbor
     const r = rand(SPAWN_R_MIN, SPAWN_R_MAX), a = rand(0, TAU);
@@ -38,7 +40,7 @@ function spawnEnemy(sc) {
   }
   if (!ok) return;
   const L = levelAt(Math.hypot(x - PORT.x, y - PORT.y));
-  const merchant = Math.random() < 0.35;
+  const merchant = at ? !!at.merchant : Math.random() < 0.35;
   const tex = merchant ? "ship-merchant" : (Math.random() < 0.5 ? "ship-pirate" : "ship-navy");
   const st = enemyStats(L, merchant);
   const e = makeShip(sc, tex, x, y);
@@ -51,6 +53,7 @@ function spawnEnemy(sc) {
     .setOrigin(0.5).setDepth(9);
   refreshBadge(e);
   enemies.push(e);
+  return e;
 }
 function refreshBadge(e) {
   const c = threatColor(e.L);

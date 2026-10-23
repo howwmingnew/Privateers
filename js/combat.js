@@ -37,7 +37,7 @@ function fire(s, targets, dt) {
 // stern guns aft. No auto-aim and no lead: the ball flies exactly along the line that was shown,
 // so the player aims by turning the ship.
 const AIM_SHOW_PAD = 1.15;   // aim lines appear when an enemy is within (range x this) of a mount's firing arc
-let prevKeyActive = false, engagedPrev = false, releaseTips = 0;
+let engagedPrev = false, releaseTips = 0;
 function muzzle(s, m, i, n) {
   const a = s.rot + m.ang, p = s.rot + m.perp, off = n === 1 ? 0 : -m.span / 2 + m.span * i / (n - 1);
   return { x: s.x + Math.cos(p) * off + Math.cos(a) * m.out, y: s.y + Math.sin(p) * off + Math.sin(a) * m.out, a };
@@ -60,7 +60,7 @@ function lineHits(x, y, a, len) {
   }
   return false;
 }
-// Fire every loaded cannon on each engaged mount. Called when the player lets go.
+// Fire every loaded cannon on each engaged mount: Space, letting go of the stick or mouse, a click, pad A / RT.
 function playerFire() {
   if (paused || docked || !player.alive) return;
   let shots = 0;
@@ -79,7 +79,7 @@ function playerFire() {
       });
     });
   }
-  if (shots) S.cameras.main.shake(70, 0.002);
+  if (shots) camShake(70, 0.002);
 }
 
 // ship hit test: capsule along the hull axis
@@ -103,7 +103,7 @@ function hurt(s, dmg, burn, src) {
     floatText(s.x + rand(-10, 10), s.y - 22, Math.round(dmg), s.isPlayer ? "#ff8a75" : byPlayer ? "#fff4d6" : "#a9c3cb", byPlayer || s.isPlayer ? 16 : 13);
   }
   if (!s.isPlayer && src) { s.attacker = src; s.angry = 8; s.ignore.delete(src); }
-  if (s.isPlayer) S.cameras.main.shake(90, 0.004);
+  if (s.isPlayer) camShake(90, 0.004);
   if (s.hp <= 0) sink(s, src);
 }
 // A crate floating on the sea. AI loot is temporary; a player wreck is saved and never expires.

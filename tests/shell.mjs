@@ -1,0 +1,411 @@
+// Shell checks: title, pause + auto-pause, desktop keyboard / mouse, touch stick, gamepad stub, tutorial,
+// settings persistence, new game / quit / reset flows, and both languages for missing keys.
+// Usage: node tests/shell.mjs [url] [outDir]     (exit 1 on any failed check or page error)
+import { chromium } from "playwright";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
+
+const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
+const out = process.argv[3] || ".review/shell";
+mkdirSync(out, { recursive: true });
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const errors = [], results = [];
+const ok = (name, pass, info) => {
+  results.push({ name, pass: !!pass });
+  console.log(`${pass ? "ok  " : "FAIL"} ${name}${info !== undefined ? "  " + JSON.stringify(info) : ""}`);
+};
+const D = { width: 1280, height: 720 }, M = { width: 390, height: 844 };
+
+async function open(viewport, { mobile = false, locale = "en-US", keep = false, tag = "" } = {}) {
+  const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, locale, isMobile: mobile, hasTouch: mobile });
+  const page = await ctx.newPage();
+  page.on("pageerror", e => errors.push(`[${tag}] pageerror: ${e.message}`));
+  page.on("console", m => { if (m.type() === "error" && !/favicon/i.test(m.text())) errors.push(`[${tag}] console: ${m.text()}`); });
+  await page.goto(url, { waitUntil: "load" });
+  if (!keep) { await page.evaluate(() => localStorage.clear()); await page.reload({ waitUntil: "load" }); }
+  await booted(page);
+  return { ctx, page };
+}
+async function booted(page) {
+  await until(page, () => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 });
+  await page.waitForTimeout(300);
+}
+const ev = (page, fn, arg) => page.evaluate(fn, arg);
+// Interval polling (rAF polling stalled now and then in headless Chrome); on timeout, say what the game was doing.
+async function until(page, fn, arg = null, { timeout = 8000 } = {}) {
+  try { await page.waitForFunction(fn, arg, { polling: 50, timeout }); }
+  catch (e) {
+    const s = await page.evaluate(() => typeof player === "undefined" || !player ? "not booted" : JSON.stringify({ paused, docked, pauseOpen, titleOpen, canDock,
+      x: Math.round(player.x), y: Math.round(player.y), frame: S.game.loop.frame, tut: tut.step })).catch(() => "n/a");
+    throw new Error(`timed out waiting for ${fn.toString().slice(0, 90)} | state ${s}`);
+  }
+}
+async function toSea(page) {
+  await page.click("[data-smoke=start]");
+  await until(page, () => docked);
+  await page.click("#sail");
+  await until(page, () => !docked && !paused);
+  await page.waitForTimeout(150);
+}
+// Freeze the nearest enemy 180 px off the starboard side with loaded guns, so a broadside line is red.
+const beside = page => ev(page, () => {
+  const e = enemies.filter(x => x.alive).sort((a, b) => dist(a, player) - dist(b, player))[0];
+  e.x = player.x + Math.cos(player.rot + Math.PI / 2) * 180; e.y = player.y + Math.sin(player.rot + Math.PI / 2) * 180;
+  e.rot = player.rot; e.speed = 0; e.maxSpeed = 0.001; e.hp = e.maxHp = 1e6;
+  for (const g of Object.values(player.guns).flat()) g.cd = 0;
+  return e.L;
+});
+const spyFire = page => ev(page, () => {
+  window.__fires = 0;
+  if (!window.__origFire) window.__origFire = playerFire;
+  playerFire = function () { window.__fires++; return window.__origFire.apply(this, arguments); };
+});
+const tank = page => ev(page, () => { player.maxHp = player.hp = 1e6; });
+
+// ---------- 1. title, ledger focus + scroll, keyboard ----------
+{
+  const { ctx, page } = await open(D, { tag: "desk" });
+  const st = await ev(page, () => ({
+    title: !document.getElementById("title").hidden, hud: getComputedStyle(document.getElementById("hud")).display,
+    cont: document.getElementById("tContinue").hidden, smoke: document.querySelector("[data-smoke=start]")?.id, paused, docked,
+    focus: document.activeElement?.id }));
+  ok("title shows on boot, HUD hidden, fresh save offers only New game", st.title && st.hud === "none" && st.cont && st.smoke === "tNew" && st.paused && !st.docked, st);
+  const before = await ev(page, () => ({ cam: [S.cameras.main.midPoint.x, S.cameras.main.midPoint.y], e: enemies.map(e => e.x + e.y).join() }));
+  await page.waitForTimeout(1200);
+  const after = await ev(page, () => ({ cam: [S.cameras.main.midPoint.x, S.cameras.main.midPoint.y], e: enemies.map(e => e.x + e.y).join() }));
+  ok("title: camera drifts, ships stay still", Math.hypot(after.cam[0] - before.cam[0], after.cam[1] - before.cam[1]) > 1 && after.e === before.e);
+  await page.screenshot({ path: join(out, "d-title-en.png") });
+
+  await page.click("[data-smoke=start]");
+  await until(page, () => docked);
+  await page.waitForTimeout(100);
+  ok("ledger opens at the top with Set sail focused", await ev(page, () => document.querySelector("#port .sheet").scrollTop === 0 && document.activeElement.id === "sail"));
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("PageDown");
+  await page.waitForTimeout(500);                     // keyboard scrolling is animated
+  ok("arrow / PageDown keys scroll the ledger natively", await ev(page, () => document.querySelector("#port .sheet").scrollTop > 0));
+  await ev(page, () => { document.querySelector("#port .sheet").scrollTop = 600; });
+  await page.click("#sail");
+  await until(page, () => !docked && !paused);
+  await ev(page, () => { canDock = true; player.x = PORT.x + 150; player.y = PORT.y; });
+  await until(page, () => docked);
+  ok("ledger reopens scrolled to the top after a voyage", await ev(page, () => document.querySelector("#port .sheet").scrollTop === 0));
+  await page.keyboard.press("Enter");
+  await until(page, () => !docked && !paused);
+  ok("Enter on the focused Set sail sets sail", true);
+  await tank(page);
+
+  // keyboard: sail steps hold speed after release, turning keys never fire
+  await spyFire(page);
+  await ev(page, () => { player.rot = 0; });
+  await page.keyboard.press("KeyW"); await page.keyboard.press("KeyW");
+  const p0 = await ev(page, () => ({ x: player.x, y: player.y, lv: sailLevel, txt: document.getElementById("sailTxt").textContent, vis: !document.getElementById("sailInd").hidden, fr: S.game.loop.frame }));
+  await page.waitForTimeout(1500);
+  const p1 = await ev(page, () => ({ x: player.x, y: player.y, sp: player.speed, max: player.maxSpeed, paused, docked, pauseOpen, fr: S.game.loop.frame }));
+  ok("W twice = half sail, shown in the HUD; ship keeps moving with no key held", p0.lv === 2 && p0.txt === "Half" && p0.vis && Math.hypot(p1.x - p0.x, p1.y - p0.y) > 60 && p1.sp > p1.max * 0.5, { p0, p1 });
+  const r0 = await ev(page, () => player.rot);
+  await page.keyboard.down("KeyD"); await page.waitForTimeout(500); await page.keyboard.up("KeyD");
+  const rD = await ev(page, () => player.rot);
+  await page.keyboard.down("ArrowLeft"); await page.waitForTimeout(150); await page.keyboard.up("ArrowLeft");
+  const rL = await ev(page, () => player.rot);
+  for (let i = 0; i < 6; i++) { await page.keyboard.down("KeyA"); await page.waitForTimeout(60); await page.keyboard.up("KeyA"); await page.waitForTimeout(60); }
+  await page.waitForTimeout(500);
+  const r1 = await ev(page, () => ({ rot: player.rot, sp: player.speed, fires: window.__fires }));
+  ok("D / Left turn the bow, releasing turn keys never fires, speed holds", rD - r0 > 0.3 && rL < rD && r1.fires === 0 && r1.sp > 50, { r0, rD, rL, r1 });
+  for (let i = 0; i < 3; i++) await page.keyboard.press("KeyS");
+  await page.waitForTimeout(2000);
+  ok("S back to stopped brings the ship to rest", await ev(page, () => sailLevel === 0 && player.speed < 5));
+
+  // Space fires; clicking the HUD language button never lets Space toggle it again
+  await beside(page);
+  await page.waitForTimeout(100);
+  await page.click("#langHud");
+  const langA = await ev(page, () => lang);
+  for (let i = 0; i < 4; i++) { await page.keyboard.press("Space"); await page.waitForTimeout(250); }
+  await page.keyboard.press("Enter");
+  const sp = await ev(page, () => ({ lang, fires: window.__fires, balls: balls.filter(b => b.fromPlayer).length, act: document.activeElement.id || document.activeElement.tagName }));
+  ok("after clicking the HUD language button, Space fires and the language stays", sp.lang === langA && langA === "zh" && sp.fires === 4 && sp.act !== "langHud", sp);
+  await ev(page, () => document.querySelector("#langHud").click());   // back to English for the rest
+
+  // Esc / P / pause button, frozen world
+  await page.keyboard.press("Escape");
+  const pz = await ev(page, () => ({ pauseOpen, paused, tp: S.time.paused, tw: S.tweens.paused, vis: !document.getElementById("pause").hidden, seaT: S.seaT, e: enemies.map(e => e.x).join(), focus: document.activeElement.dataset.menu }));
+  await page.waitForTimeout(600);
+  const pz2 = await ev(page, () => ({ seaT: S.seaT, e: enemies.map(e => e.x).join() }));
+  ok("Esc pauses: overlay up, Resume focused, ships and sea frozen", pz.pauseOpen && pz.paused && pz.tp && pz.tw && pz.vis && pz.focus === "resume" && pz.seaT === pz2.seaT && pz.e === pz2.e, pz);
+  await page.screenshot({ path: join(out, "d-pause-en.png") });
+  await page.keyboard.press("Escape");
+  ok("Esc again resumes", await ev(page, () => !pauseOpen && !paused && !S.time.paused && document.getElementById("pause").hidden));
+  await page.keyboard.press("KeyP");
+  const pp = await ev(page, () => pauseOpen);
+  await page.keyboard.press("KeyP");
+  await page.click("#pauseBtn");
+  const pb = await ev(page, () => pauseOpen);
+  await page.click("#pause [data-menu=resume]");
+  ok("P toggles pause; HUD pause button pauses; Resume resumes", pp && pb && await ev(page, () => !pauseOpen && !paused));
+
+  // auto-pause
+  await ev(page, () => window.dispatchEvent(new Event("blur")));
+  ok("window blur at sea pauses", await ev(page, () => pauseOpen));
+  await page.keyboard.press("Escape");
+  await ev(page, () => { Object.defineProperty(document, "hidden", { configurable: true, get: () => true }); document.dispatchEvent(new Event("visibilitychange")); });
+  ok("hidden tab at sea pauses", await ev(page, () => pauseOpen));
+  // become visible again, or Phaser keeps its own loop paused for the rest of this page
+  await ev(page, () => { delete document.hidden; document.dispatchEvent(new Event("visibilitychange")); });
+  await page.keyboard.press("Escape");
+  await ev(page, () => { canDock = true; player.x = PORT.x + 150; player.y = PORT.y; });
+  await until(page, () => docked);
+  await ev(page, () => window.dispatchEvent(new Event("blur")));
+  ok("blur while docked does not pause", await ev(page, () => !pauseOpen && !document.getElementById("port").hidden));
+  await page.click("#sail");
+  await until(page, () => !docked && !paused);
+  await tank(page);
+
+  // mouse: hold steers toward the cursor (no joystick), release fires, quick click fires, right button ignored
+  await spyFire(page);
+  await ev(page, () => { player.rot = 0; player.speed = 0; setSailLevel(0); });
+  const target = await ev(page, () => { const c = S.cameras.main, wx = player.x, wy = player.y - 260; return { x: (wx - c.worldView.x) * c.zoom, y: (wy - c.worldView.y) * c.zoom }; });
+  await page.mouse.move(target.x, target.y);
+  await page.mouse.down();
+  await page.waitForTimeout(900);
+  const ms = await ev(page, () => ({ rot: player.rot, lv: sailLevel, joy: document.getElementById("joy").hidden, hold: !!mouseHold && mouseHold.steer, fires: window.__fires }));
+  await page.mouse.up();
+  await page.waitForTimeout(50);
+  const mf = await ev(page, () => window.__fires);
+  ok("mouse hold steers toward the cursor (north), sets sail, no joystick; release fires", ms.hold && ms.rot < -0.5 && ms.lv >= 2 && ms.joy && ms.fires === 0 && mf === 1, ms);
+  const lvBefore = await ev(page, () => sailLevel);
+  await page.mouse.move(target.x + 200, target.y + 100);
+  await page.mouse.down(); await page.waitForTimeout(60); await page.mouse.up();
+  ok("quick click just fires, sail unchanged", await ev(page, l => window.__fires === 2 && sailLevel === l, lvBefore));
+  await page.mouse.down({ button: "right" }); await page.waitForTimeout(250); await page.mouse.up({ button: "right" });
+  const ctxm = await ev(page, () => { const e = new MouseEvent("contextmenu", { bubbles: true, cancelable: true }); document.querySelector("#game canvas").dispatchEvent(e); return e.defaultPrevented; });
+  ok("right button neither steers nor fires; context menu suppressed", ctxm && await ev(page, () => window.__fires === 2 && !mouseHold));
+
+  // quit to title with cargo asks twice, then Continue docks at the harbor
+  await ev(page, () => { cargo = 40; });
+  await page.keyboard.press("Escape");
+  await page.click("#pQuit");
+  const armed = await ev(page, () => document.getElementById("pQuit").textContent);
+  await page.waitForTimeout(500);
+  await page.click("#pQuit");
+  const q = await ev(page, () => ({ titleOpen, cargo, docked, paused, px: Math.round(player.x - PORT.x), sail: document.querySelector("[data-smoke=start]").id }));
+  ok("Save & quit: second press needed with cargo aboard; title back, hold emptied, ship home", /40/.test(armed) && q.titleOpen && q.cargo === 0 && !q.docked && q.paused && q.px === 140, { armed, q });
+  await page.click("[data-smoke=start]");
+  ok("from the title the start button docks at the harbor", await ev(page, () => docked && !titleOpen));
+  await ctx.close();
+}
+
+// ---------- 2. touch stick unchanged (CDP touch on a phone viewport) ----------
+{
+  const { ctx, page } = await open(M, { mobile: true, tag: "touch" });
+  await page.screenshot({ path: join(out, "m-title-en.png") });
+  await toSea(page);
+  await tank(page); await spyFire(page);
+  const cdp = await ctx.newCDPSession(page);
+  const tp = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y, id: 1 }] });
+  await tp("touchStart", 200, 600); await tp("touchMove", 230, 600); await tp("touchMove", 250, 600);
+  await page.waitForTimeout(700);
+  const t1 = await ev(page, () => ({ m: joyVec.m, joy: !document.getElementById("joy").hidden, sp: player.speed, dev: device, ind: document.getElementById("sailInd").hidden }));
+  await tp("touchEnd");
+  await page.waitForTimeout(1500);
+  const t2 = await ev(page, () => ({ fires: window.__fires, sp: player.speed }));
+  ok("touch: floating stick steers, letting go fires and the ship slows as before", t1.m > 0.5 && t1.joy && t1.sp > 30 && t1.dev === "touch" && t1.ind && t2.fires === 1 && t2.sp < t1.sp, { t1, t2 });
+  await page.click("#pauseBtn");
+  await page.screenshot({ path: join(out, "m-pause-en.png") });
+  await page.click("#pause [data-menu=settings]");
+  await page.screenshot({ path: join(out, "m-settings-en.png") });
+  await page.click("#p-settings [data-menu=back]");
+  await page.click("#pause [data-menu=howto]");
+  await page.screenshot({ path: join(out, "m-howto-en.png") });
+  await ctx.close();
+}
+
+// ---------- 3. gamepad (stubbed navigator.getGamepads, hot-plug) ----------
+{
+  const { ctx, page } = await open(D, { tag: "pad" });
+  await ev(page, () => {
+    const pad = { id: "Stub pad (STANDARD GAMEPAD)", index: 0, connected: true, mapping: "standard", axes: [0, 0, 0, 0],
+      buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })) };
+    Object.defineProperty(pad, "timestamp", { get: () => performance.now() });
+    window.__pad = pad;
+    window.__btn = (i, v) => { pad.buttons[i] = { pressed: v > 0.5, touched: v > 0, value: v }; };
+    window.__plug = on => { navigator.getGamepads = () => (on ? [pad, null, null, null] : [null, null, null, null]);
+      const e = new Event(on ? "gamepadconnected" : "gamepaddisconnected"); e.gamepad = pad; window.dispatchEvent(e); };
+    window.__plug(true);
+  });
+  const tap = async i => { await ev(page, j => __btn(j, 1), i); await page.waitForTimeout(120); await ev(page, j => __btn(j, 0), i); await page.waitForTimeout(120); };
+  await page.waitForTimeout(200);
+  await tap(13);                                    // D-pad down on the title
+  const f1 = await ev(page, () => document.activeElement.dataset.menu);
+  await tap(12);
+  await tap(0);                                     // A on New game
+  await until(page, () => docked);
+  await page.waitForTimeout(100);
+  ok("pad on title: D-pad moves focus, A starts; pad focus ring class on", f1 === "howto" && await ev(page, () => device === "pad" && document.body.classList.contains("pad-nav")), { f1 });
+  await tap(0);                                     // A on the focused Set sail
+  await until(page, () => !docked && !paused);
+  await tank(page); await spyFire(page);
+  await ev(page, () => { player.rot = Math.PI; __pad.axes = [1, 0, 0, 0]; });
+  await page.waitForTimeout(2200);                   // a half turn from standstill takes about two seconds
+  const st = await ev(page, () => ({ rot: Math.abs(angDiff(player.rot, 0)), sp: player.speed }));
+  await ev(page, () => { __pad.axes = [0, 0, 0, 0]; });
+  await tap(12); await tap(12);
+  await beside(page);
+  await tap(0);
+  await ev(page, () => { for (const g of Object.values(player.guns).flat()) g.cd = 0; });
+  await tap(7);
+  const fr = await ev(page, () => ({ fires: window.__fires, lv: sailLevel }));
+  ok("pad at sea: stick points the bow, D-pad up raises the sail, A and RT fire", st.rot < 0.6 && st.sp > 30 && fr.fires === 2 && fr.lv === 2, { st, fr });
+  await tap(9);
+  const p1 = await ev(page, () => ({ pauseOpen, f: document.activeElement.dataset.menu }));
+  await tap(13);
+  const p2 = await ev(page, () => document.activeElement.dataset.menu);
+  await tap(1);
+  ok("pad Start pauses, D-pad moves focus in the pause menu, B resumes", p1.pauseOpen && p1.f === "resume" && p2 === "howto" && await ev(page, () => !pauseOpen), { p1, p2 });
+  await ev(page, () => __plug(false));
+  await page.waitForTimeout(250);
+  const un = await ev(page, () => ({ pauseOpen, toast: document.getElementById("toast").textContent }));
+  await tap(1);   // unplugged: B must do nothing
+  const still = await ev(page, () => pauseOpen);
+  await ev(page, () => __plug(true));
+  await page.waitForTimeout(250);
+  await tap(1);
+  ok("unplugging a pad at sea pauses; replugging works again", un.pauseOpen && /disconnected/i.test(un.toast) && still && await ev(page, () => !pauseOpen), un);
+  await ctx.close();
+}
+
+// ---------- 4. tutorial driven through real state ----------
+{
+  const { ctx, page } = await open(D, { tag: "tut" });
+  await toSea(page);
+  await tank(page);
+  const t0 = await ev(page, () => ({ active: tut.active, step: tut.step, coach: !document.getElementById("coach").hidden,
+    easy: enemies.filter(e => e.alive && e.merchant && e.L === 1 && dist(e, PORT) < SAFE_R + 300).length, tgt: !!tut.target }));
+  ok("brand-new save: tutorial starts on the first voyage with an easy Lv 1 merchant close by", t0.active && t0.step === 0 && t0.coach && t0.easy >= 1 && t0.tgt, t0);
+  const step = () => ev(page, () => tut.step);
+  await ev(page, () => { player.x = PORT.x + DOCK_R + 220; player.y = PORT.y; player.rot = 0; });
+  await until(page, () => tut.step === 1);
+  await ev(page, () => { const e = tut.target; e.x = player.x + Math.cos(player.rot + Math.PI / 2) * 180; e.y = player.y + Math.sin(player.rot + Math.PI / 2) * 180;
+    e.rot = player.rot; e.speed = 0; e.maxSpeed = 0.001; for (const g of Object.values(player.guns).flat()) g.cd = 0; });
+  await until(page, () => tut.step === 2);
+  await page.screenshot({ path: join(out, "d-tutorial-fire.png") });
+  await page.keyboard.press("Space");
+  await until(page, () => tut.step === 3);
+  await ev(page, () => sink(tut.target, player));
+  await until(page, () => tut.step === 4);
+  await ev(page, () => { const c = crates.find(k => !k.wreck); c.x = player.x; c.y = player.y; });
+  await until(page, () => tut.step === 5);
+  await ev(page, () => { canDock = true; player.x = PORT.x + 150; player.y = PORT.y; });
+  await until(page, () => docked && tut.step === 6);
+  await page.waitForTimeout(150);
+  const t6 = await ev(page, () => ({ gold: save.gold, inSheet: document.getElementById("coach").parentElement.classList.contains("sheet"), txt: document.getElementById("coachTxt").textContent }));
+  await page.screenshot({ path: join(out, "d-tutorial-ledger.png") });
+  await page.click('[data-act="up"][data-id="six"]');
+  await page.waitForTimeout(150);
+  const t7 = await ev(page, () => ({ done: save.tutorialDone, txt: document.getElementById("coachTxt").textContent }));
+  ok("tutorial advances out > aim (red) > fire > sink > scoop > sell > buy > done from game state", t6.gold > 0 && t6.inSheet && /60/.test(t6.txt) && t7.done && /loop/.test(t7.txt), { t6, t7 });
+  await page.reload({ waitUntil: "load" }); await booted(page);
+  await toSea(page);
+  ok("finished tutorial stays finished after a reload", await ev(page, () => !tut.active && document.getElementById("coach").hidden && save.tutorialDone));
+  await page.keyboard.press("Escape");
+  await page.click("#pause [data-menu=howto]");
+  await page.click("#p-howto [data-menu=replay-tut]");
+  const rp = await ev(page, () => ({ active: tut.active, step: tut.step, done: save.tutorialDone, pauseOpen }));
+  await page.keyboard.press("Escape");
+  const skipVis = await ev(page, () => !document.getElementById("pSkipTut").hidden);
+  await page.click("#pSkipTut");
+  ok("replay from How to play restarts it; Skip in the pause menu ends it", rp.active && rp.step === 0 && !rp.done && !rp.pauseOpen && skipVis && await ev(page, () => !tut.active && save.tutorialDone), rp);
+  await ctx.close();
+}
+{   // an old save with progress and no tutorial field never sees the tutorial
+  const ctx = await browser.newContext({ viewport: D });
+  const page = await ctx.newPage();
+  page.on("pageerror", e => errors.push(`[legacy] pageerror: ${e.message}`));
+  await page.goto(url, { waitUntil: "load" });
+  await ev(page, () => { localStorage.clear(); const s = { v: 2, gold: 300, ship: "sloop", hull: 2, sails: 1, hold: 1, unlocked: { six: true }, gunLv: { six: 2, long12: 1, carronade: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 9, wrecks: [] }; localStorage.setItem("privateers-save-v2", JSON.stringify(s)); });
+  await page.reload({ waitUntil: "load" }); await booted(page);
+  const lg = await ev(page, () => ({ done: save.tutorialDone, cont: !document.getElementById("tContinue").hidden, smoke: document.querySelector("[data-smoke=start]").id }));
+  await page.click("[data-smoke=start]"); await page.click("#sail");
+  await page.waitForTimeout(200);
+  ok("legacy save with progress: Continue is primary, no tutorial", lg.done && lg.cont && lg.smoke === "tContinue" && await ev(page, () => !tut.active), lg);
+  // New game confirm keeps settings
+  await ev(page, () => saveSettings({ textScale: 1.15 }));
+  await page.keyboard.press("Escape"); await page.click("#pQuit");
+  await page.click("#tNew");
+  const cf = await ev(page, () => ({ vis: !document.getElementById("tConfirm").hidden, focus: document.activeElement.dataset.menu }));
+  await page.click('[data-menu="new-no"]');
+  const kept = await ev(page, () => save.gold);
+  await page.click("#tNew"); await page.click('[data-menu="new-yes"]');
+  const ng = await ev(page, () => ({ gold: save.gold, sunk: save.sunk, docked, ts: JSON.parse(localStorage.getItem("privateers-settings")).textScale }));
+  ok("New game with a save asks first (Cancel focused, Cancel keeps it), then wipes progress but not settings", cf.vis && cf.focus === "new-no" && kept === 300 && ng.gold === 0 && ng.sunk === 0 && ng.docked && ng.ts === 1.15, { cf, ng });
+  await ctx.close();
+}
+
+// ---------- 5. settings persist; reset is two-step; text size; shake ----------
+{
+  const { ctx, page } = await open(D, { tag: "set" });
+  await page.click("#title [data-menu=settings]");
+  const audioHidden = await ev(page, () => document.getElementById("setAudio").hidden === (typeof Snd === "undefined"));
+  await page.click('[data-set="shake"][data-v="off"]');
+  await page.click('[data-set="ts"][data-v="1.3"]');
+  await page.click('[data-set="lang"][data-v="zh"]');
+  await page.screenshot({ path: join(out, "d-settings-zh.png") });
+  await page.reload({ waitUntil: "load" }); await booted(page);
+  const s = await ev(page, () => ({ shake: SETTINGS.shake, ts: SETTINGS.textScale, css: getComputedStyle(document.documentElement).getPropertyValue("--ts").trim(), lang, html: document.documentElement.lang,
+    font: parseFloat(getComputedStyle(document.querySelector(".mbtn")).fontSize) }));
+  await ev(page, () => camShake(200, 0.01));
+  ok("settings persist across reload (shake off, text 130%, zh) and text size scales the UI", audioHidden && s.shake === false && s.ts === 1.3 && s.css === "1.3" && s.lang === "zh" && s.html === "zh-Hant" && Math.abs(s.font - 22 * 1.3) < 0.6, s);
+  ok("screen shake off is honoured", await ev(page, () => !S.cameras.main.shakeEffect.isRunning));
+  await page.screenshot({ path: join(out, "d-title-zh-130.png") });
+  await page.click("#title [data-menu=settings]");
+  await ev(page, () => { save.gold = 999; persist(); });
+  await page.click("#setReset");
+  const armed = await ev(page, () => ({ t: document.getElementById("setReset").textContent, g: save.gold }));
+  await page.waitForTimeout(500);
+  await page.click("#setReset");
+  const rs = await ev(page, () => ({ gold: save.gold, titleOpen, panel: !document.getElementById("p-settings").hidden, ts: SETTINGS.textScale }));
+  ok("Reset progress: first press arms, second wipes and returns to the title, settings kept", armed.g === 999 && /再按一次/.test(armed.t) && rs.gold === 0 && rs.titleOpen && !rs.panel && rs.ts === 1.3, { armed, rs });
+  await ctx.close();
+}
+
+// ---------- 6. both languages: no missing keys, no raw keys or {placeholders} on any screen ----------
+for (const lg of ["en", "zh"]) {
+  for (const vp of [D, M]) {
+    const tag = `${lg}-${vp.width}`;
+    const { ctx, page } = await open(vp, { tag, mobile: vp === M, locale: lg === "zh" ? "zh-TW" : "en-US" });
+    const missing = await ev(page, () => {
+      const used = new Set([...document.querySelectorAll("[data-i18n]")].map(e => e.dataset.i18n).concat([...document.querySelectorAll("[data-i18n-html]")].map(e => e.dataset.i18nHtml)));
+      const all = new Set([...Object.keys(STR.en), ...Object.keys(STR.zh)]);
+      return { used: [...used].filter(k => !(k in STR.en) || !(k in STR.zh)), table: [...all].filter(k => !(k in STR.en) || !(k in STR.zh)) };
+    });
+    const texts = [];
+    const grab = async where => texts.push({ where, s: await ev(page, () => document.body.innerText) });
+    await grab("title");
+    for (const p of ["howto", "settings", "credits"]) { await page.click(`#title [data-menu=${p}]`); await grab(p); if (vp === D || p === "howto") await page.screenshot({ path: join(out, `${tag}-${p}.png`) }); await page.keyboard.press("Escape"); }
+    await page.click("[data-smoke=start]"); await until(page, () => docked); await grab("ledger");
+    await page.screenshot({ path: join(out, `${tag}-ledger.png`) });
+    await page.click("#sail"); await page.waitForTimeout(300); await grab("sea");
+    await page.screenshot({ path: join(out, `${tag}-sea.png`) });
+    await page.keyboard.press("Escape"); await grab("pause");
+    const coach = await ev(page, () => {   // every coach text, for every step and device
+      const outv = [], keep = { step: tut.step, dev: device, docked, doneT: tut.doneT };
+      for (const d of ["desk", "keys", "mouse", "touch", "pad"]) for (let i = 0; i < TUT.length; i++) for (const dk of [false, true]) {
+        device = d; tut.step = i; docked = dk; outv.push(coachText());
+      }
+      tut.doneT = 1; outv.push(coachText());
+      device = keep.dev; tut.step = keep.step; docked = keep.docked; tut.doneT = keep.doneT;
+      return outv.join("\n") + "\n" + ["hint_keys", "hint_mouse", "hint_pad", "hintDesk", "hintTouch"].map(k => t(k)).join("\n");
+    });
+    texts.push({ where: "coach", s: coach });
+    const bad = texts.flatMap(({ where, s }) => (s.match(/\{[a-z]+\}|\b(?:m|set|ht|cr|tut|ctl|tip|sl|hint)_[A-Za-z]+\b|undefined|NaN/g) || []).map(m => `${where}: ${m}`));
+    const wrongLang = lg === "zh" ? !/[設定玩法說明]/.test(texts[0].s) : /設定/.test(texts[0].s);
+    ok(`${tag}: every key in both tables, no raw keys or placeholders on screen`, !missing.used.length && !missing.table.length && !bad.length && !wrongLang, { missing, bad: bad.slice(0, 8) });
+    await ctx.close();
+  }
+}
+
+await browser.close();
+const failed = results.filter(r => !r.pass);
+if (errors.length) console.error("page errors:\n" + errors.join("\n"));
+console.log(`${results.length - failed.length}/${results.length} checks passed, ${errors.length} page errors. Screenshots in ${out}`);
+process.exit(failed.length || errors.length ? 1 : 0);

@@ -38,13 +38,13 @@ function drawMini() {
   mctx.restore();
 }
 
-// ---------- Input: floating joystick (touch + mouse) ----------
+// ---------- Input: floating joystick (touch and pen; the mouse steers toward the cursor, js/input.js) ----------
 (function joystick() {
   const area = document.getElementById("game"), joy = document.getElementById("joy"), knob = joy.firstElementChild;
   let id = null, ox = 0, oy = 0;
   const R = 50;
   area.addEventListener("pointerdown", e => {
-    if (paused || id !== null) return;
+    if (paused || id !== null || e.pointerType === "mouse") return;
     id = e.pointerId; ox = e.clientX; oy = e.clientY;
     area.setPointerCapture(id);
     joy.style.left = ox + "px"; joy.style.top = oy + "px"; joy.hidden = false;
@@ -71,6 +71,7 @@ function applyLang() {
   if (player) { hud(true); renderPort(); enemies.forEach(e => e.badge && refreshBadge(e)); }
   if (harborLabel) harborLabel.setText(t("harborMap"));
   for (const c of crates) c.label?.setText(t("wreckLabel"));
+  document.dispatchEvent(new Event("langchange"));   // modules with their own dynamic text re-render on this
 }
 document.querySelectorAll("[data-lang-toggle]").forEach(el => el.addEventListener("click", () => {
   lang = lang === "zh" ? "en" : "zh";

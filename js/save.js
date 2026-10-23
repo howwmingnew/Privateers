@@ -4,7 +4,8 @@
 const SAVE_KEY = "privateers-save-v2", SAVE_KEY_V1 = "privateers-save-v1";
 const defaultSave = () => ({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1, unlocked: { six: true },
   gunLv: { six: 1, long12: 1, carronade: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0,
-  wrecks: [] });   // the player's own sunken cargo: [{ x, y, value }], kept across sessions
+  wrecks: [],      // the player's own sunken cargo: [{ x, y, value }], kept across sessions
+  tutorialDone: false, tutorialStep: 0 });   // first-voyage coach (js/tutorial.js); older saves are judged by progress
 // Give every mount exactly as many guns as the ship has ports, using only guns the captain owns.
 function fitMounts(s) {
   const d = defaultSave(), ship = Object.hasOwn(SHIPS, s.ship) ? s.ship : "sloop";
