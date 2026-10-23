@@ -107,3 +107,13 @@ button:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) { .bar i, #toast, #hint { transition: none; } }
 @media (max-width: 420px) { .deck .row { grid-template-columns: 1fr; } .hullbar { margin-left: 0; } .sheet h1 { font-size: calc(28px * var(--ts)); } }
+
+/* Big desktop screens: the sea is framed like 1280x720 (js/view.js), so the overlays grow with it instead of shrinking
+   into the corners. Whole-box zoom keeps fixed-width bars and their text in proportion. #bossArrow is placed in CSS
+   pixels by script, so it stays unzoomed. */
+@media (min-width: 1500px) and (min-height: 900px) {
+  #hud, #hint, #toast, #coach, #achToast, #bossBar, #seaBanner, #port, #title, #pause, #logbook, #victory, #wanted { zoom: 1.25; }
+}
+@media (min-width: 2400px) and (min-height: 1300px) {
+  #hud, #hint, #toast, #coach, #achToast, #bossBar, #seaBanner, #port, #title, #pause, #logbook, #victory, #wanted { zoom: 1.5; }
+}

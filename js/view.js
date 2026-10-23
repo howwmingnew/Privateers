@@ -22,9 +22,18 @@ function viewScaleConfig() {
   const b = viewBacking(VIEW);
   return { mode: Phaser.Scale.NONE, width: b.w, height: b.h, zoom: 1 / VIEW.dpr };
 }
-// World zoom: the original rule in CSS pixels (shorter side / 720, clamped 0.55-1.1), times the render dpr, times the
-// player's ship class (bigger ships see further, js/art.js shipZoomK).
-const viewZoom = () => clamp(Math.min(VIEW.cssW, VIEW.cssH) / 720, 0.55, 1.1) * VIEW.dpr * (typeof shipZoomK === "function" ? shipZoomK() : 1);
+// World zoom: shorter side / 720 in CSS pixels, so every desktop size frames the same patch of sea as 1280x720 does
+// (the old 1.1 cap left a 1080p fight a speck in a field of islands); 0.55 floor for phones. Then the render dpr,
+// the player's ship class (bigger ships see further, js/art.js shipZoomK) and the player's own wheel zoom.
+const ZOOM_USER = { min: 0.75, max: 1.25, step: 0.05 };
+const viewZoom = () => clamp(Math.min(VIEW.cssW, VIEW.cssH) / 720, 0.55, 2.4) * VIEW.dpr
+  * (typeof shipZoomK === "function" ? shipZoomK() : 1) * SETTINGS.zoom;
+function nudgeZoom(dir) {
+  const z = clamp(Math.round((SETTINGS.zoom + dir * ZOOM_USER.step) * 100) / 100, ZOOM_USER.min, ZOOM_USER.max);
+  if (z !== SETTINGS.zoom) { saveSettings({ zoom: z }); refitView(); }
+}
+// Mouse wheel zooms the sea (not the ledger or menus, which sit above the canvas and scroll normally).
+document.getElementById("game")?.addEventListener("wheel", e => { if (!paused) nudgeZoom(e.deltaY > 0 ? -1 : 1); }, { passive: true });
 let viewRefit = null;   // the live scene's fit(), for when something other than a resize changes the zoom rule
 function refitView() { if (viewRefit) viewRefit(); }
 // Text is rasterised once into its own canvas, so draw it at the device pixels it will cover (in 0.25 steps).
