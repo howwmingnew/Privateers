@@ -54,14 +54,14 @@ function renderPort() {
   // armory
   $("armory").innerHTML = GUN_ORDER.map(id => {
     const g = GUNS[id], lv = save.gunLv[id], m = gunLvMul(lv), owned = save.unlocked[id];
-    const dmgTxt = t("dmg", { n: Math.round(g.dmg * m) }) + (g.burn ? t("burn", { n: Math.round(g.burn * m * BURN_T) }) : "") + (g.chain ? t("chainFx", { n: CHAIN_T }) : "");
+    const dmgTxt = t("dmg", { n: Math.round(g.dmg * m) }) + (g.burn ? t("burn", { n: Math.round(g.burn * m * BURN_T) }) : "");
     let btn;
     if (!owned) btn = `<button class="btn" type="button" data-act="buy" data-id="${id}" ${save.gold < g.cost ? "disabled" : ""}>${t("buy", { n: fmt(g.cost) })}</button>`;
     else if (lv >= GUN_MAX) btn = `<button class="btn max" type="button" disabled>${t("max")}</button>`;
     else { const c = gunUpCost(id); btn = `<button class="btn" type="button" data-act="up" data-id="${id}" ${save.gold < c ? "disabled" : ""}>${t("upgrade", { n: fmt(c) })}</button>`; }
     const next = owned && lv < GUN_MAX ? ` <span class="up">→ ${Math.round(g.dmg * gunLvMul(lv + 1))}</span>` : "";
     return `<div class="item"><div class="nm">${t("gf_" + id)}<small>${owned ? "Lv " + lv : t("notOwned")}</small></div>${btn}
-      <div class="ds">${dmgTxt}${next} · ${t("range", { n: g.range })} · ${t("rpm", { n: g.rpm })} · ${t("gn_" + id)}</div></div>`;
+      <div class="ds">${dmgTxt}${next} · ${t("range", { n: g.range })} · ${t("rpm", { n: g.rpm })}${g.chain ? t("chainFx", { n: CHAIN_T }) : ""} · ${t("gn_" + id)}</div></div>`;
   }).join("");
   // shipwright
   $("yard").innerHTML = Object.entries(YARD).map(([k, y]) => {

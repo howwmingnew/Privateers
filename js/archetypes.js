@@ -176,6 +176,10 @@ function fireshipContact() {
 }
 function fireshipBoom(s) {
   S.fx.spark.explode(46, s.x, s.y); S.fx.smoke.explode(26, s.x, s.y);
+  if (onScreen(s.x, s.y, 120)) {   // the blast's reach, as a flash ring
+    const ring = S.add.circle(s.x, s.y, BOOM_R, 0xffa040, 0.5).setDepth(8).setScale(0.25).setBlendMode(Phaser.BlendModes.ADD);
+    S.tweens.add({ targets: ring, scale: 1, alpha: 0, duration: 420, ease: "Cubic.easeOut", onComplete: () => ring.destroy() });
+  }
   Snd.play("sink", { x: s.x, y: s.y, big: true }); Snd.play("cannonFar", { x: s.x, y: s.y });
   const hit = enemies.filter(o => o.alive && o !== s && dist(o, s) < BOOM_R);
   if (player.alive && !docked && dist(player, s) < BOOM_R) hit.push(player);

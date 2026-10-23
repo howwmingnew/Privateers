@@ -70,23 +70,34 @@ function releaseVolley(s, key, v, guns) {
 }
 
 // ---------- Warning glow ----------
-// Red light on the gun ports of a side about to fire, brightening as the moment comes. js/vfx.js may replace
-// drawVolleyGlow(g, s, key, k) (k = 0 at the first warning .. 1 at the shot) with its own look.
-function drawVolleyGlow(g, s, key, k) {
-  const guns = s.guns[key], n = guns.length, pulse = 0.55 + 0.45 * Math.sin(S.time.now / 45);
-  if (key === "turret") { g.lineStyle(3, 0xff3b24, 0.25 + 0.6 * k); g.strokeCircle(s.x, s.y, 30 + 6 * k); return; }
+// Red light on the gun ports of a side about to fire, brightening as the moment comes; a side laid on the player also
+// throws a red fan over the water it covers, so the danger reads at a glance. js/vfx.js may replace
+// drawVolleyGlow(g, s, key, k, atMe) (k = 0 at the first warning .. 1 at the shot) with its own look.
+function drawVolleyGlow(g, s, key, k, atMe) {
+  const guns = s.guns[key], n = guns.length, pulse = 0.6 + 0.4 * Math.sin(S.time.now / 45);
+  if (key === "turret") {
+    g.lineStyle(atMe ? 4 : 2, 0xff3b24, (atMe ? 0.35 : 0.15) + 0.5 * k); g.strokeCircle(s.x, s.y, 32 + 10 * k);
+    if (atMe) { g.fillStyle(0xff2a10, (0.06 + 0.14 * k) * pulse); g.fillCircle(s.x, s.y, 32 + 10 * k); }
+    return;
+  }
+  const a0 = enemyMuzzle(s, key, 0, n), a1 = enemyMuzzle(s, key, n - 1, n), a = a0.a, c = Math.cos(a), sn = Math.sin(a);
+  if (atMe) {   // the fan: from the gun row out over the water it will sweep, flaring a little
+    const D = 46 + 64 * k, px = -sn, py = c, w = 4 + (n > 1 ? 0 : 6), f = D * 0.3;
+    const e0 = { x: a0.x - px * w, y: a0.y - py * w }, e1 = { x: a1.x + px * w, y: a1.y + py * w };
+    const pts = [e0, e1, { x: e1.x + c * D + px * f, y: e1.y + sn * D + py * f }, { x: e0.x + c * D - px * f, y: e0.y + sn * D - py * f }];
+    g.fillStyle(0xff2a10, (0.08 + 0.2 * k) * pulse); g.fillPoints(pts, true);
+    g.lineStyle(2, 0xff5a3c, 0.25 + 0.45 * k); g.strokePoints(pts, true);
+  }
   for (let i = 0; i < n; i++) {
     const m = enemyMuzzle(s, key, i, n);
-    g.fillStyle(0xff2a10, (0.18 + 0.3 * k) * pulse); g.fillCircle(m.x, m.y, 6 + 5 * k);
-    g.fillStyle(0xffb08a, 0.5 + 0.5 * k); g.fillCircle(m.x, m.y, 2 + 1.5 * k);
-    g.lineStyle(2, 0xff3b24, 0.25 + 0.5 * k);
-    g.lineBetween(m.x, m.y, m.x + Math.cos(m.a) * (8 + 14 * k), m.y + Math.sin(m.a) * (8 + 14 * k));
+    g.fillStyle(0xff2a10, ((atMe ? 0.3 : 0.15) + 0.35 * k) * pulse); g.fillCircle(m.x, m.y, 5 + 5 * k);
+    g.fillStyle(0xffd0b0, (atMe ? 0.7 : 0.4) + 0.3 * k); g.fillCircle(m.x, m.y, 2 + 1.5 * k);
   }
 }
 function drawVolleyWarnings(g) {
   for (const s of enemies) {
     if (!s.alive || !s.vol || !onScreen(s.x, s.y, 80)) continue;
-    for (const key in s.vol) { const v = s.vol[key]; if (v.warn > 0) drawVolleyGlow(g, s, key, 1 - v.warn / VOLLEY_WARN); }
+    for (const key in s.vol) { const v = s.vol[key]; if (v.warn > 0) drawVolleyGlow(g, s, key, 1 - v.warn / VOLLEY_WARN, v.tgt === player); }
   }
 }
 
