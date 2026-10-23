@@ -3,7 +3,7 @@
 // Usage: node tests/art-shots.mjs [url] [outDir]
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
-const url = process.argv[2] || "http://127.0.0.1:8774/index.html", out = process.argv[3] || ".review/art-shots";
+const url = process.argv[2] || "http://127.0.0.1:8765/index.html", out = process.argv[3] || ".review/art-shots";
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const errors = [];

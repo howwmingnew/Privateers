@@ -6,7 +6,7 @@
 //     hull, and across the bow and stern tips.
 // Usage: node tests/art-hits.mjs [url]
 import { chromium } from "playwright";
-const url = process.argv[2] || "http://127.0.0.1:8774/index.html";
+const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const page = await (await browser.newContext({ viewport: { width: 1280, height: 720 } })).newPage();
 const errors = []; page.on("pageerror", e => errors.push(e.message));

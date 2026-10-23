@@ -2,7 +2,7 @@
 // Usage: node tests/art-page.mjs [base-url] [outDir] [dpr]
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
-const base = process.argv[2] || "http://127.0.0.1:8774", out = process.argv[3] || ".review/art-page", dpr = +(process.argv[4] || 1);
+const base = process.argv[2] || "http://127.0.0.1:8765", out = process.argv[3] || ".review/art-page", dpr = +(process.argv[4] || 1);
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const ctx = await browser.newContext({ viewport: { width: 1180, height: 900 }, deviceScaleFactor: dpr });
