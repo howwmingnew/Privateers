@@ -2,13 +2,17 @@
 // ---------- Enemy gunnery: telegraphed volleys ----------
 // A side (or a chaser, or a fort's battery) fires all its guns together, VOLLEY_WARN s after its gun ports glow red.
 // The gunners lay their guns when the glow starts, on where they expect the target to be when the balls arrive, so a
-// captain who turns bow-on in that window (a narrow target, off the path they planned for) makes them miss. Low-level
-// crews allow for only part of the target's motion. From FAN_L they fan the balls of a side over the turns the target
-// is likely to make (its current turn +/- FAN_W), so a ship that simply keeps circling gets hit.
+// captain who turns into line with the red fan in that window (a narrow target, off the path they planned for) makes
+// them miss. Green crews misjudge the target's speed and scatter their shot (enemyStats: leadErr, spread) and read
+// little of its turn. From FAN_L they fan the balls of a side over the turns the target is likely to make (its current
+// turn w +/- FAN_W0 + FAN_WK x |w|), so a ship that simply keeps circling gets hit (.review/combat/acc.mjs).
 const FAN_L = 5;             // fanned volleys from this level
-const FAN_W = 1.0;           // rad/s either side of the target's current turn that a fan covers
+const FAN_W0 = 0.3, FAN_WK = 0.4;   // rad/s: the fan spans the doubt in the current turn, not a hard turn away (a dodge)
 const ARC_FIRE = ARC * 1.3;  // at the moment of firing the target may have drifted a little out of the arc
 const EMOUNT = { bow: MOUNTS[0], left: MOUNTS[1], right: MOUNTS[2], stern: MOUNTS[3] };
+Object.assign(STR.en, { volleyTip: "Red glow: a broadside is about to fire. Turn bow or stern into it!" });
+Object.assign(STR.zh, { volleyTip: "紅光：敵艦要齊射了。把船首或船尾轉向它！" });
+let volleyTips = 0;   // the first volleys laid on the player each session say what the red fan means
 
 // Where ship t will be in T s if it keeps its speed and turns at w rad/s, scaled toward its current spot by `lead`.
 function predictAt(t, T, w, lead) {
@@ -38,6 +42,7 @@ function enemyFire(s, targets, dt) {
     const aims = layGuns(s, tg, guns), a = aims[0];
     if (Math.hypot(a.x - s.x, a.y - s.y) > guns[0].range) continue;   // it will have sailed out of reach: hold fire
     v.warn = VOLLEY_WARN; v.tgt = tg; v.aims = aims;
+    if (tg.isPlayer && volleyTips < 2 && onScreen(s.x, s.y)) { volleyTips++; toast(t("volleyTip")); }
   }
 }
 // Pick an aim point per gun when the warning starts. The whole side shares one misjudgement of the target's speed.
@@ -46,7 +51,7 @@ function layGuns(s, tg, guns) {
   const lead = s.aimLead * (1 + rand(-1, 1) * (s.aimLeadErr || 0));
   return guns.map((g, i) => {
     const k = fan === 1 ? 0 : fan === 2 ? (i % 2 ? 0.5 : -0.5) : [0, -1, 1][i % 3];
-    const w = w0 + k * FAN_W;
+    const w = w0 + k * (FAN_W0 + FAN_WK * Math.abs(w0));
     let T = VOLLEY_WARN + dist(s, tg) / g.speed, p = predictAt(tg, T, w, lead);
     T = VOLLEY_WARN + Math.hypot(p.x - s.x, p.y - s.y) / g.speed; p = predictAt(tg, T, w, lead);
     return { x: p.x, y: p.y, err: rand(-1, 1) * s.aimSpread };

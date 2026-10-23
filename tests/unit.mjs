@@ -240,7 +240,7 @@ test("every string exists in both languages", () => {
 });
 
 // ---------- Combat, guns and economy tables (js/data.js, js/arsenal.js, js/plunder.js) ----------
-const COMBAT_SRC = ["js/arsenal.js", "js/plunder.js"].map(f => [f, readFileSync(new URL("../" + f, import.meta.url), "utf8")]);
+const COMBAT_SRC = ["js/volley.js", "js/arsenal.js", "js/plunder.js"].map(f => [f, readFileSync(new URL("../" + f, import.meta.url), "utf8")]);
 
 test("chain shot is a full gun: armoury order, save defaults, sanitiser, old saves", () => {
   const g = boot();
