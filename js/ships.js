@@ -23,30 +23,36 @@ function makePlayer(sc) {
   player = p; applyPlayerStats(true);
   return p;
 }
-// Enemy level is set purely by distance from the harbor: each level owns one ring, ZONE_STEP wide.
+// Enemy level is set purely by distance from the harbor: each level owns one ring, ZONE_STEP wide (js/world-seas.js),
+// plus 3 levels per New Game+ cycle.
 const SPAWN_R_MIN = SAFE_R + 120, SPAWN_R_MAX = Math.hypot(PORT.x - 150, PORT.y - 150);
-const levelAt = d => clamp(1 + Math.floor((d - SAFE_R) / ZONE_STEP), 1, 14);
-const ringOf = L => ({ r0: Math.max(SPAWN_R_MIN, SAFE_R + (L - 1) * ZONE_STEP), r1: SAFE_R + L * ZONE_STEP });
-function spawnEnemy(sc) {
+const levelAt = d => ringAt(d) + levelBonus();
+// The ring an enemy of level L roams when idle (the outermost one runs on into the corners).
+const ringOf = L => { const k = clamp(L - levelBonus(), 1, MAX_RING);
+  return { r0: Math.max(SPAWN_R_MIN, ringEdge(k)), r1: k === MAX_RING ? SPAWN_R_MAX : ringEdge(k + 1) }; };
+// at: { x, y, faction } places a chosen ship (bosses, escorts); otherwise the ring quotas pick where. Returns the ship.
+// at.near lets it start closer than the usual 750 px to the player (the tutorial's easy first target, js/tutorial.js).
+function spawnEnemy(sc, at) {
   let x, y, ok = false;
+  const ring = at ? 0 : spawnRing();
   for (let tries = 0; tries < 40 && !ok; tries++) {
-    // radius (not area) is uniform, so every ring gets a similar share and low levels stay common near the harbor
-    const r = rand(SPAWN_R_MIN, SPAWN_R_MAX), a = rand(0, TAU);
-    x = PORT.x + Math.cos(a) * r; y = PORT.y + Math.sin(a) * r;
+    ({ x, y } = at ? { x: at.x + rand(-60, 60), y: at.y + rand(-60, 60) } : spawnPoint(ring));
     ok = x > 150 && x < W - 150 && y > 150 && y < H - 150 &&
-         (!player || Math.hypot(x - player.x, y - player.y) > 750) &&
+         (!player || (at && at.near) || Math.hypot(x - player.x, y - player.y) > 750) &&
          !islands.some(i => Math.hypot(i.x - x, i.y - y) < i.r * 1.3 + 40);
   }
-  if (!ok) return;
-  const L = levelAt(Math.hypot(x - PORT.x, y - PORT.y)), faction = pickFaction();
+  if (!ok) return null;
+  const L = levelAt(Math.hypot(x - PORT.x, y - PORT.y)), faction = at && at.faction ? at.faction : pickFaction();
   const e = makeEnemy(sc, x, y, L, faction);
-  if (e.merchant) maybeConvoy(sc, e);
+  if (e.merchant && !at) maybeConvoy(sc, e);   // placed ships (bosses, escorts, the tutorial's target) sail alone
   return e;
 }
 // One enemy of level L and faction at (x, y); its class (js/archetypes.js) is picked by level and faction unless given.
+// A campaign boss or escort re-takes its bounty's class next frame (js/volley.js campaignOutfit).
 function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
   const e = makeShip(sc, "ship-" + faction, x, y);
-  Object.assign(e, { L, faction, angry: 0, thinkT: 0, wander: null, target: null, chaseFrom: null, retarget: rand(0, 0.5), attacker: null, ignore: new Map() });
+  Object.assign(e, { L, ring: ringAt(Math.hypot(x - PORT.x, y - PORT.y)), faction, angry: 0, thinkT: 0, wander: null, target: null, chaseFrom: null,
+    retarget: rand(0, 0.5), attacker: null, ignore: new Map() });
   e.badge = sc.add.text(x, y - 36, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#1b1410", padding: { x: 5, y: 1 } })
     .setOrigin(0.5).setDepth(9);
   outfitEnemy(e, cls);   // numbers, guns, and the class's art + hitbox via applyShipArt (js/art.js)
@@ -96,7 +102,7 @@ function avoidIslands(s, desired) {
 const LEASH = 900;          // an AI gives up once it has sailed this far from where the chase began and still cannot reach
 const GIVE_UP_DIST = 1300;  // ...or as soon as the target is this far away
 const IGNORE_TIME = 10;     // seconds an AI ignores a target it gave up on
-const inSafe = s => Math.hypot(s.x - PORT.x, s.y - PORT.y) < SAFE_R * 0.6;
+const inSafe = s => Math.hypot(s.x - PORT.x, s.y - PORT.y) < SAFE_R * 0.6 || inTruce(s);   // inTruce: the outpost, js/campaign.js
 function isHostile(e, o) {
   if (!o || o === e || !o.alive) return false;
   if (o.isPlayer && (docked || inSafe(o))) return false;

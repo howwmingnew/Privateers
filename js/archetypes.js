@@ -2,9 +2,10 @@
 // ---------- Enemy archetypes ----------
 // Every enemy is one class with its own hull numbers, guns and battle plan, picked per spawn by level and faction.
 // Contract with js/art.js: e.cls is one of cutter | brig | frigate | manowar | fireship | fluyt (manowar draws as the
-// "line" hull); the AI itself reads e.arch, so art may rewrite e.cls freely. Bosses (e.boss, set by the campaign) use
-// the same classes: set e.boss = { hpMul, dmgMul, lootMul, speedMul, gun: "carronade" | "long", cls } and e.L, then
-// call outfitEnemy(e, cls) (or leave it: combatTick re-outfits any ship whose e.boss changed).
+// "line" hull); the AI itself reads e.arch, so art may rewrite e.cls freely. Campaign bosses and escorts (js/campaign.js
+// tags e.boss / e.escortOf and e.cls after spawning) re-take their bounty's class with its multipliers once, on the next
+// frame (campaignOutfit). outfitEnemy(e, cls, { hpMul, dmgMul, lootMul, speedMul, spreadMul, gun }) does it directly;
+// gun: "carronade" | "long" swaps the main battery for a boss that should close in or stand off.
 //
 // Multipliers apply to enemyStats(L) (the brig). sides(per) = guns per broadside; bow / stern = chasers.
 // plan: circle = today's broadside circling, orbit = a steadier wide circle, kite = hold off at bow-gun range,
@@ -19,7 +20,7 @@ const ARCH = {
   fluyt:    { hp: 1,    speed: 1,    turn: 0.9,  sides: () => 1, bow: 0, stern: 0, dmg: 1, reload: 1.2, range: 1, loot: 1, plan: "flee" },
   fort:     { hp: 3.6,  speed: 0,    turn: 0,    sides: () => 0, bow: 0, stern: 0, turret: 3, dmg: 1.2, reload: 1.2, rangeAbs: 420, gunSpeed: 560, loot: 2.5, plan: "fort" },
 };
-// Boss gun loadouts (e.boss.gun): carronades hit hard up close, long guns reach out.
+// Boss gun loadouts (multiplier `gun`): carronades hit hard up close, long guns reach out.
 const EGUN = { std: { dmg: 1, range: 1 }, carronade: { dmg: 1.6, range: 0.75, speed: 400 }, long: { dmg: 0.85, range: 1.35, speed: 600 } };
 // Which classes sail in each faction's waters: [from level, { class: weight }]; the last row at or below L applies.
 const ARCH_MIX = {
@@ -44,15 +45,15 @@ function pickArch(L, faction) {
 }
 const pickFaction = () => Math.random() < 0.35 ? "merchant" : Math.random() < 0.5 ? "pirate" : "navy";
 
-// (Re)build an enemy's numbers and guns from its level, class and boss multipliers. Safe to call again.
-function outfitEnemy(e, key) {
-  const k = Object.hasOwn(ARCH, key) ? key : "brig", A = ARCH[k];
-  const b = e.boss && typeof e.boss === "object" ? e.boss : {}, st = enemyStats(e.L, k === "fluyt");
-  e.arch = k; e.A = A; e.cls = k; e.merchant = k === "fluyt"; e.fixed = k === "fort"; e.bossFit = e.boss;
+// (Re)build an enemy's numbers and guns from its level, class and multipliers. Safe to call again.
+function outfitEnemy(e, key, b = {}) {
+  const k = Object.hasOwn(ARCH, key) ? key : "brig", A = ARCH[k], st = enemyStats(e.L, k === "fluyt");
+  const ng = typeof lootMul === "function" ? lootMul() : 1;   // New Game+ pays more (js/world-seas.js)
+  e.arch = k; e.A = A; e.cls = k; e.merchant = k === "fluyt"; e.fixed = k === "fort";
   e.maxHp = e.hp = st.hp * A.hp * (b.hpMul || 1);
   e.maxSpeed = st.speed * A.speed * (b.speedMul || 1);
   e.turnRate = 1.7 * A.turn;
-  e.loot = Math.round(st.loot * A.loot * (b.lootMul || 1));
+  e.loot = Math.round(st.loot * A.loot * (b.lootMul || 1) * ng);
   e.aim = st.aim; e.aimLead = st.lead; e.aimLeadErr = st.leadErr; e.aimTurn = st.turn; e.aimSpread = st.spread * (b.spreadMul || 1);
   const eg = EGUN[b.gun] || EGUN.std;
   const main = { dmg: st.dmg * A.dmg * eg.dmg * (b.dmgMul || 1), range: (A.rangeAbs || st.range * A.range) * eg.range,
@@ -70,6 +71,18 @@ function outfitEnemy(e, key) {
     e.cls = k;
   }
   return e;
+}
+// js/campaign.js spawns a boss or escort as an ordinary ship and then tags it (e.boss = bounty id or e.escortOf,
+// e.cls = the bounty's class), scaling HP / speed by hand and fitting stand-in guns. Re-take the class once, with the
+// bounty's own hpMul / speed, so it fights as that archetype: the fire-raiders are real fireships, the Sovereign a
+// man-o'-war with its broadsides and stern chaser.
+function campaignOutfit(e) {
+  e.campaignFit = true;
+  const b = e.boss && typeof BOUNTIES !== "undefined" ? BOUNTIES.find(x => x.id === e.boss) : null;
+  const key = Object.hasOwn(ARCH, e.cls) ? e.cls : e.arch, frac = e.maxHp > 0 ? clamp(e.hp / e.maxHp, 0, 1) : 1;
+  outfitEnemy(e, key, b ? { hpMul: b.hpMul, speedMul: b.speed || 1 } : {});
+  e.hp = e.maxHp * frac;
+  if (e.badge) refreshBadge(e);
 }
 
 // ---------- Battle plans ----------

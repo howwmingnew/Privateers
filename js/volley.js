@@ -36,6 +36,7 @@ function enemyFire(s, targets, dt) {
   const tg = targets[0];
   for (const key in s.vol) {
     const v = s.vol[key], guns = s.guns[key];
+    if (!guns || !guns.length) continue;   // guns swapped out from under the mount (campaign stand-ins, until campaignOutfit)
     if (v.cd > 0) v.cd -= dt;
     if (v.warn > 0) { v.warn -= dt; if (v.warn <= 0) releaseVolley(s, key, v, guns); continue; }
     if (v.cd > 0 || !tg || !tg.alive || dist(s, tg) > guns[0].range || !bears(s, key, tg, ARC)) continue;
@@ -119,7 +120,7 @@ function combatTick(dt) {
   trackTurns(dt, ships);
   for (const e of ships) {
     if (e.panicT > 0) e.panicT -= dt;
-    if (e.boss && e.bossFit !== e.boss && e.arch) outfitEnemy(e, e.boss.cls || e.arch);   // a campaign boss tagged after spawning
+    if ((e.boss || e.escortOf) && !e.campaignFit && e.arch) campaignOutfit(e);   // a campaign boss or escort, tagged after spawning
   }
   fireshipContact();
   updateForts(dt);

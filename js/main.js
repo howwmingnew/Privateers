@@ -38,17 +38,20 @@ class Main extends Phaser.Scene {
     player.spr.setPosition(player.x, player.y);
     cam.centerOn(player.x, player.y);
     hud(true);
-    dock("welcome");
+    shellBoot(this);   // title screen first; it docks at the harbor on Continue / New game (js/menu.js)
+    runHook("ready");   // feature modules start their per-frame work (js/hooks.js)
   }
   update(_, deltaMs) {
     const dt = Math.min(deltaMs / 1000, 0.05);
     const v = this.cameras.main.worldView;
+    if (!seaFrozen) this.seaT = (this.seaT || 0) + deltaMs;   // own clock: time.now keeps running while paused
     for (const [ts, k] of [[this.sea1, 1], [this.sea2, 0.6]]) {
       const tw = Math.ceil(v.width + 128), th = Math.ceil(v.height + 128);
       if (ts.width !== tw || ts.height !== th) ts.setSize(tw, th);
       ts.setPosition(v.x - 64, v.y - 64);
-      ts.tilePositionX = (v.x - 64) / ts.tileScaleX + this.time.now * 0.004 * k; ts.tilePositionY = (v.y - 64) / ts.tileScaleY + this.time.now * 0.002 * k;
+      ts.tilePositionX = (v.x - 64) / ts.tileScaleX + this.seaT * 0.004 * k; ts.tilePositionY = (v.y - 64) / ts.tileScaleY + this.seaT * 0.002 * k;
     }
+    shellTick(dt);     // pause / menus / gamepad / tutorial (js/menu.js)
     const timeK = vfxFrame(dt);   // < 1 during a hit-stop
     if (!paused) step(dt * timeK);
     drawOverlays();
@@ -58,20 +61,8 @@ class Main extends Phaser.Scene {
 }
 
 function step(dt) {
-  const K = S.keys;
-  // --- player input ---
-  if (player.alive) {
-    let kx = (K.D.isDown || K.RIGHT.isDown) - (K.A.isDown || K.LEFT.isDown);
-    let ky = (K.S.isDown || K.DOWN.isDown) - (K.W.isDown || K.UP.isDown);
-    let ix = joyVec.x, iy = joyVec.y, m = joyVec.m;
-    const keyActive = !!(kx || ky);
-    if (prevKeyActive && !keyActive) playerFire();      // letting go of the keys fires, like letting go of the stick
-    prevKeyActive = keyActive;
-    if (kx || ky) { ix = kx; iy = ky; m = 1; }
-    if (m > 0.2) { steer(player, Math.atan2(iy, ix), Math.min(1, m * 1.25), dt);
-      if (!moved) { moved = true; document.getElementById("hint").style.opacity = 0; } }
-    else steer(player, null, 0, dt);
-  }
+  // --- player input: touch stick, mouse, keyboard sail and turn, gamepad (js/input.js) ---
+  if (player.alive) playerInput(dt);
   // --- AI ---
   for (const e of enemies) if (e.alive) think(e, dt);
   // --- movement ---
@@ -92,7 +83,8 @@ function step(dt) {
   const living = enemies.filter(e => e.alive);
   for (const g of Object.values(player.guns).flat()) g.cd = Math.max(0, g.cd - dt);   // reload
   const engaged = player.alive && MOUNTS.some(mountEngaged);
-  if (engaged && !engagedPrev && releaseTips < 3 && (joyVec.m > 0 || prevKeyActive)) { releaseTips++; toast(t("releaseTip")); }
+  const tip = engaged && !engagedPrev && releaseTips < 3 && fireTipKey();
+  if (tip) { releaseTips++; toast(t(tip)); }
   engagedPrev = engaged;
   for (const e of living) fire(e, e.target && isHostile(e, e.target) ? [e.target] : [], dt);
   combatTick(dt);   // turn tracking for enemy gunners, fireship rams, shore batteries, streak chip (js/volley.js)
@@ -130,7 +122,8 @@ function step(dt) {
     if (player.alive && d < 150 && room > 0) { const k = Math.min(1, 260 * dt / Math.max(d, 1)); c.x += (player.x - c.x) * k; c.y += (player.y - c.y) * k; }
     if (player.alive && d < 32) {
       if (room > 0) { const take = Math.min(room, c.value); cargo += take; c.value -= take; floatText(c.x, c.y - 10, t("fCargo", { n: fmt(take) }), "#f0c766", 17); Snd.play("pickup");
-        if (c.wreck) { c.wreck.value = c.value; if (c.value <= 0) save.wrecks = save.wrecks.filter(w => w !== c.wreck); persist(); } }
+        if (c.wreck) { c.wreck.value = c.value; if (c.value <= 0) save.wrecks = save.wrecks.filter(w => w !== c.wreck); persist(); }
+        runHook("pickup", c, take); }
       else if (S.time.now - lastHoldToast > 3000) { lastHoldToast = S.time.now; toast(t("toastFull")); Snd.play("denied"); }
     }
     if (c.wreck) { c.wreck.x = Math.round(c.x); c.wreck.y = Math.round(c.y); }
@@ -138,18 +131,12 @@ function step(dt) {
     if (c.label) c.label.setPosition(c.x, c.y - 26);
     if (c.value <= 0 || (!c.wreck && c.t > 60)) { c.spr.destroy(); c.label?.destroy(); crates.splice(i, 1); }
   }
-  // --- harbor ---
-  const dPort = Math.hypot(player.x - PORT.x, player.y - PORT.y);
+  // --- harbor (or the Hulk Outpost once a bounty has opened it: js/campaign.js) ---
+  const hb = nearestHarbor(), dPort = Math.hypot(player.x - hb.x, player.y - hb.y);
   if (!canDock && dPort > DOCK_R + 80) canDock = true;
-  if (canDock && player.alive && dPort < DOCK_R) dock("return");
-  // --- population ---
-  for (let i = enemies.length - 1; i >= 0; i--) {
-    const e = enemies[i];
-    if (e.dead) { enemies.splice(i, 1); continue; }
-    if (e.alive && e.angry <= 0 && dist(e, player) > 3000) { e.alive = false; e.spr.destroy(); e.badge.destroy(); enemies.splice(i, 1); }
-  }
-  spawnT -= dt;
-  if (spawnT <= 0) { spawnT = 1.2; if (enemies.filter(e => e.alive).length < ENEMY_COUNT) spawnEnemy(S); }
+  if (canDock && player.alive && dPort < DOCK_R) dock(hb.outpost ? "outpost" : "return");
+  // --- population: ring quotas (js/world-seas.js) ---
+  managePopulation(dt);
 }
 
 const reloadWas = {};   // per mount: were all its guns loaded last frame? (for the reload knock)
@@ -217,6 +204,7 @@ function boot() {
     type: Phaser.AUTO, parent: "game", backgroundColor: "#155a73",
     scale: viewScaleConfig(),   // device-pixel canvas shown at CSS size (js/view.js)
     callbacks: { preBoot: g => { if (typeof watchBoot === "function") watchBoot(g); } },   // crash message (js/boot-guard.js)
+    input: { gamepad: padsAllowed() },   // js/input.js
     render: { antialias: true }, scene: [Main], audio: { noAudio: true },   // all sound goes through Snd (js/audio.js)
   });
 }

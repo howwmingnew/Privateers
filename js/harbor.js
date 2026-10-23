@@ -1,6 +1,7 @@
 "use strict";
 // ---------- Harbor ----------
 function dock(kind) {
+  runHook("dock", kind, cargo);   // kind "outpost" docks at the Hulk Outpost (js/campaign.js)
   paused = true; docked = true;
   const { sold, bonus } = sellHold(kind);   // the hold sells at the sortie's plunder-streak price (js/plunder.js)
   save.gold += sold; cargo = 0;
@@ -13,6 +14,7 @@ function dock(kind) {
   else portMsg = sold > 0 ? (bonus > 0 ? ["soldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["sold", { n: fmt(sold) }]) : ["empty"];
   renderPort();
   document.getElementById("port").hidden = false;
+  document.querySelector("#port .sheet").scrollTop = 0;   // the result message is at the top; never open scrolled past it
   Snd.music("harbor"); Snd.ambience("harbor");
   if (kind === "return") { Snd.play("bell"); if (sold > 0) Snd.play("coin", { amount: sold, delay: 0.45 }); }
   document.getElementById("joy").hidden = true; joyVec = { x: 0, y: 0, m: 0 };
@@ -22,6 +24,7 @@ function setSail() {
   docked = false; paused = false; canDock = false;
   resetEnemies(S);
   Snd.play("sail"); Snd.music("sea"); Snd.ambience("sea");
+  runHook("sail");   // the bounty's ship takes up its lair, a new sortie starts (js/campaign.js, js/logbook.js)
 }
 // Every departure starts from a fresh sea: no ship left waiting outside the harbor, no shot still in flight.
 function resetEnemies(sc) {
@@ -74,13 +77,16 @@ function renderPort() {
   }).join("");
   // ships: the current one and every bigger one (buying replaces the current ship)
   $("ships").innerHTML = SHIP_ORDER.slice(SHIP_ORDER.indexOf(save.ship)).map(id => {
-    const sh = SHIPS[id], credit = id === save.ship ? 0 : tradeInCredit(id), net = sh.cost - credit;   // trade-in: js/plunder.js
+    const sh = SHIPS[id], lock = shipLock(id);   // Letters of Marque gate (js/campaign.js): null, or why not yet
+    const credit = id === save.ship ? 0 : tradeInCredit(id), net = sh.cost - credit;   // trade-in (js/plunder.js)
     const btn = id === save.ship ? `<button class="btn max" type="button" disabled>${t("yourShip")}</button>`
+      : lock ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("locked")}</button>`
       : `<button class="btn" type="button" data-act="ship" data-id="${id}" ${save.gold < net ? "disabled" : ""}>${shipArmed === id ? t("shipArm") : t("buy", { n: fmt(net) })}</button>`;
     const ds = t("shipDs", { b: sh.slots.bow, s: sh.slots.left, t: sh.slots.stern,
-      hp: YARD.hull.show(yardVal("hull", 1, sh)), kn: YARD.sails.show(yardVal("sails", 1, sh)), cargo: fmt(yardVal("hold", 1, sh)) }) + (credit > 0 ? t("tradeIn", { n: fmt(credit) }) : "");
-    return `<div class="item"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${ds}</div></div>`;
+      hp: YARD.hull.show(yardVal("hull", 1, sh)), kn: YARD.sails.show(yardVal("sails", 1, sh)), cargo: fmt(yardVal("hold", 1, sh)) }) + (credit > 0 && !lock ? t("tradeIn", { n: fmt(credit) }) : "");
+    return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${ds}${lock ? `<span class="lock">${lock}</span>` : ""}</div></div>`;
   }).join("");
+  runHook("renderPort");   // wanted poster, outpost layout (js/campaign.js)
 }
 
 document.getElementById("port").addEventListener("click", ev => {
@@ -99,6 +105,7 @@ document.getElementById("port").addEventListener("click", ev => {
     const k = b.dataset.k; save.gold -= YARD[k].cost(save[k]); save[k]++;
   } else if (act === "ship") {
     const id = b.dataset.id;
+    if (shipLock(id)) return;
     if (shipArmed === id && performance.now() - shipArmedAt < 400) return;   // a double-click is not a second tap
     clearTimeout(shipArmTimer);
     if (shipArmed !== id) {
@@ -127,12 +134,4 @@ document.getElementById("port").addEventListener("click", ev => {
 // Not enough gold: a disabled button never receives a click, so listen for the press itself.
 document.getElementById("port").addEventListener("pointerdown", ev => { const b = ev.target.closest("[data-act]"); if (b && b.disabled) Snd.play("denied"); });
 document.getElementById("sail").addEventListener("click", setSail);
-const resetBtn = document.getElementById("reset");
-let resetArmed = false;
-resetBtn.addEventListener("click", () => {
-  Snd.play("uiClick");
-  if (!resetArmed) { resetArmed = true; resetBtn.textContent = t("resetArm"); setTimeout(() => { resetArmed = false; resetBtn.textContent = t("reset"); }, 3000); return; }
-  save = defaultSave(); persist(); resetArmed = false; resetBtn.textContent = t("reset");
-  for (let i = crates.length - 1; i >= 0; i--) if (crates[i].wreck) { crates[i].spr.destroy(); crates[i].label?.destroy(); crates.splice(i, 1); }
-  applyPlayerStats(true); dock("welcome"); hud(true);
-});
+// "Reset progress" moved to the settings panel (js/options.js, wipeProgress).

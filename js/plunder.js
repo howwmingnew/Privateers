@@ -51,7 +51,7 @@ function lootDrop(s, killer) {
 }
 // Docking: the hold sells at the streak's price, and the streak ends with the sortie either way.
 function sellHold(kind) {
-  const bonus = kind === "return" ? streakBonus() : 0, sold = Math.round(cargo * (1 + bonus));
+  const bonus = kind === "return" || kind === "outpost" ? streakBonus() : 0, sold = Math.round(cargo * (1 + bonus));
   streak = 0; streakChip();
   return { sold, bonus };
 }
@@ -60,7 +60,8 @@ function sellHold(kind) {
 const streakEl = (() => {
   const bars = typeof document.querySelector === "function" && document.querySelector("#hud .bars"); if (!bars) return null;
   const el = document.createElement("div"); el.id = "streak"; el.className = "streak"; el.hidden = true;
-  bars.insertBefore(el, bars.querySelector(".lang")); return el;
+  const before = [...bars.children].find(c => c.classList.contains("hudrow") || c.classList.contains("lang"));   // above the button row
+  bars.insertBefore(el, before || null); return el;
 })();
 let streakShown = "";
 function streakChip() {

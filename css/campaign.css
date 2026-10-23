@@ -1,0 +1,136 @@
+/* Campaign, seas, captain's log, achievements, victory. Same night-sea + parchment theme as css/style.css. */
+
+/* Chart: the whole square map (the Maelstrom fills the corners), a little larger where there is room */
+#mini { width: 124px; height: 124px; border-radius: 8px; }
+@media (min-width: 760px) and (min-height: 560px) { #mini { width: 156px; height: 156px; } }
+
+/* Sea banner */
+#seaBanner { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 24vh); transform: translateX(-50%); z-index: 6; pointer-events: none;
+  display: grid; justify-items: center; gap: 4px; text-align: center; width: max-content; max-width: calc(100vw - 32px); opacity: 0;
+  color: var(--foam); text-shadow: 0 2px 10px rgba(0,0,0,.75), 0 0 2px rgba(0,0,0,.6); }
+#seaBanner.on { animation: seaIn 3.8s ease forwards; }
+#seaBanner small { font-size: 13px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: #f0c766; }
+#seaBanner b { font-family: var(--f-display); font-weight: 400; font-size: clamp(32px, 6vw, 54px); line-height: 1.05; padding: 4px 22px;
+  border-block: 1px solid rgba(240,199,102,.55); text-wrap: balance; }
+#seaBanner span { font-size: 15px; opacity: .92; text-wrap: balance; }
+#seaBanner[data-sea="maelstrom"] small { color: #ef8f6a; }
+@keyframes seaIn { 0% { opacity: 0; transform: translate(-50%, 10px); } 12%, 76% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -6px); } }
+@keyframes seaFade { 0% { opacity: 0; } 10%, 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Achievement toast: bottom left, never takes input */
+#achToast { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 100px); z-index: 13; pointer-events: none;
+  display: grid; gap: 1px; max-width: min(320px, calc(100vw - 32px)); padding: 8px 14px 9px 46px; border-radius: 4px;
+  background: rgba(8,34,45,.92); border: 1.5px solid var(--brass); box-shadow: 0 6px 22px rgba(0,0,0,.45);
+  opacity: 0; transform: translateX(-12px); transition: opacity .3s, transform .3s; }
+#achToast::before { content: ""; position: absolute; left: 12px; top: 50%; width: 22px; height: 22px; margin-top: -11px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ffe39a, #c08f2e 60%, #7a5a1a); box-shadow: 0 0 0 2px rgba(240,199,102,.3); }
+#achToast.on { opacity: 1; transform: none; }
+#achToast small { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #f0c766; }
+#achToast b { font-family: var(--f-display); font-weight: 400; font-size: 20px; line-height: 1.1; }
+#achToast span { font-size: 13px; opacity: .85; }
+/* on narrow screens a sheet fills the width: keep the toast off its buttons */
+@media (max-width: 900px) {
+  body:has(#port:not([hidden])) #achToast, body:has(#logbook:not([hidden])) #achToast, body:has(#victory:not([hidden])) #achToast {
+    bottom: auto; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+}
+
+/* Bounty arrow on the screen edge, and the boss's hull bar */
+#bossArrow { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 4; pointer-events: none; }
+#bossArrow .ptr { position: absolute; left: -24px; top: -24px; width: 48px; height: 48px; }
+#bossArrow .ptr::after { content: ""; position: absolute; right: -9px; top: 50%; margin-top: -9px;
+  border-left: 14px solid #f0c766; border-block: 9px solid transparent; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
+#bossArrow canvas { position: absolute; left: -16px; top: -16px; width: 32px; height: 32px; }
+#bossBar { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 56px); transform: translateX(-50%); z-index: 5; pointer-events: none;
+  width: min(420px, calc(100vw - 32px)); display: grid; gap: 4px; text-align: center; }
+#bossBar span { font-family: var(--f-display); font-size: 20px; color: #f6d27a; text-shadow: 0 2px 6px #000; }
+#bossBar .bb { height: 10px; border-radius: 3px; background: rgba(8,34,45,.85); border: 1px solid rgba(240,199,102,.6); overflow: hidden; }
+#bossBar .bb i { display: block; height: 100%; width: 100%; background: linear-gradient(#e2c15a, #b07f1f); transition: width .2s; }
+
+/* Ship gate in the "New ships" list */
+.item.locked .nm { color: var(--ink-soft); }
+.item .ds .lock { display: block; margin-top: 3px; color: var(--blood); font-weight: 700; }
+
+/* Wanted poster (a section of the harbor ledger) */
+#wanted { display: grid; gap: 12px; }
+#wanted .story { margin: 0; font-size: 16px; line-height: 1.45; padding: 10px 12px; border-left: 3px solid var(--brass); background: rgba(192,143,46,.12); }
+#wanted .story em { font-style: normal; font-weight: 700; color: #8a5d0c; }
+#wanted .hint-s { margin: 0; }
+.poster { position: relative; background: #ead9ad; border: 1px solid rgba(42,29,16,.35); border-radius: 2px; padding: 16px 18px 14px; transform: rotate(-.5deg);
+  box-shadow: 0 3px 10px rgba(60,40,10,.25), inset 0 0 40px rgba(150,110,50,.28); }
+.poster::before { content: ""; position: absolute; left: 50%; top: 7px; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #b9b2a2, #4d473c); box-shadow: 0 1px 1px rgba(0,0,0,.4); }
+.poster .p-marque { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); text-align: center; margin-top: 4px; }
+.poster .p-head { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: center; margin-top: 8px; }
+.poster .p-flag { width: 120px; height: 85px; }
+.poster .p-wanted { font-family: var(--f-display); font-size: 30px; line-height: 1; letter-spacing: .12em; text-transform: uppercase; color: var(--ink); }
+.poster .p-name { font-family: var(--f-display); font-size: 34px; line-height: 1.05; color: var(--blood); text-wrap: balance; }
+.poster .p-sub { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+.poster .p-story { margin: 10px 0 8px; font-size: 15px; line-height: 1.45; }
+.poster .p-facts { margin: 0; display: grid; gap: 4px; font-size: 14px; border-top: 1px solid rgba(42,29,16,.3); padding-top: 8px; }
+.poster .p-facts div { display: grid; grid-template-columns: 92px 1fr; gap: 8px; }
+.poster .p-facts dt { font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .06em; font-size: 12px; padding-top: 2px; }
+.poster .p-facts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.poster .p-facts b { color: #8a5d0c; }
+.poster.done { text-align: center; display: grid; gap: 8px; justify-items: center; }
+.poster.done .p-story { margin: 0; }
+.poster .ngbtn { grid-row: auto; grid-column: auto; }
+.rankline { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; font-size: 15px; color: var(--ink-soft); }
+.rankline b { color: var(--ink); }
+.logbtn { font: inherit; font-weight: 700; font-size: 14px; padding: 6px 12px; border-radius: 3px; cursor: pointer; background: transparent; color: var(--ink);
+  border: 1.5px solid var(--ink); }
+@media (hover: hover) { .logbtn:hover { background: rgba(42,29,16,.08); } }
+
+/* Captain's log and victory sheets: over the ledger, same parchment */
+#logbook, #victory { position: fixed; inset: 0; z-index: 11; display: grid; place-items: center; background: rgba(4,18,24,.62);
+  padding-block: calc(env(safe-area-inset-top, 0px) + 12px) calc(env(safe-area-inset-bottom, 0px) + 12px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+#victory { z-index: 12; background: rgba(4,18,24,.78); }
+.sheet.log, .sheet.victory { padding-bottom: 20px; }
+.sheet h3 { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin: 14px 0 6px; }
+.sheet .closebtn { grid-row: auto; grid-column: auto; min-width: 0; }
+.logstats { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 16px; }
+.logstats dt { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+.logstats dd { margin: 0; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fbars { display: grid; gap: 6px; }
+.fbar { display: grid; grid-template-columns: 84px 1fr 52px; gap: 10px; align-items: center; font-size: 14px; }
+.fbar i { display: block; height: 12px; min-width: 2px; border-radius: 2px; background: var(--ink); }
+.fbar.f-navy i { background: #3d4f6b; }
+.fbar.f-merchant i { background: #7a5230; }
+.fbar b { text-align: right; font-variant-numeric: tabular-nums; }
+.lvbars { display: flex; gap: 4px; align-items: stretch; height: 92px; }
+.lvbars .lv { flex: 1; display: grid; grid-template-rows: 16px 1fr 16px; justify-items: center; min-width: 0; }
+.lvbars .lv b { font-size: 11px; font-variant-numeric: tabular-nums; align-self: end; }
+.lvbars .lv i { align-self: end; width: 100%; max-width: 26px; min-height: 1px; background: var(--brass); border-radius: 2px 2px 0 0; }
+.lvbars .lv span { font-size: 11px; color: var(--ink-soft); border-top: 1px solid rgba(42,29,16,.4); width: 100%; text-align: center; }
+.achs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 14px; }
+.achs li { position: relative; padding: 6px 0 6px 30px; display: grid; gap: 1px; border-top: 1px solid rgba(42,29,16,.18); }
+.achs li::before { content: ""; position: absolute; left: 2px; top: 9px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px dashed rgba(42,29,16,.4); }
+.achs li.on::before { border: 0; background: radial-gradient(circle at 40% 35%, #ffe39a, #c08f2e 60%, #7a5a1a); }
+.achs li b { font-size: 15px; }
+.achs li span { font-size: 13px; color: var(--ink-soft); }
+.achs li.off { opacity: .62; }
+
+.sheet.victory { width: min(100%, 620px); text-align: left; }
+.sheet.victory .v-rose { width: 120px; height: 120px; justify-self: center; margin-top: 4px; }
+.sheet.victory > .eyebrow, .sheet.victory > h1 { text-align: center; }
+.sheet.victory h1 { font-size: 40px; }
+.sheet.victory .epi { margin: 0; font-size: 17px; line-height: 1.55; }
+.sheet.victory .credits p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-soft); }
+.v-choices { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; position: sticky; bottom: 0; margin: 0 -20px -20px; padding: 14px 20px 20px;
+  background: linear-gradient(transparent, var(--parch) 30%); }
+.v-choices button { display: grid; gap: 2px; justify-items: center; grid-row: auto; grid-column: auto; min-width: 220px; }
+.v-choices button small { font-family: var(--f-ui); font-size: 12px; font-weight: 600; opacity: .85; }
+.v-choices .btn { padding: 10px 18px; font-size: 18px; }
+
+@media (max-width: 420px) {
+  .poster .p-head { grid-template-columns: 92px 1fr; gap: 10px; }
+  .poster .p-flag { width: 92px; height: 65px; }
+  .poster .p-wanted { font-size: 24px; } .poster .p-name { font-size: 27px; }
+  .poster .p-facts div { grid-template-columns: 76px 1fr; }
+  .v-choices button { min-width: 0; width: 100%; }
+  .sheet.victory h1 { font-size: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #seaBanner.on { animation-name: seaFade; }
+  #achToast, #bossBar .bb i { transition: none; }
+}
