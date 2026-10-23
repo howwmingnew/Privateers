@@ -29,6 +29,13 @@ async function open(browser, { dpr = 1, viewport = { width: 1280, height: 720 },
   return { ctx, page, errors };
 }
 const ready = page => page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S && S.sys.isActive(), null, { timeout: 15000 });
+// The game boots to a title screen (js/menu.js); its start button docks at the harbor ledger as boot used to.
+async function leaveTitle(page) {
+  if (!(await page.evaluate(() => typeof titleOpen !== "undefined" && titleOpen))) return;
+  await page.click("[data-smoke=start]");
+  await page.waitForFunction(() => docked, null, { polling: 50, timeout: 5000 });
+}
+const seaFrozen = async page => { await leaveTitle(page); await page.evaluate(() => { setSail(); paused = true; }); };
 // textContent, not innerText: the error details sit in a collapsed <details>
 const failPanel = page => page.evaluate(() => { const el = document.querySelector("#bootFail .sheet"); return el ? el.textContent : null; });
 // Canvas, camera and text state; *Css values are CSS pixels on the page.
@@ -56,7 +63,7 @@ try {
   for (const dpr of [1, 1.25, 1.5, 2, 3]) {
     const { ctx, page, errors } = await open(browser, { dpr });
     await ready(page);
-    await page.evaluate(() => { setSail(); paused = true; });   // ledger closed so the harbor label shows; world frozen
+    await seaFrozen(page);   // ledger closed so the harbor label shows; world frozen
     await sleep(400);
     const v = views[dpr] = await view(page);
     const r = Math.min(dpr, 2);
@@ -104,7 +111,7 @@ try {
   for (const dpr of [1, 2]) {
     const { ctx, page, errors } = await open(browser, { dpr });
     await ready(page);
-    await page.evaluate(() => { setSail(); paused = true; });   // at sea (no ledger over the canvas), camera still
+    await seaFrozen(page);   // at sea (no ledger over the canvas), camera still
     await sleep(500);
     const hits = [];
     for (const [x, y] of [[200, 300], [1080, 570], [677, 307]]) {
@@ -136,7 +143,7 @@ try {
   for (const [name, seed] of Object.entries(saves)) {
     const { ctx, page, errors } = await open(browser, { seed });
     let booted = true;
-    try { await ready(page); } catch (e) { booted = false; }
+    try { await ready(page); await leaveTitle(page); } catch (e) { booted = false; }
     await sleep(300);
     const st = booted ? await page.evaluate(() => ({ docked, port: !document.getElementById("port").hidden, gold: save.gold, goldType: typeof save.gold,
       maxHp: player.maxHp, ship: save.ship, wrecks: save.wrecks.length, crates: crates.filter(c => c.wreck).length, xss: window.__xss || 0,
@@ -190,6 +197,7 @@ try {
   {
     const { ctx, page } = await open(browser);
     await ready(page);
+    await leaveTitle(page);
     await page.click("#sail");
     await page.evaluate(() => setTimeout(() => { throw new Error("test: stray error"); }, 0));
     await sleep(3500);
@@ -208,7 +216,7 @@ try {
     const ctx = await b2.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 2 });
     const page = await ctx.newPage(); const errors = []; page.on("pageerror", e => errors.push(e.message));
     await page.goto(url, { waitUntil: "load" }); await ready(page);
-    await page.evaluate(() => { setSail(); paused = true; }); await sleep(400);
+    await seaFrozen(page); await sleep(400);
     const v = await view(page);
     check(v.renderType === 1 && near(v.canvasW, 2560, 1) && !errors.length, "Canvas renderer at 2x boots with a 2x backing store", { v, errors });
     const h = v.harborCss;

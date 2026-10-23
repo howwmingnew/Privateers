@@ -31,13 +31,14 @@ const levelAt = d => ringAt(d) + levelBonus();
 const ringOf = L => { const k = clamp(L - levelBonus(), 1, MAX_RING);
   return { r0: Math.max(SPAWN_R_MIN, ringEdge(k)), r1: k === MAX_RING ? SPAWN_R_MAX : ringEdge(k + 1) }; };
 // at: { x, y, faction } places a chosen ship (bosses, escorts); otherwise the ring quotas pick where. Returns the ship.
+// at.near lets it start closer than the usual 750 px to the player (the tutorial's easy first target, js/tutorial.js).
 function spawnEnemy(sc, at) {
   let x, y, ok = false;
   const ring = at ? 0 : spawnRing();
   for (let tries = 0; tries < 40 && !ok; tries++) {
     ({ x, y } = at ? { x: at.x + rand(-60, 60), y: at.y + rand(-60, 60) } : spawnPoint(ring));
     ok = x > 150 && x < W - 150 && y > 150 && y < H - 150 &&
-         (!player || Math.hypot(x - player.x, y - player.y) > 750) &&
+         (!player || (at && at.near) || Math.hypot(x - player.x, y - player.y) > 750) &&
          !islands.some(i => Math.hypot(i.x - x, i.y - y) < i.r * 1.3 + 40);
   }
   if (!ok) return null;

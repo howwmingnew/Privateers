@@ -14,6 +14,7 @@ function dock(kind) {
   else portMsg = sold > 0 ? ["sold", { n: fmt(sold) }] : ["empty"];
   renderPort();
   document.getElementById("port").hidden = false;
+  document.querySelector("#port .sheet").scrollTop = 0;   // the result message is at the top; never open scrolled past it
   Snd.music("harbor"); Snd.ambience("harbor");
   if (kind === "return") { Snd.play("bell"); if (sold > 0) Snd.play("coin", { amount: sold, delay: 0.45 }); }
   document.getElementById("joy").hidden = true; joyVec = { x: 0, y: 0, m: 0 };
@@ -130,12 +131,4 @@ document.getElementById("port").addEventListener("click", ev => {
 // Not enough gold: a disabled button never receives a click, so listen for the press itself.
 document.getElementById("port").addEventListener("pointerdown", ev => { const b = ev.target.closest("[data-act]"); if (b && b.disabled) Snd.play("denied"); });
 document.getElementById("sail").addEventListener("click", setSail);
-const resetBtn = document.getElementById("reset");
-let resetArmed = false;
-resetBtn.addEventListener("click", () => {
-  Snd.play("uiClick");
-  if (!resetArmed) { resetArmed = true; resetBtn.textContent = t("resetArm"); setTimeout(() => { resetArmed = false; resetBtn.textContent = t("reset"); }, 3000); return; }
-  save = defaultSave(); persist(); resetArmed = false; resetBtn.textContent = t("reset");
-  for (let i = crates.length - 1; i >= 0; i--) if (crates[i].wreck) { crates[i].spr.destroy(); crates[i].label?.destroy(); crates.splice(i, 1); }
-  applyPlayerStats(true); dock("welcome"); hud(true);
-});
+// "Reset progress" moved to the settings panel (js/options.js, wipeProgress).

@@ -38,7 +38,7 @@ function fire(s, targets, dt) {
 // stern guns aft. No auto-aim and no lead: the ball flies exactly along the line that was shown,
 // so the player aims by turning the ship.
 const AIM_SHOW_PAD = 1.15;   // aim lines appear when an enemy is within (range x this) of a mount's firing arc
-let prevKeyActive = false, engagedPrev = false, releaseTips = 0;
+let engagedPrev = false, releaseTips = 0;
 function muzzle(s, m, i, n) {
   const g = (s.mounts && s.mounts[m.key]) || m;   // per-hull out/span from applyShipArt, else the MOUNTS defaults
   const a = s.rot + m.ang, p = s.rot + m.perp, off = n === 1 ? 0 : -g.span / 2 + g.span * i / (n - 1);
@@ -63,7 +63,7 @@ function lineHits(x, y, a, len) {
   }
   return null;
 }
-// Fire every loaded cannon on each engaged mount. Called when the player lets go.
+// Fire every loaded cannon on each engaged mount: Space, letting go of the stick or mouse, a click, pad A / RT.
 function playerFire() {
   if (paused || docked || !player.alive) return;
   let shots = 0;

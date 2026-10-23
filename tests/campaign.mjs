@@ -25,7 +25,12 @@ async function open(viewport, { lang = "en", saveJson = null, mobile = false } =
   await ready(page);
   return { ctx, page, errors, shot: name => page.screenshot({ path: join(out, name + ".png") }) };
 }
-const ready = page => page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S && docked, null, { timeout: 15000 });
+// Boot shows the title screen (js/menu.js); its start button docks at the harbor as boot used to.
+const ready = async page => {
+  await page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S && typeof titleOpen !== "undefined", null, { timeout: 15000 });
+  if (await page.evaluate(() => titleOpen)) await page.click("[data-smoke=start]");
+  await page.waitForFunction(() => docked, null, { timeout: 15000 });
+};
 const done = async (tag, o) => { check(o.errors.length === 0, `${tag}: no page errors${o.errors.length ? " -> " + o.errors.join(" | ") : ""}`); await o.ctx.close(); };
 // Sink the active bounty's ship by hand: sail if needed, park beside it, one big hit from the player.
 const claim = (page, i) => page.evaluate(i => {
@@ -123,7 +128,8 @@ console.log("Fresh campaign (desktop, en)");
     check(r.tagGone, `bounty ${i + 1}: name tag removed with the ship`);
     if (i === 0) {   // buy the schooner now that it is unlocked: the gate opened and the yard sells it
       await page.evaluate(() => { sendHome(); dock("return"); });
-      const story = await page.evaluate(() => document.querySelector("#wanted .story")?.textContent || "");
+      await page.waitForTimeout(400);   // shop buttons ignore clicks for a moment after the ledger opens (js/menu.js)
+      const story =await page.evaluate(() => document.querySelector("#wanted .story")?.textContent || "");
       check(/Privateer/.test(story), "harbor tells the story of the bounty just claimed");
       await o.shot("desktop-en-5-after-ned");
       await page.click('#ships [data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(500);

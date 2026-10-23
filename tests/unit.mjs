@@ -39,7 +39,7 @@ const loadWith = (o, opts) => boot({ [SAVE_KEY]: typeof o === "string" ? o : v2(
 test("fresh browser gets the default save", () => {
   const g = boot();
   assert.deepEqual(g.json("save"), g.json("defaultSave()"));
-  assert.deepEqual(g.json("save"), JSON.parse(v2({})));
+  assert.deepEqual(g.json("save"), JSON.parse(v2({})));   // module fields (tutorial, campaign) come via SAVE_DEFAULTS
   assert.equal(g.store.size, 0, "loading must not write anything");
 });
 

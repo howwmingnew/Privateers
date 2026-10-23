@@ -38,7 +38,8 @@ try {
   const { ctx, page } = await open("index.html");
   await page.waitForFunction(() => typeof player !== "undefined" && player && typeof Snd !== "undefined", null, { timeout: 15000 });
   check(await page.evaluate(() => Snd.state()) === "locked", "no AudioContext before the first gesture");
-  await page.click("#sail");                                         // a real user gesture
+  await page.click("[data-smoke=start]");                            // a real user gesture (title screen, js/menu.js)
+  await page.click("#sail");
   await page.waitForFunction(() => Snd.state() === "running", null, { timeout: 4000 }).catch(() => {});
   check(await page.evaluate(() => Snd.state()) === "running", "AudioContext is running after a click");
   await page.waitForTimeout(400);
@@ -82,8 +83,12 @@ try {
   await page.waitForFunction(() => Snd.state() === "suspended", null, { timeout: 2000 }).catch(() => {});
   check(await page.evaluate(() => Snd.state()) === "suspended", "a hidden tab suspends audio");
   await page.evaluate(() => { Object.defineProperty(document, "hidden", { configurable: true, get: () => false }); document.dispatchEvent(new Event("visibilitychange")); });
+  // hiding the tab at sea also opened the pause menu (js/menu.js), which keeps the game and its sound paused until Resume
+  await page.waitForTimeout(300);
+  check(await page.evaluate(() => pauseOpen && Snd.state() === "suspended"), "back on the tab, the pause menu keeps audio paused");
+  await page.keyboard.press("Escape");
   await page.waitForFunction(() => Snd.state() === "running", null, { timeout: 2000 }).catch(() => {});
-  check(await page.evaluate(() => Snd.state()) === "running", "showing the tab again resumes audio");
+  check(await page.evaluate(() => !pauseOpen && Snd.state()) === "running", "Resume from the pause menu resumes audio");
 
   // M toggles mute, with a toast in the current language, and it persists
   await page.keyboard.press("KeyM");
