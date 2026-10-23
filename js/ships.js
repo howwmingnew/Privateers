@@ -26,10 +26,10 @@ function makePlayer(sc) {
 // Enemy level is set purely by distance from the harbor: each level owns one ring, ZONE_STEP wide (js/world-seas.js),
 // plus 3 levels per New Game+ cycle.
 const SPAWN_R_MIN = SAFE_R + 120, SPAWN_R_MAX = Math.hypot(PORT.x - 150, PORT.y - 150);
-const levelAt = d => ringAt(d) + levelBonus();
+const levelAt = d => ringAt(d) + levelBonus() + warLevels(ringAt(d));
 // The ring an enemy of level L roams when idle (the outermost one runs on into the corners).
-const ringOf = L => { const k = clamp(L - levelBonus(), 1, MAX_RING);
-  return { r0: Math.max(SPAWN_R_MIN, ringEdge(k)), r1: k === MAX_RING ? SPAWN_R_MAX : ringEdge(k + 1) }; };
+const ringBand = k => ({ r0: Math.max(SPAWN_R_MIN, ringEdge(k)), r1: k === MAX_RING ? SPAWN_R_MAX : ringEdge(k + 1) });
+const ringOf = L => ringBand(clamp(L - levelBonus(), 1, MAX_RING));
 // at: { x, y, faction } places a chosen ship (bosses, escorts); otherwise the ring quotas pick where. Returns the ship.
 // at.near lets it start closer than the usual 750 px to the player (the tutorial's easy first target, js/tutorial.js).
 function spawnEnemy(sc, at) {
@@ -42,7 +42,9 @@ function spawnEnemy(sc, at) {
          !islands.some(i => Math.hypot(i.x - x, i.y - y) < i.r * 1.3 + 40);
   }
   if (!ok) return null;
-  const L = levelAt(Math.hypot(x - PORT.x, y - PORT.y)), faction = at && at.faction ? at.faction : pickFaction();
+  // placed ships (bosses, escorts, the tutorial's mark) keep their designed level: the war's escalation is for the open sea
+  const d0 = Math.hypot(x - PORT.x, y - PORT.y), L = at ? ringAt(d0) + levelBonus() : levelAt(d0);
+  const faction = at && at.faction ? at.faction : pickFaction();
   const e = makeEnemy(sc, x, y, L, faction);
   // placed ships (bosses, escorts, the tutorial's target) sail alone; a convoy only fills what its own ring is short of
   // its quota (js/world-seas.js), so it never starves the other rings
@@ -154,7 +156,9 @@ function think(e, dt) {
     const d = dist(e, tg), toT = Math.atan2(tg.y - e.y, tg.x - e.x);
     const range = e.range ?? 250;
     const chased = Math.hypot(e.x - e.chaseFrom.x, e.y - e.chaseFrom.y);
-    if ((chased > LEASH && d > range) || d > GIVE_UP_DIST) giveUp(e, tg, now);
+    // an ordinary ship breaks off once its quarry has fled two or more rings shallower than the ring it calls home
+    const shoal = tg === player && !e.boss && !e.escortOf && e.ring && ringAt(dist(player, PORT)) <= e.ring - 2;
+    if ((chased > LEASH && d > range) || d > GIVE_UP_DIST || shoal) giveUp(e, tg, now);
     else ({ desired, thr } = archTactic(e, tg, d, toT, now));   // each class's battle plan (js/archetypes.js)
   }
   if (desired == null) { const c = convoyIdle(e); if (c) ({ desired, thr } = c); }
@@ -171,7 +175,7 @@ function think(e, dt) {
     e.thinkT -= dt;
     if (!e.wander || e.thinkT <= 0 || Math.hypot(e.wander.x - e.x, e.wander.y - e.y) < 80) {
       // idle ships roam their own level's ring, so stronger ships don't drift in toward the harbor
-      const { r0, r1 } = ringOf(e.L), r = rand(r0, r1);
+      const { r0, r1 } = e.ring ? ringBand(e.ring) : ringOf(e.L), r = rand(r0, r1);   // by home ring: level != ring once the war escalates
       const a = Math.atan2(e.y - PORT.y, e.x - PORT.x) + rand(-1, 1) * 600 / r;
       e.thinkT = rand(5, 10);
       e.wander = { x: clamp(PORT.x + Math.cos(a) * r, 200, W - 200), y: clamp(PORT.y + Math.sin(a) * r, 200, H - 200) };

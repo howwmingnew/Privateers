@@ -15,7 +15,7 @@ const ARCH = {
               bowGun: { dmg: 1.1, range: 1.15, speed: 560 } },
   brig:     { hp: 1,    speed: 1,    turn: 1,    sides: per => per, bow: 0, stern: 0, dmg: 1, reload: 1, range: 1, loot: 1, plan: "circle" },
   frigate:  { hp: 1.25, speed: 0.95, turn: 0.9,  sides: per => Math.min(per + 1, 5), bow: 0, stern: 1, dmg: 1, reload: 1.2, range: 1.05, loot: 1.3, plan: "orbit" },
-  fireship: { hp: 0.55, speed: 1.35, turn: 1.15, sides: () => 0, bow: 0, stern: 0, dmg: 0, reload: 1, range: 1, loot: 0.6, plan: "ram", boom: true },
+  fireship: { hp: 0.4, speed: 1.35, turn: 1.15, sides: () => 0, bow: 0, stern: 0, dmg: 0, reload: 1, range: 1, loot: 0.6, plan: "ram", boom: true },
   manowar:  { hp: 1.7,  speed: 0.75, turn: 0.6,  sides: () => 5, bow: 0, stern: 1, dmg: 1, reload: 1.35, range: 1.1, loot: 1.9, plan: "line", rake: 1.5 },
   fluyt:    { hp: 1,    speed: 1,    turn: 0.9,  sides: () => 1, bow: 0, stern: 0, dmg: 1, reload: 1.2, range: 1, loot: 1, plan: "flee" },
   fort:     { hp: 3.6,  speed: 0,    turn: 0,    sides: () => 0, bow: 0, stern: 0, turret: 3, dmg: 1.2, reload: 1.2, rangeAbs: 420, gunSpeed: 560, loot: 2.5, plan: "fort" },
@@ -33,6 +33,7 @@ const ARCH_MIX = {
   merchant: [[1, { fluyt: 1 }]],
 };
 const CONVOY_P = 0.3;          // share of merchants that sail as a convoy: 1-2 more fluyts and an armed escort brig
+const FUSE_R = 260;   // a fireship lights its fuse this close to its target
 const BOOM_R = 70, BOOM_K = 0.25, BOOM_BOSS_K = 0.08;   // fireship blast: radius, share of each hull's max HP (bosses less)
 
 function pickArch(L, faction) {
@@ -217,6 +218,13 @@ function panic(e, src) {
 function fireshipContact() {
   for (const e of enemies) {
     if (!e.alive || e.arch !== "fireship" || !e.target || !e.target.alive) continue;
+    // inside FUSE_R it lights its fuse: sparks and a warning mark, about 1.5 s of run-in to turn away or shoot it
+    if (!e.fuseLit && dist(e, e.target) < FUSE_R) {
+      e.fuseLit = true;
+      if (onScreen(e.x, e.y, 60)) floatText(e.x, e.y - 34, t("fFuse"), "#ffb04a", 18);
+      if (e.target === player) Snd.play("burn", { x: e.x, y: e.y });
+    }
+    if (e.fuseLit && onScreen(e.x, e.y, 40) && Math.random() < 0.5) S.fx.spark.emitParticleAt(e.x + rand(-8, 8), e.y + rand(-6, 6), 1);
     if (dist(e, e.target) < 30 + (e.target.hw || 13) + (e.hw || 11)) { e.rammed = true; e.loot = 0; sink(e, null); }
   }
 }

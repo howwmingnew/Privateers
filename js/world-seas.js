@@ -35,6 +35,10 @@ const polarPt = (a, r) => ({ x: PORT.x + Math.cos(a) * r, y: PORT.y + Math.sin(a
 const NG_LEVELS = 3, NG_LOOT = 1.5, NG_CAP = 3;
 const ngCycles = () => Math.min(save.ngPlus || 0, NG_CAP);
 const levelBonus = () => NG_LEVELS * ngCycles();
+// The war escalates: once the Ashen Saint (bounty 3) and then Commodore Hale (bounty 4) are sunk, the Navy Lanes and the
+// Maelstrom (rings 6+) put out ships 1 and then 2 levels stronger, so the late game keeps something above the player.
+const WAR_RING = 6, WAR_FROM = 2, WAR_MAX = 2;
+const warLevels = ring => ring >= WAR_RING ? clamp(((save.campaign && save.campaign.bounty) || 0) - WAR_FROM, 0, WAR_MAX) : 0;
 const lootMul = () => NG_LOOT ** ngCycles();
 
 // ---------- Islands ----------
@@ -156,7 +160,7 @@ const seaDepth = d => Math.min(...SEA_LINES().map(r => Math.abs(d - r)));   // p
 function renderSeaBanner(id) {
   const s = SEAS.find(x => x.id === id), b = levelBonus();
   seaBanner.dataset.sea = id;
-  seaBanner.innerHTML = `<small>${t("seaLv", { a: s.L0 + b, b: s.L1 + b })}</small><b>${t("sea_" + id)}</b><span>${t("seaLine_" + id)}</span>`;
+  seaBanner.innerHTML = `<small>${t("seaLv", { a: s.L0 + b + warLevels(s.L0), b: s.L1 + b + warLevels(s.L1) })}</small><b>${t("sea_" + id)}</b><span>${t("seaLine_" + id)}</span>`;
 }
 function showSeaBanner(id) {
   seaShown = id; renderSeaBanner(id);

@@ -62,7 +62,7 @@ const BOUNTIES = [
   { id: "ned",    L: 3,  cls: "cutter",  faction: "pirate", hpMul: 2.5, speed: 0.9,  ang: Math.PI,        r: ringMid(3), reward: 400,   escorts: [] },
   { id: "carey",  L: 5,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: -Math.PI / 2,   r: ringMid(5), reward: 1500,  escorts: [{ cls: "brig" }] },
   { id: "saint",  L: 7,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: Math.PI * 0.75, r: ringMid(7), reward: 4000,  escorts: [FIRE_RAIDER, FIRE_RAIDER, FIRE_RAIDER] },
-  { id: "hale",   L: 9,  cls: "frigate", faction: "navy",   hpMul: 2,              ang: 0,              r: ringMid(9), reward: 10000, escorts: [{ cls: "brig" }, { cls: "brig" }] },
+  { id: "hale",   L: 9,  cls: "frigate", faction: "navy",   hpMul: 1.6,              ang: 0,              r: ringMid(9), reward: 10000, escorts: [{ cls: "brig" }, { cls: "brig" }] },
   { id: "thorne", L: 10, cls: "manowar", faction: "navy",   hpMul: 2, speed: 0.85, guns: 5, ang: Math.PI / 4, r: 3800, reward: 20000, final: true,
     escorts: [{ cls: "frigate" }, { cls: "brig" }, { cls: "brig" }] },
 ];
