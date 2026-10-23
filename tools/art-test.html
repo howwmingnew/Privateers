@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privateers art test</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="../css/vfx.css">
+<style>
+  body { margin: 0; background: #0b2530; color: #f6f1e3; font: 14px "Barlow Semi Condensed", system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 12px; background: #0b2530ee; }
+  header b { margin-right: 10px; font-size: 16px; }
+  button, label { font: inherit; background: #1d4e60; color: #f6f1e3; border: 1px solid #3c7488; border-radius: 3px; padding: 4px 10px; cursor: pointer; }
+  #game canvas { display: block; }
+</style>
+</head>
+<body>
+<!-- Every hull class x livery at 1x and at 0.55x (gameplay zoom on a phone), plus a VFX sandbox using the game's own
+     vfx*() functions. Open over http or file://. ?hitbox=1 draws the hit capsules; window.sandbox drives it from tests. -->
+<header>
+  <b>Art test</b>
+  <button data-a="broadside">Broadside</button><button data-a="hit">Hit</button><button data-a="miss">Miss</button>
+  <button data-a="half">Hull 40%</button><button data-a="quarter">Hull 20%</button><button data-a="burn">Burn</button>
+  <button data-a="sink">Sink</button><button data-a="hitstop">Hit-stop</button><button data-a="reset">Reset</button>
+  <label><input type="checkbox" id="hb"> hitboxes</label>
+</header>
+<div id="game"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/util.js"></script>
+<script src="../js/view.js"></script>
+<script src="../js/settings.js"></script>
+<script src="../js/i18n.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/save.js"></script>
+<script src="../js/state.js"></script>
+<script src="../js/world.js"></script>
+<script src="../js/art.js"></script>
+<script src="../js/art-draw.js"></script>
+<script src="../js/scenery.js"></script>
+<script src="../js/harbor-art.js"></script>
+<script src="../js/vfx.js"></script>
+<script src="../js/ships.js"></script>
+<script src="../js/combat.js"></script>
+<script>
+"use strict";
+const CLASSES = Object.keys(SHIP_ART), LIVS = Object.keys(LIVERY);
+const CW = 200, RH = 74, GX = 130, GY = 60, PAGE_W = 1160, SMALL_Y = GY + RH * CLASSES.length + 50, BOX_Y = SMALL_Y + 380, PAGE_H = BOX_Y + 430;
+const DPR = Math.min(2, window.devicePixelRatio || 1);
+VIEW = { ...VIEW, dpr: DPR };   // artRes() bakes at 2x on HiDPI, as in the game
+const label = (sc, x, y, s, size = 13, col = "#f6f1e3") => sc.add.text(x, y, s, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color: col, resolution: DPR * 2 });
+let box = [], hbG, showHB = /hitbox=1/.test(location.search);
+class ArtTest extends Phaser.Scene {
+  constructor() { super("art"); }
+  create() {
+    S = this; islands = [];
+    makeTextures(this);
+    const cam = this.cameras.main.setZoom(DPR).setScroll(0, 0).setOrigin(0).setBackgroundColor("#155a73");
+    // same base emitters as main.js create(); the vfx module reuses wake, spark and splash
+    this.fx = {
+      wake:   this.add.particles(0, 0, "puff", { lifespan: 1500, speed: 0, scale: { start: 0.6, end: 1.8 }, alpha: { start: 0.45, end: 0 }, emitting: false }).setDepth(3),
+      smoke:  this.add.particles(0, 0, "puff", { lifespan: 800, speed: { min: 10, max: 45 }, scale: { start: 0.8, end: 2.2 }, alpha: { start: 0.8, end: 0 }, tint: 0xdedad0, emitting: false }).setDepth(8),
+      spark:  this.add.particles(0, 0, "dot", { lifespan: 450, speed: { min: 60, max: 200 }, scale: { start: 1, end: 0 }, tint: [0xffd27a, 0xff8a3a, 0xff5a2a], blendMode: "ADD", emitting: false }).setDepth(8),
+      splash: this.add.particles(0, 0, "dot", { lifespan: 550, speed: { min: 30, max: 90 }, scale: { start: 0.9, end: 0.2 }, alpha: { start: 0.9, end: 0 }, tint: 0xe9f7fa, emitting: false }).setDepth(3),
+    };
+    vfxInit(this);
+    label(this, 12, 12, "Hull class x livery at 1x (gameplay zoom 1). Hit capsules: ?hitbox=1", 16);
+    LIVS.forEach((l, j) => label(this, GX + j * CW + CW / 2, GY - 22, l, 14).setOrigin(0.5, 0));
+    hbG = this.add.graphics().setDepth(20);
+    const grid = [];
+    CLASSES.forEach((c, i) => {
+      const a = SHIP_ART[c], y = GY + i * RH + RH / 2;
+      label(this, 12, y - 14, c, 15); label(this, 12, y + 4, `${a.len}x${a.beam}  ${a.rig}`, 12, "#bcd3da");
+      LIVS.forEach((l, j) => {
+        const s = { x: GX + j * CW + CW / 2, y, rot: 0, spr: this.add.image(0, 0, "dot").setDepth(5) };
+        applyShipArt(s, c, l); s.spr.setPosition(s.x, s.y);
+        if (l === "player") this.add.image(s.x, s.y, "fx-halo").setDisplaySize(a.len * 1.45, a.beam * 2.7).setAlpha(0.38).setDepth(3.5);
+        grid.push(s);
+      });
+    });
+    label(this, 12, SMALL_Y - 34, "The same grid at 0.55x (phone zoom), through a second camera so it is the game's own downsampling", 16);
+    const gw = CW * LIVS.length + GX, gh = RH * CLASSES.length + GY;
+    this.cameras.add(0, SMALL_Y * DPR, gw * 0.55 * DPR, gh * 0.55 * DPR).setZoom(0.55 * DPR).setBackgroundColor("#155a73").centerOn(gw / 2, gh / 2 + 6);
+    // VFX sandbox
+    label(this, 12, BOX_Y - 34, "VFX sandbox: buttons above, or window.sandbox.* from a test", 16);
+    this.add.rectangle(0, BOX_Y, PAGE_W, 420, 0x155a73).setOrigin(0).setDepth(-1);
+    sandboxReset();
+    this.events.on("update", (_, dms) => {
+      const dt = Math.min(dms / 1000, 0.05), k = vfxFrame(dt);
+      for (const s of box) if (s.alive) {
+        s.x += Math.cos(s.rot) * s.speed * dt * k; if (s.x > PAGE_W - 120) s.x = 140;
+        s.spr.setPosition(s.x, s.y).setRotation(s.rot); vfxShip(s, dt * k);
+        if (s.burnT > 0) s.burnT -= dt * k;
+      }
+      hbG.clear(); if (!showHB) return;
+      hbG.lineStyle(1, 0xff3df2, 0.9);
+      for (const s of grid.concat(box.filter(b => b.alive))) capsule(hbG, s);
+    });
+    document.getElementById("hb").checked = showHB;
+  }
+}
+function capsule(g, s) {   // outline of hitShip()'s capsule
+  const c = Math.cos(s.rot), sn = Math.sin(s.rot), pts = [];
+  for (let i = 0; i <= 16; i++) { const a = -Math.PI / 2 + i / 16 * Math.PI; pts.push([s.hl + Math.cos(a) * s.hw, Math.sin(a) * s.hw]); }
+  for (let i = 0; i <= 16; i++) { const a = Math.PI / 2 + i / 16 * Math.PI; pts.push([-s.hl + Math.cos(a) * s.hw, Math.sin(a) * s.hw]); }
+  g.beginPath(); pts.forEach(([u, v], i) => { const x = s.x + c * u - sn * v, y = s.y + sn * u + c * v; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); g.strokePath();
+}
+function sandboxReset() {
+  for (const s of box) { S.tweens.killTweensOf(s.spr); s.spr.destroy(); }
+  const mk = (cls, liv, x, y, extra) => { const s = makeShip(S, "dot", x, y); Object.assign(s, { rot: 0, maxHp: 100, hp: 100, maxSpeed: 120, speed: 60, faction: liv }, extra); applyShipArt(s, cls, liv); return s; };
+  player = mk("frigate", "player", 260, BOX_Y + 90, { isPlayer: true });
+  box = [player, mk("brig", "pirate", 640, BOX_Y + 90), mk("frigate", "navy", 300, BOX_Y + 230), mk("fluyt", "merchant", 700, BOX_Y + 230), mk("fireship", "pirate", 420, BOX_Y + 350),
+    mk("line", "boss", 860, BOX_Y + 350)];
+  docked = false; paused = false;
+}
+const target = () => box.find(s => s.alive && !s.isPlayer) || box[0];
+window.sandbox = {
+  broadside() {   // the player's starboard battery, a rolling 70 ms apart like playerFire()
+    const m = MOUNTS.find(x => x.key === "right"), n = player.art.guns;
+    for (let i = 0; i < n; i++) S.time.delayedCall(i * 70, () => { const p = muzzle(player, m, i, n); vfxMuzzle(p.x, p.y, p.a); });
+  },
+  hit() { const s = target(); vfxFlash(s); vfxHit(s.x + rand(-10, 10), s.y + s.hw * (Math.random() < 0.5 ? -1 : 1)); },
+  miss() { for (let i = 0; i < 4; i++) S.time.delayedCall(i * 90, () => vfxSplash(rand(300, 900), BOX_Y + rand(150, 180), false)); vfxSplash(560, BOX_Y + 300, true); },
+  half() { for (const s of box) if (s.alive) s.hp = s.maxHp * 0.4; },
+  quarter() { for (const s of box) if (s.alive) s.hp = s.maxHp * 0.2; },
+  burn() { for (const s of box) if (s.alive) s.burnT = 3; },
+  sink() { const s = target(); s.alive = false; s.speed = 0; S.fx.spark.explode(26, s.x, s.y); vfxSink(s, player); },
+  hitstop() { vfxHitStop(0.5); },
+  reset: sandboxReset,
+};
+document.querySelector("header").addEventListener("click", e => { const a = e.target.dataset && e.target.dataset.a; if (a) window.sandbox[a](); });
+document.getElementById("hb").addEventListener("change", e => { showHB = e.target.checked; });
+new Phaser.Game({ type: Phaser.AUTO, parent: "game", backgroundColor: "#0b2530", render: { antialias: true }, audio: { noAudio: true },
+  scale: { mode: Phaser.Scale.NONE, width: PAGE_W * DPR, height: PAGE_H * DPR, zoom: 1 / DPR }, scene: [ArtTest] });
+</script>
+</body>
+</html>

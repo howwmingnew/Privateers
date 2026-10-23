@@ -15,6 +15,7 @@ function applyPlayerStats(full) {
   player.maxSpeed = yardVal("sails");
   player.cap = yardVal("hold");
   player.guns = playerGuns();
+  applyShipArt(player, save.ship, "player");   // hull art, hitbox, muzzles and view follow the ship in the save
 }
 function makePlayer(sc) {
   const p = makeShip(sc, "ship-player", PORT.x + 140, PORT.y);
@@ -52,12 +53,13 @@ function spawnEnemy(sc, at) {
   e.badge = sc.add.text(x, y - 36, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#1b1410", padding: { x: 5, y: 1 } })
     .setOrigin(0.5).setDepth(9);
   refreshBadge(e);
+  applyShipArt(e);   // class + livery art and hitbox (js/art.js)
   enemies.push(e);
   return e;
 }
 function refreshBadge(e) {
-  const c = threatColor(e.L);
-  e.badge.setText(t("badge", { n: e.L, g: fmt(e.loot) })).setBackgroundColor(c).setColor(c === "#d9493a" ? "#fff6ea" : "#1b1410");
+  const tier = threatTier(e.L), c = tier.color;   // glyph + colour, so threat reads without colour vision
+  e.badge.setText(tier.glyph + " " + t("badge", { n: e.L, g: fmt(e.loot) })).setBackgroundColor(c).setColor(c === "#d9493a" ? "#fff6ea" : "#1b1410");
 }
 
 // ---------- Steering & AI ----------

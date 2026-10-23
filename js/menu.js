@@ -38,6 +38,7 @@ function shellBoot(sc) {
   showTitle();
 }
 function shellTick(dt) {
+  if (titleOpen && sailing()) { closeAllPanels(); closeTitle(); }   // set sail without the title (a script or test): step aside
   if (docked !== wasDocked) {            // the ledger opened or closed (harbor.js dock / setSail)
     wasDocked = docked;
     if (docked) onDocked(); else if (!paused) onVoyage();
@@ -87,10 +88,13 @@ function renderTitle() {
 }
 function startGame(fresh) {
   if (fresh) wipeProgress();
+  closeTitle();
+  dock("welcome");
+}
+function closeTitle() {
   titleOpen = false;
   $m("title").hidden = true; document.body.classList.remove("on-title");
   S.cameras.main.startFollow(player.spr, true, 0.15, 0.15);
-  dock("welcome");
 }
 
 // ---------- pause ----------
@@ -98,7 +102,10 @@ function freeze(on) {
   paused = on; seaFrozen = on;
   S.time.paused = on;                      // queued broadside shots and the sinking timer wait too
   if (on) S.tweens.pauseAll(); else S.tweens.resumeAll();
-  for (const k in S.fx) { const f = S.fx[k]; if (f && typeof f.pause === "function") on ? f.pause() : f.resume(); }
+  // particle emitters: the scene's own and the combat-effect set in js/vfx.js (FX also holds plain numbers)
+  for (const set of [S.fx, typeof FX !== "undefined" ? FX : {}]) for (const k in set) {
+    const f = set[k]; if (f && typeof f.pause === "function" && typeof f.resume === "function") on ? f.pause() : f.resume();
+  }
   if (typeof Snd !== "undefined") { if (on) Snd.pauseAll("pause"); else Snd.resumeAll("pause"); }
 }
 function pauseGame() {

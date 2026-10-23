@@ -23,6 +23,7 @@ class Main extends Phaser.Scene {
       spark:  this.add.particles(0, 0, "dot", { lifespan: 450, speed: { min: 60, max: 200 }, scale: { start: 1, end: 0 }, tint: [0xffd27a, 0xff8a3a, 0xff5a2a], blendMode: "ADD", emitting: false }).setDepth(8),
       splash: this.add.particles(0, 0, "dot", { lifespan: 550, speed: { min: 30, max: 90 }, scale: { start: 0.9, end: 0.2 }, alpha: { start: 0.9, end: 0 }, tint: 0xe9f7fa, emitting: false }).setDepth(3),
     };
+    vfxInit(this);   // combat effects, player halo, low-hull vignette (js/vfx.js)
     this.arcG = this.add.graphics().setDepth(4);
     this.barG = this.add.graphics().setDepth(9);
     makePlayer(this);
@@ -50,7 +51,8 @@ class Main extends Phaser.Scene {
       ts.tilePositionX = (v.x - 64) / ts.tileScaleX + this.seaT * 0.004 * k; ts.tilePositionY = (v.y - 64) / ts.tileScaleY + this.seaT * 0.002 * k;
     }
     shellTick(dt);     // pause / menus / gamepad / tutorial (js/menu.js)
-    if (!paused) step(dt);
+    const timeK = vfxFrame(dt);   // < 1 during a hit-stop
+    if (!paused) step(dt * timeK);
     drawOverlays();
     hudT -= dt; if (hudT <= 0) { hud(); hudT = 0.1; }
     miniT -= dt; if (miniT <= 0) { drawMini(); miniT = 0.15; }
@@ -71,13 +73,11 @@ function step(dt) {
   }
   for (const s of ships) {
     s.spr.setPosition(s.x, s.y).setRotation(s.rot);
-    s.wakeT -= dt;
-    if (s.speed > 25 && s.wakeT <= 0) { s.wakeT = 0.07; S.fx.wake.emitParticleAt(s.x - Math.cos(s.rot) * 30, s.y - Math.sin(s.rot) * 30, 1); }
+    vfxShip(s, dt);   // wake, damage smoke/flames, badge, player halo
     if (s.burnT > 0) { s.burnT -= dt; s.hp -= s.burnDps * dt; s.burnFx -= dt;
       if (s.burnFx <= 0) { s.burnFx = 0.08; S.fx.spark.emitParticleAt(s.x + rand(-20, 20), s.y + rand(-8, 8), 1); }
       s.burnSnd = (s.burnSnd || 0) - dt; if (s.burnSnd <= 0) { s.burnSnd = rand(0.2, 0.45); Snd.play("burn", { x: s.x, y: s.y }); }
       if (s.hp <= 0) sink(s, s.burnSrc); }
-    if (s.badge) s.badge.setPosition(s.x, s.y - 38);
   }
   // --- firing ---
   const living = enemies.filter(e => e.alive);
@@ -107,9 +107,9 @@ function step(dt) {
     if (!b.fromPlayer && player.alive && hitShip(player, b.x, b.y)) hit = player;
     if (!hit) for (const e of living) if (e !== b.owner && e.alive && hitShip(e, b.x, b.y)) { hit = e; break; }
     const onRock = !hit && islands.some(isl => Math.hypot(isl.x - b.x, isl.y - b.y) < isl.r * 0.9);
-    if (hit) { S.fx.spark.explode(10, b.x, b.y); hurt(hit, b.dmg, b.burn, b.owner); }
+    if (hit) { vfxHit(b.x, b.y); hurt(hit, b.dmg, b.burn, b.owner); }
     if (hit || onRock || b.life <= 0) {
-      if (!hit) S.fx.splash.explode(onRock ? 4 : 8, b.x, b.y);
+      if (!hit) vfxSplash(b.x, b.y, onRock);
       if (!hit && !onRock) Snd.play("splash", { x: b.x, y: b.y });
       b.spr.destroy(); balls.splice(i, 1);
     }
@@ -157,38 +157,47 @@ function threatLevel(living, engaged) {
 
 function drawOverlays() {
   const g = S.arcG, bg = S.barG; g.clear(); bg.clear();
-  const v = S.cameras.main.worldView;
+  const v = S.cameras.main.worldView, lk = labelScale();   // widths counter-scaled with the labels, so lines survive zoom 0.55
   // Aim lines: hidden until an enemy nears a mount's firing arc. One straight line per cannon.
-  //   red    = loaded, and the line passes through an enemy right now
+  //   red    = loaded, and the line passes through an enemy on screen right now (that ship also gets a bracket)
   //   yellow = loaded, line misses
   //   faint  = reloading; the line grows back to full length as the gun reloads
+  // With many guns every line is drawn thinner and fainter, so a 14-gun broadside doesn't paint a red grid.
   if (player.alive && !docked) {
-    for (const mount of MOUNTS) {
-      if (!mountEngaged(mount)) continue;
+    const mounts = MOUNTS.filter(mountEngaged), total = mounts.reduce((n, m) => n + player.guns[m.key].length, 0);
+    const k = clamp(2.2 / Math.sqrt(Math.max(1, total)), 0.5, 1), marked = new Set();
+    for (const mount of mounts) {
       const arr = player.guns[mount.key];
       arr.forEach((gun, i) => {
         const m = muzzle(player, mount, i, arr.length), ready = gun.cd <= 0;
         const len = gun.range * (ready ? 1 : 1 - gun.cd / gun.interval);
-        const hit = ready && lineHits(m.x, m.y, m.a, gun.range);
-        const col = !ready ? 0xf6f1e3 : hit ? 0xff4a2e : 0xffd76a, alpha = !ready ? 0.25 : hit ? 0.95 : 0.75;
+        const tg = ready ? lineHits(m.x, m.y, m.a, gun.range) : null;
+        if (tg) marked.add(tg);
+        const col = !ready ? 0xf6f1e3 : tg ? 0xff4a2e : 0xffd76a, alpha = (!ready ? 0.25 : tg ? 0.95 : 0.75) * (tg ? Math.max(k, 0.7) : k);
         const c = Math.cos(m.a), sn = Math.sin(m.a);
-        g.lineStyle(hit ? 3 : 2, col, alpha);
+        g.lineStyle((tg ? 3 : 2) * Math.max(k, 0.65) * lk, col, alpha);
         for (let d = 0; d < len; d += 18) g.lineBetween(m.x + c * d, m.y + sn * d, m.x + c * Math.min(d + 11, len), m.y + sn * Math.min(d + 11, len));
-        g.fillStyle(col, alpha); g.fillCircle(m.x + c * len, m.y + sn * len, ready ? 4 : 2.5);
+        g.fillStyle(col, alpha); g.fillCircle(m.x + c * len, m.y + sn * len, (ready ? 4 : 2.5) * lk);
       });
     }
+    const pulse = 1 + 0.07 * Math.sin(S.time.now * 0.012);
+    for (const e of marked) {   // target bracket: four arcs around the hull, a shape cue as well as a colour one
+      const r = ((e.hl ?? 28) + (e.hw ?? 13)) * 0.8 * pulse + 8 * lk;
+      g.lineStyle(2.5 * lk, 0xff4a2e, 0.9);
+      for (let q = 0; q < 4; q++) { g.beginPath(); g.arc(e.x, e.y, r, q * Math.PI / 2 + 0.35, q * Math.PI / 2 + 1.22); g.strokePath(); }
+    }
   }
-  // health bars
+  // health bars, just above each hull's drawn extent
   for (const e of enemies) {
     if (!e.alive || e.x < v.x - 60 || e.x > v.right + 60 || e.y < v.y - 60 || e.y > v.bottom + 60) continue;
-    const w = 46, x = e.x - w / 2, y = e.y - 27;
-    bg.fillStyle(0x08222d, 0.8); bg.fillRect(x - 1, y - 1, w + 2, 6);
-    bg.fillStyle(e.burnT > 0 ? 0xff8a3a : 0x86c46f, 1); bg.fillRect(x, y, w * clamp(e.hp / e.maxHp, 0, 1), 4);
+    const w = 46 * lk, h = 4 * lk, x = e.x - w / 2, y = shipTop(e) - 8 * lk;
+    bg.fillStyle(0x08222d, 0.8); bg.fillRect(x - lk, y - lk, w + 2 * lk, h + 2 * lk);
+    bg.fillStyle(e.burnT > 0 ? 0xff8a3a : 0x86c46f, 1); bg.fillRect(x, y, w * clamp(e.hp / e.maxHp, 0, 1), h);
   }
   if (player.alive && !docked && player.hp < player.maxHp) {
-    const w = 50, x = player.x - w / 2, y = player.y - 30;
-    bg.fillStyle(0x08222d, 0.8); bg.fillRect(x - 1, y - 1, w + 2, 6);
-    bg.fillStyle(0xd45a43, 1); bg.fillRect(x, y, w * clamp(player.hp / player.maxHp, 0, 1), 4);
+    const w = 50 * lk, h = 4 * lk, x = player.x - w / 2, y = shipTop(player) - 8 * lk;
+    bg.fillStyle(0x08222d, 0.8); bg.fillRect(x - lk, y - lk, w + 2 * lk, h + 2 * lk);
+    bg.fillStyle(0xd45a43, 1); bg.fillRect(x, y, w * clamp(player.hp / player.maxHp, 0, 1), h);
   }
 }
 
