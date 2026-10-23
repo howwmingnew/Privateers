@@ -8,19 +8,19 @@ function fire(s, targets, dt) {
     arr.forEach((g, i) => {
       g.cd -= dt; if (g.cd > 0) return;
       let best = null, bd = 1e9;
-      for (const t of targets) {
-        if (!t.alive) continue;
-        const dx = t.x - s.x, dy = t.y - s.y, d = Math.hypot(dx, dy);
+      for (const tg of targets) {
+        if (!tg.alive) continue;
+        const dx = tg.x - s.x, dy = tg.y - s.y, d = Math.hypot(dx, dy);
         if (d > g.range || d >= bd) continue;
         if (Math.abs(angDiff(Math.atan2(dy, dx), normal)) > ARC) continue;
-        best = t; bd = d;
+        best = tg; bd = d;
       }
       if (!best) { g.cd = 0; return; }
       const off = n === 1 ? 0 : -18 + 36 * i / (n - 1);
       const mx = s.x + Math.cos(s.rot) * off + Math.cos(normal) * 13;
       const my = s.y + Math.sin(s.rot) * off + Math.sin(normal) * 13;
-      const lead = s.isPlayer ? 1 : s.aimLead, t = bd / BALL_SPEED;
-      const tx = best.x + best.vx * t * lead, ty = best.y + best.vy * t * lead;
+      const lead = s.isPlayer ? 1 : s.aimLead, tof = bd / BALL_SPEED;   // ball time of flight
+      const tx = best.x + best.vx * tof * lead, ty = best.y + best.vy * tof * lead;
       const ang = Math.atan2(ty - my, tx - mx) + rand(-1, 1) * (s.isPlayer ? 0.05 : s.aimSpread);
       const life = g.range * 1.08 / BALL_SPEED;
       const spr = S.add.image(mx, my, "ball").setDepth(7);
@@ -89,9 +89,9 @@ function hitShip(s, x, y) {
   return Math.hypot(dx - c * along, dy - sn * along) < 13;
 }
 function floatText(x, y, str, color, size = 16) {
-  const t = S.add.text(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
+  const txt = S.add.text(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
     .setOrigin(0.5).setDepth(10);
-  S.tweens.add({ targets: t, y: y - 34, alpha: 0, duration: 900, ease: "Cubic.easeOut", onComplete: () => t.destroy() });
+  S.tweens.add({ targets: txt, y: y - 34, alpha: 0, duration: 900, ease: "Cubic.easeOut", onComplete: () => txt.destroy() });
 }
 function hurt(s, dmg, burn, src) {
   if (!s.alive) return;

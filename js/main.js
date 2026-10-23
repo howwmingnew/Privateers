@@ -31,8 +31,7 @@ class Main extends Phaser.Scene {
     this.input.keyboard.on("keydown-SPACE", () => playerFire());
     for (let i = 0; i < ENEMY_COUNT; i++) spawnEnemy(this);
     for (const w of save.wrecks) addCrate(w.x, w.y, w.value, w);
-    const fit = () => cam.setZoom(clamp(Math.min(this.scale.width, this.scale.height) / 720, 0.55, 1.1));
-    this.scale.on("resize", fit); fit();
+    fitView(this);   // camera zoom, crisp text and canvas size for HiDPI screens (js/view.js)
     buildMiniBase();
     player.spr.setPosition(player.x, player.y);
     cam.centerOn(player.x, player.y);
@@ -181,7 +180,8 @@ function drawOverlays() {
 function boot() {
   new Phaser.Game({
     type: Phaser.AUTO, parent: "game", backgroundColor: "#155a73",
-    scale: { mode: Phaser.Scale.RESIZE, width: "100%", height: "100%" },
+    scale: viewScaleConfig(),   // device-pixel canvas shown at CSS size (js/view.js)
+    callbacks: { preBoot: g => { if (typeof watchBoot === "function") watchBoot(g); } },   // crash message (js/boot-guard.js)
     render: { antialias: true }, scene: [Main],
   });
 }

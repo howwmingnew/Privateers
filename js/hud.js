@@ -1,7 +1,7 @@
 "use strict";
 // ---------- HUD ----------
 let toastTimer;
-function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("on"), 2400); }
+function toast(msg) { const el = document.getElementById("toast"); el.textContent = msg; el.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("on"), 2400); }
 function hud(force) {
   const $ = id => document.getElementById(id);
   $("hpFill").style.width = clamp(player.hp / player.maxHp, 0, 1) * 100 + "%";
