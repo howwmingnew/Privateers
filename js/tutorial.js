@@ -14,6 +14,7 @@ Object.assign(STR.en, {
   tut_buy: "Spend your gold: buy or upgrade anything in this ledger. The cheapest costs {n} gold.",
   tut_poor: "The cheapest upgrade costs {n} gold. Set sail, sink another ship and bring its plunder back.",
   tut_buySea: "Bring plunder home, then buy or upgrade something. The cheapest costs {n} gold.",
+  tut_buyMoor: "Stop inside the harbor ring and hold still to open the ledger, then buy or upgrade something. The cheapest costs {n} gold.",
   tut_docked: "Set sail to carry on with your first voyage.",
   tut_done: "That is the whole loop, captain. Farther waters hold richer ships, and deadlier ones.",
   ctl_steer_keys: "W raises the sail, S lowers it, A and D turn.", ctl_steer_mouse: "Hold the left mouse button where you want to sail; farther means faster.",
@@ -33,6 +34,7 @@ Object.assign(STR.zh, {
   tut_buy: "把金幣花掉吧：在帳簿裡購買或升級任何一項。最便宜的要 {n} 金幣。",
   tut_poor: "最便宜的升級要 {n} 金幣。再出航擊沉一艘船，把戰利品帶回來。",
   tut_buySea: "把戰利品帶回港口，再購買或升級任何一項。最便宜的要 {n} 金幣。",
+  tut_buyMoor: "在港口的虛線圈裡停船、保持靜止就能打開帳簿，再購買或升級任何一項。最便宜的要 {n} 金幣。",
   tut_docked: "啟航，繼續你的首航。",
   tut_done: "這就是整個循環了，船長。越遠的海域，敵船越富有，也越危險。",
   ctl_steer_keys: "W 升帆、S 降帆，A 和 D 轉向。", ctl_steer_mouse: "在想去的方向按住滑鼠左鍵，游標越遠速度越快。",
@@ -146,6 +148,7 @@ function tutorialTick(dt) {
     if (at === "out" && Math.hypot(player.x - PORT.x, player.y - PORT.y) > DOCK_R + 140) next = Math.max(next, 1);
     else if (at === "aim" && aimOnTarget()) next = Math.max(next, 2);
     else if (at === "fire" && balls.some(b => b.fromPlayer)) next = Math.max(next, 3);
+    else if (at === "sell" && save.gold > tut.gold0) next = 6;               // sold on a pass through the ring (js/mooring.js)
     else if ((at === "scoop" || at === "sell") && cargo <= 0 && !crates.some(c => !c.wreck)) next = 3;   // the loot drifted away
   } else if (docked) {
     if (at === "sell") next = save.gold > tut.gold0 ? 6 : 3;               // docked by sinking: the hold was lost
@@ -159,7 +162,10 @@ function tutorialTick(dt) {
 function coachText() {
   if (tut.doneT > 0) return t("tut_done");
   const at = TUT[tut.step];
-  if (at === "buy") { const n = fmt(cheapestBuy()); return t(!docked ? "tut_buySea" : save.gold >= cheapestBuy() ? "tut_buy" : "tut_poor", { n }); }
+  if (at === "buy") {
+    const n = fmt(cheapestBuy()), rich = save.gold >= cheapestBuy();
+    return t(!docked ? (rich ? "tut_buyMoor" : "tut_buySea") : rich ? "tut_buy" : "tut_poor", { n });
+  }
   if (docked) return t("tut_docked");
   return t("tut_" + at, { steer: t("ctl_steer_" + device), fire: t("ctl_fire_" + device) });
 }
