@@ -14,8 +14,8 @@ Object.assign(STR.en, { volleyTip: "Red glow: a broadside is about to fire. Turn
 Object.assign(STR.zh, { volleyTip: "紅光：敵艦要齊射了。把船首或船尾轉向它！" });
 let volleyTips = 0;   // the first volleys laid on the player each session say what the red fan means
 // One warning at a time at the player: a pack's volleys come VOLLEY_GAP s apart instead of all at once, so each can be
-// read and dodged, and three ships hit like a little under two (ships fighting each other are not held back).
-const VOLLEY_GAP = 1.1;
+// read and dodged, and a pack of three frigates lands about a quarter less (AI-vs-AI fire is not held back).
+const VOLLEY_GAP = 1.5;
 let playerVolleyAt = -1e9;
 // Combat clock (s): simulated time, advanced by step()'s dt in combatTick. Phaser's scene clock keeps running while the game
 // is paused (and ignores time scaling), so combat timers count on this instead.
