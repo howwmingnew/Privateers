@@ -39,6 +39,12 @@ function ledgerMove(dx, dy) {
     if (f) focusEl(f);
     return;
   }
+  // the gun deck is a diagram with the broadsides side by side (js/deck-art.js): down reads it like a page (bow, larboard
+  // top to bottom, starboard, stern) so a run of downs reaches every port; up and sideways stay spatial
+  if (dy > 0 && cur.closest("#deck")) {
+    const ports = [...$m("deck").querySelectorAll(".slot")], next = ports[ports.indexOf(cur) + 1];
+    if (next) { focusEl(next); return; }
+  }
   const foot = inFooter(cur), col = cur.closest(".lcol");
   // sideways stays in its row (footer or shop); up and down move through the shop, never into the footer, and finish
   // the column they are in (the shop, or the poster beside it) before crossing to the other

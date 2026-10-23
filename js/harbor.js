@@ -14,6 +14,7 @@ function dock(kind) {
   else portMsg = sold > 0 ? (bonus > 0 ? ["soldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["sold", { n: fmt(sold) }]) : ["empty"];
   renderPort();
   document.getElementById("port").hidden = false;
+  paintGunDeck();   // the ship needs the shown layout; the deck's ResizeObserver only fires on the next rendered frame
   document.querySelector("#port .sheet").scrollTop = 0;   // the result message is at the top; never open scrolled past it
   Snd.music("harbor"); Snd.ambience("harbor");
   if (kind === "return") { Snd.play("bell"); if (sold > 0) Snd.play("coin", { amount: sold, delay: 0.45 }); }
@@ -46,15 +47,7 @@ function renderPort() {
   $("pGold").textContent = fmt(save.gold);
   $("pStats").innerHTML = `<span><b>${t("s_" + save.ship)}</b></span><span>${t("statLv", { n: shipRating() })}</span><span><b>${YARD.hull.show(yardVal("hull"))}</b></span>` +
     `<span><b>${YARD.sails.show(yardVal("sails"))}</b></span><span>${t("statHold", { n: fmt(yardVal("hold")) })}</span><span>${t("statSunk", { n: save.sunk })}</span>`;
-  // gun deck diagram: one row per mount the ship has
-  const slotRow = (side, label) => {
-    if (!save[side].length) return "";
-    const btns = save[side].map((id, i) =>
-      `<button class="slot" type="button" data-act="slot" data-side="${side}" data-i="${i}" aria-label="${t("slotAria", { side: label, n: i + 1, gun: t("gf_" + id) })}">${t("g_" + id)}<small>Lv ${save.gunLv[id]}</small></button>`).join("");
-    return `<div class="row"><div class="lbl">${label}</div><div class="slots">${btns}</div></div>`;
-  };
-  $("deck").innerHTML = slotRow("bow", t("bow")) + slotRow("left", t("larboard")) + `<div class="hullbar" aria-hidden="true"></div>` +
-    slotRow("right", t("starboard")) + slotRow("stern", t("stern"));
+  renderDeck($("deck"));   // gun deck: the ship bow-up with each gun port beside its muzzle (js/deck-art.js)
   // armory
   $("armory").innerHTML = GUN_ORDER.map(id => {
     const g = GUNS[id], lv = save.gunLv[id], m = gunLvMul(lv), owned = save.unlocked[id];

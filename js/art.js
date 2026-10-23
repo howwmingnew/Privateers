@@ -101,9 +101,10 @@ function shipArt(cls, livery, opt = {}, sc = S) {
   const key = opt.key || `ship:${cls}:${livery}${opt.furled ? ":f" : ""}`;
   if (sc.textures.exists(key)) return key;
   const { w, h } = texSize({ ...a, bigFlag: L.bigFlag });
-  let seed = 7; for (const ch of key) seed = Math.imul(seed ^ ch.charCodeAt(0), 2654435761);
-  return bakeCanvas(sc, key, w, h, opt.res || artRes(), c => drawShip(c, a, L, w / 2, h / 2, !!opt.furled, mulberry32(seed)));
+  return bakeCanvas(sc, key, w, h, opt.res || artRes(), c => drawShip(c, a, L, w / 2, h / 2, !!opt.furled, mulberry32(artSeed(key))));
 }
+// per-texture rng seed, so a redraw of the same key (the harbor gun deck, js/deck-art.js) matches the sprite exactly
+function artSeed(key) { let seed = 7; for (const ch of key) seed = Math.imul(seed ^ ch.charCodeAt(0), 2654435761); return seed; }
 function applyShipArt(s, cls = enemyClassFor(s), livery = liveryFor(s)) {
   s.cls = SHIP_ART[cls] ? cls : "sloop"; s.livery = LIVERY[livery] ? livery : "pirate";
   const a = s.art = SHIP_ART[s.cls];

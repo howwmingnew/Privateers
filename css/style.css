@@ -77,13 +77,28 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 .stats b { color: var(--ink); }
 .hint-s { margin: -4px 0 8px; font-size: calc(14px * var(--ts)); color: var(--ink-soft); }
 
-.deck { display: grid; gap: 6px; }
-.deck .row { display: grid; grid-template-columns: 76px 1fr; align-items: center; gap: 8px; }
+/* Gun deck (js/deck-art.js): the ship bow-up in the middle column on a canvas, larboard guns left of it, starboard right,
+   bow guns above, stern guns below; an SVG leader line runs from each button to its muzzle on the hull. */
+.deck { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) var(--shipw, 30%) minmax(0, 1fr);
+  grid-template-areas: "bow bow bow" "left ship right" "stern stern stern"; gap: 10px 12px; }
+.dk-art, .dk-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.dk-lines line { stroke: var(--ink); stroke-width: 1.2; stroke-linecap: round; }
+.dk-lines line.halo { stroke: rgba(239,227,196,.75); stroke-width: 3.4; }
+.dk-lines circle { fill: var(--brass); stroke: var(--ink); stroke-width: 1.2; }
+.dk-lines .on line:not(.halo) { stroke: var(--blood); stroke-width: 2; }
+.dk-lines .on circle { fill: var(--blood); r: 4.5px; }
+.dk-ship { grid-area: ship; aspect-ratio: var(--ship-ar, 1 / 2); align-self: center; }
+.dk-grp { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.dk-bow { grid-area: bow; } .dk-stern { grid-area: stern; }
+.dk-left { grid-area: left; align-items: flex-end; } .dk-right { grid-area: right; align-items: flex-start; }
+.dk-left, .dk-right { justify-content: center; }
+.dk-grp .slots { display: flex; gap: 8px; }
+.dk-left .slots, .dk-right .slots { flex-direction: column; gap: 6px; width: min(100%, calc(104px * var(--ts))); }
+.dk-left .lbl, .dk-right .lbl { width: min(100%, calc(104px * var(--ts))); text-align: center; }
+.dk-bow .slot, .dk-stern .slot { width: calc(84px * var(--ts)); }
 .deck .lbl { font-size: calc(12px * var(--ts)); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--ink-soft); }
-.slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.hullbar { height: 26px; margin-left: 84px; border-radius: 4px 50% 50% 4px / 4px 50% 50% 4px; background: linear-gradient(90deg, #7a4a26, #a46c3b); position: relative; }
-.hullbar::after { content: ""; position: absolute; left: 8px; right: 30px; top: 11px; height: 4px; background: rgba(255,235,200,.35); }
 .slot { font: inherit; font-size: calc(13px * var(--ts)); font-weight: 700; padding: 8px 4px; border-radius: 3px; border: 1.5px solid var(--ink); background: var(--parch-2); color: var(--ink); cursor: pointer; line-height: 1.15; min-width: 0; }
+.slot:hover { background: #ead8aa; }
 .slot small { display: block; font-weight: 500; font-size: calc(11px * var(--ts)); color: var(--ink-soft); }
 
 .list { display: grid; gap: 8px; }
@@ -106,7 +121,7 @@ button:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
 .textbtn { font: inherit; font-size: calc(13px * var(--ts)); background: none; border: 0; color: var(--ink-soft); text-decoration: underline; cursor: pointer; padding: 6px 0; }
 
 @media (prefers-reduced-motion: reduce) { .bar i, #toast, #hint { transition: none; } }
-@media (max-width: 420px) { .deck .row { grid-template-columns: 1fr; } .hullbar { margin-left: 0; } .sheet h1 { font-size: calc(28px * var(--ts)); } }
+@media (max-width: 420px) { .deck { column-gap: 8px; } .sheet h1 { font-size: calc(28px * var(--ts)); } }
 
 /* Big desktop screens: the sea is framed like 1280x720 (js/view.js), so the overlays grow with it instead of shrinking
    into the corners. Whole-box zoom keeps fixed-width bars and their text in proportion. #bossArrow is placed in CSS
