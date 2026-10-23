@@ -145,7 +145,7 @@ function threatMark(ctx, x, y, tier, r = 5) {
   ctx.beginPath();
   if (tier.d <= -1) tri(x, false, 0.9); else if (tier.d === 0) ctx.arc(x, y, r * 0.75, 0, TAU);
   else if (tier.d === 1) tri(x, true, 1); else { tri(x - r * 0.75, true, 0.85); tri(x + r * 0.75, true, 0.85); }
-  ctx.fillStyle = tier.color; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = "rgba(4,18,24,.85)"; ctx.stroke();
+  ctx.fillStyle = tier.color; ctx.fill(); ctx.lineWidth = Math.max(1.5, r * 0.3); ctx.strokeStyle = "rgba(4,18,24,.85)"; ctx.stroke();
 }
 function shipTop(s) {
   const a = s.art || SHIP_ART.sloop, sx = a.rig === "square" ? a.beam * SAIL_SPAN * (a.sail || 1) : a.beam * 0.55;

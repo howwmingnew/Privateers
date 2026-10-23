@@ -399,13 +399,16 @@ for (const dpr of [1, 2]) {
   }
   await page.click('[data-set="shake"][data-v="off"]');
   await page.click('[data-set="ts"][data-v="1.3"]');
+  await page.click('[data-set="mini"][data-v="1.25"]');
   await page.click('[data-set="lang"][data-v="zh"]');
   await page.screenshot({ path: join(out, "d-settings-zh.png") });
   await page.reload({ waitUntil: "load" }); await booted(page);
   const s = await ev(page, () => ({ shake: SETTINGS.shake, ts: SETTINGS.textScale, css: getComputedStyle(document.documentElement).getPropertyValue("--ts").trim(), lang, html: document.documentElement.lang,
-    font: parseFloat(getComputedStyle(document.querySelector(".mbtn")).fontSize) }));
+    font: parseFloat(getComputedStyle(document.querySelector(".mbtn")).fontSize), mini: SETTINGS.miniScale,
+    miniCss: getComputedStyle(document.documentElement).getPropertyValue("--mini").trim(), miniLbl: document.querySelector('[data-set="mini"][data-v="1.25"]').textContent }));
   await ev(page, () => camShake(200, 0.01));
   ok("settings persist across reload (shake off, text 130%, zh) and text size scales the UI", audioHidden && s.shake === false && s.ts === 1.3 && s.css === "1.3" && s.lang === "zh" && s.html === "zh-Hant" && Math.abs(s.font - 22 * 1.3) < 0.6, s);
+  ok("settings: chart size Large persists (--mini 1.25) and its label is translated", s.mini === 1.25 && s.miniCss === "1.25" && s.miniLbl === "大", s);
   ok("screen shake off is honoured", await ev(page, () => !S.cameras.main.shakeEffect.isRunning));
   await page.screenshot({ path: join(out, "d-title-zh-130.png") });
   await page.click("#title [data-menu=settings]");

@@ -20,22 +20,20 @@ function buildMiniBase() {
   const c = miniBase.getContext("2d");
   drawSeaChart(c, M);   // tinted seas and the real level rings (js/world-seas.js)
   c.fillStyle = "rgba(227,207,150,.72)"; for (const i of islands) { c.beginPath(); c.arc(i.x * k, i.y * k, Math.max(2 * u, i.r * k), 0, TAU); c.fill(); }
-  c.fillStyle = "#f6f1e3"; c.beginPath(); c.arc(PORT.x * k, PORT.y * k, 5 * u, 0, TAU); c.fill();
   drawSeaLabels(c, M);
+  miniHarbor(c, PORT.x * k, PORT.y * k, u);   // marks: js/mini-marks.js
 }
 function drawMini() {
   const M = mini.width, k = M / W, u = M / 224;
   mctx.save();
   mctx.drawImage(miniBase, 0, 0);
-  for (const c of crates) if (!c.wreck) { mctx.fillStyle = "#f0c766"; mctx.fillRect(c.x * k - 2 * u, c.y * k - 2 * u, 4 * u, 4 * u); }
-  mctx.strokeStyle = "#ff5a3c"; mctx.lineWidth = 2.5 * u;
-  for (const c of crates) if (c.wreck) { const x = c.x * k, y = c.y * k, r = 5 * u;
-    mctx.beginPath(); mctx.moveTo(x - r, y - r); mctx.lineTo(x + r, y + r); mctx.moveTo(x + r, y - r); mctx.lineTo(x - r, y + r); mctx.stroke(); }
-  for (const e of enemies) if (e.alive && !e.boss) threatMark(mctx, e.x * k, e.y * k, threatTier(e.threatL ?? e.L), 4 * u);   // shape per tier (js/art.js)
+  const treasure = new Set(typeof fortSites !== "undefined" ? fortSites.map(s => s.crate).filter(Boolean) : []);
+  for (const c of crates) if (!c.wreck) miniChest(mctx, c.x * k, c.y * k, u, treasure.has(c));
+  if (typeof fortSites !== "undefined") for (const s of fortSites) if (s.hp !== 0) miniFort(mctx, s.x * k, s.y * k, s.L, u);
+  for (const c of crates) if (c.wreck) miniWreck(mctx, c.x * k, c.y * k, u);
+  for (const e of enemies) if (e.alive && !e.boss && !e.fixed) miniShip(mctx, e, e.x * k, e.y * k, u);
   runHook("mini", mctx, k, u);   // the bounty's skull, the outpost (js/campaign-ui.js)
-  const px = player.x * k, py = player.y * k;
-  mctx.translate(px, py); mctx.rotate(player.rot); mctx.scale(u, u); mctx.fillStyle = "#fff";
-  mctx.beginPath(); mctx.moveTo(7, 0); mctx.lineTo(-5, -4.5); mctx.lineTo(-5, 4.5); mctx.closePath(); mctx.fill();
+  miniPlayer(mctx, player.x * k, player.y * k, player.rot, u);
   mctx.restore();
 }
 

@@ -197,9 +197,11 @@ function drawSeaChart(c, M) {
   c.fillStyle = "#3a9aab"; c.beginPath(); c.arc(cx, cy, SAFE_R * k, 0, TAU); c.fill();   // the harbor's safe water
   for (let L = 2; L <= MAX_RING; L++) {
     const border = SEAS.some(s => s.L0 === L);
-    c.strokeStyle = border ? "rgba(246,241,227,.42)" : "rgba(4,18,24,.32)"; c.lineWidth = (border ? 1.5 : 1) * u;
+    c.strokeStyle = border ? "rgba(246,241,227,.55)" : "rgba(4,18,24,.32)"; c.lineWidth = (border ? 1.6 : 1) * u;
+    c.setLineDash(border ? [5 * u, 3 * u] : []);   // a sea's border is dashed, so it reads apart from the level rings
     c.beginPath(); c.arc(cx, cy, ringEdge(L) * k, 0, TAU); c.stroke();
   }
+  c.setLineDash([]);
 }
 function drawSeaLabels(c, M) {
   const k = M / W, u = M / 224, a = -Math.PI * 0.75, b = levelBonus();

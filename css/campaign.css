@@ -1,8 +1,9 @@
 /* Campaign, seas, captain's log, achievements, victory. Same night-sea + parchment theme as css/style.css. */
 
-/* Chart: the whole square map (the Maelstrom fills the corners), a little larger where there is room */
-#mini { width: 124px; height: 124px; border-radius: 8px; }
-@media (min-width: 760px) and (min-height: 560px) { #mini { width: 156px; height: 156px; } }
+/* Chart: the whole square map (the Maelstrom fills the corners), a little larger where there is room.
+   --mini is the chart-size setting (js/options.js); on the narrowest phones it stops at 44vw so the bars keep their room. */
+#mini { --mini-w: min(calc(124px * var(--mini, 1)), 44vw); width: var(--mini-w); height: var(--mini-w); border-radius: 8px; }
+@media (min-width: 760px) and (min-height: 560px) { #mini { --mini-w: calc(156px * var(--mini, 1)); } }
 
 /* Sea banner */
 #seaBanner { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 24vh); transform: translateX(-50%); z-index: 6; pointer-events: none;

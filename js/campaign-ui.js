@@ -161,14 +161,13 @@ onHook("frame", () => {
 // ---------- Chart marks: the bounty (live ship, or its lair while in port) and the outpost ----------
 onHook("mini", (c, k, u) => {
   if (save.campaign.outpost) {
-    const x = OUTPOST.x * k, y = OUTPOST.y * k;
-    c.fillStyle = "#f6f1e3"; c.strokeStyle = "#1b1410"; c.lineWidth = 1.5 * u;
-    c.beginPath(); c.rect(x - 3.5 * u, y - 3.5 * u, 7 * u, 7 * u); c.fill(); c.stroke();
+    miniOutpost(c, OUTPOST.x * k, OUTPOST.y * k, u);   // js/mini-marks.js
   }
   const b = activeBounty();
   if (!b || (bountyHeld && !docked)) return;   // the first voyage: no bounty until the tutorial is done (js/campaign.js)
   const p = bossShip && bossShip.alive ? bossShip : lairOf(b), x = p.x * k, y = p.y * k, pulse = 1 + 0.25 * Math.sin(performance.now() / 260);
   c.strokeStyle = "rgba(240,199,102,.85)"; c.lineWidth = 1.5 * u; c.beginPath(); c.arc(x, y, 10 * u * pulse, 0, TAU); c.stroke();
   c.fillStyle = "#1b1410"; c.beginPath(); c.arc(x, y, 7.5 * u, 0, TAU); c.fill();
+  c.strokeStyle = "#f0c766"; c.lineWidth = 1.3 * u; c.stroke();
   drawSkull(c, x, y + 0.5 * u, 5.5 * u);
 });
