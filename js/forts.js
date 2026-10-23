@@ -1,9 +1,9 @@
 "use strict";
 // ---------- Shore batteries ----------
-// From ring FORT_L (the Navy Lanes on), a few islands carry a pirate battery: a stone fort with a ring of guns (range 420, fast balls) that fires
-// in every direction at anyone the pirates fight, and a treasure crate on the beach below it. The same islands every
-// sortie (picked from the map), rebuilt with each fresh sea. A battery only exists as a ship while the player is near,
-// so it never counts against the sea's population for long and the distance despawn can't lose it.
+// From ring FORT_L (Lv 8 waters on), a few islands carry a pirate battery: a stone fort with a ring of guns (range 420,
+// fast balls) that fires in every direction at anyone the pirates fight, and a treasure crate on the beach below it.
+// The same islands every sortie (picked from the map), rebuilt with each fresh sea. A battery only exists as a ship
+// while the player is near, so it barely counts against the sea's population and the distance despawn can't lose it.
 const FORT_L = 8, FORT_MAX = 4, FORT_NEAR = 2200, TREASURE_K = 3;
 let fortSites = [];
 
