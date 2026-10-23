@@ -33,7 +33,7 @@ function boot(seed = {}, { failWrites = false } = {}) {
   return { run, json, store, errors, domReady: () => domReady.forEach(fn => fn()) };
 }
 const v2 = o => JSON.stringify({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1, unlocked: { six: true },
-  gunLv: { six: 1, long12: 1, carronade: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0, wrecks: [], ...o });
+  gunLv: { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0, wrecks: [], ...o });
 const loadWith = (o, opts) => boot({ [SAVE_KEY]: typeof o === "string" ? o : v2(o) }, opts);
 
 test("fresh browser gets the default save", () => {
@@ -46,7 +46,7 @@ test("fresh browser gets the default save", () => {
 test("sanitising is idempotent and keeps a valid save as it is", () => {
   const g = boot();
   const rich = { v: 2, gold: 1234, ship: "brig", hull: 4, sails: 3, hold: 5, unlocked: { six: true, long12: true, fire: true },
-    gunLv: { six: 3, long12: 2, carronade: 1, fire: 4 }, bow: ["long12"], left: ["six", "fire", "long12"], right: ["long12", "six", "six"], stern: [],
+    gunLv: { six: 3, long12: 2, carronade: 1, chain: 2, fire: 4 }, bow: ["long12"], left: ["six", "fire", "long12"], right: ["long12", "six", "six"], stern: [],
     sunk: 17, wrecks: [{ x: 3000, y: 1200, value: 80 }] };
   const once = g.json(`sanitizeSave(${JSON.stringify(rich)})`);
   assert.deepEqual(once, rich);
@@ -113,9 +113,9 @@ test("hostile numbers are coerced into range", () => {
     [{ gold: [7] }, s => assert.equal(s.gold, 0)],
     [{ hull: 99, sails: -3, hold: "7" }, s => { assert.equal(s.hull, 15); assert.equal(s.sails, 1); assert.equal(s.hold, 7); }],
     [{ hull: "NaN", sails: {}, hold: true }, s => { assert.equal(s.hull, 1); assert.equal(s.sails, 1); assert.equal(s.hold, 1); }],
-    [{ gunLv: { six: '1<img src=x onerror="alert(1)">', long12: 50, carronade: 0, fire: "3" } },
-      s => assert.deepEqual(s.gunLv, { six: 1, long12: 10, carronade: 1, fire: 3 })],
-    [{ gunLv: "lots" }, s => assert.deepEqual(s.gunLv, { six: 1, long12: 1, carronade: 1, fire: 1 })],
+    [{ gunLv: { six: '1<img src=x onerror="alert(1)">', long12: 50, carronade: 0, chain: -2, fire: "3" } },
+      s => assert.deepEqual(s.gunLv, { six: 1, long12: 10, carronade: 1, chain: 1, fire: 3 })],
+    [{ gunLv: "lots" }, s => assert.deepEqual(s.gunLv, { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 })],
     [{ sunk: -5 }, s => assert.equal(s.sunk, 0)],
     [{ sunk: "12" }, s => assert.equal(s.sunk, 12)],
   ];
@@ -159,7 +159,7 @@ test("prototype keys in a save don't pollute anything", () => {
   const s = g.json("save");
   assert.equal(s.gold, 10);
   assert.deepEqual(s.unlocked, { six: true });
-  assert.deepEqual(s.gunLv, { six: 1, long12: 1, carronade: 1, fire: 1 });
+  assert.deepEqual(s.gunLv, { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 });
   assert.deepEqual(s.wrecks, [{ x: 1, y: 2, value: 3 }]);
   assert.equal(g.run("Object.getPrototypeOf(save) === Object.prototype"), true);
   assert.equal(g.run("['__proto__', 'constructor', 'prototype'].some(k => Object.hasOwn(save, k))"), false);

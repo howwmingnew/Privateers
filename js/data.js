@@ -1,21 +1,31 @@
 "use strict";
 // ---------- Data tables ----------
+// Every number here is a tuning value [PLACEHOLDER until playtested]: .review/combat/model.mjs prints the curves they
+// make (DPS per gold, ship ladder, enemy levels) and .review/combat/play.mjs measures the pacing they give.
+// speed = ball speed (px/s). Long 12 balls are fast (easy at range), carronade balls slow (close range only).
 const GUNS = {
-  six:       { name: "6-pounder",  full: "Iron 6-pounder",   dmg: 10, range: 270, rpm: 36, cost: 0,   upBase: 60,  note: "Reliable all-rounder" },
-  long12:    { name: "Long 12",    full: "Long 12-pounder",  dmg: 14, range: 390, rpm: 26, cost: 350, upBase: 140, note: "Outranges most ships" },
-  carronade: { name: "Carronade",  full: "24-pdr Carronade", dmg: 30, range: 210, rpm: 22, cost: 600, upBase: 220, note: "Smashes hulls up close" },
-  fire:      { name: "Incendiary", full: "Incendiary Gun",   dmg: 7,  range: 260, rpm: 30, cost: 900, upBase: 300, burn: 8, note: "Sets hulls burning for 3 s" },
+  six:       { name: "6-pounder",  full: "Iron 6-pounder",   dmg: 10, range: 270, rpm: 36, speed: 480, cost: 0,   upBase: 60,  note: "Reliable all-rounder" },
+  long12:    { name: "Long 12",    full: "Long 12-pounder",  dmg: 18, range: 400, rpm: 26, speed: 620, cost: 350, upBase: 130, note: "Fast balls, outranges most ships" },
+  carronade: { name: "Carronade",  full: "24-pdr Carronade", dmg: 32, range: 200, rpm: 20, speed: 400, cost: 600, upBase: 200, note: "Smashes hulls up close" },
+  chain:     { name: "Chain shot", full: "Chain-shot Gun",   dmg: 5,  range: 240, rpm: 30, speed: 480, cost: 500, upBase: 120, chain: true, note: "Cuts rigging: slows the target" },
+  fire:      { name: "Incendiary", full: "Incendiary Gun",   dmg: 6,  range: 260, rpm: 30, speed: 480, cost: 900, upBase: 260, burn: 5, note: "Each hit starts a fire" },
 };
-const GUN_ORDER = ["six", "long12", "carronade", "fire"];
+const GUN_ORDER = ["six", "long12", "carronade", "chain", "fire"];
 const GUN_MAX = 10;
+// Incendiary: each hit adds one fire of `burn`/s for BURN_T s; a hull holds at most BURN_MAX at once (oldest goes out).
+const BURN_T = 4, BURN_MAX = 4;
+// Chain shot: torn rigging costs the target 40% of its speed and 30% of its turn for CHAIN_T s (a new hit renews it).
+const CHAIN_T = 4, CHAIN_SPEED = 0.6, CHAIN_TURN = 0.7;
 
-// Ships for sale. Bigger ships carry more guns and start sturdier, but their yard upgrades begin again at Lv 1.
+// Ships for sale. Bigger ships carry more guns and start sturdier, but their yard upgrades begin again at Lv 1, so each
+// one's base stats beat the previous ship at a typical refit (hull Lv 4-5, hold Lv 3-4). The yard pays back 60% of the
+// old refit on purchase (js/plunder.js). refit scales yard prices: a bigger hull costs more to refit.
 const SHIPS = {
-  sloop:    { slots: { bow: 1, left: 1, right: 1, stern: 0 }, hp: 100, speed: 150, hold: 150, cost: 0 },
-  schooner: { slots: { bow: 1, left: 2, right: 2, stern: 0 }, hp: 140, speed: 165, hold: 220, cost: 400 },
-  brig:     { slots: { bow: 1, left: 3, right: 3, stern: 0 }, hp: 200, speed: 155, hold: 330, cost: 1200 },
-  frigate:  { slots: { bow: 2, left: 4, right: 4, stern: 1 }, hp: 300, speed: 150, hold: 500, cost: 3600 },
-  line:     { slots: { bow: 2, left: 5, right: 5, stern: 2 }, hp: 450, speed: 140, hold: 750, cost: 9000 },
+  sloop:    { slots: { bow: 1, left: 1, right: 1, stern: 0 }, hp: 100,  speed: 150, hold: 240,  cost: 0,     refit: 1 },
+  schooner: { slots: { bow: 1, left: 2, right: 2, stern: 0 }, hp: 180,  speed: 165, hold: 440,  cost: 600,   refit: 1.7 },
+  brig:     { slots: { bow: 1, left: 3, right: 3, stern: 0 }, hp: 325,  speed: 155, hold: 800,  cost: 2000,  refit: 3.2 },
+  frigate:  { slots: { bow: 2, left: 4, right: 4, stern: 1 }, hp: 585,  speed: 150, hold: 1450, cost: 6000,  refit: 6 },
+  line:     { slots: { bow: 2, left: 5, right: 5, stern: 2 }, hp: 1050, speed: 140, hold: 2600, cost: 16000, refit: 11 },
 };
 const SHIP_ORDER = Object.keys(SHIPS);
 // Gun mounts. ang = firing direction relative to the bow; muzzles sit `out` px that way,
@@ -27,41 +37,56 @@ const MOUNTS = [
   { key: "stern", ang: Math.PI,      out: 34, perp: Math.PI / 2, span: 12 },
 ];
 
-// Yard upgrades scale the current ship's base stats.
+// Yard upgrades scale the current ship's base stats by a percentage per level, so a level means the same on any hull.
 const YARD = {
-  hull:  { val: (l, sh) => Math.round(sh.hp * 1.28 ** (l - 1)),   show: v => t("u_hp", { n: v }),                cost: l => Math.round(120 * 1.6 ** (l - 1)), max: 15 },
-  sails: { val: (l, sh) => sh.speed + 14 * (l - 1),               show: v => t("u_kn", { n: (v / 15).toFixed(1) }), cost: l => Math.round(90 * 1.6 ** (l - 1)),  max: 10 },
-  hold:  { val: (l, sh) => Math.round(sh.hold * 1.6 ** (l - 1)),  show: v => t("u_cargo", { n: fmt(v) }),         cost: l => Math.round(100 * 1.7 ** (l - 1)), max: 12 },
+  hull:  { val: (l, sh) => Math.round(sh.hp * 1.15 ** (l - 1)),          show: v => t("u_hp", { n: v }),                  cost: (l, sh = SHIPS[save.ship]) => Math.round(110 * sh.refit * 1.5 ** (l - 1)), max: 15 },
+  sails: { val: (l, sh) => Math.round(sh.speed * (1 + 0.045 * (l - 1))), show: v => t("u_kn", { n: (v / 15).toFixed(1) }), cost: (l, sh = SHIPS[save.ship]) => Math.round(80 * sh.refit * 1.5 ** (l - 1)),  max: 10 },
+  hold:  { val: (l, sh) => Math.round(sh.hold * 1.2 ** (l - 1)),         show: v => t("u_cargo", { n: fmt(v) }),           cost: (l, sh = SHIPS[save.ship]) => Math.round(90 * sh.refit * 1.5 ** (l - 1)),  max: 12 },
 };
 function yardVal(k, l = save[k], sh = SHIPS[save.ship]) { return YARD[k].val(l, sh); }
 
 function gunLvMul(lv) { return 1.2 ** (lv - 1); }
 function gunUpCost(id) { return Math.round(GUNS[id].upBase * 1.55 ** (save.gunLv[id] - 1)); }
 
-// Enemy stats by level L. Merchants are tankier, slower, nearly unarmed, and richer.
+// Enemy base stats by level L (the brig; js/archetypes.js scales them per class). Merchants are tankier, nearly
+// unarmed and richer. Enemy guns fire a side together after VOLLEY_WARN s of warning (js/volley.js); aim (0..1) is how
+// well their gunners predict the target, lead how much of its motion they allow for, spread their random error (rad).
+const VOLLEY_WARN = 0.6;
 function enemyStats(L, merchant) {
   const aim = clamp((L - 1) / (AIM_FULL_L - 1), 0, 1);
   return {
-    lead: 0.7 * aim,             // share of the target's motion they aim ahead of
-    spread: 0.45 - 0.36 * aim,   // ± random aim error in radians
-    hp: 60 * 1.32 ** (L - 1) * (merchant ? 1.25 : 1),
+    aim,
+    lead: 0.35 + 0.65 * aim,
+    spread: 0.3 - 0.24 * aim,
+    hp: 60 * 1.36 ** (L - 1) * (merchant ? 1.25 : 1),
     per: merchant ? 1 : Math.min(1 + Math.floor((L - 1) / 2), 4),
-    dmg: 7 * 1.22 ** (L - 1),
+    dmg: 7 * 1.2 ** (L - 1),
     range: 230 + 10 * L,
-    interval: 2.6,
-    speed: (118 + 6 * L) * (merchant ? 0.85 : 1),
-    loot: Math.round(50 * 1.4 ** (L - 1) * (merchant ? 1.7 : 1)),
+    interval: 2.4,
+    speed: 118 + 6 * L,
+    loot: Math.round(22 * 1.45 ** (L - 1) * (merchant ? 1.3 : 1)),
   };
 }
-// "Power" = sqrt(hp * dps per side). Used only to show a comparable ship level.
-function enemyPower(L) { const s = enemyStats(L, false); return Math.sqrt(s.hp * s.per * s.dmg / s.interval); }
+// Ship level shown to the player: the strongest enemy level whose power its own power matches.
+// Power = sqrt(hull x the damage per second it really lands), so equal power means about equal time to sink each other.
+// The player aims by hand: each mount bears on a target about a quarter of the time (a broadside half the time, on one
+// side or the other), and incendiary fires count once, at the stack level that rate of hits keeps burning.
+const MOUNT_UPTIME = 0.25;
+// Enemy side: a volley every interval + warning while the target is in its arc, times its gunners' hit rate against a
+// ship that keeps moving, relative to the player's (measured with .review/combat/acc.mjs).
+const enemyHitK = L => 0.18 + 0.32 * clamp((L - 1) / (AIM_FULL_L - 1), 0, 1);
+function enemyPower(L) {
+  const s = enemyStats(L, false);
+  return Math.sqrt(s.hp * s.per * s.dmg / (s.interval + VOLLEY_WARN) * enemyHitK(L));
+}
 function playerPower() {
-  const mountDps = key => save[key].reduce((a, id) => {
-    const g = GUNS[id], m = gunLvMul(save.gunLv[id]);
-    return a + (g.dmg * m + (g.burn ? g.burn * m * 3 : 0)) * g.rpm / 60;
-  }, 0);
-  // bow and stern guns bear on a target less often than a broadside, so they count half
-  const dps = (mountDps("left") + mountDps("right")) / 2 + (mountDps("bow") + mountDps("stern")) / 2;
+  let dps = 0, fireRate = 0, fireDps = 0;
+  for (const { key } of MOUNTS) for (const id of save[key]) {
+    const g = GUNS[id], m = gunLvMul(save.gunLv[id]), rate = g.rpm / 60 * MOUNT_UPTIME;
+    dps += g.dmg * m * rate;
+    if (g.burn) { fireRate += rate; fireDps = Math.max(fireDps, g.burn * m); }
+  }
+  dps += Math.min(BURN_MAX, fireRate * BURN_T) * fireDps;
   return Math.sqrt(yardVal("hull") * dps);
 }
 function shipRating() { const p = playerPower(); let L = 1; while (L < 40 && enemyPower(L + 1) <= p) L++; return L; }

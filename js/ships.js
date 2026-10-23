@@ -6,7 +6,7 @@ function makeShip(sc, tex, x, y) {
 }
 function playerGuns() {
   const mk = id => { const g = GUNS[id], m = gunLvMul(save.gunLv[id]);
-    return { id, dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, range: g.range, interval: 60 / g.rpm, cd: 0 }; };
+    return { id, dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, chain: !!g.chain, range: g.range, speed: g.speed || BALL_SPEED, interval: 60 / g.rpm, cd: 0 }; };
   return Object.fromEntries(MOUNTS.map(({ key }) => [key, save[key].map(mk)]));
 }
 function applyPlayerStats(full) {
@@ -37,20 +37,21 @@ function spawnEnemy(sc) {
          !islands.some(i => Math.hypot(i.x - x, i.y - y) < i.r * 1.3 + 40);
   }
   if (!ok) return;
-  const L = levelAt(Math.hypot(x - PORT.x, y - PORT.y));
-  const merchant = Math.random() < 0.35;
-  const tex = merchant ? "ship-merchant" : (Math.random() < 0.5 ? "ship-pirate" : "ship-navy");
-  const st = enemyStats(L, merchant);
-  const e = makeShip(sc, tex, x, y);
-  Object.assign(e, { L, merchant, maxHp: st.hp, hp: st.hp, maxSpeed: st.speed, loot: st.loot, aimLead: st.lead, aimSpread: st.spread, angry: 0, thinkT: 0, wander: null, turnRate: 1.7,
-    faction: merchant ? "merchant" : tex === "ship-pirate" ? "pirate" : "navy",
-    target: null, chaseFrom: null, retarget: rand(0, 0.5), attacker: null, ignore: new Map() });
-  const mk = () => ({ dmg: st.dmg, burn: 0, range: st.range, interval: st.interval, cd: rand(0.5, 2.2) });
-  e.guns = { left: Array.from({ length: st.per }, mk), right: Array.from({ length: st.per }, mk) };
+  const L = levelAt(Math.hypot(x - PORT.x, y - PORT.y)), faction = pickFaction();
+  const e = makeEnemy(sc, x, y, L, faction);
+  if (e.merchant) maybeConvoy(sc, e);
+  return e;
+}
+// One enemy of level L and faction at (x, y); its class (js/archetypes.js) is picked by level and faction unless given.
+function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
+  const e = makeShip(sc, "ship-" + faction, x, y);
+  Object.assign(e, { L, faction, angry: 0, thinkT: 0, wander: null, target: null, chaseFrom: null, retarget: rand(0, 0.5), attacker: null, ignore: new Map() });
+  outfitEnemy(e, cls);
   e.badge = sc.add.text(x, y - 36, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#1b1410", padding: { x: 5, y: 1 } })
     .setOrigin(0.5).setDepth(9);
   refreshBadge(e);
   enemies.push(e);
+  return e;
 }
 function refreshBadge(e) {
   const c = threatColor(e.L);
@@ -58,10 +59,22 @@ function refreshBadge(e) {
 }
 
 // ---------- Steering & AI ----------
+// Letting go of the helm (which is also how touch fires) doesn't brake the player's ship at once: it holds its heading at
+// COAST_K of its speed for COAST_T s, then slows, so firing doesn't make you a sitting target. Chain shot (s.chainT)
+// costs a ship speed and turn while its rigging is torn.
+const COAST_T = 1.2, COAST_K = 0.8;
 function steer(s, desired, thr, dt) {
-  const turn = s.turnRate * dt * (0.45 + 0.55 * Math.min(1, s.speed / s.maxSpeed + 0.2));
+  if (s.isPlayer) {
+    if (desired == null && thr === 0) {
+      if (s.helmThr > 0) { s.coastT = COAST_T; s.coastV = s.speed * COAST_K; }
+      if (s.coastT > 0) { s.coastT -= dt; thr = Math.min(s.coastV, s.speed) / s.maxSpeed; }
+    } else s.coastT = 0;
+    s.helmThr = desired == null ? 0 : thr;
+  }
+  const torn = s.chainT > 0;
+  const turn = s.turnRate * (torn ? CHAIN_TURN : 1) * dt * (0.45 + 0.55 * Math.min(1, s.speed / s.maxSpeed + 0.2));
   if (desired != null) s.rot += clamp(angDiff(desired, s.rot), -turn, turn);
-  const target = thr * s.maxSpeed;
+  const target = thr * s.maxSpeed * (torn ? CHAIN_SPEED : 1);
   s.speed += clamp(target - s.speed, -s.maxSpeed * 1.1 * dt, s.maxSpeed * 0.7 * dt);
 }
 function avoidIslands(s, desired) {
@@ -90,6 +103,7 @@ function isHostile(e, o) {
   const g = o.isPlayer ? "player" : o.faction;
   if (e.faction === "pirate") return g !== "pirate";
   if (e.faction === "navy") return g === "pirate" || g === "player";
+  if (e.escort) return g === "pirate";   // a convoy's escort brig keeps pirates off its fluyts
   return false;
 }
 const ignoring = (e, o, now) => (e.ignore.get(o) || 0) > now;
@@ -112,6 +126,7 @@ function giveUp(e, tg, now) {
   if (onScreen(e.x, e.y)) floatText(e.x, e.y - 48, t("gaveUp"), "#c9d6da", 14);
 }
 function think(e, dt) {
+  if (e.fixed) return fortThink(e, dt);   // shore batteries (js/forts.js) only pick targets
   const now = S.time.now / 1000;
   e.angry = Math.max(0, e.angry - dt);
   if (e.target && (!isHostile(e, e.target) || ignoring(e, e.target, now))) e.target = null;
@@ -125,19 +140,12 @@ function think(e, dt) {
   const tg = e.target;
   if (tg) {
     const d = dist(e, tg), toT = Math.atan2(tg.y - e.y, tg.x - e.x);
-    const range = e.guns.left[0]?.range ?? 250;
+    const range = e.range ?? 250;
     const chased = Math.hypot(e.x - e.chaseFrom.x, e.y - e.chaseFrom.y);
     if ((chased > LEASH && d > range) || d > GIVE_UP_DIST) giveUp(e, tg, now);
-    else if (e.merchant) { desired = toT + Math.PI + Math.sin(now * 1.1 + e.L) * 0.5; thr = 1; }
-    else if (d > range * 0.85) { desired = toT; thr = 1; }
-    else {
-      // present a broadside: run perpendicular to the target, side chosen by current heading
-      const a1 = toT + Math.PI / 2, a2 = toT - Math.PI / 2;
-      desired = Math.abs(angDiff(a1, e.rot)) < Math.abs(angDiff(a2, e.rot)) ? a1 : a2;
-      if (d < range * 0.45) desired += (desired === a1 ? 0.35 : -0.35);
-      thr = 0.75;
-    }
+    else ({ desired, thr } = archTactic(e, tg, d, toT, now));   // each class's battle plan (js/archetypes.js)
   }
+  if (desired == null) { const c = convoyIdle(e); if (c) ({ desired, thr } = c); }
   if (desired == null && e.merchant) {
     // merchants run from any pirate or the player that comes close, even before a shot is fired
     let threat = null, td = 480;
@@ -166,6 +174,7 @@ function think(e, dt) {
 }
 
 function move(s, dt) {
+  if (s.fixed) { s.vx = s.vy = s.speed = 0; return; }   // shore batteries stand on their island
   s.vx = Math.cos(s.rot) * s.speed; s.vy = Math.sin(s.rot) * s.speed;
   s.x = clamp(s.x + s.vx * dt, 60, W - 60); s.y = clamp(s.y + s.vy * dt, 60, H - 60);
   // islands are solid

@@ -83,10 +83,7 @@ function step(dt) {
     s.spr.setPosition(s.x, s.y).setRotation(s.rot);
     s.wakeT -= dt;
     if (s.speed > 25 && s.wakeT <= 0) { s.wakeT = 0.07; S.fx.wake.emitParticleAt(s.x - Math.cos(s.rot) * 30, s.y - Math.sin(s.rot) * 30, 1); }
-    if (s.burnT > 0) { s.burnT -= dt; s.hp -= s.burnDps * dt; s.burnFx -= dt;
-      if (s.burnFx <= 0) { s.burnFx = 0.08; S.fx.spark.emitParticleAt(s.x + rand(-20, 20), s.y + rand(-8, 8), 1); }
-      s.burnSnd = (s.burnSnd || 0) - dt; if (s.burnSnd <= 0) { s.burnSnd = rand(0.2, 0.45); Snd.play("burn", { x: s.x, y: s.y }); }
-      if (s.hp <= 0) sink(s, s.burnSrc); }
+    tickStatus(s, dt);   // stacked fires and torn rigging (js/arsenal.js)
     if (s.badge) s.badge.setPosition(s.x, s.y - 38);
   }
   // --- firing ---
@@ -96,6 +93,7 @@ function step(dt) {
   if (engaged && !engagedPrev && releaseTips < 3 && (joyVec.m > 0 || prevKeyActive)) { releaseTips++; toast(t("releaseTip")); }
   engagedPrev = engaged;
   for (const e of living) fire(e, e.target && isHostile(e, e.target) ? [e.target] : [], dt);
+  combatTick(dt);   // turn tracking for enemy gunners, fireship rams, shore batteries, streak chip (js/volley.js)
   // --- audio: ears on the player, combat music while a hostile ship is close ---
   Snd.setListener(player.x, player.y);
   Snd.setMotion(player.alive ? player.speed / player.maxSpeed : 0);
@@ -116,7 +114,7 @@ function step(dt) {
     if (!b.fromPlayer && player.alive && hitShip(player, b.x, b.y)) hit = player;
     if (!hit) for (const e of living) if (e !== b.owner && e.alive && hitShip(e, b.x, b.y)) { hit = e; break; }
     const onRock = !hit && islands.some(isl => Math.hypot(isl.x - b.x, isl.y - b.y) < isl.r * 0.9);
-    if (hit) { S.fx.spark.explode(10, b.x, b.y); hurt(hit, b.dmg, b.burn, b.owner); }
+    if (hit) { S.fx.spark.explode(10, b.x, b.y); hurt(hit, b.dmg, b.burn, b.owner, b); }
     if (hit || onRock || b.life <= 0) {
       if (!hit) S.fx.splash.explode(onRock ? 4 : 8, b.x, b.y);
       if (!hit && !onRock) Snd.play("splash", { x: b.x, y: b.y });
@@ -199,6 +197,7 @@ function drawOverlays() {
     bg.fillStyle(0x08222d, 0.8); bg.fillRect(x - 1, y - 1, w + 2, 6);
     bg.fillStyle(0xd45a43, 1); bg.fillRect(x, y, w * clamp(player.hp / player.maxHp, 0, 1), 4);
   }
+  drawVolleyWarnings(bg);   // red glow on gun ports about to fire (js/volley.js)
 }
 
 // ---------- Boot ----------

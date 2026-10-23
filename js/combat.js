@@ -1,37 +1,7 @@
 "use strict";
 // ---------- Combat ----------
-function fire(s, targets, dt) {
-  for (const side of [-1, 1]) {
-    const arr = side < 0 ? s.guns.left : s.guns.right;
-    const normal = s.rot + side * Math.PI / 2;
-    const n = arr.length;
-    arr.forEach((g, i) => {
-      g.cd -= dt; if (g.cd > 0) return;
-      let best = null, bd = 1e9;
-      for (const tg of targets) {
-        if (!tg.alive) continue;
-        const dx = tg.x - s.x, dy = tg.y - s.y, d = Math.hypot(dx, dy);
-        if (d > g.range || d >= bd) continue;
-        if (Math.abs(angDiff(Math.atan2(dy, dx), normal)) > ARC) continue;
-        best = tg; bd = d;
-      }
-      if (!best) { g.cd = 0; return; }
-      const off = n === 1 ? 0 : -18 + 36 * i / (n - 1);
-      const mx = s.x + Math.cos(s.rot) * off + Math.cos(normal) * 13;
-      const my = s.y + Math.sin(s.rot) * off + Math.sin(normal) * 13;
-      const lead = s.isPlayer ? 1 : s.aimLead, tof = bd / BALL_SPEED;   // ball time of flight
-      const tx = best.x + best.vx * tof * lead, ty = best.y + best.vy * tof * lead;
-      const ang = Math.atan2(ty - my, tx - mx) + rand(-1, 1) * (s.isPlayer ? 0.05 : s.aimSpread);
-      const life = g.range * 1.08 / BALL_SPEED;
-      const spr = S.add.image(mx, my, "ball").setDepth(7);
-      balls.push({ spr, x: mx, y: my, vx: Math.cos(ang) * BALL_SPEED + s.vx * 0.3, vy: Math.sin(ang) * BALL_SPEED + s.vy * 0.3,
-        life, life0: life, dmg: g.dmg, burn: g.burn, fromPlayer: !!s.isPlayer, owner: s });
-      S.fx.smoke.emitParticleAt(mx + Math.cos(normal) * 6, my + Math.sin(normal) * 6, 3);
-      Snd.play("cannonFar", { x: mx, y: my });
-      g.cd = g.interval * rand(0.85, 1.15);
-    });
-  }
-}
+// AI gunnery: telegraphed volleys per side, chaser and fort battery (js/volley.js).
+function fire(s, targets, dt) { enemyFire(s, targets, dt); }
 
 // ---------- Player gunnery: straight aim lines, fire on release ----------
 // Each cannon shoots straight out of its mount: bow guns forward, broadside guns perpendicular to the hull,
@@ -73,9 +43,9 @@ function playerFire() {
       g.cd = g.interval;
       S.time.delayedCall(shots++ * 70, () => {          // a rolling broadside, not one blast
         if (!player.alive || paused) return;
-        const m = muzzle(player, mount, i, arr.length), life = g.range / BALL_SPEED;
+        const m = muzzle(player, mount, i, arr.length), life = g.range / g.speed;   // each gun has its own ball speed
         balls.push({ spr: S.add.image(m.x, m.y, "ball").setDepth(7), x: m.x, y: m.y,
-          vx: Math.cos(m.a) * BALL_SPEED, vy: Math.sin(m.a) * BALL_SPEED, life, life0: life, dmg: g.dmg, burn: g.burn, fromPlayer: true, owner: player });
+          vx: Math.cos(m.a) * g.speed, vy: Math.sin(m.a) * g.speed, life, life0: life, dmg: g.dmg, burn: g.burn, chain: g.chain, fromPlayer: true, owner: player });
         S.fx.smoke.emitParticleAt(m.x + Math.cos(m.a) * 6, m.y + Math.sin(m.a) * 6, 3);
         Snd.play("cannon", { pan: Math.cos(m.a) * 0.35 });
       });
@@ -87,18 +57,18 @@ function playerFire() {
 // ship hit test: capsule along the hull axis
 function hitShip(s, x, y) {
   const dx = x - s.x, dy = y - s.y, c = Math.cos(s.rot), sn = Math.sin(s.rot);
-  const along = clamp(dx * c + dy * sn, -28, 28);
-  return Math.hypot(dx - c * along, dy - sn * along) < 13;
+  const hl = s.hl ?? 28, along = clamp(dx * c + dy * sn, -hl, hl);   // s.hl / s.hw: per-hull capsule (art, forts)
+  return Math.hypot(dx - c * along, dy - sn * along) < (s.hw ?? 13);
 }
 function floatText(x, y, str, color, size = 16) {
   const txt = S.add.text(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
     .setOrigin(0.5).setDepth(10);
   S.tweens.add({ targets: txt, y: y - 34, alpha: 0, duration: 900, ease: "Cubic.easeOut", onComplete: () => txt.destroy() });
 }
-function hurt(s, dmg, burn, src) {
+function hurt(s, dmg, burn, src, ball) {
   if (!s.alive) return;
+  dmg = onHit(s, dmg, burn, src, ball);   // raking, fires, chain shot, merchants and convoys raising the alarm (js/arsenal.js)
   s.hp -= dmg;
-  if (burn) { s.burnT = 3; s.burnDps = burn; s.burnSrc = src; }
   s.spr.setTint(0xffb4a0); S.time.delayedCall(90, () => s.spr && s.spr.clearTint());
   if (onScreen(s.x, s.y)) {
     const byPlayer = src === player;
@@ -128,11 +98,11 @@ function sink(s, killer) {
   S.tweens.add({ targets: s.spr, alpha: 0, scale: 0.6, angle: s.spr.angle + 25, duration: 1300, ease: "Quad.easeIn",
     onComplete: () => { if (!s.isPlayer) { s.spr.destroy(); s.dead = true; } } });
   if (s.isPlayer) {
-    // the hold's cargo stays where the ship went down, and survives closing the game
-    lastLost = Math.round(cargo);
+    // half the hold stays where the ship went down, and survives closing the game; the plunder streak is lost
+    lastLost = Math.round(cargo * WRECK_KEEP); streak = 0;
     if (lastLost > 0) { const w = { x: Math.round(s.x), y: Math.round(s.y), value: lastLost }; save.wrecks.push(w); addCrate(w.x, w.y, w.value, w); }
     cargo = 0; persist();
-    toast(t(lastLost > 0 ? "toastSunkWreck" : "toastSunk"));
+    toast(t(lastLost > 0 ? "toastSunkHalf" : "toastSunk"));
     S.time.delayedCall(1700, () => {
       cargo = 0;
       Object.assign(player, { x: PORT.x + 140, y: PORT.y, rot: 0, speed: 0, alive: true, burnT: 0 });
@@ -140,7 +110,7 @@ function sink(s, killer) {
       dock("sunk");
     });
   } else {
-    addCrate(s.x, s.y, s.loot, null);     // whoever sank it, the loot floats here (not saved)
+    lootDrop(s, killer);     // whoever sank it, the loot floats here (not saved); the player's kills pay bounty + streak
     if (killer === player) { save.sunk++; floatText(s.x, s.y - 30, t("fSunk"), "#f0c766", 20); }
   }
 }
