@@ -89,12 +89,11 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 .deck { display: grid; gap: 6px; }
 .deck .row { display: grid; grid-template-columns: 76px 1fr; align-items: center; gap: 8px; }
 .deck .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--ink-soft); }
-.slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .hullbar { height: 26px; margin-left: 84px; border-radius: 4px 50% 50% 4px / 4px 50% 50% 4px; background: linear-gradient(90deg, #7a4a26, #a46c3b); position: relative; }
 .hullbar::after { content: ""; position: absolute; left: 8px; right: 30px; top: 11px; height: 4px; background: rgba(255,235,200,.35); }
 .slot { font: inherit; font-size: 13px; font-weight: 700; padding: 8px 4px; border-radius: 3px; border: 1.5px solid var(--ink); background: var(--parch-2); color: var(--ink); cursor: pointer; line-height: 1.15; min-width: 0; }
 .slot small { display: block; font-weight: 500; font-size: 11px; color: var(--ink-soft); }
-.slot.locked { border-style: dashed; opacity: .45; cursor: default; background: transparent; }
 
 .list { display: grid; gap: 8px; }
 .item { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(42,29,16,.25); }
@@ -160,6 +159,11 @@ button:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
       <h2 data-i18n="shipwright">Shipwright</h2>
       <div class="list" id="yard"></div>
     </section>
+    <section>
+      <h2 data-i18n="ships">New ships</h2>
+      <p class="hint-s" data-i18n="shipsHint">A new ship starts with hull, sails and hold back at Lv 1. Your cannons move aboard.</p>
+      <div class="list" id="ships"></div>
+    </section>
     <footer>
       <span style="display:flex;gap:12px;align-items:center"><button class="lang on-sheet" type="button" data-lang-toggle>中文</button>
       <button class="reset" id="reset" type="button" data-i18n="reset">Reset progress</button></span>
@@ -194,14 +198,18 @@ const UI_FONT = '"Barlow Semi Condensed", "Noto Sans TC", "Microsoft JhengHei", 
 const STR = {
   en: {
     hull: "Hull", cargo: "Cargo", gold: "Gold", shipLv: "Ship Lv {n}", ledger: "Harbor ledger", harbor: "Safe Harbor", harborMap: "SAFE HARBOR",
-    broadside: "Broadside", slotHint: "Tap a gun port to swap in another cannon you own.", armory: "Armory", shipwright: "Shipwright",
+    broadside: "Gun deck", slotHint: "Tap a gun port to swap in another cannon you own.", armory: "Armory", shipwright: "Shipwright",
+    ships: "New ships", shipsHint: "A new ship starts with hull, sails and hold back at Lv 1. Your cannons move aboard.",
+    yourShip: "Your ship", shipArm: "Tap again to buy", boughtShip: "The <em>{ship}</em> is yours. Hull, sails and hold start again at Lv 1, and your cannons are aboard.",
+    shipDs: "Bow <b>{b}</b> · <b>{s}</b> per side · stern <b>{t}</b> · starts at <b>{hp}</b>, <b>{kn}</b>, hold <b>{cargo}</b>",
+    s_sloop: "Sloop", s_schooner: "Schooner", s_brig: "Brig", s_frigate: "Frigate", s_line: "Ship of the Line",
     reset: "Reset progress", resetArm: "Tap again to wipe all progress", sail: "Set sail", langBtn: "中文",
     hintTouch: "Drag to steer · when aim lines appear, let go to fire", hintDesk: "Drag or WASD to steer · when aim lines appear, let go (or Space) to fire", releaseTip: "Let go to fire!",
-    larboard: "Larboard", starboard: "Starboard", closed: "Closed", gunPort: "Gun port", slotAria: "{side} gun port {n}: {gun}",
+    bow: "Bow", larboard: "Larboard", starboard: "Starboard", stern: "Stern", slotAria: "{side} gun port {n}: {gun}",
     statLv: "Ship <b>Lv {n}</b>", statHold: "Hold <b>{n}</b>", statSunk: "Ships sunk <b>{n}</b>",
     buy: "Buy {n}", upgrade: "Upgrade {n}", max: "Max level", notOwned: "Not owned",
     dmg: "<b>{n}</b> dmg", burn: " + <b>{n}</b> burn", range: "range <b>{n}</b>", rpm: "<b>{n}</b>/min",
-    welcome: "Drag to sail. When an enemy comes near a broadside, aim lines appear. Each ball flies straight along its line, so turn the ship to point the lines at the enemy, then let go to fire. Sink ships, scoop up their plunder, and bring it back here to sell. Deeper waters hold richer and deadlier ships.",
+    welcome: "Drag to sail. When an enemy comes near your bow or a broadside, aim lines appear. Each ball flies straight along its line, so turn the ship to point the lines at the enemy, then let go to fire. Sink ships, scoop up their plunder, and bring it back here to sell. Deeper waters hold richer and deadlier ships.",
     welcomeBack: "Welcome back, captain. Your ledger is as you left it.",
     sunkMsg: "The crew swam ashore. Your hold was lost at sea, but the shipwright patched the hull for free.",
     sold: "Sold the hold for <em>{n} gold</em>. Hull repaired.", empty: "Hull repaired. Your hold is empty.",
@@ -214,19 +222,23 @@ const STR = {
     g_long12: "Long 12", gf_long12: "Long 12-pounder", gn_long12: "Outranges most ships",
     g_carronade: "Carronade", gf_carronade: "24-pdr Carronade", gn_carronade: "Smashes hulls up close",
     g_fire: "Incendiary", gf_fire: "Incendiary Gun", gn_fire: "Sets hulls burning for 3 s",
-    y_hull: "Hull", y_sails: "Sails", y_hold: "Cargo hold", y_ports: "Gun ports",
-    u_hp: "{n} HP", u_kn: "{n} kn", u_cargo: "{n} cargo", u_ports: "{n} per side",
+    y_hull: "Hull", y_sails: "Sails", y_hold: "Cargo hold",
+    u_hp: "{n} HP", u_kn: "{n} kn", u_cargo: "{n} cargo",
   },
   zh: {
     hull: "船體", cargo: "貨艙", gold: "金幣", shipLv: "船艦 Lv {n}", ledger: "港口帳簿", harbor: "安全港", harborMap: "安全港",
-    broadside: "舷側火力", slotHint: "點一下砲位，換上你擁有的其他火砲。", armory: "軍械庫", shipwright: "造船廠",
+    broadside: "火砲配置", slotHint: "點一下砲位，換上你擁有的其他火砲。", armory: "軍械庫", shipwright: "造船廠",
+    ships: "新船", shipsHint: "換新船後，船體、船帆、貨艙的升級會從 Lv 1 重新開始。火砲會一起搬上新船。",
+    yourShip: "目前的船", shipArm: "再點一次購買", boughtShip: "<em>{ship}</em>是你的了。船體、船帆、貨艙從 Lv 1 重新開始，火砲已經搬上船。",
+    shipDs: "船首 <b>{b}</b> 門 · 每舷 <b>{s}</b> 門 · 船尾 <b>{t}</b> 門 · 起始 <b>{hp}</b>、<b>{kn}</b>、貨艙 <b>{cargo}</b>",
+    s_sloop: "單桅帆船", s_schooner: "縱帆船", s_brig: "雙桅橫帆船", s_frigate: "巡防艦", s_line: "戰列艦",
     reset: "重置進度", resetArm: "再點一次會清除所有進度", sail: "啟航", langBtn: "EN",
     hintTouch: "拖曳來轉向 · 出現瞄準線時放開就開火", hintDesk: "拖曳或 WASD 轉向 · 出現瞄準線時放開（或按空白鍵）開火", releaseTip: "放開就開火！",
-    larboard: "左舷", starboard: "右舷", closed: "未開啟", gunPort: "砲位", slotAria: "{side}第 {n} 個砲位：{gun}",
+    bow: "船首", larboard: "左舷", starboard: "右舷", stern: "船尾", slotAria: "{side}第 {n} 個砲位：{gun}",
     statLv: "船艦 <b>Lv {n}</b>", statHold: "貨艙 <b>{n}</b>", statSunk: "擊沉 <b>{n}</b> 艘",
     buy: "購買 {n}", upgrade: "升級 {n}", max: "已滿級", notOwned: "未擁有",
     dmg: "傷害 <b>{n}</b>", burn: " + 燃燒 <b>{n}</b>", range: "射程 <b>{n}</b>", rpm: "<b>{n}</b> 發/分",
-    welcome: "拖曳來航行。敵船靠近舷側時會出現瞄準線。砲彈會沿著瞄準線直直飛出去，所以要轉動船身讓瞄準線對準敵船，再放開手開火。擊沉敵船、撿起戰利品，再帶回這裡賣掉。離港口越遠，敵船越富有，也越危險。",
+    welcome: "拖曳來航行。敵船靠近船首或舷側時會出現瞄準線。砲彈會沿著瞄準線直直飛出去，所以要轉動船身讓瞄準線對準敵船，再放開手開火。擊沉敵船、撿起戰利品，再帶回這裡賣掉。離港口越遠，敵船越富有，也越危險。",
     welcomeBack: "歡迎回來，船長。帳簿和你離開時一樣。",
     sunkMsg: "船員游上了岸。貨艙裡的東西沉入海底，造船廠免費修好了船體。",
     sold: "貨艙賣得 <em>{n} 金幣</em>。船體已修好。", empty: "船體已修好。貨艙是空的。",
@@ -239,8 +251,8 @@ const STR = {
     g_long12: "長 12 磅", gf_long12: "長管 12 磅砲", gn_long12: "射程勝過大多數船",
     g_carronade: "卡隆砲", gf_carronade: "24 磅卡隆砲", gn_carronade: "近距離重創船體",
     g_fire: "燃燒砲", gf_fire: "燃燒砲", gn_fire: "讓船體燃燒 3 秒",
-    y_hull: "船體", y_sails: "船帆", y_hold: "貨艙", y_ports: "砲位",
-    u_hp: "{n} HP", u_kn: "{n} 節", u_cargo: "{n} 貨物", u_ports: "每舷 {n} 門",
+    y_hull: "船體", y_sails: "船帆", y_hold: "貨艙",
+    u_hp: "{n} HP", u_kn: "{n} 節", u_cargo: "{n} 貨物",
   },
 };
 const LANG_KEY = "privateers-lang";
@@ -259,12 +271,31 @@ const GUNS = {
 const GUN_ORDER = ["six", "long12", "carronade", "fire"];
 const GUN_MAX = 10;
 
-const YARD = {
-  hull:  { val: l => Math.round(100 * 1.28 ** (l - 1)), show: v => t("u_hp", { n: v }),                cost: l => Math.round(120 * 1.6 ** (l - 1)), max: 15 },
-  sails: { val: l => 150 + 14 * (l - 1),                show: v => t("u_kn", { n: (v / 15).toFixed(1) }), cost: l => Math.round(90 * 1.6 ** (l - 1)),  max: 10 },
-  hold:  { val: l => Math.round(150 * 1.6 ** (l - 1)),  show: v => t("u_cargo", { n: fmt(v) }),         cost: l => Math.round(100 * 1.7 ** (l - 1)), max: 12 },
-  ports: { val: l => l,                                 show: v => t("u_ports", { n: v }),               cost: l => Math.round(300 * 3 ** (l - 1)),   max: 4 },
+// Ships for sale. Bigger ships carry more guns and start sturdier, but their yard upgrades begin again at Lv 1.
+const SHIPS = {
+  sloop:    { slots: { bow: 1, left: 1, right: 1, stern: 0 }, hp: 100, speed: 150, hold: 150, cost: 0 },
+  schooner: { slots: { bow: 1, left: 2, right: 2, stern: 0 }, hp: 140, speed: 165, hold: 220, cost: 400 },
+  brig:     { slots: { bow: 1, left: 3, right: 3, stern: 0 }, hp: 200, speed: 155, hold: 330, cost: 1200 },
+  frigate:  { slots: { bow: 2, left: 4, right: 4, stern: 1 }, hp: 300, speed: 150, hold: 500, cost: 3600 },
+  line:     { slots: { bow: 2, left: 5, right: 5, stern: 2 }, hp: 450, speed: 140, hold: 750, cost: 9000 },
 };
+const SHIP_ORDER = Object.keys(SHIPS);
+// Gun mounts. ang = firing direction relative to the bow; muzzles sit `out` px that way,
+// spread over `span` px along the direction (s.rot + perp).
+const MOUNTS = [
+  { key: "bow",   ang: 0,            out: 34, perp: Math.PI / 2, span: 12 },
+  { key: "left",  ang: -Math.PI / 2, out: 13, perp: 0,           span: 36 },
+  { key: "right", ang: Math.PI / 2,  out: 13, perp: 0,           span: 36 },
+  { key: "stern", ang: Math.PI,      out: 34, perp: Math.PI / 2, span: 12 },
+];
+
+// Yard upgrades scale the current ship's base stats.
+const YARD = {
+  hull:  { val: (l, sh) => Math.round(sh.hp * 1.28 ** (l - 1)),   show: v => t("u_hp", { n: v }),                cost: l => Math.round(120 * 1.6 ** (l - 1)), max: 15 },
+  sails: { val: (l, sh) => sh.speed + 14 * (l - 1),               show: v => t("u_kn", { n: (v / 15).toFixed(1) }), cost: l => Math.round(90 * 1.6 ** (l - 1)),  max: 10 },
+  hold:  { val: (l, sh) => Math.round(sh.hold * 1.6 ** (l - 1)),  show: v => t("u_cargo", { n: fmt(v) }),         cost: l => Math.round(100 * 1.7 ** (l - 1)), max: 12 },
+};
+function yardVal(k, l = save[k], sh = SHIPS[save.ship]) { return YARD[k].val(l, sh); }
 
 function gunLvMul(lv) { return 1.2 ** (lv - 1); }
 function gunUpCost(id) { return Math.round(GUNS[id].upBase * 1.55 ** (save.gunLv[id] - 1)); }
@@ -287,22 +318,45 @@ function enemyStats(L, merchant) {
 // "Power" = sqrt(hp * dps per side). Used only to show a comparable ship level.
 function enemyPower(L) { const s = enemyStats(L, false); return Math.sqrt(s.hp * s.per * s.dmg / s.interval); }
 function playerPower() {
-  const sideDps = side => save[side].reduce((a, id) => {
+  const mountDps = key => save[key].reduce((a, id) => {
     const g = GUNS[id], m = gunLvMul(save.gunLv[id]);
     return a + (g.dmg * m + (g.burn ? g.burn * m * 3 : 0)) * g.rpm / 60;
   }, 0);
-  const dps = (sideDps("left") + sideDps("right")) / 2;
-  return Math.sqrt(YARD.hull.val(save.hull) * dps);
+  // bow and stern guns bear on a target less often than a broadside, so they count half
+  const dps = (mountDps("left") + mountDps("right")) / 2 + (mountDps("bow") + mountDps("stern")) / 2;
+  return Math.sqrt(yardVal("hull") * dps);
 }
 function shipRating() { const p = playerPower(); let L = 1; while (L < 40 && enemyPower(L + 1) <= p) L++; return L; }
 
 // ---------- Save (per-browser convenience only) ----------
-const SAVE_KEY = "privateers-save-v1";
-const defaultSave = () => ({ v: 1, gold: 0, hull: 1, sails: 1, hold: 1, ports: 1, unlocked: { six: true },
-  gunLv: { six: 1, long12: 1, carronade: 1, fire: 1 }, left: ["six"], right: ["six"], sunk: 0,
+// v2 lives under its own key, so an older cached copy of the page can't overwrite it with a fresh v1 save.
+const SAVE_KEY = "privateers-save-v2", SAVE_KEY_V1 = "privateers-save-v1";
+const defaultSave = () => ({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1, unlocked: { six: true },
+  gunLv: { six: 1, long12: 1, carronade: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0,
   wrecks: [] });   // the player's own sunken cargo: [{ x, y, value }], kept across sessions
+// Give every mount exactly as many guns as the ship has ports, using only guns the captain owns.
+function fitMounts(s) {
+  const d = defaultSave(), ship = Object.hasOwn(SHIPS, s.ship) ? s.ship : "sloop";
+  const unlocked = { ...d.unlocked, ...s.unlocked }, gunLv = { ...d.gunLv, ...s.gunLv };
+  const owned = id => Object.hasOwn(GUNS, id) && unlocked[id];
+  return { ...s, ship, unlocked, gunLv, ...Object.fromEntries(MOUNTS.map(({ key }) => {
+    const old = Array.isArray(s[key]) ? s[key] : [];
+    return [key, Array.from({ length: SHIPS[ship].slots[key] }, (_, i) => owned(old[i]) ? old[i] : "six")];
+  })) };
+}
+// v1 sold extra gun ports instead of ships: move each captain onto the ship with as many guns per side,
+// keeping their yard levels, so nothing they paid for is lost.
+function migrateV1(s) {
+  const { ports, ...rest } = s;
+  return { ...defaultSave(), ...rest, v: 2, ship: SHIP_ORDER[Math.min(Math.max((ports | 0) - 1, 0), 3)] };
+}
 function loadSave() {
-  try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === 1) return Object.assign(defaultSave(), s); } catch (e) {}
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (s && s.v === 2) return fitMounts({ ...defaultSave(), ...s });
+    const old = JSON.parse(localStorage.getItem(SAVE_KEY_V1));
+    if (old && old.v === 1) return fitMounts(migrateV1(old));
+  } catch (e) {}
   return defaultSave();
 }
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
@@ -444,13 +498,13 @@ function makeShip(sc, tex, x, y) {
 function playerGuns() {
   const mk = id => { const g = GUNS[id], m = gunLvMul(save.gunLv[id]);
     return { id, dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, range: g.range, interval: 60 / g.rpm, cd: 0 }; };
-  return { left: save.left.map(mk), right: save.right.map(mk) };
+  return Object.fromEntries(MOUNTS.map(({ key }) => [key, save[key].map(mk)]));
 }
 function applyPlayerStats(full) {
-  player.maxHp = YARD.hull.val(save.hull);
+  player.maxHp = yardVal("hull");
   if (full) player.hp = player.maxHp;
-  player.maxSpeed = YARD.sails.val(save.sails);
-  player.cap = YARD.hold.val(save.hold);
+  player.maxSpeed = yardVal("sails");
+  player.cap = yardVal("hold");
   player.guns = playerGuns();
 }
 function makePlayer(sc) {
@@ -638,19 +692,20 @@ function fire(s, targets, dt) {
   }
 }
 // ---------- Player gunnery: straight aim lines, fire on release ----------
-// Each cannon shoots straight out of its side, perpendicular to the hull. No auto-aim and no lead:
-// the ball flies exactly along the line that was shown, so the player aims by turning the ship.
-const AIM_SHOW_PAD = 1.15;   // aim lines appear when an enemy is within (range x this) of a broadside
+// Each cannon shoots straight out of its mount: bow guns forward, broadside guns perpendicular to the hull,
+// stern guns aft. No auto-aim and no lead: the ball flies exactly along the line that was shown,
+// so the player aims by turning the ship.
+const AIM_SHOW_PAD = 1.15;   // aim lines appear when an enemy is within (range x this) of a mount's firing arc
 let prevKeyActive = false, engagedPrev = false, releaseTips = 0;
-function muzzle(s, side, i, n) {
-  const a = s.rot + side * Math.PI / 2, off = n === 1 ? 0 : -18 + 36 * i / (n - 1);
-  return { x: s.x + Math.cos(s.rot) * off + Math.cos(a) * 13, y: s.y + Math.sin(s.rot) * off + Math.sin(a) * 13, a };
+function muzzle(s, m, i, n) {
+  const a = s.rot + m.ang, p = s.rot + m.perp, off = n === 1 ? 0 : -m.span / 2 + m.span * i / (n - 1);
+  return { x: s.x + Math.cos(p) * off + Math.cos(a) * m.out, y: s.y + Math.sin(p) * off + Math.sin(a) * m.out, a };
 }
-// Is an enemy near this broadside? Only then are its aim lines shown and can it fire.
-function sideEngaged(side) {
-  const arr = side < 0 ? player.guns.left : player.guns.right;
+// Is an enemy inside this mount's firing arc? Only then are its aim lines shown and can it fire.
+function mountEngaged(m) {
+  const arr = player.guns[m.key];
   if (!arr.length) return false;
-  const r = Math.max(...arr.map(g => g.range)) * AIM_SHOW_PAD, normal = player.rot + side * Math.PI / 2;
+  const r = Math.max(...arr.map(g => g.range)) * AIM_SHOW_PAD, normal = player.rot + m.ang;
   return enemies.some(e => e.alive && dist(e, player) < r && Math.abs(angDiff(Math.atan2(e.y - player.y, e.x - player.x), normal)) < ARC);
 }
 // Would a straight shot from (x, y) at angle a, length len, pass through an enemy hull right now?
@@ -664,19 +719,19 @@ function lineHits(x, y, a, len) {
   }
   return false;
 }
-// Fire every loaded cannon on each engaged side. Called when the player lets go.
+// Fire every loaded cannon on each engaged mount. Called when the player lets go.
 function playerFire() {
   if (paused || docked || !player.alive) return;
   let shots = 0;
-  for (const side of [-1, 1]) {
-    if (!sideEngaged(side)) continue;
-    const arr = side < 0 ? player.guns.left : player.guns.right;
+  for (const mount of MOUNTS) {
+    if (!mountEngaged(mount)) continue;
+    const arr = player.guns[mount.key];
     arr.forEach((g, i) => {
       if (g.cd > 0) return;
       g.cd = g.interval;
       S.time.delayedCall(shots++ * 70, () => {          // a rolling broadside, not one blast
         if (!player.alive || paused) return;
-        const m = muzzle(player, side, i, arr.length), life = g.range / BALL_SPEED;
+        const m = muzzle(player, mount, i, arr.length), life = g.range / BALL_SPEED;
         balls.push({ spr: S.add.image(m.x, m.y, "ball").setDepth(7), x: m.x, y: m.y,
           vx: Math.cos(m.a) * BALL_SPEED, vy: Math.sin(m.a) * BALL_SPEED, life, life0: life, dmg: g.dmg, burn: g.burn, fromPlayer: true, owner: player });
         S.fx.smoke.emitParticleAt(m.x + Math.cos(m.a) * 6, m.y + Math.sin(m.a) * 6, 3);
@@ -767,23 +822,23 @@ function setSail() {
 }
 
 let portMsg = ["welcome"];
+// Buying a ship wipes its yard upgrades, so the button needs a second tap within a few seconds.
+let shipArmed = null, shipArmedAt = 0, shipArmTimer;
 function renderPort() {
   const $ = id => document.getElementById(id);
   $("pMsg").innerHTML = t(...portMsg);
   $("pGold").textContent = fmt(save.gold);
-  $("pStats").innerHTML = `<span>${t("statLv", { n: shipRating() })}</span><span><b>${YARD.hull.show(YARD.hull.val(save.hull))}</b></span>` +
-    `<span><b>${YARD.sails.show(YARD.sails.val(save.sails))}</b></span><span>${t("statHold", { n: fmt(YARD.hold.val(save.hold)) })}</span><span>${t("statSunk", { n: save.sunk })}</span>`;
-  // broadside diagram
+  $("pStats").innerHTML = `<span><b>${t("s_" + save.ship)}</b></span><span>${t("statLv", { n: shipRating() })}</span><span><b>${YARD.hull.show(yardVal("hull"))}</b></span>` +
+    `<span><b>${YARD.sails.show(yardVal("sails"))}</b></span><span>${t("statHold", { n: fmt(yardVal("hold")) })}</span><span>${t("statSunk", { n: save.sunk })}</span>`;
+  // gun deck diagram: one row per mount the ship has
   const slotRow = (side, label) => {
-    let h = `<div class="row"><div class="lbl">${label}</div><div class="slots">`;
-    for (let i = 0; i < 4; i++) {
-      if (i < save.ports) { const id = save[side][i];
-        h += `<button class="slot" type="button" data-act="slot" data-side="${side}" data-i="${i}" aria-label="${t("slotAria", { side: label, n: i + 1, gun: t("gf_" + id) })}">${t("g_" + id)}<small>Lv ${save.gunLv[id]}</small></button>`;
-      } else h += `<button class="slot locked" type="button" disabled>${t("closed")}<small>${t("gunPort")}</small></button>`;
-    }
-    return h + "</div></div>";
+    if (!save[side].length) return "";
+    const btns = save[side].map((id, i) =>
+      `<button class="slot" type="button" data-act="slot" data-side="${side}" data-i="${i}" aria-label="${t("slotAria", { side: label, n: i + 1, gun: t("gf_" + id) })}">${t("g_" + id)}<small>Lv ${save.gunLv[id]}</small></button>`).join("");
+    return `<div class="row"><div class="lbl">${label}</div><div class="slots">${btns}</div></div>`;
   };
-  $("deck").innerHTML = slotRow("left", t("larboard")) + `<div class="hullbar" aria-hidden="true"></div>` + slotRow("right", t("starboard"));
+  $("deck").innerHTML = slotRow("bow", t("bow")) + slotRow("left", t("larboard")) + `<div class="hullbar" aria-hidden="true"></div>` +
+    slotRow("right", t("starboard")) + slotRow("stern", t("stern"));
   // armory
   $("armory").innerHTML = GUN_ORDER.map(id => {
     const g = GUNS[id], lv = save.gunLv[id], m = gunLvMul(lv), owned = save.unlocked[id];
@@ -798,12 +853,21 @@ function renderPort() {
   }).join("");
   // shipwright
   $("yard").innerHTML = Object.entries(YARD).map(([k, y]) => {
-    const lv = save[k], cur = y.show(y.val(lv));
+    const lv = save[k], cur = y.show(yardVal(k));
     let btn, ds;
     if (lv >= y.max) { btn = `<button class="btn max" type="button" disabled>${t("max")}</button>`; ds = `<b>${cur}</b>`; }
     else { const c = y.cost(lv); btn = `<button class="btn" type="button" data-act="yard" data-k="${k}" ${save.gold < c ? "disabled" : ""}>${t("upgrade", { n: fmt(c) })}</button>`;
-      ds = `<b>${cur}</b> <span class="up">→ ${y.show(y.val(lv + 1))}</span>`; }
+      ds = `<b>${cur}</b> <span class="up">→ ${y.show(yardVal(k, lv + 1))}</span>`; }
     return `<div class="item"><div class="nm">${t("y_" + k)}<small>Lv ${lv}</small></div>${btn}<div class="ds">${ds}</div></div>`;
+  }).join("");
+  // ships: the current one and every bigger one (buying replaces the current ship)
+  $("ships").innerHTML = SHIP_ORDER.slice(SHIP_ORDER.indexOf(save.ship)).map(id => {
+    const sh = SHIPS[id];
+    const btn = id === save.ship ? `<button class="btn max" type="button" disabled>${t("yourShip")}</button>`
+      : `<button class="btn" type="button" data-act="ship" data-id="${id}" ${save.gold < sh.cost ? "disabled" : ""}>${shipArmed === id ? t("shipArm") : t("buy", { n: fmt(sh.cost) })}</button>`;
+    const ds = t("shipDs", { b: sh.slots.bow, s: sh.slots.left, t: sh.slots.stern,
+      hp: YARD.hull.show(yardVal("hull", 1, sh)), kn: YARD.sails.show(yardVal("sails", 1, sh)), cargo: fmt(yardVal("hold", 1, sh)) });
+    return `<div class="item"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${ds}</div></div>`;
   }).join("");
 }
 
@@ -821,11 +885,28 @@ document.getElementById("port").addEventListener("click", ev => {
     const id = b.dataset.id; save.gold -= gunUpCost(id); save.gunLv[id]++;
   } else if (act === "yard") {
     const k = b.dataset.k; save.gold -= YARD[k].cost(save[k]); save[k]++;
-    if (k === "ports") { save.left.push("six"); save.right.push("six"); }
+  } else if (act === "ship") {
+    const id = b.dataset.id;
+    if (shipArmed === id && performance.now() - shipArmedAt < 400) return;   // a double-click is not a second tap
+    clearTimeout(shipArmTimer);
+    if (shipArmed !== id) {
+      shipArmed = id; shipArmedAt = performance.now();
+      shipArmTimer = setTimeout(() => {
+        shipArmed = null;   // relabel in place rather than re-render, so keyboard focus stays put
+        const el = document.querySelector(`[data-act="ship"][data-id="${id}"]`);
+        if (el) el.textContent = t("buy", { n: fmt(SHIPS[id].cost) });
+      }, 3000);
+      renderPort(); document.querySelector(`[data-act="ship"][data-id="${id}"]`)?.focus();
+      return;
+    }
+    shipArmed = null;
+    save = fitMounts({ ...save, gold: save.gold - SHIPS[id].cost, ship: id, hull: 1, sails: 1, hold: 1 });
+    portMsg = ["boughtShip", { ship: t("s_" + id) }];
   }
   applyPlayerStats(true); persist(); renderPort(); hud(true);
   // keep focus on the same control after re-render (keyboard users)
-  const sel = act === "slot" ? `[data-act="slot"][data-side="${b.dataset.side}"][data-i="${b.dataset.i}"]` : null;
+  const sel = act === "slot" ? `[data-act="slot"][data-side="${b.dataset.side}"][data-i="${b.dataset.i}"]`
+    : act === "ship" ? `#ships [data-act="ship"]:not(:disabled), #sail` : null;
   if (sel) document.querySelector(sel)?.focus();
 });
 document.getElementById("sail").addEventListener("click", setSail);
@@ -1003,8 +1084,8 @@ function step(dt) {
   }
   // --- firing ---
   const living = enemies.filter(e => e.alive);
-  for (const g of player.guns.left.concat(player.guns.right)) g.cd = Math.max(0, g.cd - dt);   // reload
-  const engaged = player.alive && (sideEngaged(-1) || sideEngaged(1));
+  for (const g of Object.values(player.guns).flat()) g.cd = Math.max(0, g.cd - dt);   // reload
+  const engaged = player.alive && MOUNTS.some(mountEngaged);
   if (engaged && !engagedPrev && releaseTips < 3 && (joyVec.m > 0 || prevKeyActive)) { releaseTips++; toast(t("releaseTip")); }
   engagedPrev = engaged;
   for (const e of living) fire(e, e.target && isHostile(e, e.target) ? [e.target] : [], dt);
@@ -1056,16 +1137,16 @@ function step(dt) {
 function drawOverlays() {
   const g = S.arcG, bg = S.barG; g.clear(); bg.clear();
   const v = S.cameras.main.worldView;
-  // Aim lines: hidden until an enemy nears a broadside. One straight line per cannon.
+  // Aim lines: hidden until an enemy nears a mount's firing arc. One straight line per cannon.
   //   red    = loaded, and the line passes through an enemy right now
   //   yellow = loaded, line misses
   //   faint  = reloading; the line grows back to full length as the gun reloads
   if (player.alive && !docked) {
-    for (const side of [-1, 1]) {
-      if (!sideEngaged(side)) continue;
-      const arr = side < 0 ? player.guns.left : player.guns.right;
+    for (const mount of MOUNTS) {
+      if (!mountEngaged(mount)) continue;
+      const arr = player.guns[mount.key];
       arr.forEach((gun, i) => {
-        const m = muzzle(player, side, i, arr.length), ready = gun.cd <= 0;
+        const m = muzzle(player, mount, i, arr.length), ready = gun.cd <= 0;
         const len = gun.range * (ready ? 1 : 1 - gun.cd / gun.interval);
         const hit = ready && lineHits(m.x, m.y, m.a, gun.range);
         const col = !ready ? 0xf6f1e3 : hit ? 0xff4a2e : 0xffd76a, alpha = !ready ? 0.25 : hit ? 0.95 : 0.75;
