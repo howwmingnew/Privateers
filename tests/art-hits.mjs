@@ -39,6 +39,7 @@ const res = await page.evaluate(() => {
 const live = await page.evaluate(() => {
   setSail(); for (const e of enemies) { e.spr.destroy(); e.badge?.destroy(); } enemies.length = 0; spawnT = 1e9;
   Object.assign(player, { x: PORT.x, y: PORT.y - 3000, alive: true, maxHp: 1e9, hp: 1e9 });
+  islands = islands.filter(i => Math.hypot(i.x - PORT.x - 600, i.y - PORT.y + 2400) > i.r + 400);   // islands are rolled per game: keep the range clear
   S.game.loop.sleep(); let t = performance.now();
   const adv = n => { for (let i = 0; i < n; i++) { t += 16.667; S.game.step(t, 16.667); } };
   const res = {};

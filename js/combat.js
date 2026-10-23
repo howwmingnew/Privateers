@@ -110,6 +110,7 @@ function hurt(s, dmg, burn, src) {
   Snd.play("hit", { x: s.x, y: s.y, big: s.isPlayer });
   if (!s.isPlayer && src) { s.attacker = src; s.angry = 8; s.ignore.delete(src); }
   if (s.isPlayer) camShake(90, 0.004);
+  runHook("hurt", s, dmg, src);   // stats, achievements, bounty assists (js/hooks.js)
   if (s.hp <= 0) sink(s, src);
 }
 // A crate floating on the sea. AI loot is temporary; a player wreck is saved and never expires.
@@ -141,8 +142,8 @@ function sink(s, killer) {
       vfxRespawn(player); player.spr.setPosition(player.x, player.y);
       dock("sunk");
     });
-  } else {
-    addCrate(s.x, s.y, s.loot, null);     // whoever sank it, the loot floats here (not saved)
-    if (killer === player) { save.sunk++; floatText(s.x, s.y - 30, t("fSunk"), "#f0c766", 20); }
   }
+  const loot = s.isPlayer ? null : addCrate(s.x, s.y, s.loot, null);   // whoever sank it, the loot floats here (not saved)
+  if (!s.isPlayer && killer === player) { save.sunk++; floatText(s.x, s.y - 30, t("fSunk"), "#f0c766", 20); }
+  runHook("sunk", s, killer, loot);   // bounties, stats, achievements (js/hooks.js)
 }

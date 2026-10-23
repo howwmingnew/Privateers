@@ -39,7 +39,7 @@ const loadWith = (o, opts) => boot({ [SAVE_KEY]: typeof o === "string" ? o : v2(
 test("fresh browser gets the default save", () => {
   const g = boot();
   assert.deepEqual(g.json("save"), g.json("defaultSave()"));
-  assert.deepEqual(g.json("save"), { ...JSON.parse(v2({})), tutorialDone: false, tutorialStep: 0 });   // tutorial fields: js/tutorial.js
+  assert.deepEqual(g.json("save"), JSON.parse(v2({})));   // module fields (tutorial, campaign) come via SAVE_DEFAULTS
   assert.equal(g.store.size, 0, "loading must not write anything");
 });
 
@@ -140,11 +140,11 @@ test("unknown ships and guns are dropped", () => {
 test("wrecks: only finite, in-map, positive entries, at most 50", () => {
   for (const wrecks of [null, {}, "abc", 5, true]) assert.deepEqual(loadWith({ wrecks }).json("save").wrecks, [], JSON.stringify(wrecks));
   const s = loadWith({ wrecks: [
-    { x: 100, y: 200, value: 30, extra: "<b>" }, { x: -5, y: 10, value: 3 }, { x: 99999, y: 10, value: 3 }, { x: 10, y: 5001, value: 3 },
+    { x: 100, y: 200, value: 30, extra: "<b>" }, { x: -5, y: 10, value: 3 }, { x: 99999, y: 10, value: 3 }, { x: 10, y: 8001, value: 3 },
     { x: "300", y: "400", value: "12" }, { x: null, y: 10, value: 3 }, { x: 10, y: 10, value: 0 }, { x: 10, y: 10, value: -4 },
-    { x: 10, y: 10, value: "lots" }, null, "wreck", [1, 2, 3], { x: 5000, y: 0, value: 1 },
+    { x: 10, y: 10, value: "lots" }, null, "wreck", [1, 2, 3], { x: 8000, y: 0, value: 1 },
   ] }).json("save");
-  assert.deepEqual(s.wrecks, [{ x: 100, y: 200, value: 30 }, { x: 300, y: 400, value: 12 }, { x: 5000, y: 0, value: 1 }]);
+  assert.deepEqual(s.wrecks, [{ x: 100, y: 200, value: 30 }, { x: 300, y: 400, value: 12 }, { x: 8000, y: 0, value: 1 }]);
   const many = Array.from({ length: 5000 }, (_, i) => ({ x: 10 + (i % 4000), y: 20, value: i + 1 }));
   const capped = loadWith({ wrecks: many }).json("save").wrecks;
   assert.equal(capped.length, 50);

@@ -56,6 +56,8 @@ function hasProgress(s) {
   try { raw = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) {}
   if (!(raw && typeof raw === "object" && "tutorialDone" in raw) && hasProgress(save)) save = { ...save, tutorialDone: true };
 })();
+// New games start with the fields (js/save.js SAVE_DEFAULTS); the check below fills them into the first load.
+if (typeof SAVE_DEFAULTS !== "undefined") SAVE_DEFAULTS.push(() => ({ tutorialDone: false, tutorialStep: 0 }));
 // js/save.js runs these on every load (and once more after all scripts): a bad or missing value means "not done yet".
 if (typeof SAVE_SANITIZERS !== "undefined") SAVE_SANITIZERS.push(s => ({ ...s,
   tutorialDone: s.tutorialDone === true, tutorialStep: Number.isInteger(s.tutorialStep) ? clamp(s.tutorialStep, 0, TUT.length - 1) : 0 }));
@@ -92,7 +94,7 @@ function forgivingSpawn() {
   for (let i = 0; i < 24; i++) {
     const a = base + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.22, x = PORT.x + Math.cos(a) * r, y = PORT.y + Math.sin(a) * r;
     if (islands.some(s => Math.hypot(s.x - x, s.y - y) < s.r * 1.3 + 60)) continue;
-    return spawnEnemy(S, { x, y, merchant: true }) || null;
+    return spawnEnemy(S, { x, y, faction: "merchant", near: true }) || null;
   }
   return null;
 }

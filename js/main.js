@@ -39,6 +39,7 @@ class Main extends Phaser.Scene {
     cam.centerOn(player.x, player.y);
     hud(true);
     shellBoot(this);   // title screen first; it docks at the harbor on Continue / New game (js/menu.js)
+    runHook("ready");   // feature modules start their per-frame work (js/hooks.js)
   }
   update(_, deltaMs) {
     const dt = Math.min(deltaMs / 1000, 0.05);
@@ -121,7 +122,8 @@ function step(dt) {
     if (player.alive && d < 150 && room > 0) { const k = Math.min(1, 260 * dt / Math.max(d, 1)); c.x += (player.x - c.x) * k; c.y += (player.y - c.y) * k; }
     if (player.alive && d < 32) {
       if (room > 0) { const take = Math.min(room, c.value); cargo += take; c.value -= take; floatText(c.x, c.y - 10, t("fCargo", { n: fmt(take) }), "#f0c766", 17); Snd.play("pickup");
-        if (c.wreck) { c.wreck.value = c.value; if (c.value <= 0) save.wrecks = save.wrecks.filter(w => w !== c.wreck); persist(); } }
+        if (c.wreck) { c.wreck.value = c.value; if (c.value <= 0) save.wrecks = save.wrecks.filter(w => w !== c.wreck); persist(); }
+        runHook("pickup", c, take); }
       else if (S.time.now - lastHoldToast > 3000) { lastHoldToast = S.time.now; toast(t("toastFull")); Snd.play("denied"); }
     }
     if (c.wreck) { c.wreck.x = Math.round(c.x); c.wreck.y = Math.round(c.y); }
@@ -129,18 +131,12 @@ function step(dt) {
     if (c.label) c.label.setPosition(c.x, c.y - 26);
     if (c.value <= 0 || (!c.wreck && c.t > 60)) { c.spr.destroy(); c.label?.destroy(); crates.splice(i, 1); }
   }
-  // --- harbor ---
-  const dPort = Math.hypot(player.x - PORT.x, player.y - PORT.y);
+  // --- harbor (or the Hulk Outpost once a bounty has opened it: js/campaign.js) ---
+  const hb = nearestHarbor(), dPort = Math.hypot(player.x - hb.x, player.y - hb.y);
   if (!canDock && dPort > DOCK_R + 80) canDock = true;
-  if (canDock && player.alive && dPort < DOCK_R) dock("return");
-  // --- population ---
-  for (let i = enemies.length - 1; i >= 0; i--) {
-    const e = enemies[i];
-    if (e.dead) { enemies.splice(i, 1); continue; }
-    if (e.alive && e.angry <= 0 && dist(e, player) > 3000) { e.alive = false; e.spr.destroy(); e.badge.destroy(); enemies.splice(i, 1); }
-  }
-  spawnT -= dt;
-  if (spawnT <= 0) { spawnT = 1.2; if (enemies.filter(e => e.alive).length < ENEMY_COUNT) spawnEnemy(S); }
+  if (canDock && player.alive && dPort < DOCK_R) dock(hb.outpost ? "outpost" : "return");
+  // --- population: ring quotas (js/world-seas.js) ---
+  managePopulation(dt);
 }
 
 const reloadWas = {};   // per mount: were all its guns loaded last frame? (for the reload knock)
