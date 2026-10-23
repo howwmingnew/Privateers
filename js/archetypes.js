@@ -33,7 +33,7 @@ const ARCH_MIX = {
   merchant: [[1, { fluyt: 1 }]],
 };
 const CONVOY_P = 0.3;          // share of merchants that sail as a convoy: 1-2 more fluyts and an armed escort brig
-const FUSE_R = 260;   // a fireship lights its fuse this close to its target
+const FUSE_R = 420;   // a fireship lights its fuse this close to its target: ~1.5 s of warning at its closing speed
 const BOOM_R = 70, BOOM_K = 0.25, BOOM_BOSS_K = 0.08;   // fireship blast: radius, share of each hull's max HP (bosses less)
 
 function pickArch(L, faction) {
@@ -218,7 +218,7 @@ function panic(e, src) {
 function fireshipContact() {
   for (const e of enemies) {
     if (!e.alive || e.arch !== "fireship" || !e.target || !e.target.alive) continue;
-    // inside FUSE_R it lights its fuse: sparks and a warning mark, about 1.5 s of run-in to turn away or shoot it
+    // inside FUSE_R it lights its fuse: sparks and a warning mark before the run-in, time to turn away or shoot it
     if (!e.fuseLit && dist(e, e.target) < FUSE_R) {
       e.fuseLit = true;
       if (onScreen(e.x, e.y, 60)) floatText(e.x, e.y - 34, t("fFuse"), "#ffb04a", 18);
