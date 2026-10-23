@@ -78,12 +78,17 @@
   </section>
 </main>
 <script src="../js/util.js"></script>
+<script src="../js/audio-kit.js"></script>
+<script src="../js/audio-sfx.js"></script>
+<script src="../js/audio-music.js"></script>
 <script src="../js/audio.js"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
 const LABEL = { master: "Master · 總音量", music: "Music · 音樂", sfx: "Effects · 音效", ambient: "Ambience · 環境音",
-  sea: "At sea · 海上", harbor: "Harbour · 港口", off: "Off · 關閉" };
+  sea: "At sea · 海上", harbor: "Harbour · 港口", off: "Off · 關閉",
+  sea_reef: "Reef Straits · 暗礁海峽", sea_lanes: "Navy Lanes · 海軍航道", sea_maelstrom: "Maelstrom · 大漩渦", boss: "Bounty boss · 懸賞頭目",
+  title: "Title · 標題", ending: "Ending · 結局" };
 function button(parent, text, onClick) { const b = document.createElement("button"); b.type = "button"; b.textContent = text; b.addEventListener("click", onClick); parent.append(b); return b; }
 function pick(group, el) { for (const b of group.children) b.classList.toggle("on", b === el); }
 

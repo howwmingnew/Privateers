@@ -75,7 +75,7 @@ function showVictory() {
   vicNgArmed = false; renderVictory();
   vicEl.hidden = false; vicShownAt = performance.now(); vicEl.firstElementChild.focus();
   sfx("victory");
-  if (typeof Snd !== "undefined") Snd.music("harbor");
+  if (typeof Snd !== "undefined") Snd.music("ending");   // the sea tune, in D major, with the full band
 }
 function closeVictory() {
   vicEl.hidden = true; vicNgArmed = false; clearTimeout(vicNgT);
