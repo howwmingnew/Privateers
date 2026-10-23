@@ -38,7 +38,7 @@ function lootDrop(s, killer) {
   let value = s.loot || 0;
   if (killer === player && player.alive) {
     streak++;
-    const warship = s.faction === "pirate" || s.faction === "navy";
+    const warship = (s.faction === "pirate" || s.faction === "navy") && !s.boss;   // a bounty target pays its Captain's Chest instead (js/campaign.js)
     if (warship && value > 0) {
       const g = Math.round(value * BOUNTY_K);
       save.gold += g; value -= g; persist();

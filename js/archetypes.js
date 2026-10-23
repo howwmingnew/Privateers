@@ -142,12 +142,17 @@ const broadside = (side, toT, d, r0, band) => toT + side * (Math.PI / 2 - BROAD_
 // ---------- Convoys ----------
 // A merchant may sail with 1-2 more fluyts and an armed escort brig. The escort guards the fluyts against pirates and
 // anyone who fires on them; the fluyts keep station on the lead ship.
-function maybeConvoy(sc, lead) {
-  if (Math.random() >= CONVOY_P) return;
+function maybeConvoy(sc, lead, room = 3) {
+  if (room < 2 || Math.random() >= CONVOY_P) return;   // room: ships the sea may still add (a fluyt and the escort at least)
   const cv = { lead, ships: [lead] }; lead.convoy = cv;
-  const slots = [[-90, 70], [-90, -70], [-180, 0]], n = 1 + (Math.random() < 0.5 ? 1 : 0);
+  const slots = [[-90, 70], [-90, -70], [-180, 0]], n = Math.min(1 + (Math.random() < 0.5 ? 1 : 0), room - 1);
+  const d0 = Math.hypot(lead.x - PORT.x, lead.y - PORT.y), r0 = SAFE_R + (lead.ring - 1) * ZONE_STEP + 6, r1 = r0 + ZONE_STEP - 12;
   slots.slice(0, n + 1).forEach(([ax, ay], i) => {
-    const c = Math.cos(lead.rot), s = Math.sin(lead.rot), x = lead.x + c * ax - s * ay, y = lead.y + s * ax + c * ay;
+    const c = Math.cos(lead.rot), s = Math.sin(lead.rot);
+    let x = lead.x + c * ax - s * ay, y = lead.y + s * ax + c * ay;
+    // keep every ship of the convoy in the lead's level ring (its level is the lead's; the census counts it there)
+    const a = Math.atan2(y - PORT.y, x - PORT.x), r = clamp(Math.hypot(x - PORT.x, y - PORT.y), r0, lead.ring >= MAX_RING ? Math.max(r1, d0 + 200) : r1);
+    x = PORT.x + Math.cos(a) * r; y = PORT.y + Math.sin(a) * r;
     if (islands.some(isl => Math.hypot(isl.x - x, isl.y - y) < isl.r + 30)) return;
     const e = makeEnemy(sc, x, y, lead.L, "merchant", i === n ? "brig" : "fluyt");
     e.rot = lead.rot; e.convoy = cv; e.station = { ax, ay }; cv.ships.push(e);

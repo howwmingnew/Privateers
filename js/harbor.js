@@ -32,7 +32,8 @@ function resetEnemies(sc) {
   enemies.length = 0;
   for (const b of balls) b.spr.destroy();
   balls.length = 0;
-  for (let i = 0; i < ENEMY_COUNT; i++) spawnEnemy(sc);
+  // fill up to the sea's ship count (a convoy is several ships from one spawn)
+  for (let i = 0; i < ENEMY_COUNT * 2 && enemies.filter(e => e.alive && !e.boss && !e.escortOf).length < ENEMY_COUNT; i++) spawnEnemy(sc);
   seaReset(sc);   // shore batteries and their treasure (js/forts.js)
 }
 

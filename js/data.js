@@ -22,7 +22,7 @@ const CHAIN_T = 4, CHAIN_SPEED = 0.6, CHAIN_TURN = 0.7;
 // old refit on purchase (js/plunder.js). refit scales yard prices: a bigger hull costs more to refit.
 const SHIPS = {
   sloop:    { slots: { bow: 1, left: 1, right: 1, stern: 0 }, hp: 100,  speed: 150, hold: 240,  cost: 0,     refit: 1 },
-  schooner: { slots: { bow: 1, left: 2, right: 2, stern: 0 }, hp: 180,  speed: 165, hold: 440,  cost: 600,   refit: 1.7 },
+  schooner: { slots: { bow: 1, left: 2, right: 2, stern: 0 }, hp: 180,  speed: 165, hold: 440,  cost: 400,   refit: 1.7 },
   brig:     { slots: { bow: 1, left: 3, right: 3, stern: 0 }, hp: 325,  speed: 155, hold: 800,  cost: 2000,  refit: 3.2 },
   frigate:  { slots: { bow: 2, left: 4, right: 4, stern: 1 }, hp: 585,  speed: 150, hold: 1450, cost: 6000,  refit: 6 },
   line:     { slots: { bow: 2, left: 5, right: 5, stern: 2 }, hp: 1050, speed: 140, hold: 2600, cost: 16000, refit: 11 },
@@ -54,21 +54,24 @@ function gunUpCost(id) { return Math.round(GUNS[id].upBase * 1.55 ** (save.gunLv
 // how much of the target's turn they read (turn, 0..1), how badly a volley misjudges its speed (leadErr, +/- share of
 // the lead) and each gun's random error (spread, rad). Green crews (low L) mostly miss a ship that keeps moving.
 const VOLLEY_WARN = 0.6;
+// Growth per level up to Lv 10, then a gentler `after` rate: New Game+ adds 3 levels a cycle (up to Lv 19), and a
+// maxed ship of the line must still be able to sink what it meets there.
+const lvGrow = (L, k, after) => L <= 10 ? k ** (L - 1) : k ** 9 * after ** (L - 10);
 function enemyStats(L, merchant) {
-  const aim = clamp((L - 1) / (AIM_FULL_L - 1), 0, 1);
+  const aim = clamp((L - 1) / (AIM_FULL_L - 1), 0, 1), past = Math.max(0, L - 10), Lc = Math.min(L, 10);
   return {
     aim,
     lead: 1,
     leadErr: 0.8 * (1 - aim),
     turn: clamp((L - 2) / 5, 0, 1),
     spread: 0.5 - 0.4 * aim,
-    hp: 60 * 1.45 ** (L - 1) * (merchant ? 1.25 : 1),
+    hp: 60 * lvGrow(L, 1.45, 1.22) * (merchant ? 1.25 : 1),
     per: merchant ? 1 : Math.min(1 + Math.floor((L - 1) / 2), 4),
-    dmg: 7 * 1.24 ** (L - 1),
-    range: 230 + 10 * L,
+    dmg: 7 * lvGrow(L, 1.24, 1.12),
+    range: 230 + 10 * Lc + 4 * past,
     interval: 2.4,
-    speed: 118 + 6 * L,
-    loot: Math.round(22 * 1.45 ** (L - 1) * (merchant ? 1.3 : 1)),
+    speed: 118 + 6 * Lc + 2 * past,
+    loot: Math.round(22 * lvGrow(L, 1.45, 1.25) * (merchant ? 1.3 : 1)),
   };
 }
 // Ship level shown to the player: the strongest enemy level whose power its own power matches.

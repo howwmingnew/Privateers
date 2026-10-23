@@ -1,6 +1,6 @@
 "use strict";
 // ---------- Shore batteries ----------
-// From FORT_L, a few islands carry a pirate battery: a stone fort with a ring of guns (range 420, fast balls) that fires
+// From ring FORT_L (the Navy Lanes on), a few islands carry a pirate battery: a stone fort with a ring of guns (range 420, fast balls) that fires
 // in every direction at anyone the pirates fight, and a treasure crate on the beach below it. The same islands every
 // sortie (picked from the map), rebuilt with each fresh sea. A battery only exists as a ship while the player is near,
 // so it never counts against the sea's population for long and the distance despawn can't lose it.
@@ -27,11 +27,12 @@ function fortTex(sc) {
 }
 // Battery sites: the L8+ islands, spread out (every k-th by seed), each with the side facing open water.
 function pickFortSites() {
-  const deep = islands.filter(i => levelAt(Math.hypot(i.x - PORT.x, i.y - PORT.y)) >= FORT_L).sort((a, b) => a.seed - b.seed);
+  const deep = islands.filter(i => ringAt(Math.hypot(i.x - PORT.x, i.y - PORT.y)) >= FORT_L).sort((a, b) => a.seed - b.seed);
   const k = Math.max(1, Math.floor(deep.length / FORT_MAX)), out = [];
   for (let i = 0; i < deep.length && out.length < FORT_MAX; i += k) {
     const isl = deep[i], a = Math.atan2(PORT.y - isl.y, PORT.x - isl.x), rho = isl.r * 0.9 - 24;   // ships can't get within 40 px
-    out.push({ isl, a, x: isl.x + Math.cos(a) * rho, y: isl.y + Math.sin(a) * rho, L: levelAt(Math.hypot(isl.x - PORT.x, isl.y - PORT.y)), hp: null, ent: null, crate: null });
+    const x = isl.x + Math.cos(a) * rho, y = isl.y + Math.sin(a) * rho;   // its level is that of the spot it stands on
+    out.push({ isl, a, x, y, L: levelAt(Math.hypot(x - PORT.x, y - PORT.y)), hp: null, ent: null, crate: null });
   }
   return out;
 }
@@ -46,7 +47,7 @@ function seaReset(sc) {
 }
 function makeFort(sc, site) {
   const e = makeShip(sc, fortTex(sc), site.x, site.y);
-  Object.assign(e, { L: site.L, faction: "pirate", rot: 0, angry: 0, thinkT: 0, wander: null, target: null, chaseFrom: { x: site.x, y: site.y },
+  Object.assign(e, { L: site.L, ring: ringAt(Math.hypot(site.x - PORT.x, site.y - PORT.y)), faction: "pirate", rot: 0, angry: 0, thinkT: 0, wander: null, target: null, chaseFrom: { x: site.x, y: site.y },
     retarget: 0, attacker: null, ignore: new Map(), site, isl: site.isl });
   outfitEnemy(e, "fort");
   if (site.hp != null) e.hp = site.hp;
