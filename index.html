@@ -187,6 +187,7 @@ const ENEMY_COUNT = 26;
 const BALL_SPEED = 480;
 const ARC = 0.62;           // half-angle (rad) of each broadside firing arc
 const ZONE_STEP = 420;      // every this many px from the harbor, enemy level +1
+const AIM_FULL_L = 8;       // enemy gunners get more accurate with level, up to this level
 
 // ---------- Language ----------
 const UI_FONT = '"Barlow Semi Condensed", "Noto Sans TC", "Microsoft JhengHei", sans-serif';
@@ -270,7 +271,10 @@ function gunUpCost(id) { return Math.round(GUNS[id].upBase * 1.55 ** (save.gunLv
 
 // Enemy stats by level L. Merchants are tankier, slower, nearly unarmed, and richer.
 function enemyStats(L, merchant) {
+  const aim = clamp((L - 1) / (AIM_FULL_L - 1), 0, 1);
   return {
+    lead: 0.7 * aim,             // share of the target's motion they aim ahead of
+    spread: 0.45 - 0.36 * aim,   // ± random aim error in radians
     hp: 60 * 1.32 ** (L - 1) * (merchant ? 1.25 : 1),
     per: merchant ? 1 : Math.min(1 + Math.floor((L - 1) / 2), 4),
     dmg: 7 * 1.22 ** (L - 1),
@@ -470,7 +474,7 @@ function spawnEnemy(sc) {
   const tex = merchant ? "ship-merchant" : (Math.random() < 0.5 ? "ship-pirate" : "ship-navy");
   const st = enemyStats(L, merchant);
   const e = makeShip(sc, tex, x, y);
-  Object.assign(e, { L, merchant, maxHp: st.hp, hp: st.hp, maxSpeed: st.speed, loot: st.loot, angry: 0, thinkT: 0, wander: null, turnRate: 1.7,
+  Object.assign(e, { L, merchant, maxHp: st.hp, hp: st.hp, maxSpeed: st.speed, loot: st.loot, aimLead: st.lead, aimSpread: st.spread, angry: 0, thinkT: 0, wander: null, turnRate: 1.7,
     faction: merchant ? "merchant" : tex === "ship-pirate" ? "pirate" : "navy",
     target: null, chaseFrom: null, retarget: rand(0, 0.5), attacker: null, ignore: new Map() });
   const mk = () => ({ dmg: st.dmg, burn: 0, range: st.range, interval: st.interval, cd: rand(0.5, 2.2) });
@@ -621,9 +625,9 @@ function fire(s, targets, dt) {
       const off = n === 1 ? 0 : -18 + 36 * i / (n - 1);
       const mx = s.x + Math.cos(s.rot) * off + Math.cos(normal) * 13;
       const my = s.y + Math.sin(s.rot) * off + Math.sin(normal) * 13;
-      const lead = s.isPlayer ? 1 : 0.7, t = bd / BALL_SPEED;
+      const lead = s.isPlayer ? 1 : s.aimLead, t = bd / BALL_SPEED;
       const tx = best.x + best.vx * t * lead, ty = best.y + best.vy * t * lead;
-      const ang = Math.atan2(ty - my, tx - mx) + rand(-1, 1) * (s.isPlayer ? 0.05 : 0.09);
+      const ang = Math.atan2(ty - my, tx - mx) + rand(-1, 1) * (s.isPlayer ? 0.05 : s.aimSpread);
       const life = g.range * 1.08 / BALL_SPEED;
       const spr = S.add.image(mx, my, "ball").setDepth(7);
       balls.push({ spr, x: mx, y: my, vx: Math.cos(ang) * BALL_SPEED + s.vx * 0.3, vy: Math.sin(ang) * BALL_SPEED + s.vy * 0.3,
