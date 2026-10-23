@@ -53,7 +53,7 @@ function outfitEnemy(e, key) {
   e.maxSpeed = st.speed * A.speed * (b.speedMul || 1);
   e.turnRate = 1.7 * A.turn;
   e.loot = Math.round(st.loot * A.loot * (b.lootMul || 1));
-  e.aim = st.aim; e.aimLead = st.lead; e.aimSpread = st.spread;
+  e.aim = st.aim; e.aimLead = st.lead; e.aimLeadErr = st.leadErr; e.aimTurn = st.turn; e.aimSpread = st.spread * (b.spreadMul || 1);
   const eg = EGUN[b.gun] || EGUN.std;
   const main = { dmg: st.dmg * A.dmg * eg.dmg * (b.dmgMul || 1), range: (A.rangeAbs || st.range * A.range) * eg.range,
     interval: st.interval * A.reload, speed: eg.speed || A.gunSpeed || BALL_SPEED };
@@ -75,11 +75,18 @@ function outfitEnemy(e, key) {
 // ---------- Battle plans ----------
 // archTactic -> TAC.desired (heading) and TAC.thr (throttle), given the target, its distance d and bearing toT.
 const TAC = { desired: null, thr: 0.55 };
+const STEER_LEAD = 1.2;   // s ahead that a broadside ship steers for (half that for green crews)
 const tac = (desired, thr) => { TAC.desired = desired; TAC.thr = thr; return TAC; };
 const nearSide = (e, toT) => Math.abs(angDiff(toT + Math.PI / 2, e.rot)) < Math.abs(angDiff(toT - Math.PI / 2, e.rot)) ? 1 : -1;
 function archTactic(e, tg, d, toT, now) {
-  const R = e.range;
-  switch (e.A.plan) {
+  const R = e.range, plan = e.A.plan;
+  if ((plan === "circle" || plan === "orbit" || plan === "line") && !e.inBroad) {
+    // close in on where the target is going (its turn included), not where it is: chasing a circling ship's current
+    // spot only ever trails it round the outside of its circle, out of reach
+    const P = predictAt(tg, STEER_LEAD * (0.5 + 0.5 * e.aim), (tg.omega || 0) * e.aim, 1);
+    d = Math.hypot(P.x - e.x, P.y - e.y); toT = Math.atan2(P.y - e.y, P.x - e.x);
+  }
+  switch (plan) {
     case "flee": {
       const h = e.haven;   // hit: run for the nearest navy ship and its guns
       if (e.panicT > 0 && h && h.alive && dist(e, h) > 140) return tac(Math.atan2(h.y - e.y, h.x - e.x) + Math.sin(now * 1.3 + e.L) * 0.25, 1);
@@ -95,22 +102,25 @@ function archTactic(e, tg, d, toT, now) {
       return tac(toT + (e.kiteSide || 1) * 0.18, d > R * 0.9 ? 1 : 0.35);
     }
     case "orbit": { // a steady circle at 0.68 x range, keeping the same broadside on the target
-      if (d > R * 0.95) return tac(toT, 1);
+      if (!closing(e, d, R)) return tac(toT, 1);
       if (!e.orbitSide || e.orbitTg !== tg) { e.orbitSide = nearSide(e, toT); e.orbitTg = tg; }
-      return tac(broadside(e.orbitSide, toT, d, R * 0.68, R * 0.27), 0.8);
+      return tac(broadside(e.orbitSide, toT, d, R * 0.68, R * 0.27), d > R * 0.68 ? 1 : 0.8);
     }
     case "line": {  // sail parallel to the target at 0.7 x range; slow to turn, so its bow and stern are open
-      if (d > R * 1.05) return tac(toT, 1);
+      if (!closing(e, d, R)) return tac(toT, 1);
       const ref = (tg.speed || 0) > 30 ? tg.rot : e.rot;
       const side = Math.abs(angDiff(toT + Math.PI / 2, ref)) < Math.abs(angDiff(toT - Math.PI / 2, ref)) ? 1 : -1;
-      return tac(broadside(side, toT, d, R * 0.7, R * 0.3), 0.7);
+      return tac(broadside(side, toT, d, R * 0.7, R * 0.3), d > R * 0.7 ? 1 : 0.7);
     }
     default: {      // circle: close to range, then run across the target with a broadside on it, side by heading
-      if (d > R * 0.95) return tac(toT, 1);
-      return tac(broadside(nearSide(e, toT), toT, d, R * 0.68, R * 0.3), 0.75);
+      if (!closing(e, d, R)) return tac(toT, 1);
+      return tac(broadside(nearSide(e, toT), toT, d, R * 0.68, R * 0.3), d > R * 0.68 ? 1 : 0.75);
     }
   }
 }
+// In broadside range? With hysteresis: a ship sitting on one threshold flipped between "chase" and "broadside" every
+// frame and ended up only ever chasing a circling target, never bringing a side to bear.
+function closing(e, d, R) { e.inBroad = d < R * (e.inBroad ? 1.12 : 0.95); return e.inBroad; }
 // Heading that keeps the target abeam on `side` while drifting toward distance r0 (tilted up to BROAD_TILT, which
 // stays inside the firing arc). Without the tilt a ship at the edge of its range only ever chased a circling target.
 const BROAD_TILT = 0.5;

@@ -6,7 +6,7 @@
 // crews allow for only part of the target's motion. From FAN_L they fan the balls of a side over the turns the target
 // is likely to make (its current turn +/- FAN_W), so a ship that simply keeps circling gets hit.
 const FAN_L = 5;             // fanned volleys from this level
-const FAN_W = 0.55;          // rad/s either side of the target's current turn that a fan covers
+const FAN_W = 1.0;           // rad/s either side of the target's current turn that a fan covers
 const ARC_FIRE = ARC * 1.3;  // at the moment of firing the target may have drifted a little out of the arc
 const EMOUNT = { bow: MOUNTS[0], left: MOUNTS[1], right: MOUNTS[2], stern: MOUNTS[3] };
 
@@ -35,12 +35,15 @@ function enemyFire(s, targets, dt) {
     if (v.cd > 0) v.cd -= dt;
     if (v.warn > 0) { v.warn -= dt; if (v.warn <= 0) releaseVolley(s, key, v, guns); continue; }
     if (v.cd > 0 || !tg || !tg.alive || dist(s, tg) > guns[0].range || !bears(s, key, tg, ARC)) continue;
-    v.warn = VOLLEY_WARN; v.tgt = tg; v.aims = layGuns(s, tg, guns);
+    const aims = layGuns(s, tg, guns), a = aims[0];
+    if (Math.hypot(a.x - s.x, a.y - s.y) > guns[0].range) continue;   // it will have sailed out of reach: hold fire
+    v.warn = VOLLEY_WARN; v.tgt = tg; v.aims = aims;
   }
 }
-// Pick an aim point per gun when the warning starts.
+// Pick an aim point per gun when the warning starts. The whole side shares one misjudgement of the target's speed.
 function layGuns(s, tg, guns) {
-  const n = guns.length, fan = s.L >= FAN_L && n >= 2 ? Math.min(3, n) : 1, lead = s.aimLead, w0 = (tg.omega || 0) * s.aim;
+  const n = guns.length, fan = s.L >= FAN_L && n >= 2 ? Math.min(3, n) : 1, w0 = (tg.omega || 0) * s.aimTurn;
+  const lead = s.aimLead * (1 + rand(-1, 1) * (s.aimLeadErr || 0));
   return guns.map((g, i) => {
     const k = fan === 1 ? 0 : fan === 2 ? (i % 2 ? 0.5 : -0.5) : [0, -1, 1][i % 3];
     const w = w0 + k * FAN_W;

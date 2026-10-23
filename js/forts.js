@@ -68,6 +68,7 @@ function updateForts() {
 }
 // A battery stands inside its island's rock; its balls leave from where the line of fire clears the shore.
 function fortMuzzle(s, ang) {
+  if (!s.isl) return { x: s.x + Math.cos(ang) * 32, y: s.y + Math.sin(ang) * 32 };
   const isl = s.isl, R = isl.r * 0.9 + 6, dx = s.x - isl.x, dy = s.y - isl.y, c = Math.cos(ang), sn = Math.sin(ang);
   const b = dx * c + dy * sn, q = dx * dx + dy * dy - R * R, t = -b + Math.sqrt(Math.max(0, b * b - q));
   return { x: s.x + c * t, y: s.y + sn * t };

@@ -45,22 +45,26 @@ const YARD = {
 };
 function yardVal(k, l = save[k], sh = SHIPS[save.ship]) { return YARD[k].val(l, sh); }
 
-function gunLvMul(lv) { return 1.2 ** (lv - 1); }
+function gunLvMul(lv) { return 1.15 ** (lv - 1); }
 function gunUpCost(id) { return Math.round(GUNS[id].upBase * 1.55 ** (save.gunLv[id] - 1)); }
 
 // Enemy base stats by level L (the brig; js/archetypes.js scales them per class). Merchants are tankier, nearly
-// unarmed and richer. Enemy guns fire a side together after VOLLEY_WARN s of warning (js/volley.js); aim (0..1) is how
-// well their gunners predict the target, lead how much of its motion they allow for, spread their random error (rad).
+// unarmed and richer. Enemy guns fire a side together after VOLLEY_WARN s of warning (js/volley.js). Every crew aims
+// where the target is heading (lead 1), so changing course when the gun ports glow is a dodge at any level. Skill is
+// how much of the target's turn they read (turn, 0..1), how badly a volley misjudges its speed (leadErr, +/- share of
+// the lead) and each gun's random error (spread, rad). Green crews (low L) mostly miss a ship that keeps moving.
 const VOLLEY_WARN = 0.6;
 function enemyStats(L, merchant) {
   const aim = clamp((L - 1) / (AIM_FULL_L - 1), 0, 1);
   return {
     aim,
-    lead: 0.35 + 0.65 * aim,
-    spread: 0.3 - 0.24 * aim,
-    hp: 60 * 1.36 ** (L - 1) * (merchant ? 1.25 : 1),
+    lead: 1,
+    leadErr: 0.8 * (1 - aim),
+    turn: clamp((L - 2) / 5, 0, 1),
+    spread: 0.5 - 0.4 * aim,
+    hp: 60 * 1.45 ** (L - 1) * (merchant ? 1.25 : 1),
     per: merchant ? 1 : Math.min(1 + Math.floor((L - 1) / 2), 4),
-    dmg: 7 * 1.2 ** (L - 1),
+    dmg: 7 * 1.24 ** (L - 1),
     range: 230 + 10 * L,
     interval: 2.4,
     speed: 118 + 6 * L,
@@ -72,12 +76,13 @@ function enemyStats(L, merchant) {
 // The player aims by hand: each mount bears on a target about a quarter of the time (a broadside half the time, on one
 // side or the other), and incendiary fires count once, at the stack level that rate of hits keeps burning.
 const MOUNT_UPTIME = 0.25;
-// Enemy side: a volley every interval + warning while the target is in its arc, times its gunners' hit rate against a
-// ship that keeps moving, relative to the player's (measured with .review/combat/acc.mjs).
-const enemyHitK = L => 0.18 + 0.32 * clamp((L - 1) / (AIM_FULL_L - 1), 0, 1);
+// Enemy side: a volley every interval + warning, times ENEMY_FIRE_K for how much of it lands relative to the player's
+// share. Calibrated with duels (.review/combat/duel.mjs: a bot that dodges half the volleys, one enemy brig): the level
+// a loadout wins with ~55-75% of its hull left comes out as its rating (sloop 2, schooner 4, brig 7, frigate 9, line 11).
+const ENEMY_FIRE_K = 0.705;
 function enemyPower(L) {
   const s = enemyStats(L, false);
-  return Math.sqrt(s.hp * s.per * s.dmg / (s.interval + VOLLEY_WARN) * enemyHitK(L));
+  return Math.sqrt(s.hp * s.per * s.dmg / (s.interval + VOLLEY_WARN) * ENEMY_FIRE_K);
 }
 function playerPower() {
   let dps = 0, fireRate = 0, fireDps = 0;
