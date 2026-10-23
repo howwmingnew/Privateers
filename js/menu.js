@@ -77,7 +77,7 @@ function showTitle() {
   document.body.classList.add("on-title");
   renderTitle();
   $m("title").hidden = false;
-  if (typeof Snd !== "undefined") { Snd.music("harbor"); Snd.ambience("sea"); }   // starts on the first click (autoplay rules)
+  if (typeof Snd !== "undefined") { Snd.music("title"); Snd.ambience("sea"); }   // starts on the first click (autoplay rules)
   const cam = S.cameras.main;
   cam.stopFollow();
   Object.assign(drift, { x: cam.midPoint.x, y: cam.midPoint.y, t: 0 });
