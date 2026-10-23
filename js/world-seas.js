@@ -38,6 +38,7 @@ const levelBonus = () => NG_LEVELS * ngCycles();
 // The war escalates: once the Ashen Saint (bounty 3) and then Commodore Hale (bounty 4) are sunk, the Navy Lanes and the
 // Maelstrom (rings 6+) put out ships 1 and then 2 levels stronger, so the late game keeps something above the player.
 const WAR_RING = 6, WAR_FROM = 2, WAR_MAX = 2;
+if (typeof onHook === "function") onHook("bounty", () => { if (typeof buildMiniBase === "function" && S) buildMiniBase(); });
 const warLevels = ring => ring >= WAR_RING ? clamp(((save.campaign && save.campaign.bounty) || 0) - WAR_FROM, 0, WAR_MAX) : 0;
 const lootMul = () => NG_LOOT ** ngCycles();
 
@@ -206,7 +207,7 @@ function drawSeaLabels(c, M) {
   c.lineWidth = 3.5 * u; c.strokeStyle = "rgba(4,18,24,.9)"; c.fillStyle = "#f6f1e3";
   SEAS.forEach((s, i) => {
     const r0 = ringEdge(s.L0), r1 = i < SEAS.length - 1 ? ringEdge(SEAS[i + 1].L0) : r0 + 1100;
-    const p = polarPt(a, (r0 + r1) / 2), txt = `${s.L0 + b}–${s.L1 + b}`;
+    const p = polarPt(a, (r0 + r1) / 2), txt = `${s.L0 + b + warLevels(s.L0)}–${s.L1 + b + warLevels(s.L1)}`;   // as the banner says
     c.strokeText(txt, p.x * k, p.y * k); c.fillText(txt, p.x * k, p.y * k);
   });
 }

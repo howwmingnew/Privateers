@@ -64,7 +64,7 @@ function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
   enemies.push(e);
   return e;
 }
-const LOOT_SEEN_R = 650;   // px from the player inside which an enemy's badge shows its plunder
+const LOOT_SEEN_R = 450;   // px from the player inside which an enemy's badge shows its plunder (about gun range)
 function refreshBadge(e) {
   const tier = threatTier(e.threatL ?? e.L), c = tier.color;   // glyph + colour (by how hard it fights, js/archetypes.js), readable without colour vision
   // the plunder aboard only reads through the spyglass, so a distant fleet is a tidy row of levels, not a price list
