@@ -102,8 +102,9 @@ console.log("Fresh campaign (desktop, en)");
   await o.shot("desktop-en-2-banner");
 
   // bounty 1, with the arrow (boss off screen) and the tag / boss bar (boss close)
-  // the previous step left the camera out west, where Red Ned's lair is; snap it home so the boss is truly off screen
-  await page.evaluate(() => { sendHome(), dock("return"); setSail(); S.cameras.main.centerOn(player.x, player.y); });
+  // the previous step left the camera out west, where Red Ned's lair is; snap it home so the boss is truly off screen.
+  // A fresh save is still on its first voyage, which holds the bounty back (js/campaign.js): call the tutorial done.
+  await page.evaluate(() => { save.tutorialDone = true; sendHome(), dock("return"); setSail(); S.cameras.main.centerOn(player.x, player.y); });
   await page.waitForTimeout(400);
   const arrow =await page.evaluate(() => ({ arrow: !bossArrow.hidden, mini: !!activeBounty() }));
   check(arrow.arrow, "edge arrow points at the bounty while it is off screen");

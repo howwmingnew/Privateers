@@ -64,8 +64,8 @@ const BOUNTIES = [
 const LAIR_LEASH = 380;   // an idle boss (or escort) further than this from its lair heads back to it
 const ASSIST_MS = 20000;  // a boss someone else sinks still pays if the player hit it this recently
 const lairOf = b => polarPt(b.ang, b.r);
-// Hull art for a spec class until the archetype pass gives the man-o'-war its own (js/art.js SHIP_ART).
-const artClass = cls => cls === "manowar" ? "line" : SHIP_ART[cls] ? cls : "brig";
+// Hull art for a spec class (js/art.js SHIP_ART; the man-o'-war has its own, bigger than anything the yard sells).
+const artClass = cls => SHIP_ART[cls] ? cls : "brig";
 const activeBounty = () => BOUNTIES[save.campaign.bounty] || null;
 const bossName = b => t("boss_" + b.id);
 const shipFor = i => SHIP_ORDER.find(id => SHIP_GATE[id] === i + 1);   // the hull bounty i (0-based) unlocks
@@ -78,6 +78,10 @@ function shipLock(id) {
 
 // ---------- The bounty at sea ----------
 let bossShip = null, bossTag = null, bossSeen = false, bossHitAt = -1e9, storyKey = null;
+// The hunt toast is news: a bounty not announced yet, or one the player has not been near for HUNT_REMIND_MS.
+// On the first voyage the bounty waits until the tutorial is done (bountyHeld), so it never crosses the lesson.
+const HUNT_REMIND_MS = 5 * 60 * 1000;
+let huntSeenAt = {}, bountyHeld = false;
 function makeSkullTex(sc) {
   if (sc.textures.exists("skull")) return;
   const g = sc.make.graphics({ add: false });
@@ -102,7 +106,7 @@ function spawnBounty() {
   const hp = boss.maxHp * b.hpMul;
   Object.assign(boss, { boss: b.id, cls: b.cls, lair, maxHp: hp, hp, maxSpeed: boss.maxSpeed * (b.speed || 1) });
   if (b.guns) setGuns(boss, b.guns);
-  applyShipArt(boss, artClass(b.cls), "boss");   // the boss livery: gold trim, big flag (js/art.js)
+  applyShipArt(boss, artClass(b.cls), bossLivery(b));   // gold trim, big flag: the Jolly Roger or the Crown's ensign (js/art.js)
   makeSkullTex(S);
   bossShip = boss;
   bossTag = { skull: S.add.image(0, 0, "skull").setDepth(9),
@@ -118,8 +122,12 @@ function spawnBounty() {
     if (spec.guns) setGuns(e, spec.guns);
     applyShipArt(e, artClass(spec.cls));
   });
-  toast(t("huntToast", { name: bossName(b), sea: t("sea_" + seaOfRing(b.L).id) }));
-  sfx("bell", { pitch: 0.75, delay: 0.8 });
+  const now = performance.now(), last = huntSeenAt[b.id];
+  if (last === undefined || now - last > HUNT_REMIND_MS) {
+    toast(t("huntToast", { name: bossName(b), sea: t("sea_" + seaOfRing(b.L).id) }));
+    sfx("bell", { pitch: 0.75, delay: 0.8 });
+  }
+  huntSeenAt = { ...huntSeenAt, [b.id]: now };
 }
 // Above the level badge, counter-scaled like it so the name stays readable when the camera zooms out.
 function placeBossTag() {
@@ -144,7 +152,7 @@ function claimBounty(b, s) {
   hud(true);
   runHook("bounty", n, b);
 }
-onHook("sail", () => { storyKey = null; clearBoss(); spawnBounty(); });
+onHook("sail", () => { storyKey = null; clearBoss(); bountyHeld = !save.tutorialDone; if (!bountyHeld) spawnBounty(); });
 onHook("hurt", (s, dmg, src) => { if (s === bossShip && src === player) bossHitAt = S.time.now; });
 onHook("sunk", (s, killer) => {
   if (!s.boss || s !== bossShip) return;
@@ -163,9 +171,11 @@ onHook("frame", () => {
       e.wander = { x: e.lair.x + rand(-160, 160), y: e.lair.y + rand(-160, 160) }; e.thinkT = rand(5, 8);
     }
   }
+  if (bountyHeld && save.tutorialDone) { bountyHeld = false; spawnBounty(); }   // the tutorial was finished or skipped at sea
   if (bossShip && !bossSeen && player.alive && dist(player, bossShip) < 1100) {
     bossSeen = true; toast(t("bossSighted", { name: bossName(activeBounty()) })); sfx("bell", { pitch: 0.6 });
   }
+  if (bossSeen && bossShip && player.alive && dist(player, bossShip) < 1100) huntSeenAt = { ...huntSeenAt, [bossShip.boss]: performance.now() };
 });
 onHook("lang", () => { if (bossTag && bossShip) bossTag.txt.setText(bossName(BOUNTIES.find(b => b.id === bossShip.boss))); });
 

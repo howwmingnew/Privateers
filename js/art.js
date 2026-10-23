@@ -3,10 +3,13 @@
 // The bow points along +x and each texture is centred on the hull's midpoint, so the sprite's centre is the hitbox centre.
 //
 // API
-//   SHIP_ART[cls]              hull geometry. Player + enemy: sloop schooner brig frigate line; enemy only: cutter fireship fluyt.
+//   SHIP_ART[cls]              hull geometry. Player + enemy: sloop schooner brig frigate line; enemy only: cutter fireship fluyt
+//                              manowar (Admiral Thorne's flagship: a three-decker with a stern gallery, larger than any buyable hull).
 //                              { len, beam } in px, masts (0 = stern .. 1 = bow), rig "fore" | "square", guns (deck guns per
 //                              side, = muzzle count the art expects), rows (gun-port rows on the wale), ports (per row).
-//   LIVERY[name]               player pirate navy merchant boss: CSS colours for hull, deck, sails, trim and flags.
+//   LIVERY[name]               player pirate navy merchant boss bossNavy admiral: CSS colours for hull, deck, sails, trim and flags.
+//                              boss = pirate captains (Jolly Roger); bossNavy / admiral fly the Crown's ensign, never the skull.
+//   bossLivery(bounty)         "boss" | "bossNavy" | "admiral" for a BOUNTIES entry (js/campaign.js).
 //   shipArt(cls, livery, opt)  -> texture key ("ship:<cls>:<livery>"), drawn on first use and cached.
 //                              opt.furled: sails stowed (moored boats); opt.key: draw into a fixed key.
 //   applyShipArt(s, cls, liv)  sets s.spr's texture, s.cls / s.livery / s.art, the hit capsule s.hl / s.hw (hitShip) and
@@ -29,15 +32,21 @@ const SHIP_ART = {
   cutter:   { len: 60,  beam: 18, masts: [0.5], rig: "fore", boom: 0.66, sprit: 0.44, bow: 1.25, stern: 0.5, guns: 1, jibs: 2 },
   fireship: { len: 64,  beam: 22, masts: [0.56], rig: "square", sail: 0.82, sprit: 0.22, guns: 0, barrels: true, tattered: true, smoulder: true },
   fluyt:    { len: 86,  beam: 34, masts: [0.7, 0.46, 0.2], rig: "square", sail: 0.8, lateen: true, sprit: 0.2, bow: 0.55, stern: 0.4, wide0: 0.26, wide1: 0.64, guns: 1, hatches: 3 },
+  manowar:  { len: 150, beam: 46, masts: [0.76, 0.52, 0.28], rig: "square", sail: 0.92, spanker: true, sprit: 0.2, guns: 5, rows: 3, ports: 11, boat: true, gallery: true },
 };
 const LIVERY = {
   player:   { hull: "#6e3d1f", deck: "#cfa165", sail: "#fff7e2", trim: "#2f8ad6", flag: "#2f8ad6", flag2: "#fff7e2", pennant: "#3fa9ff", lamp: "#ffe7a8" },
   pirate:   { hull: "#29231f", deck: "#64533f", sail: "#3b3841", trim: "#b02626", flag: "#121014", flag2: "#efeae0", pennant: "#b02626", lamp: "#ffb35c",
               patch: ["#4f4b57", "#29262d", "#5b5146"] },
-  navy:     { hull: "#1d3767", deck: "#bd9b6e", sail: "#fbfbf7", trim: "#e2b94b", flag: "#f7f6f1", flag2: "#c8352a", pennant: "#c8352a", lamp: "#ffe7a8" },
+  navy:     { hull: "#1d3767", deck: "#bd9b6e", sail: "#fbfbf7", trim: "#e2b94b", flag: "#f7f6f1", flag2: "#c8352a", pennant: "#c8352a", pennant2: "#f7f6f1", lamp: "#ffe7a8" },
   merchant: { hull: "#7f5634", deck: "#dcb67e", sail: "#d5b585", trim: "#4f9c4b", flag: "#4f9c4b", flag2: "#f3ead4", pennant: "#4f9c4b", lamp: "#ffd98a" },
   boss:     { hull: "#1c1820", deck: "#6e4c38", sail: "#a32a2a", trim: "#eabf4e", flag: "#141016", flag2: "#eabf4e", pennant: "#eabf4e", lamp: "#ffd66b",
               gold: true, bigFlag: true },
+  // navy flag officers: gilded blue hull, white sails with a red band, a big ensign (white canton, red cross)
+  bossNavy: { hull: "#172a52", deck: "#9c7f55", sail: "#f6f3ea", trim: "#e2b94b", flag: "#22375a", flag2: "#f4efe2", pennant: "#c8352a", pennant2: "#f7f6f1", lamp: "#ffe7a8",
+              band: "#b4412c", gold: true, bigFlag: true, ensign: true },
+  admiral:  { hull: "#0d1424", deck: "#5f4a33", sail: "#ece6d6", trim: "#e8bf52", flag: "#8e1f1a", flag2: "#f4efe2", pennant: "#c8352a", pennant2: "#f7f6f1", lamp: "#ffd98a",
+              band: "#9c2a22", gold: true, bigFlag: true, ensign: true, admiral: true },
 };
 // Baked texture resolution: 2x when the canvas renders at >= 1.5 device px per CSS px (js/view.js), else 1x, since a
 // 2x texture shown at 1x zoom just shimmers (no mipmaps for these canvas textures).
@@ -114,7 +123,12 @@ function enemyClassFor(e) {
   if (e.boss) return L >= 7 ? "line" : "frigate";
   return L <= 2 ? (e.faction === "pirate" ? "cutter" : "sloop") : L <= 5 ? "brig" : L <= 8 ? "frigate" : "line";
 }
-function liveryFor(s) { return s.isPlayer ? "player" : s.boss ? "boss" : LIVERY[s.faction] ? s.faction : "pirate"; }
+function bossLivery(b) { return b && b.final ? "admiral" : b && b.faction === "navy" ? "bossNavy" : "boss"; }
+function liveryFor(s) {
+  if (s.isPlayer) return "player";
+  if (s.boss) return bossLivery((typeof BOUNTIES !== "undefined" && BOUNTIES.find(b => b.id === s.boss)) || { faction: s.faction });
+  return LIVERY[s.faction] ? s.faction : "pirate";
+}
 function shipZoomK() { return 1 - 0.05 * Math.max(0, SHIP_ORDER.indexOf(save.ship)); }
 function threatTier(L) {
   const d = L - shipRating();
@@ -137,10 +151,10 @@ function shipTop(s) {
   return s.y - (Math.abs(Math.sin(s.rot)) * a.len * 0.5 + Math.abs(Math.cos(s.rot)) * sx);
 }
 // Counter-zoom for world text: never smaller on screen than its design size. Works in CSS pixels (js/view.js multiplies
-// the camera zoom by the canvas dpr), so HiDPI screens get the same on-screen size.
+// the camera zoom by the canvas dpr), so HiDPI screens get the same on-screen size. The text-size setting multiplies in.
 function labelScale() {
   const dpr = typeof VIEW !== "undefined" ? VIEW.dpr : 1;
-  return clamp(dpr / S.cameras.main.zoom, 1, 2.4);
+  return clamp(dpr / S.cameras.main.zoom, 1, 2.4) * SETTINGS.textScale;
 }
 function labelText(txt) {
   if (typeof crispText === "function" && typeof viewTextRes === "function") crispText(txt, viewTextRes(S.cameras.main.zoom * labelScale()));

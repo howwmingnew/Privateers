@@ -4,10 +4,11 @@
 // both sides, sails darken under the yard and brighten where they belly out, and soft shadows lift sails off the deck.
 function hexA(hex, al) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${al})`; }
 function drawShip(c, a, L, cx, cy, furled, rng) {
-  const di = a.rows === 2 ? 3.8 : a.rows ? 2.9 : 2.3;   // deck inset: heavier bulwarks on the warships
+  const di = a.rows >= 3 ? 5.2 : a.rows === 2 ? 3.8 : a.rows ? 2.9 : 2.3;   // deck inset: heavier bulwarks on the warships
   drawSprit(c, a, cx, cy);
   drawHull(c, a, L, cx, cy);
   drawDeck(c, a, L, cx, cy, di, rng);
+  if (a.gallery) drawGallery(c, a, L, cx, cy);
   drawRigging(c, a, cx, cy);
   if (furled) drawFurled(c, a, L, cx, cy); else drawSails(c, a, L, cx, cy, rng);
   for (const u of a.masts) {
@@ -21,6 +22,14 @@ function drawShip(c, a, L, cx, cy, furled, rng) {
     g.addColorStop(0, "rgba(255,250,222,1)"); g.addColorStop(0.35, hexA(L.lamp, 0.65)); g.addColorStop(1, hexA(L.lamp, 0));
     c.fillStyle = g; c.fillRect(x0 - 6, y - 6, 12, 12); dot(c, x0, y, 1.1, "#fffbe8");
   }
+}
+// A flagship's stern gallery: a gilded rail and a row of lit windows across the transom.
+function drawGallery(c, a, L, cx, cy) {
+  const x = cx - a.len / 2 + 1.7, h = hullHalf(a, 0) - 2.6;
+  line(c, x + 2.6, cy - h, x + 2.6, cy + h, 1, L.trim);
+  c.save(); blur(c, 3, "rgba(255,214,120,.9)");
+  for (let i = 0; i < 6; i++) { c.fillStyle = "#ffe2a0"; c.fillRect(x - 0.7, cy - h + (i + 0.5) * (2 * h / 6) - 1.2, 1.8, 2.4); }
+  c.restore();
 }
 function drawSprit(c, a, cx, cy) {
   const x1 = cx + a.len / 2 - 5, x2 = cx + a.len / 2 + a.sprit * a.len;
@@ -163,6 +172,10 @@ function squareSail(c, a, L, x, cy, Sx, D, rng, top) {
   for (let k = -2; k <= 2; k++) line(c, x, cy + k * Sx / 3, x + D * 2, cy + k * Sx / 3, 0.5, "rgba(0,0,0,.08)");   // cloths
   for (const f of [0.4, 0.75]) { c.beginPath(); c.moveTo(x, cy - Sx); c.bezierCurveTo(x + D * 1.33 * f, cy - Sx * 0.62, x + D * 1.33 * f, cy + Sx * 0.62, x, cy + Sx); c.lineWidth = 0.5; c.strokeStyle = "rgba(0,0,0,.1)"; c.stroke(); }
   if (L.patch && !top) patches(c, L, rng, () => [x + D * (0.25 + rng() * 0.5), cy + (rng() - 0.5) * Sx * 1.3]);
+  if (L.band && !top) {   // a red band across the course, following the belly of the cloth
+    c.beginPath(); c.moveTo(x, cy - Sx); c.bezierCurveTo(x + D * 0.82, cy - Sx * 0.62, x + D * 0.82, cy + Sx * 0.62, x, cy + Sx);
+    c.lineWidth = D * 0.24; c.strokeStyle = hexA(L.band, 0.88); c.stroke();
+  }
   if (torn) for (let i = 0; i < 3; i++) dot(c, x + D * (0.2 + rng() * 0.5), cy + (rng() - 0.5) * Sx * 1.4, 0.7 + rng() * 0.8, "rgba(20,10,5,.85)");
   c.restore();
   line(c, x, cy - Sx - 1.2, x, cy + Sx + 1.2, top ? 1.1 : 1.5, WOOD);   // the yard
@@ -212,7 +225,11 @@ function drawFlags(c, a, L, cx, cy) {
   c.save(); blur(c, 2, "rgba(0,0,0,.4)"); wavyFlag(c, fx, cy, fw, fh, 0.7); c.fillStyle = L.flag; c.fill(); c.restore();
   c.save(); wavyFlag(c, fx, cy, fw, fh, 0.7); c.clip();
   const mx = fx - fw * 0.5;
-  if (L.patch || L.bigFlag) {   // skull and crossbones
+  if (L.ensign) {   // the Crown's ensign: the field with a white canton and a red cross at the hoist
+    const cw = fw * 0.46, ch = fh * 0.52, y0 = cy - fh / 2 - 1;
+    c.fillStyle = L.flag2; c.fillRect(fx - cw, y0, cw + 1, ch + 1);
+    line(c, fx - cw / 2, y0, fx - cw / 2, y0 + ch + 1, fh * 0.13, "#c8352a"); line(c, fx - cw, y0 + ch / 2 + 0.5, fx, y0 + ch / 2 + 0.5, fh * 0.13, "#c8352a");
+  } else if (L.patch || L.bigFlag) {   // skull and crossbones
     line(c, mx - fh * 0.32, cy - fh * 0.05, mx + fh * 0.32, cy + fh * 0.38, fh * 0.1, L.flag2); line(c, mx - fh * 0.32, cy + fh * 0.38, mx + fh * 0.32, cy - fh * 0.05, fh * 0.1, L.flag2);
     dot(c, mx, cy - fh * 0.08, fh * 0.2, L.flag2);
   } else if (L.flag2 === "#c8352a") { line(c, fx - fw, cy, fx, cy, fh * 0.24, L.flag2); line(c, fx - fw * 0.42, cy - fh, fx - fw * 0.42, cy + fh, fh * 0.24, L.flag2); }   // navy: red cross
@@ -226,5 +243,13 @@ function drawFlags(c, a, L, cx, cy) {
   for (let i = 1; i <= 6; i++) c.lineTo(px - pl * i / 6, cy - pw * (1 - i / 6.5) + Math.sin(i * 1.2) * 0.8 + i * 0.15);
   for (let i = 6; i >= 0; i--) c.lineTo(px - pl * i / 6, cy + pw * (1 - i / 6.5) + Math.sin(i * 1.2) * 0.8 + i * 0.15);
   c.closePath(); c.save(); blur(c, 2, "rgba(0,0,0,.45)"); c.fillStyle = L.pennant; c.fill(); c.restore();
-  if (L.flag === "#f7f6f1") { c.save(); c.clip(); c.fillStyle = "#f7f6f1"; c.fillRect(px - pl, cy - pw * 2, pl, pw * 1.9); c.restore(); }   // navy pennant: white over red
+  if (L.pennant2) { c.save(); c.clip(); c.fillStyle = L.pennant2; c.fillRect(px - pl, cy - pw * 2, pl, pw * 1.9); c.restore(); }   // navy pennant: white over red
+  if (L.admiral) {   // the admiral's flag at the foremast head: a square St George's cross, unlike any other ship's
+    const ax = x0 + a.masts[0] * len, s = 7;
+    c.save(); blur(c, 2, "rgba(0,0,0,.45)"); wavyFlag(c, ax, cy, s * 1.3, s, 0.6); c.fillStyle = "#f4efe2"; c.fill(); c.restore();
+    c.save(); wavyFlag(c, ax, cy, s * 1.3, s, 0.6); c.clip();
+    line(c, ax - s * 1.3, cy, ax, cy, s * 0.26, "#c8352a"); line(c, ax - s * 0.65, cy - s, ax - s * 0.65, cy + s, s * 0.26, "#c8352a");
+    c.restore();
+    wavyFlag(c, ax, cy, s * 1.3, s, 0.6); c.lineWidth = 0.7; c.strokeStyle = L.trim; c.stroke();
+  }
 }

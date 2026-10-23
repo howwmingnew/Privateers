@@ -1,0 +1,43 @@
+/* Harbor ledger on wide screens, the toast lane, hit markers (js/ledger-nav.js, js/notices.js, js/bounty-rec.js).
+   Same night-sea + parchment theme as css/style.css. */
+
+/* ---- ledger: one column on phones and narrow windows (the wrappers vanish), two on a desktop ---- */
+.lcol { display: contents; }
+@media (min-width: 1100px) {
+  /* left: ship stats and the bounty; right: the shop, so it starts at the top instead of below the poster */
+  #port .sheet { width: min(100%, calc(1100px * var(--ts))); grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); column-gap: 32px; }
+  #port .sheet > header, #port .sheet > .msg, #port .sheet > #coach, #port .sheet > footer { grid-column: 1 / -1; }
+  #port .lcol { display: grid; gap: 18px; align-content: start; min-width: 0; }
+  #port .lcol-r { grid-column: 2; }
+  /* the Hulk Outpost has no shop: back to the single sheet */
+  #port .lcol-r:not(:has(> section:not([hidden]))) { display: none; }
+  #port .sheet:not(:has(.lcol-r > section:not([hidden]))) { width: min(100%, calc(560px * var(--ts))); grid-template-columns: minmax(0, 1fr); }
+  #port .sheet:not(:has(.lcol-r > section:not([hidden]))) .lcol-l { grid-column: 1; }
+}
+/* pad: Y jumps to Set sail, so say so on the button */
+body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: center; width: 1.25em; height: 1.25em; margin-right: .45em; border-radius: 50%;
+  background: var(--foam); color: var(--blood); font: 700 .6em/1 var(--f-ui); vertical-align: .2em; }
+
+/* ---- Wanted poster: recommended ship level, with the same threat glyph as the badges ---- */
+.poster .p-rec .tier { display: inline-block; padding: 0 6px; border-radius: 3px; font-weight: 700; color: #1b1410; }
+.poster .p-rec .tier.dark { color: #fff6ea; }
+.poster .p-rec .you { color: var(--ink-soft); }
+
+/* ---- toasts: a plated lane under every sheet and menu (never over the ledger: js/notices.js holds them while docked) ---- */
+#toast { z-index: 9; background: rgba(8,34,45,.82); border: 1px solid rgba(240,199,102,.35); border-radius: 3px; padding: 3px 14px 5px; }
+/* on a phone the toast lane and the sea banner share a band: drop the toast below the banner while it shows */
+@media (max-width: 560px) { body:has(#seaBanner.on) #toast { top: calc(env(safe-area-inset-top, 0px) + 24vh + 150px); } }
+
+/* ---- hit markers: who just hit you. Over the shooter when it is on screen, at the screen edge (pointing at it) when not ---- */
+#hitDirs { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+#hitDirs .hd { position: absolute; left: 0; top: 0; width: 0; height: 0; transition: opacity .3s; }
+#hitDirs .hd b { position: absolute; left: -13px; top: -13px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: #c8321f; color: #fff6ea; border: 2px solid #ffd0c4; font: 800 17px/1 var(--f-ui); box-shadow: 0 1px 4px rgba(0,0,0,.7); }
+#hitDirs .hd i { position: absolute; left: -24px; top: -24px; width: 48px; height: 48px; }
+#hitDirs .hd i::after { content: ""; position: absolute; right: -9px; top: 50%; margin-top: -9px;
+  border-left: 14px solid #ff5a3c; border-block: 9px solid transparent; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
+#hitDirs .hd.near i { display: none; }
+#hitDirs .hd.fade { opacity: 0; }
+#hitDirs .hd.pop b { animation: hdPop .35s ease-out; }
+@keyframes hdPop { 0% { transform: scale(1.55); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { #hitDirs .hd.pop b { animation: none; } #hitDirs .hd { transition: none; } }
