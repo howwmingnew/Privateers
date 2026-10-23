@@ -27,9 +27,9 @@ const SND_SFX = (() => {
       hiss(v, t + 0.04, "bandpass", 260 * p, 0.9, 0.3, 0.06, 1.1, true); } },                            // its echo over the water
     cannonFar: { max: 6, gap: 0.04, pv: 0.08, gv: 0.15, gain: 0.65, wet: 0.45, far: 1900, pri: 2, duck: 3, hold: 0.18, fn(v) { const { t, p } = v;
       sweep(hiss(v, t, "lowpass", 1600 * p, 0.7, 0.8, 0.004, 0.9).frequency, t, 1600 * p, 300 * p, 0.5);
-      tone(v, t, "sine", 64 * p, 30 * p, 0.3, 0.7, 0.004, 0.55);
-      body(v, t, 105 * p, 62 * p, 0.25, 0.32, 0.22, 2.5);
-      hiss(v, t, "bandpass", 420 * p, 0.7, 0.75, 0.003, 0.2);
+      tone(v, t, "sine", 64 * p, 30 * p, 0.3, 0.5, 0.004, 0.55);
+      body(v, t, 105 * p, 62 * p, 0.25, 0.42, 0.22, 2.5);
+      hiss(v, t, "bandpass", 420 * p, 0.6, 1.1, 0.003, 0.22);
       hiss(v, t + 0.05, "bandpass", 160 * p, 0.8, 0.25, 0.08, 1.4, true); } },
     hit: { max: 5, gap: 0.025, pv: 0.12, gv: 0.15, gain: 1.05, wet: 0.2, far: 1300, pri: 2, duck: 4, hold: 0.18, fn(v) { const { t, p } = v, k = v.big ? 1.25 : 1;
       tone(v, t, "triangle", 160 * p, 58 * p, 0.12, 0.5 * k, 0.002, 0.16);                                // hull thud
