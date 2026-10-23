@@ -23,9 +23,9 @@ const CHAIN_T = 4, CHAIN_SPEED = 0.6, CHAIN_TURN = 0.7;
 const SHIPS = {
   sloop:    { slots: { bow: 1, left: 1, right: 1, stern: 0 }, hp: 100,  speed: 150, hold: 240,  cost: 0,     refit: 1 },
   schooner: { slots: { bow: 1, left: 2, right: 2, stern: 0 }, hp: 180,  speed: 165, hold: 440,  cost: 400,   refit: 1.7 },
-  brig:     { slots: { bow: 1, left: 3, right: 3, stern: 0 }, hp: 325,  speed: 155, hold: 800,  cost: 2000,  refit: 3.2 },
-  frigate:  { slots: { bow: 2, left: 4, right: 4, stern: 1 }, hp: 585,  speed: 150, hold: 1450, cost: 6000,  refit: 6 },
-  line:     { slots: { bow: 2, left: 5, right: 5, stern: 2 }, hp: 1050, speed: 140, hold: 2600, cost: 16000, refit: 11 },
+  brig:     { slots: { bow: 1, left: 3, right: 3, stern: 0 }, hp: 325,  speed: 155, hold: 1250, cost: 2000,  refit: 3.2 },
+  frigate:  { slots: { bow: 2, left: 4, right: 4, stern: 1 }, hp: 585,  speed: 150, hold: 2200, cost: 6000,  refit: 6 },
+  line:     { slots: { bow: 2, left: 5, right: 5, stern: 2 }, hp: 1050, speed: 140, hold: 4100, cost: 16000, refit: 11 },
 };
 const SHIP_ORDER = Object.keys(SHIPS);
 // Gun mounts. ang = firing direction relative to the bow; muzzles sit `out` px that way,
