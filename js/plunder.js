@@ -41,7 +41,7 @@ function lootDrop(s, killer) {
     const warship = (s.faction === "pirate" || s.faction === "navy") && !s.boss;   // a bounty target pays its Captain's Chest instead (js/campaign.js)
     if (warship && value > 0) {
       const g = Math.round(value * BOUNTY_K);
-      save.gold += g; value -= g; persist();
+      save.gold += g; value -= g; statsGold(g); persist();
       floatText(s.x, s.y - 52, t("fBounty", { n: fmt(g) }), "#ffe08a", 15);
       Snd.play("coin", { amount: g, delay: 0.2 });
     }
@@ -53,8 +53,11 @@ function lootDrop(s, killer) {
 function sellHold(kind) {
   const bonus = kind === "return" || kind === "outpost" ? streakBonus() : 0, sold = Math.round(cargo * (1 + bonus));
   streak = 0; streakChip();
+  statsGold(sold - Math.round(cargo));   // the logbook's "dock" hook already counted the hold at its plain value
   return { sold, bonus };
 }
+// Lifetime gold in the captain's log (js/logbook.js), for gold that doesn't pass through its own hooks.
+function statsGold(n) { if (n > 0 && typeof addStats === "function" && save.stats) addStats({ gold: (save.stats.gold || 0) + n }); }
 
 // HUD chip under the cargo bar, shown while a streak is running.
 const streakEl = (() => {

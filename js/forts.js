@@ -42,7 +42,7 @@ function seaReset(sc) {
   fortSites = pickFortSites();
   for (const s of fortSites) {
     const r = s.isl.r * 0.9 + 40;
-    s.crate = addCrate(s.isl.x + Math.cos(s.a) * r, s.isl.y + Math.sin(s.a) * r, Math.round(enemyStats(s.L, false).loot * TREASURE_K), null);
+    s.crate = addCrate(s.isl.x + Math.cos(s.a) * r, s.isl.y + Math.sin(s.a) * r, Math.round(enemyStats(s.L, false).loot * TREASURE_K * (typeof lootMul === "function" ? lootMul() : 1)), null);
   }
 }
 function makeFort(sc, site) {
@@ -64,7 +64,12 @@ function updateForts() {
       if (s.crate.value > 0 && crates.includes(s.crate)) { if (s.crate.t > 40) s.crate.t -= 20 * TAU / 3; } else s.crate = null;
     }
     if (s.ent && !s.ent.alive) { s.hp = Math.max(0, s.ent.hp); s.ent = null; if (s.hp <= 0) s.hp = 0; }
-    if (!s.ent && s.hp !== 0 && player.alive && !docked && dist(player, s) < FORT_NEAR) s.ent = makeFort(S, s);
+    const d = dist(player, s);
+    if (s.ent && d > FORT_NEAR + 400 && !(s.ent.angry > 0)) {   // out of sight and quiet: put it back on its site
+      const e = s.ent, i = enemies.indexOf(e); s.hp = e.hp; s.ent = null;
+      e.alive = false; e.spr.destroy(); e.badge?.destroy(); if (i >= 0) enemies.splice(i, 1);
+    }
+    if (!s.ent && s.hp !== 0 && player.alive && !docked && d < FORT_NEAR) s.ent = makeFort(S, s);
   }
 }
 // A battery stands inside its island's rock; its balls leave from where the line of fire clears the shore.
