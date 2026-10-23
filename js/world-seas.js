@@ -142,11 +142,17 @@ function managePopulation(dt) {
 }
 
 // ---------- Sea banner: the sea's name when the player sails into it ----------
+// A crossing counts once the ship is SEA_HYST px past the line or has stayed SEA_DWELL s beyond it (a fight on a border
+// used to fire it every few seconds). The banner then shows at most once per sea per sortie, and not for a sea the
+// player was in less than SEA_AGAIN_MS ago (sunk in the Reef, straight back out: no second "Reef Straits").
+const SEA_HYST = 120, SEA_DWELL = 2.5, SEA_AGAIN_MS = 60000;
 const seaBanner = document.createElement("div");
 seaBanner.id = "seaBanner"; seaBanner.setAttribute("role", "status");
 document.body.append(seaBanner);
-let seaNow = null, seaPend = null, seaPendT = 0, seaShown = null, seaBannerT;
+let seaNow = null, seaPend = null, seaPendT = 0, seaShown = null, seaBannerT, seaSortie = new Set(), seaLastIn = {};
 function seaHere() { const d = dist(player, PORT); return d < SAFE_R ? null : seaOfRing(ringAt(d)).id; }
+const SEA_LINES = () => [SAFE_R, ...SEAS.slice(1).map(s => ringEdge(s.L0))];
+const seaDepth = d => Math.min(...SEA_LINES().map(r => Math.abs(d - r)));   // px to the nearest sea border
 function renderSeaBanner(id) {
   const s = SEAS.find(x => x.id === id), b = levelBonus();
   seaBanner.dataset.sea = id;
@@ -160,14 +166,19 @@ function showSeaBanner(id) {
 function hideSeaBanner() { seaBanner.classList.remove("on"); seaShown = null; }
 onHook("frame", dt => {
   if (paused || docked || !player.alive) return;
-  const here = seaHere();
+  const here = seaHere(), now = performance.now();
+  if (seaNow) seaLastIn = { ...seaLastIn, [seaNow]: now };
   if (here === seaNow) { seaPend = null; return; }
   if (here !== seaPend) { seaPend = here; seaPendT = 0; }
-  if ((seaPendT += dt) < 0.4) return;   // a bow dipping over the line and back is not a crossing
+  if ((seaPendT += dt) < SEA_DWELL && seaDepth(dist(player, PORT)) < SEA_HYST) return;   // a bow over the line and back is not a crossing
   seaNow = here; seaPend = null;
-  if (here) { showSeaBanner(here); runHook("sea", here); }
+  if (!here) return;
+  runHook("sea", here);
+  const fresh = !seaSortie.has(here) && !(now - (seaLastIn[here] ?? -Infinity) < SEA_AGAIN_MS);
+  seaSortie = new Set([...seaSortie, here]);
+  if (fresh) showSeaBanner(here);
 });
-onHook("sail", () => { seaNow = seaHere(); seaPend = null; hideSeaBanner(); });
+onHook("sail", () => { seaNow = seaHere(); seaPend = null; seaSortie = new Set(); hideSeaBanner(); });
 onHook("dock", hideSeaBanner);
 onHook("lang", () => { if (seaShown) renderSeaBanner(seaShown); });
 

@@ -44,12 +44,14 @@ function muzzle(s, m, i, n) {
   const a = s.rot + m.ang, p = s.rot + m.perp, off = n === 1 ? 0 : -g.span / 2 + g.span * i / (n - 1);
   return { x: s.x + Math.cos(p) * off + Math.cos(a) * g.out, y: s.y + Math.sin(p) * off + Math.sin(a) * g.out, a };
 }
-// Is an enemy inside this mount's firing arc? Only then are its aim lines shown and can it fire.
+// Is an enemy inside this mount's firing arc, and on screen (AIM_SCREEN_PAD world px of slack)? Only then are its aim
+// lines shown and can it fire: nothing the player cannot see draws a line or eats a broadside.
+const AIM_SCREEN_PAD = 24;
 function mountEngaged(m) {
   const arr = player.guns[m.key];
   if (!arr.length) return false;
   const r = Math.max(...arr.map(g => g.range)) * AIM_SHOW_PAD, normal = player.rot + m.ang;
-  return enemies.some(e => e.alive && dist(e, player) < r && Math.abs(angDiff(Math.atan2(e.y - player.y, e.x - player.x), normal)) < ARC);
+  return enemies.some(e => e.alive && dist(e, player) < r && Math.abs(angDiff(Math.atan2(e.y - player.y, e.x - player.x), normal)) < ARC && onScreen(e.x, e.y, AIM_SCREEN_PAD));
 }
 // Would a straight shot from (x, y) at angle a, length len, pass through an enemy hull right now? Returns that enemy.
 // Only ships the player can see count: a "will hit" line must never point at something off screen.
@@ -105,7 +107,7 @@ function hurt(s, dmg, burn, src) {
   vfxFlash(s);
   if (onScreen(s.x, s.y)) {
     const byPlayer = src === player;
-    floatText(s.x + rand(-10, 10), s.y - 22, Math.round(dmg), s.isPlayer ? "#ff8a75" : byPlayer ? "#fff4d6" : "#a9c3cb", byPlayer || s.isPlayer ? 16 : 13);
+    dmgNumber(s, dmg, s.isPlayer ? "#ff8a75" : byPlayer ? "#fff4d6" : "#a9c3cb", byPlayer || s.isPlayer ? 16 : 13);   // a broadside merges (js/notices.js)
   }
   Snd.play("hit", { x: s.x, y: s.y, big: s.isPlayer });
   if (!s.isPlayer && src) { s.attacker = src; s.angry = 8; s.ignore.delete(src); }
