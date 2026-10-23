@@ -129,7 +129,7 @@ function sink(s, killer) {
   s.alive = false; s.speed = 0; s.hp = 0;
   S.fx.spark.explode(26, s.x, s.y); S.fx.smoke.explode(14, s.x, s.y);
   Snd.play("sink", { x: s.x, y: s.y, big: s.isPlayer });
-  if (s.isPlayer) Snd.play("defeat"); else if (killer === player) Snd.play("victory", { delay: 0.25 });
+  if (s.isPlayer) Snd.play("defeat"); else if (killer === player) Snd.play(s.boss ? "victory" : "kill", { delay: 0.25 });   // the fanfare is for bounties
   if (s.badge) { s.badge.destroy(); s.badge = null; }
   vfxSink(s, killer);   // list, darken, go under; sets s.dead for AI ships when done (js/vfx.js)
   if (s.isPlayer) {
