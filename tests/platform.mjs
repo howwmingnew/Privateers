@@ -146,7 +146,7 @@ try {
     try { await ready(page); await leaveTitle(page); } catch (e) { booted = false; }
     await sleep(300);
     const st = booted ? await page.evaluate(() => ({ docked, port: !document.getElementById("port").hidden, gold: save.gold, goldType: typeof save.gold,
-      maxHp: player.maxHp, ship: save.ship, wrecks: save.wrecks.length, crates: crates.filter(c => c.wreck).length, xss: window.__xss || 0,
+      maxHp: player.maxHp, maxHpAtCap: yardVal("hull", YARD.hull.max, SHIPS.sloop), ship: save.ship, wrecks: save.wrecks.length, crates: crates.filter(c => c.wreck).length, xss: window.__xss || 0,
       corrupt: localStorage.getItem("privateers-save-corrupt") })) : null;
     if (booted) {   // and it plays: sail, steer, fire, dock and sell
       await page.click("#sail");
@@ -159,7 +159,7 @@ try {
     report[`save_${name}`] = st;
     if (name === "truncated" || name === "notJson") check(st && st.corrupt === seed["privateers-save-v2"], `"${name}": raw save kept under privateers-save-corrupt`, st && st.corrupt);
     if (name === "goldString") check(st && st.gold === 500 && st.afterDock.gold === 510, "gold string coerced to a number", st);
-    if (name === "badShip") check(st && st.ship === "sloop" && st.maxHp === Math.round(100 * 1.28 ** 14) && st.wrecks === 1 && st.crates === 1, "bad ship, levels and wrecks sanitised", st);
+    if (name === "badShip") check(st && st.ship === "sloop" && st.maxHp === st.maxHpAtCap && st.wrecks === 1 && st.crates === 1, "bad ship, levels and wrecks sanitised", st);
     await page.screenshot({ path: join(out, `save-${name}.png`) });
     await ctx.close();
   }
