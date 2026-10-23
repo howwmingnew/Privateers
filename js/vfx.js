@@ -102,7 +102,11 @@ function vfxShip(s, dt) {
     }
     if (a.smoulder && f >= 0.5 && (s.smokeT = (s.smokeT || 0) - dt) <= 0) { s.smokeT = 0.35; FX.tint = 0x5a524a; FX.dmg.emitParticleAt(s.x + rand(-8, 8), s.y + rand(-5, 5), 1); }
   }
-  if (s.badge) { labelText(s.badge); s.badge.setPosition(s.x, shipTop(s) - 20 * labelScale()); }
+  if (s.badge) {
+    const seen = dist(s, player) < LOOT_SEEN_R;
+    if (seen !== !!s.lootSeen) { s.lootSeen = seen; refreshBadge(s); }
+    labelText(s.badge); s.badge.setPosition(s.x, shipTop(s) - 20 * labelScale());
+  }
   if (s.isPlayer && halo) halo.setPosition(s.x, s.y).setRotation(s.rot).setDisplaySize(a.len * 1.45, a.beam * 2.7)
     .setVisible(true).setAlpha(0.32 + 0.12 * Math.sin(S.time.now * 0.004));
 }

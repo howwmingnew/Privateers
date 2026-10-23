@@ -36,11 +36,12 @@ function lineHits(x, y, a, len) {
   return null;
 }
 // Fire every loaded cannon on each engaged mount: Space, letting go of the stick or mouse, a click, pad A / RT.
-function playerFire() {
+// `only`: mount keys to fire (Q / E fire one broadside); all of them when omitted.
+function playerFire(only) {
   if (paused || docked || !player.alive) return;
   let shots = 0;
   for (const mount of MOUNTS) {
-    if (!mountEngaged(mount)) continue;
+    if ((only && !only.includes(mount.key)) || !mountEngaged(mount)) continue;
     const arr = player.guns[mount.key];
     arr.forEach((g, i) => {
       if (g.cd > 0) return;

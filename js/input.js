@@ -2,12 +2,13 @@
 // ---------- Desktop and controller input (touch keeps the floating joystick in hud.js) ----------
 // Keyboard: A/D turn, W/S step the sail through SAIL_THR and the ship holds that speed; Space fires.
 // Mouse: hold the left button to steer toward the cursor (its distance sets the sail), let go to fire;
-//   a quick click only fires.
+//   a quick click only fires. Holding the right button steers the same way but never fires, so the left button can be
+//   kept for shooting (the usual desktop split). Q / E fire only the larboard / starboard broadside.
 // Gamepad (Phaser plugin): left stick points the bow, A or RT fires, D-pad up/down steps the sail, Start pauses.
 Object.assign(STR.en, {
-  hintDesk: "WASD or hold the mouse to steer · Space or let go to fire · Esc pause",
-  hint_keys: "A/D turn · W/S sail · Space fire · Esc pause",
-  hint_mouse: "Hold the left button to steer · let go or click to fire · Esc pause",
+  hintDesk: "WASD or hold a mouse button to steer · Space or left-click to fire · Esc pause",
+  hint_keys: "A/D turn · W/S sail · Space fire (Q/E one side) · Esc pause",
+  hint_mouse: "Hold right (or left) button to steer · left-click or let go of left to fire · Esc pause",
   hint_pad: "Left stick steer · D-pad sail · A / RT fire · Start pause",
   tip_keys: "Press Space to fire!", tip_pad: "Press A to fire!", tip_click: "Click to fire!", tip_desk: "Space or click to fire!",
   sl_lbl: "Sail", sl_0: "Stopped", sl_1: "Slow", sl_2: "Half", sl_3: "Full",
@@ -17,9 +18,9 @@ Object.assign(STR.en, {
   welcome: "Sail out, find a ship and turn until your aim lines point at it, then fire. Sink ships, scoop up their plunder, and bring it back here to sell. Deeper waters hold richer and deadlier ships. The controls are under How to play.",
 });
 Object.assign(STR.zh, {
-  hintDesk: "WASD 或按住滑鼠轉向 · 空白鍵或放開滑鼠開火 · Esc 暫停",
-  hint_keys: "A/D 轉向 · W/S 升降帆 · 空白鍵開火 · Esc 暫停",
-  hint_mouse: "按住左鍵轉向 · 放開或點一下開火 · Esc 暫停",
+  hintDesk: "WASD 或按住滑鼠轉向 · 空白鍵或左鍵開火 · Esc 暫停",
+  hint_keys: "A/D 轉向 · W/S 升降帆 · 空白鍵開火（Q/E 單舷）· Esc 暫停",
+  hint_mouse: "按住右鍵（或左鍵）轉向 · 點左鍵或放開左鍵開火 · Esc 暫停",
   hint_pad: "左搖桿轉向 · 十字鍵升降帆 · A／RT 開火 · Start 暫停",
   tip_keys: "按空白鍵開火！", tip_pad: "按 A 開火！", tip_click: "點一下開火！", tip_desk: "按空白鍵或點一下開火！",
   sl_lbl: "船帆", sl_0: "收帆", sl_1: "慢速", sl_2: "半帆", sl_3: "滿帆",
@@ -76,6 +77,8 @@ window.addEventListener("keydown", e => {
   if (!sailing() || e.repeat) return;
   if (e.code === "KeyW" || e.code === "ArrowUp") setSailLevel(sailLevel + 1);
   else if (e.code === "KeyS" || e.code === "ArrowDown") setSailLevel(sailLevel - 1);
+  else if (e.code === "KeyQ") playerFire(["left"]);
+  else if (e.code === "KeyE") playerFire(["right"]);
 }, true);
 
 // ---------- Mouse: hold to steer, release to fire ----------
@@ -86,19 +89,24 @@ window.addEventListener("keydown", e => {
   area.addEventListener("pointerdown", e => {
     if (e.pointerType !== "mouse") { setDevice("touch"); return; }
     setDevice("mouse");
-    if (e.button !== 0 || !sailing() || mouseHold) return;
-    mouseHold = { id: e.pointerId, t: performance.now(), x: e.clientX, y: e.clientY, steer: false };
+    if ((e.button !== 0 && e.button !== 2) || !sailing() || mouseHold) return;
+    const right = e.button === 2;   // bit 1 = left, bit 2 = right in PointerEvent.buttons
+    mouseHold = { id: e.pointerId, t: performance.now(), x: e.clientX, y: e.clientY, steer: right, mask: right ? 2 : 1, fires: !right };
   });
-  // With another button also down, letting go of the left one is a pointermove (buttons bit 1 cleared), not a pointerup.
+  // With another button also down, letting go of the held one is a pointermove (its buttons bit cleared), not a pointerup.
   const leftUp = e => {
-    if (!mouseHold || e.pointerId !== mouseHold.id || (e.buttons & 1)) return false;
-    mouseHold = null; playerFire();   // a long hold and a quick click both fire on release
+    if (!mouseHold || e.pointerId !== mouseHold.id || (e.buttons & mouseHold.mask)) return false;
+    const fires = mouseHold.fires; mouseHold = null;
+    if (fires) playerFire();   // left: a long hold and a quick click both fire on release; right: steering only
     return true;
   };
   window.addEventListener("pointermove", e => {
     if (leftUp(e)) return;
     if (mouseHold && e.pointerId === mouseHold.id && Math.hypot(e.clientX - mouseHold.x, e.clientY - mouseHold.y) > CLICK_PX) mouseHold.steer = true;
   });
+  // A left click while steering with the right button fires at once. A second button pressed on an already-active pointer
+  // raises no pointerdown (only a pointermove), but mousedown fires for every button.
+  area.addEventListener("mousedown", e => { if (e.button === 0 && mouseHold && !mouseHold.fires && sailing()) playerFire(); });
   window.addEventListener("pointerup", leftUp);
   window.addEventListener("pointercancel", e => { if (mouseHold && e.pointerId === mouseHold.id) mouseHold = null; });
 })();
