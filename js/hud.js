@@ -14,26 +14,28 @@ function hud(force) {
 }
 const mini = document.getElementById("mini"), mctx = mini.getContext("2d");
 let miniBase;
+// The chart covers the whole square map (the Maelstrom fills the corners). Sizes scale from the original 224-px chart.
 function buildMiniBase() {
-  miniBase = document.createElement("canvas"); miniBase.width = miniBase.height = 224;
-  const c = miniBase.getContext("2d"), k = 224 / W;
-  c.fillStyle = "#0f3f52"; c.fillRect(0, 0, 224, 224);
-  c.strokeStyle = "rgba(0,0,0,.25)"; c.lineWidth = 1;
-  for (let i = 1; i <= 9; i++) { c.beginPath(); c.arc(PORT.x * k, PORT.y * k, (SAFE_R + 80 + i * ZONE_STEP * 1.5) * k, 0, TAU); c.stroke(); }
-  c.fillStyle = "#e3cf96"; for (const i of islands) { c.beginPath(); c.arc(i.x * k, i.y * k, Math.max(2, i.r * k), 0, TAU); c.fill(); }
-  c.fillStyle = "#f6f1e3"; c.beginPath(); c.arc(PORT.x * k, PORT.y * k, 5, 0, TAU); c.fill();
+  const M = mini.width, k = M / W, u = M / 224;
+  miniBase = document.createElement("canvas"); miniBase.width = miniBase.height = M;
+  const c = miniBase.getContext("2d");
+  drawSeaChart(c, M);   // tinted seas and the real level rings (js/world-seas.js)
+  c.fillStyle = "rgba(227,207,150,.72)"; for (const i of islands) { c.beginPath(); c.arc(i.x * k, i.y * k, Math.max(2 * u, i.r * k), 0, TAU); c.fill(); }
+  c.fillStyle = "#f6f1e3"; c.beginPath(); c.arc(PORT.x * k, PORT.y * k, 5 * u, 0, TAU); c.fill();
+  drawSeaLabels(c, M);
 }
 function drawMini() {
-  const k = 224 / W;
-  mctx.save(); mctx.beginPath(); mctx.arc(112, 112, 112, 0, TAU); mctx.clip();
+  const M = mini.width, k = M / W, u = M / 224;
+  mctx.save();
   mctx.drawImage(miniBase, 0, 0);
-  for (const c of crates) if (!c.wreck) { mctx.fillStyle = "#f0c766"; mctx.fillRect(c.x * k - 2, c.y * k - 2, 4, 4); }
-  mctx.strokeStyle = "#ff5a3c"; mctx.lineWidth = 2.5;
-  for (const c of crates) if (c.wreck) { const x = c.x * k, y = c.y * k;
-    mctx.beginPath(); mctx.moveTo(x - 5, y - 5); mctx.lineTo(x + 5, y + 5); mctx.moveTo(x + 5, y - 5); mctx.lineTo(x - 5, y + 5); mctx.stroke(); }
-  for (const e of enemies) if (e.alive) threatMark(mctx, e.x * k, e.y * k, threatTier(e.L));   // shape per tier (js/art.js)
+  for (const c of crates) if (!c.wreck) { mctx.fillStyle = "#f0c766"; mctx.fillRect(c.x * k - 2 * u, c.y * k - 2 * u, 4 * u, 4 * u); }
+  mctx.strokeStyle = "#ff5a3c"; mctx.lineWidth = 2.5 * u;
+  for (const c of crates) if (c.wreck) { const x = c.x * k, y = c.y * k, r = 5 * u;
+    mctx.beginPath(); mctx.moveTo(x - r, y - r); mctx.lineTo(x + r, y + r); mctx.moveTo(x + r, y - r); mctx.lineTo(x - r, y + r); mctx.stroke(); }
+  for (const e of enemies) if (e.alive && !e.boss) threatMark(mctx, e.x * k, e.y * k, threatTier(e.L), 4 * u);   // shape per tier (js/art.js)
+  runHook("mini", mctx, k, u);   // the bounty's skull, the outpost (js/campaign-ui.js)
   const px = player.x * k, py = player.y * k;
-  mctx.translate(px, py); mctx.rotate(player.rot); mctx.fillStyle = "#fff";
+  mctx.translate(px, py); mctx.rotate(player.rot); mctx.scale(u, u); mctx.fillStyle = "#fff";
   mctx.beginPath(); mctx.moveTo(7, 0); mctx.lineTo(-5, -4.5); mctx.lineTo(-5, 4.5); mctx.closePath(); mctx.fill();
   mctx.restore();
 }
@@ -71,6 +73,7 @@ function applyLang() {
   if (player) { hud(true); renderPort(); enemies.forEach(e => e.badge && refreshBadge(e)); }
   if (harborLabel) harborLabel.setText(t("harborMap"));
   for (const c of crates) c.label?.setText(t("wreckLabel"));
+  runHook("lang");   // feature modules relabel their own texts (js/hooks.js)
 }
 document.querySelectorAll("[data-lang-toggle]").forEach(el => el.addEventListener("click", () => {
   lang = lang === "zh" ? "en" : "zh"; Snd.play("uiClick");

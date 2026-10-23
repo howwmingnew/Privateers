@@ -34,16 +34,17 @@ function shapePath(c, shape, cx, cy, R, k) {
   for (let i = 0; i <= 96; i++) { const a = i / 96 * TAU, r = shape(a) * R * k; c.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); }
   c.closePath();
 }
-function bakeIsland(sc, isl, idx) {
+// res: device px per world px for the land layer (default artRes()). Returns the two images, so a new map can free them.
+function bakeIsland(sc, isl, idx, res = artRes()) {
   const shape = islandShape(isl), R = isl.r, rng = mulberry32(Math.floor(isl.seed * 1e6));
   const sh = Math.ceil(R * 1.6);   // shallows: low-res layer under the land
   bakeCanvas(sc, "isl-sh" + idx, sh * 2, sh * 2, 0.5, c => {   // stacked faint rings: the edge is a gradient, not a hard line
     for (let k = 1.4; k > 1.0; k -= 0.035) { c.fillStyle = `rgba(130,215,208,${k > 1.2 ? 0.045 : 0.07})`; shapePath(c, shape, sh, sh, R, k); c.fill(); }
   });
-  sc.add.image(isl.x, isl.y, "isl-sh" + idx).setScale(2).setDepth(0.9);
-  const half = Math.ceil(R * 1.24 + 6), res = artRes();
+  const shallows = sc.add.image(isl.x, isl.y, "isl-sh" + idx).setScale(2).setDepth(0.9);
+  const half = Math.ceil(R * 1.24 + 6);
   bakeCanvas(sc, "isl" + idx, half * 2, half * 2, res, c => paintIsland(c, isl, shape, half, rng));
-  sc.add.image(isl.x, isl.y, "isl" + idx).setScale(1 / res).setDepth(1);
+  return [shallows, sc.add.image(isl.x, isl.y, "isl" + idx).setScale(1 / res).setDepth(1)];
 }
 function paintIsland(c, isl, shape, C, rng) {
   const R = isl.r, P = k => shapePath(c, shape, C, C, R, k);

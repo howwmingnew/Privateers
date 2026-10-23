@@ -1,6 +1,7 @@
 "use strict";
 // ---------- Harbor ----------
 function dock(kind) {
+  runHook("dock", kind, cargo);   // kind "outpost" docks at the Hulk Outpost (js/campaign.js)
   paused = true; docked = true;
   const sold = cargo;
   save.gold += cargo; cargo = 0;
@@ -22,6 +23,7 @@ function setSail() {
   docked = false; paused = false; canDock = false;
   resetEnemies(S);
   Snd.play("sail"); Snd.music("sea"); Snd.ambience("sea");
+  runHook("sail");   // the bounty's ship takes up its lair, a new sortie starts (js/campaign.js, js/logbook.js)
 }
 // Every departure starts from a fresh sea: no ship left waiting outside the harbor, no shot still in flight.
 function resetEnemies(sc) {
@@ -73,13 +75,15 @@ function renderPort() {
   }).join("");
   // ships: the current one and every bigger one (buying replaces the current ship)
   $("ships").innerHTML = SHIP_ORDER.slice(SHIP_ORDER.indexOf(save.ship)).map(id => {
-    const sh = SHIPS[id];
+    const sh = SHIPS[id], lock = shipLock(id);   // Letters of Marque gate (js/campaign.js): null, or why not yet
     const btn = id === save.ship ? `<button class="btn max" type="button" disabled>${t("yourShip")}</button>`
+      : lock ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("locked")}</button>`
       : `<button class="btn" type="button" data-act="ship" data-id="${id}" ${save.gold < sh.cost ? "disabled" : ""}>${shipArmed === id ? t("shipArm") : t("buy", { n: fmt(sh.cost) })}</button>`;
     const ds = t("shipDs", { b: sh.slots.bow, s: sh.slots.left, t: sh.slots.stern,
       hp: YARD.hull.show(yardVal("hull", 1, sh)), kn: YARD.sails.show(yardVal("sails", 1, sh)), cargo: fmt(yardVal("hold", 1, sh)) });
-    return `<div class="item"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${ds}</div></div>`;
+    return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${ds}${lock ? `<span class="lock">${lock}</span>` : ""}</div></div>`;
   }).join("");
+  runHook("renderPort");   // wanted poster, outpost layout (js/campaign.js)
 }
 
 document.getElementById("port").addEventListener("click", ev => {
@@ -98,6 +102,7 @@ document.getElementById("port").addEventListener("click", ev => {
     const k = b.dataset.k; save.gold -= YARD[k].cost(save[k]); save[k]++;
   } else if (act === "ship") {
     const id = b.dataset.id;
+    if (shipLock(id)) return;
     if (shipArmed === id && performance.now() - shipArmedAt < 400) return;   // a double-click is not a second tap
     clearTimeout(shipArmTimer);
     if (shipArmed !== id) {

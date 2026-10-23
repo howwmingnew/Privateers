@@ -38,7 +38,7 @@ function makeTextures(sc) {
 // The painted versions (sea depth, islands with palms and surf, the harbour town) live in js/scenery.js.
 function drawWorld(sc) {
   bakeSeaDepth(sc);
-  islands.forEach((isl, idx) => bakeIsland(sc, isl, idx));
+  drawIslands(sc);   // js/world-seas.js: paints each island (js/scenery.js) and rebuilds them when a new game rolls a new map
   bakeHarbor(sc);
   harborLabel = sc.add.text(PORT.x, PORT.y + PORT_ISLAND_R + 44, t("harborMap"), { fontFamily: UI_FONT, fontSize: "18px", fontStyle: "700", color: "#f6f1e3" })
     .setOrigin(0.5).setAlpha(0.7).setDepth(1);
