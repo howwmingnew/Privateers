@@ -71,7 +71,7 @@ console.log("Fresh campaign (desktop, en)");
       player.x = PORT.x + Math.cos(a) * r; player.y = PORT.y + Math.sin(a) * r;
       for (let i = 0; i < 600; i++) { player.hp = player.maxHp; step(0.05); }
       const c = seaCensus(), nearN = c.near.reduce((s, L) => s + c.count[L], 0);
-      return { r, ring: playerRing(), count: c.count.slice(1), total: c.total, nearShare: +(nearN / c.total).toFixed(2),
+      return { r, ring: playerRing(), count: c.count.slice(1), total: c.total, nearShare: +(nearN / c.total).toFixed(2), nearMin: Math.min(...c.near.map(L => c.count[L])),
         within1500: enemies.filter(e => e.alive && isOrdinary(e) && dist(e, player) < 1500).length };
     }, r));
   }
@@ -79,7 +79,10 @@ console.log("Fresh campaign (desktop, en)");
   const sp = await page.evaluate(() => ({ n: __spawns.length, bad: __spawns.filter(s => s.L !== ringAt(s.d)).length, levels: [...new Set(__spawns.map(s => s.L))].sort((a, b) => a - b) }));
   check(sp.bad === 0, `every spawn's level comes from its distance (${sp.n} spawns, ${sp.bad} off)`);
   check(sp.levels.join() === "1,2,3,4,5,6,7,8,9,10", `spawns cover Lv 1-10 (${sp.levels})`);
-  check(rows.every(r => r.count.every(n => n >= 1)), "every level ring stays populated wherever the player is");
+  // Far rings hold 1-2 ships each, so one of them can sit empty for a moment between a sinking and the next top-up
+  // (spawns come every 1.2 s); the rings around the player never may.
+  check(rows.every(r => r.count.filter(n => n < 1).length <= 1 && r.nearMin >= 1),
+    "the player's ring and its neighbours are always populated; at most one far ring is briefly empty");
   check(rows.every(r => r.total <= 30 && r.nearShare >= 0.45), "near rings hold most of the ships (~60%)");
   await page.evaluate(() => { player.maxHp = yardVal("hull"); player.hp = player.maxHp; sendHome(), dock("return"); });
 
@@ -94,9 +97,10 @@ console.log("Fresh campaign (desktop, en)");
   await o.shot("desktop-en-2-banner");
 
   // bounty 1, with the arrow (boss off screen) and the tag / boss bar (boss close)
-  await page.evaluate(() => { sendHome(), dock("return"); setSail(); });
+  // the previous step left the camera out west, where Red Ned's lair is; snap it home so the boss is truly off screen
+  await page.evaluate(() => { sendHome(), dock("return"); setSail(); S.cameras.main.centerOn(player.x, player.y); });
   await page.waitForTimeout(400);
-  const arrow = await page.evaluate(() => ({ arrow: !bossArrow.hidden, mini: !!activeBounty() }));
+  const arrow =await page.evaluate(() => ({ arrow: !bossArrow.hidden, mini: !!activeBounty() }));
   check(arrow.arrow, "edge arrow points at the bounty while it is off screen");
   await o.shot("desktop-en-3-arrow");
   await page.evaluate(() => { const b = enemies.find(e => e.boss); player.x = b.x - 280; player.y = b.y + 40; player.rot = 0; b.target = null; });
