@@ -22,8 +22,11 @@ function viewScaleConfig() {
   const b = viewBacking(VIEW);
   return { mode: Phaser.Scale.NONE, width: b.w, height: b.h, zoom: 1 / VIEW.dpr };
 }
-// World zoom: the original rule in CSS pixels (shorter side / 720, clamped 0.55-1.1), times the render dpr.
-const viewZoom = () => clamp(Math.min(VIEW.cssW, VIEW.cssH) / 720, 0.55, 1.1) * VIEW.dpr;
+// World zoom: the original rule in CSS pixels (shorter side / 720, clamped 0.55-1.1), times the render dpr, times the
+// player's ship class (bigger ships see further, js/art.js shipZoomK).
+const viewZoom = () => clamp(Math.min(VIEW.cssW, VIEW.cssH) / 720, 0.55, 1.1) * VIEW.dpr * (typeof shipZoomK === "function" ? shipZoomK() : 1);
+let viewRefit = null;   // the live scene's fit(), for when something other than a resize changes the zoom rule
+function refitView() { if (viewRefit) viewRefit(); }
 // Text is rasterised once into its own canvas, so draw it at the device pixels it will cover (in 0.25 steps).
 const viewTextRes = zoom => clamp(Math.ceil(zoom * 4) / 4, 1, 3);
 function crispText(txt, res) {
@@ -43,7 +46,7 @@ function fitView(sc) {
     for (const o of sc.children.list) if (isText(o)) crispText(o, res);
   };
   const onAdd = o => { if (isText(o)) crispText(o, VIEW.textRes); };   // badges, damage numbers, labels made later
-  sc.scale.on("resize", fit);
+  sc.scale.on("resize", fit); viewRefit = fit;
   sc.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, onAdd);
   sc.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { sc.scale.off("resize", fit); sc.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, onAdd); });
   tameShake(cam);

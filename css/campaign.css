@@ -28,6 +28,11 @@
 #achToast small { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #f0c766; }
 #achToast b { font-family: var(--f-display); font-weight: 400; font-size: 20px; line-height: 1.1; }
 #achToast span { font-size: 13px; opacity: .85; }
+/* on narrow screens a sheet fills the width: keep the toast off its buttons */
+@media (max-width: 900px) {
+  body:has(#port:not([hidden])) #achToast, body:has(#logbook:not([hidden])) #achToast, body:has(#victory:not([hidden])) #achToast {
+    bottom: auto; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+}
 
 /* Bounty arrow on the screen edge, and the boss's hull bar */
 #bossArrow { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 4; pointer-events: none; }

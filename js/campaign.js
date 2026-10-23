@@ -64,6 +64,8 @@ const BOUNTIES = [
 const LAIR_LEASH = 380;   // an idle boss (or escort) further than this from its lair heads back to it
 const ASSIST_MS = 20000;  // a boss someone else sinks still pays if the player hit it this recently
 const lairOf = b => polarPt(b.ang, b.r);
+// Hull art for a spec class until the archetype pass gives the man-o'-war its own (js/art.js SHIP_ART).
+const artClass = cls => cls === "manowar" ? "line" : SHIP_ART[cls] ? cls : "brig";
 const activeBounty = () => BOUNTIES[save.campaign.bounty] || null;
 const bossName = b => t("boss_" + b.id);
 const shipFor = i => SHIP_ORDER.find(id => SHIP_GATE[id] === i + 1);   // the hull bounty i (0-based) unlocks
@@ -100,7 +102,7 @@ function spawnBounty() {
   const hp = boss.maxHp * b.hpMul;
   Object.assign(boss, { boss: b.id, cls: b.cls, lair, maxHp: hp, hp, maxSpeed: boss.maxSpeed * (b.speed || 1) });
   if (b.guns) setGuns(boss, b.guns);
-  boss.spr.setScale(1.15);   // a flagship reads bigger, until class-sized hulls arrive
+  applyShipArt(boss, artClass(b.cls), "boss");   // the boss livery: gold trim, big flag (js/art.js)
   makeSkullTex(S);
   bossShip = boss;
   bossTag = { skull: S.add.image(0, 0, "skull").setDepth(9),
@@ -114,14 +116,17 @@ function spawnBounty() {
     const ehp = e.maxHp * (spec.hpMul || 1);
     Object.assign(e, { escortOf: b.id, cls: spec.cls, lair, maxHp: ehp, hp: ehp });
     if (spec.guns) setGuns(e, spec.guns);
+    applyShipArt(e, artClass(spec.cls));
   });
   toast(t("huntToast", { name: bossName(b), sea: t("sea_" + seaOfRing(b.L).id) }));
   sfx("bell", { pitch: 0.75, delay: 0.8 });
 }
+// Above the level badge, counter-scaled like it so the name stays readable when the camera zooms out.
 function placeBossTag() {
   if (!bossTag || !bossShip) return;
-  const w = bossTag.txt.width, x = bossShip.x - (w + 24) / 2, y = bossShip.y - 58;
-  bossTag.skull.setPosition(x + 11, y); bossTag.txt.setPosition(x + 25, y);
+  const lk = labelScale(); labelText(bossTag.txt); bossTag.skull.setScale(lk);
+  const w = bossTag.txt.displayWidth, x = bossShip.x - (w + 24 * lk) / 2, y = shipTop(bossShip) - 42 * lk;
+  bossTag.skull.setPosition(x + 11 * lk, y); bossTag.txt.setPosition(x + 25 * lk, y);
 }
 function claimBounty(b, s) {
   const c = save.campaign, n = c.bounty + 1, reward = bountyReward(b), ship = shipFor(c.bounty);
@@ -171,37 +176,55 @@ const TRUCE_R = 300;
 const PORT_DOCK = { x: PORT.x, y: PORT.y, outpost: false }, OUTPOST_DOCK = { x: OUTPOST.x, y: OUTPOST.y, outpost: true };
 const inTruce = s => save.campaign.outpost && Math.hypot(s.x - OUTPOST.x, s.y - OUTPOST.y) < TRUCE_R;
 const nearestHarbor = () => save.campaign.outpost && dist(player, OUTPOST) < dist(player, PORT) ? OUTPOST_DOCK : PORT_DOCK;
-let atOutpost = false, outpostImg = null, outpostLabel = null;
-function makeOutpostTex(sc) {
-  if (sc.textures.exists("outpost")) return;
-  const C = DOCK_R + 10, g = sc.make.graphics({ add: false }), pts = a => a.map(([x, y]) => ({ x: C + x, y: C + y }));
-  g.lineStyle(3, 0xf6f1e3, 0.3);
-  for (let i = 0; i < 36; i += 2) { g.beginPath(); g.arc(C, C, DOCK_R, i / 36 * TAU, (i + 1) / 36 * TAU); g.strokePath(); }
-  g.fillStyle(0x5fb3bf, 0.4); g.fillEllipse(C, C + 10, 200, 130);            // shoal water round the moorings
-  g.fillStyle(0x000000, 0.25); g.fillEllipse(C + 4, C + 6, 136, 46);
-  g.fillStyle(0x4a2e14, 1); g.fillPoints(pts([[-62, -16], [34, -20], [66, 0], [34, 20], [-62, 16]]), true);   // the dismasted hull
-  g.fillStyle(0xa77b4a, 1); g.fillPoints(pts([[-56, -12], [32, -15], [56, 0], [32, 15], [-56, 12]]), true);
-  g.lineStyle(1, 0x4a2e14, 0.5); for (let x = -46; x < 40; x += 10) g.lineBetween(C + x, C - 12, C + x, C + 12);
-  g.fillStyle(0x6e2c1e, 1); g.fillRect(C - 40, C - 9, 26, 18); g.fillStyle(0xb8603a, 1); g.fillRect(C - 4, C - 8, 18, 16);   // stalls
-  g.fillStyle(0x3b2414, 1); g.fillCircle(C + 26, C, 3.5); g.fillCircle(C - 50, C, 3);                                          // mast stumps
-  g.fillStyle(0x7a4f2a, 1); g.fillRect(C - 8, C + 18, 16, 60);                                                                 // jetty
-  g.fillStyle(0x8a5a2b, 1); g.fillRect(C + 12, C + 42, 12, 12); g.fillRect(C - 26, C + 56, 12, 12);
-  g.lineStyle(1.5, 0x4a2e14, 1); g.strokeRect(C + 12, C + 42, 12, 12); g.strokeRect(C - 26, C + 56, 12, 12);
-  g.fillStyle(0xffd27a, 1); g.fillCircle(C + 50, C, 3);                                                                        // lantern
-  g.fillStyle(0x3b2414, 1); g.fillRect(C + 25, C - 36, 2, 36); g.fillStyle(0x5b9a56, 1); g.fillTriangle(C + 27, C - 36, C + 44, C - 31, C + 27, C - 26);
-  g.generateTexture("outpost", C * 2, C * 2); g.destroy();
+let atOutpost = false, outpostObjs = [], outpostLabel = null;
+// Painted like Safe Harbor (js/harbor-art.js): a buoyed dock ring in the traders' green, planked floating jetties with
+// cargo and lanterns. The hulk itself and a tender are moored ships from the ship art, rocking on slow tweens.
+const OUTPOST_JETTIES = [[-10, 14, -30, 92], [18, -14, 62, -86]];
+function paintOutpost(c, C) {
+  const rng = mulberry32(23);
+  const g = c.createRadialGradient(C, C, 30, C, C, 170);
+  g.addColorStop(0, "rgba(130,218,210,.5)"); g.addColorStop(1, "rgba(130,218,210,0)"); c.fillStyle = g; c.fillRect(0, 0, C * 2, C * 2);
+  c.save(); c.setLineDash([3, 9]); c.beginPath(); c.arc(C, C, DOCK_R, 0, TAU); c.lineWidth = 1.5; c.strokeStyle = "rgba(246,241,227,.3)"; c.stroke(); c.restore();
+  for (let i = 0; i < 10; i++) {
+    const a = i / 10 * TAU + 0.2, x = C + Math.cos(a) * DOCK_R, y = C + Math.sin(a) * DOCK_R, on = i % 2 ? "#f4efe2" : "#4f9c4b";
+    dot(c, x + 1.2, y + 1.2, 4.2, "rgba(0,20,30,.35)"); dot(c, x, y, 4, on); dot(c, x, y, 1.6, i % 2 ? "#4f9c4b" : "#f4efe2");
+  }
+  for (const [x0, y0, x1, y1] of OUTPOST_JETTIES) {
+    const len = Math.hypot(x1 - x0, y1 - y0);
+    c.save(); c.translate(C + x0, C + y0); c.rotate(Math.atan2(y1 - y0, x1 - x0));
+    c.save(); blur(c, 4, "rgba(0,0,0,.45)"); c.fillStyle = "#6b4a2a"; c.fillRect(0, -7, len, 14); c.restore();
+    for (let d = 0; d < len; d += 5) { c.fillStyle = rng() < 0.5 ? "#8a6238" : "#7a5530"; c.fillRect(d, -7, 4.2, 14); }
+    for (const d of [6, len - 6]) { dot(c, d, -8, 2.2, WOOD); dot(c, d, 8, 2.2, WOOD); }
+    c.restore();
+  }
+  const crate = (x, y, w) => {
+    c.save(); blur(c, 2, "rgba(0,0,0,.45)"); c.fillStyle = "#9a6a36"; c.fillRect(C + x - w / 2, C + y - w / 2, w, w); c.restore();
+    c.strokeStyle = "#5a3a1c"; c.lineWidth = 1; c.strokeRect(C + x - w / 2 + 0.5, C + y - w / 2 + 0.5, w - 1, w - 1);
+    line(c, C + x - w / 2, C + y - w / 2, C + x + w / 2, C + y + w / 2, 0.8, "#5a3a1c");
+  };
+  const barrel = (x, y) => { dot(c, C + x + 1, C + y + 1, 4.2, "rgba(0,0,0,.3)"); dot(c, C + x, C + y, 4, "#7a4f2a"); dot(c, C + x, C + y, 2.2, "#5a3a1c"); };
+  crate(-22, 58, 10); crate(-31, 74, 9); barrel(-15, 72); barrel(44, -60); crate(53, -74, 10);
+  for (const [, , x, y] of OUTPOST_JETTIES) { c.save(); blur(c, 10, "rgba(255,214,120,.9)"); dot(c, C + x, C + y, 3, "#ffe7a8"); c.restore(); }
+}
+function buildOutpost(sc) {
+  const C = DOCK_R + 26;
+  if (!sc.textures.exists("outpost")) bakeCanvas(sc, "outpost", C * 2, C * 2, artRes(), c => paintOutpost(c, C));
+  const moored = (cls, dx, dy, rot) => { const key = shipArt(cls, "merchant", { furled: true }, sc);
+    const img = sc.add.image(OUTPOST.x + dx, OUTPOST.y + dy, key).setScale(1 / artResOf(key)).setRotation(rot).setDepth(4.2);
+    sc.tweens.add({ targets: img, angle: img.angle + rand(1, 1.8), duration: rand(2200, 3200), yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    return img; };
+  outpostLabel = labelText(sc.add.text(OUTPOST.x, OUTPOST.y + 122, t("outpostMap"), { fontFamily: UI_FONT, fontSize: "18px", fontStyle: "700", color: "#f6f1e3" })
+    .setOrigin(0.5).setAlpha(0.7).setDepth(1));
+  outpostObjs = [sc.add.image(OUTPOST.x, OUTPOST.y, "outpost").setScale(1 / artResOf("outpost")).setDepth(1),
+    moored("fluyt", 4, 0, -0.32), moored("sloop", 16, 62, 1.82), outpostLabel];
 }
 // Show the outpost (and make its hulk solid) exactly when the campaign has opened it; rebuild the chart to match.
 function syncOutpost() {
   if (!S) return;
   const on = save.campaign.outpost;
   islands = islands.filter(i => !i.outpost).concat(on ? [{ x: OUTPOST.x, y: OUTPOST.y, r: 48, pts: [], seed: 0, outpost: true }] : []);
-  if (on && !outpostImg) {
-    makeOutpostTex(S);
-    outpostImg = S.add.image(OUTPOST.x, OUTPOST.y, "outpost").setDepth(1);
-    outpostLabel = S.add.text(OUTPOST.x, OUTPOST.y + 104, t("outpostMap"), { fontFamily: UI_FONT, fontSize: "18px", fontStyle: "700", color: "#f6f1e3" })
-      .setOrigin(0.5).setAlpha(0.7).setDepth(1);
-  } else if (!on && outpostImg) { outpostImg.destroy(); outpostLabel.destroy(); outpostImg = outpostLabel = null; }
+  if (on && !outpostObjs.length) buildOutpost(S);
+  else if (!on && outpostObjs.length) { for (const o of outpostObjs) { S.tweens.killTweensOf(o); o.destroy(); } outpostObjs = []; outpostLabel = null; }
   buildMiniBase();
 }
 function sendHome() {

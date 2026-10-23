@@ -65,20 +65,17 @@ function genIslands(seed = save.seed) {
   }
   return out;
 }
-// Baked into one small texture per island (see drawWorld); old textures go when a new game rolls a new map.
+// Painted by js/scenery.js, one texture per island. On this map they bake at 1x even on HiDPI screens: 85 islands at 2x
+// would hold ~150 MB of canvas plus GPU memory (risky on iOS), 1x keeps the set below the old 34-island map at 2x.
+const ISLAND_RES = 1;
+let islandKeys = [];
 function drawIslands(sc) {
-  for (const img of islandImgs) { const key = img.texture.key; img.destroy(); sc.textures.remove(key); }
-  islandImgs = islands.filter(isl => !isl.outpost).map((isl, idx) => {
-    const half = Math.ceil(isl.r * 1.45), loc = { ...isl, x: half, y: half }, key = "isl" + idx;
-    const g = sc.make.graphics({ add: false });
-    g.fillStyle(0x5fb3bf, 0.45); blobPath(g, loc, 1.3); g.fillPath();
-    g.fillStyle(0xe3cf96, 1); blobPath(g, loc, 1.0); g.fillPath();
-    g.fillStyle(0x5b9a56, 1); blobPath(g, loc, 0.72); g.fillPath();
-    g.fillStyle(0x3f7a40, 1); blobPath(g, loc, 0.42); g.fillPath();
-    const r = mulberry32(Math.floor(isl.seed * 1e6));
-    for (let i = 0; i < 3; i++) { const a = r() * TAU, d = r() * isl.r * 0.5; g.fillStyle(0x7d7a72, 1); g.fillCircle(half + Math.cos(a) * d, half + Math.sin(a) * d, 6 + r() * 8); }
-    g.generateTexture(key, half * 2, half * 2); g.destroy();
-    return sc.add.image(isl.x, isl.y, key).setDepth(1);
+  for (const img of islandImgs) img.destroy();
+  for (const key of islandKeys) if (sc.textures.exists(key)) sc.textures.remove(key);
+  islandImgs = []; islandKeys = [];
+  islands.filter(isl => !isl.outpost).forEach((isl, idx) => {
+    islandImgs.push(...bakeIsland(sc, isl, idx, ISLAND_RES));
+    islandKeys.push("isl-sh" + idx, "isl" + idx);
   });
   islandSeed = save.seed;   // the islands on screen now belong to this game
 }

@@ -20,7 +20,7 @@ function buildMiniBase() {
   miniBase = document.createElement("canvas"); miniBase.width = miniBase.height = M;
   const c = miniBase.getContext("2d");
   drawSeaChart(c, M);   // tinted seas and the real level rings (js/world-seas.js)
-  c.fillStyle = "#e3cf96"; for (const i of islands) { c.beginPath(); c.arc(i.x * k, i.y * k, Math.max(2 * u, i.r * k), 0, TAU); c.fill(); }
+  c.fillStyle = "rgba(227,207,150,.72)"; for (const i of islands) { c.beginPath(); c.arc(i.x * k, i.y * k, Math.max(2 * u, i.r * k), 0, TAU); c.fill(); }
   c.fillStyle = "#f6f1e3"; c.beginPath(); c.arc(PORT.x * k, PORT.y * k, 5 * u, 0, TAU); c.fill();
   drawSeaLabels(c, M);
 }
@@ -32,7 +32,7 @@ function drawMini() {
   mctx.strokeStyle = "#ff5a3c"; mctx.lineWidth = 2.5 * u;
   for (const c of crates) if (c.wreck) { const x = c.x * k, y = c.y * k, r = 5 * u;
     mctx.beginPath(); mctx.moveTo(x - r, y - r); mctx.lineTo(x + r, y + r); mctx.moveTo(x + r, y - r); mctx.lineTo(x - r, y + r); mctx.stroke(); }
-  for (const e of enemies) if (e.alive) { mctx.fillStyle = threatColor(e.L); mctx.beginPath(); mctx.arc(e.x * k, e.y * k, 3 * u, 0, TAU); mctx.fill(); }
+  for (const e of enemies) if (e.alive && !e.boss) threatMark(mctx, e.x * k, e.y * k, threatTier(e.L), 4 * u);   // shape per tier (js/art.js)
   runHook("mini", mctx, k, u);   // the bounty's skull, the outpost (js/campaign-ui.js)
   const px = player.x * k, py = player.y * k;
   mctx.translate(px, py); mctx.rotate(player.rot); mctx.scale(u, u); mctx.fillStyle = "#fff";
