@@ -25,7 +25,12 @@ const SND_SFX = (() => {
       tone(v, tc, "triangle", 260 * p, 190 * p, 0.05, 0.45, 0.001, 0.09); tone(v, tc, "sine", 610 * p, 590 * p, 0, 0.16, 0.001, 0.06);
       hiss(v, tc, "bandpass", 950 * p, 2, 0.3, 0.001, 0.03);
       hiss(v, t + 0.04, "bandpass", 260 * p, 0.9, 0.3, 0.06, 1.1, true); } },                            // its echo over the water
-    cannonFar: { max: 6, gap: 0.04, pv: 0.08, gv: 0.15, gain: 0.65, wet: 0.45, far: 1900, pri: 2, duck: 3, hold: 0.18, fn(v) { const { t, p } = v;
+    // a broadside laid on the player: a fuse hiss swelling under a rising bosun's whistle, as long as the red fan shows
+    volleyWarn: { max: 2, gap: 0.3, pv: 0.04, gv: 0.1, gain: 0.85, wet: 0.25, far: 1600, fn(v) { const { t, p } = v;
+      hiss(v, t, "bandpass", 3400 * p, 3, 0.22, 0.32, 0.36);
+      tone(v, t + 0.05, "triangle", 720 * p, 1180 * p, 0.45, 0.13, 0.12, 0.5); } },
+    // gain was 0.65: enemy guns sat under the combat score
+    cannonFar: { max: 6, gap: 0.04, pv: 0.08, gv: 0.15, gain: 0.8, wet: 0.45, far: 1900, pri: 2, duck: 3, hold: 0.18, fn(v) { const { t, p } = v;
       sweep(hiss(v, t, "lowpass", 1600 * p, 0.7, 0.8, 0.004, 0.9).frequency, t, 1600 * p, 300 * p, 0.5);
       tone(v, t, "sine", 64 * p, 30 * p, 0.3, 0.5, 0.004, 0.55);
       body(v, t, 105 * p, 62 * p, 0.25, 0.42, 0.22, 2.5);

@@ -52,7 +52,7 @@ function enemyFire(s, targets, dt) {
     const aims = layGuns(s, tg, guns), a = aims[0];
     if (Math.hypot(a.x - s.x, a.y - s.y) > guns[0].range) continue;   // it will have sailed out of reach: hold fire
     v.warn = VOLLEY_WARN; v.tgt = tg; v.aims = aims;
-    if (tg.isPlayer) playerVolleyAt = now;
+    if (tg.isPlayer) { playerVolleyAt = now; Snd.play("volleyWarn", { x: s.x, y: s.y }); }   // the warning is heard as well as seen
     if (tg.isPlayer && volleyTips < 2 && onScreen(s.x, s.y)) { volleyTips++; toast(t("volleyTip")); }
   }
 }
