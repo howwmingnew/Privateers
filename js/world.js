@@ -58,18 +58,7 @@ function blobPath(g, isl, scale) {
 }
 // Static scenery is baked into small textures once; a giant live Graphics object would be re-tessellated every frame.
 function drawWorld(sc) {
-  islands.forEach((isl, idx) => {
-    const half = Math.ceil(isl.r * 1.45), loc = { ...isl, x: half, y: half };
-    const g = sc.make.graphics({ add: false });
-    g.fillStyle(0x5fb3bf, 0.45); blobPath(g, loc, 1.3); g.fillPath();
-    g.fillStyle(0xe3cf96, 1); blobPath(g, loc, 1.0); g.fillPath();
-    g.fillStyle(0x5b9a56, 1); blobPath(g, loc, 0.72); g.fillPath();
-    g.fillStyle(0x3f7a40, 1); blobPath(g, loc, 0.42); g.fillPath();
-    const r = mulberry32(Math.floor(isl.seed * 1e6));
-    for (let i = 0; i < 3; i++) { const a = r() * TAU, d = r() * isl.r * 0.5; g.fillStyle(0x7d7a72, 1); g.fillCircle(half + Math.cos(a) * d, half + Math.sin(a) * d, 6 + r() * 8); }
-    g.generateTexture("isl" + idx, half * 2, half * 2); g.destroy();
-    sc.add.image(isl.x, isl.y, "isl" + idx).setDepth(1);
-  });
+  drawIslands(sc);   // js/world-seas.js (rebuilt there when a new game rolls a new map)
   // Harbor
   const C = DOCK_R + 10, g = sc.make.graphics({ add: false });
   g.lineStyle(3, 0xf6f1e3, 0.35);

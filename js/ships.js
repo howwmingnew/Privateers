@@ -22,27 +22,30 @@ function makePlayer(sc) {
   player = p; applyPlayerStats(true);
   return p;
 }
-// Enemy level is set purely by distance from the harbor: each level owns one ring, ZONE_STEP wide.
+// Enemy level is set purely by distance from the harbor: each level owns one ring, ZONE_STEP wide (js/world-seas.js),
+// plus 3 levels per New Game+ cycle.
 const SPAWN_R_MIN = SAFE_R + 120, SPAWN_R_MAX = Math.hypot(PORT.x - 150, PORT.y - 150);
-const levelAt = d => clamp(1 + Math.floor((d - SAFE_R) / ZONE_STEP), 1, 14);
-const ringOf = L => ({ r0: Math.max(SPAWN_R_MIN, SAFE_R + (L - 1) * ZONE_STEP), r1: SAFE_R + L * ZONE_STEP });
-function spawnEnemy(sc) {
+const levelAt = d => ringAt(d) + levelBonus();
+// The ring an enemy of level L roams when idle (the outermost one runs on into the corners).
+const ringOf = L => { const k = clamp(L - levelBonus(), 1, MAX_RING);
+  return { r0: Math.max(SPAWN_R_MIN, ringEdge(k)), r1: k === MAX_RING ? SPAWN_R_MAX : ringEdge(k + 1) }; };
+// at: { x, y, faction } places a chosen ship (bosses, escorts); otherwise the ring quotas pick where. Returns the ship.
+function spawnEnemy(sc, at) {
   let x, y, ok = false;
+  const ring = at ? 0 : spawnRing();
   for (let tries = 0; tries < 40 && !ok; tries++) {
-    // radius (not area) is uniform, so every ring gets a similar share and low levels stay common near the harbor
-    const r = rand(SPAWN_R_MIN, SPAWN_R_MAX), a = rand(0, TAU);
-    x = PORT.x + Math.cos(a) * r; y = PORT.y + Math.sin(a) * r;
+    ({ x, y } = at ? { x: at.x + rand(-60, 60), y: at.y + rand(-60, 60) } : spawnPoint(ring));
     ok = x > 150 && x < W - 150 && y > 150 && y < H - 150 &&
          (!player || Math.hypot(x - player.x, y - player.y) > 750) &&
          !islands.some(i => Math.hypot(i.x - x, i.y - y) < i.r * 1.3 + 40);
   }
-  if (!ok) return;
-  const L = levelAt(Math.hypot(x - PORT.x, y - PORT.y));
-  const merchant = Math.random() < 0.35;
-  const tex = merchant ? "ship-merchant" : (Math.random() < 0.5 ? "ship-pirate" : "ship-navy");
+  if (!ok) return null;
+  const d = Math.hypot(x - PORT.x, y - PORT.y), L = levelAt(d);
+  const merchant = at ? at.faction === "merchant" : Math.random() < 0.35;
+  const tex = merchant ? "ship-merchant" : at ? "ship-" + at.faction : (Math.random() < 0.5 ? "ship-pirate" : "ship-navy");
   const st = enemyStats(L, merchant);
   const e = makeShip(sc, tex, x, y);
-  Object.assign(e, { L, merchant, maxHp: st.hp, hp: st.hp, maxSpeed: st.speed, loot: st.loot, aimLead: st.lead, aimSpread: st.spread, angry: 0, thinkT: 0, wander: null, turnRate: 1.7,
+  Object.assign(e, { L, ring: ringAt(d), merchant, maxHp: st.hp, hp: st.hp, maxSpeed: st.speed, loot: Math.round(st.loot * lootMul()), aimLead: st.lead, aimSpread: st.spread, angry: 0, thinkT: 0, wander: null, turnRate: 1.7,
     faction: merchant ? "merchant" : tex === "ship-pirate" ? "pirate" : "navy",
     target: null, chaseFrom: null, retarget: rand(0, 0.5), attacker: null, ignore: new Map() });
   const mk = () => ({ dmg: st.dmg, burn: 0, range: st.range, interval: st.interval, cd: rand(0.5, 2.2) });
@@ -51,6 +54,7 @@ function spawnEnemy(sc) {
     .setOrigin(0.5).setDepth(9);
   refreshBadge(e);
   enemies.push(e);
+  return e;
 }
 function refreshBadge(e) {
   const c = threatColor(e.L);
@@ -82,7 +86,7 @@ function avoidIslands(s, desired) {
 const LEASH = 900;          // an AI gives up once it has sailed this far from where the chase began and still cannot reach
 const GIVE_UP_DIST = 1300;  // ...or as soon as the target is this far away
 const IGNORE_TIME = 10;     // seconds an AI ignores a target it gave up on
-const inSafe = s => Math.hypot(s.x - PORT.x, s.y - PORT.y) < SAFE_R * 0.6;
+const inSafe = s => Math.hypot(s.x - PORT.x, s.y - PORT.y) < SAFE_R * 0.6 || inTruce(s);   // inTruce: the outpost, js/campaign.js
 function isHostile(e, o) {
   if (!o || o === e || !o.alive) return false;
   if (o.isPlayer && (docked || inSafe(o))) return false;
