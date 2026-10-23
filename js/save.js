@@ -9,18 +9,29 @@ Object.assign(STR.zh, { saveFail: "這個瀏覽器無法儲存進度。" });
 // Modules that own save fields push `() => ({ field: default })` here, so every new game starts with them.
 // (Scripts loaded after this file register late; their SAVE_SANITIZERS check fills the fields in for that first load.)
 const SAVE_DEFAULTS = [];
-const defaultSave = () => Object.assign({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1, unlocked: { six: true },
-  gunLv: { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0,
-  wrecks: [], salvage: [] }, ...SAVE_DEFAULTS.map(fn => fn()));   // wrecks: the player's own sunken cargo [{ x, y, value }], kept across sessions
-// Give every mount exactly as many guns as the ship has ports, using only guns the captain owns.
+// Guns are items { g, lv } (js/data.js): each port holds one or null (empty), and `store` is the gun store under the
+// gun deck. wrecks: the player's own sunken cargo [{ x, y, value }], kept across sessions.
+const defaultSave = () => Object.assign({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1,
+  bow: [gunItem("six")], left: [gunItem("six")], right: [gunItem("six")], stern: [], store: [], sunk: 0,
+  wrecks: [], salvage: [] }, ...SAVE_DEFAULTS.map(fn => fn()));
+const MAX_STORE = 200;   // a hand-edited save can't make the ledger build thousands of buttons
+// A gun item from untrusted data, or null. A bare type name (an old save's port) becomes a gun at level `lv`.
+function cleanGun(v, lv = 1) {
+  if (typeof v === "string") return Object.hasOwn(GUNS, v) ? gunItem(v, lv) : null;
+  return isObj(v) && typeof v.g === "string" && Object.hasOwn(GUNS, v.g) ? gunItem(v.g, toInt(v.lv, 1, GUN_MAX, 1)) : null;
+}
+// Give every mount exactly as many ports as the ship has. Ports past the end (a smaller ship: New Game+) send their
+// guns to the store; new ports start empty.
 function fitMounts(s) {
-  const d = defaultSave(), ship = Object.hasOwn(SHIPS, s.ship) ? s.ship : "sloop";
-  const unlocked = { ...d.unlocked, ...s.unlocked }, gunLv = { ...d.gunLv, ...s.gunLv };
-  const owned = id => Object.hasOwn(GUNS, id) && unlocked[id];
-  return { ...s, ship, unlocked, gunLv, ...Object.fromEntries(MOUNTS.map(({ key }) => {
-    const old = Array.isArray(s[key]) ? s[key] : [];
-    return [key, Array.from({ length: SHIPS[ship].slots[key] }, (_, i) => owned(old[i]) ? old[i] : "six")];
-  })) };
+  const { unlocked, gunLv, ...rest } = s;   // the old one-unlock-per-type fields (sanitizeCore converts them)
+  const ship = Object.hasOwn(SHIPS, s.ship) ? s.ship : "sloop", spill = [];
+  const mounts = Object.fromEntries(MOUNTS.map(({ key }) => {
+    const old = (Array.isArray(s[key]) ? s[key] : []).map(v => cleanGun(v)), n = SHIPS[ship].slots[key];
+    spill.push(...old.slice(n).filter(Boolean));
+    return [key, Array.from({ length: n }, (_, i) => old[i] || null)];
+  }));
+  const store = (Array.isArray(s.store) ? s.store : []).map(v => cleanGun(v)).filter(Boolean).concat(spill).slice(0, MAX_STORE);
+  return { ...rest, ship, ...mounts, store };
 }
 // v1 sold extra gun ports instead of ships: move each captain onto the ship with as many guns per side.
 // v1 yard levels scaled the sloop's base stats, so pick the levels that give the new ship the same hull, speed and
@@ -34,7 +45,7 @@ function migrateV1(s) {
     for (let l = 2; l <= YARD[k].max; l++) if (Math.abs(YARD[k].val(l, SHIPS[ship]) - was) < Math.abs(YARD[k].val(best, SHIPS[ship]) - was)) best = l;
     return [k, best];
   }));
-  return { ...defaultSave(), ...rest, ...yard, v: 2, ship };
+  return { ...defaultSave(), ...rest, ...yard, v: 2, ship, store: undefined };   // no store: sanitizeCore converts the old guns
 }
 
 // ---------- Validation ----------
@@ -56,16 +67,28 @@ function cleanWreck(w) {
 function sanitizeCore(raw) {
   const keep = Object.fromEntries(Object.keys(raw).filter(k => !UNSAFE_KEYS.has(k)).map(k => [k, raw[k]]));
   const has = (o, k) => isObj(o) && Object.hasOwn(o, k);
-  const unlocked = Object.fromEntries(GUN_ORDER.filter(id => id === "six" || (has(raw.unlocked, id) && raw.unlocked[id] === true)).map(id => [id, true]));
-  const gunLv = Object.fromEntries(GUN_ORDER.map(id => [id, toInt(has(raw.gunLv, id) ? raw.gunLv[id] : 1, 1, GUN_MAX, 1)]));
+  // Saves from before per-gun items unlocked a type once and levelled it for every port (unlocked, gunLv). Each mounted
+  // gun becomes its own item at its type's level (a port holding a type never bought, the 6-pounder), and each type
+  // bought but mounted nowhere puts one gun in the store, so nothing paid for is lost.
+  const lvOf = id => toInt(has(raw.gunLv, id) ? raw.gunLv[id] : 1, 1, GUN_MAX, 1);
+  const owned = id => id === "six" || (has(raw.unlocked, id) && raw.unlocked[id] === true);
+  // Old saves had a gun in every port, so a port the save leaves out was a 6-pounder too.
+  const legacy = !Array.isArray(raw.store), ship = typeof raw.ship === "string" && Object.hasOwn(SHIPS, raw.ship) ? raw.ship : "sloop";
+  const port = v => typeof v === "string" && Object.hasOwn(GUNS, v) && owned(v) ? gunItem(v, lvOf(v)) : gunItem("six", lvOf("six"));
+  const mounts = Object.fromEntries(MOUNTS.map(({ key }) => {
+    const arr = Array.isArray(raw[key]) ? raw[key] : [];
+    return [key, legacy ? Array.from({ length: SHIPS[ship].slots[key] }, (_, i) => port(arr[i])) : arr];
+  }));
+  const aboard = new Set(Object.values(mounts).flat().map(v => cleanGun(v)?.g));
+  const store = legacy ? GUN_ORDER.filter(id => id !== "six" && owned(id) && !aboard.has(id)).map(id => gunItem(id, lvOf(id))) : raw.store;
   const yard = Object.fromEntries(Object.keys(YARD).map(k => [k, toInt(raw[k], 1, YARD[k].max, 1)]));
   // salvage: wreck cargo scooped up but not yet sold. The hold isn't saved, so if the game closed before docking it goes
   // back into the sea where it was found instead of vanishing.
   const salvage = (Array.isArray(raw.salvage) ? raw.salvage : []).map(cleanWreck).filter(Boolean);
   const wrecks = (Array.isArray(raw.wrecks) ? raw.wrecks : []).map(cleanWreck).filter(Boolean).concat(salvage).slice(-MAX_WRECKS);   // newest last
   return fitMounts({ ...keep, v: 2, gold: toInt(raw.gold, 0, Number.MAX_SAFE_INTEGER, 0),
-    ship: typeof raw.ship === "string" && Object.hasOwn(SHIPS, raw.ship) ? raw.ship : "sloop",
-    ...yard, unlocked, gunLv, sunk: toInt(raw.sunk, 0, Number.MAX_SAFE_INTEGER, 0), wrecks, salvage: [] });
+    ship,
+    ...yard, ...mounts, store, sunk: toInt(raw.sunk, 0, Number.MAX_SAFE_INTEGER, 0), wrecks, salvage: [] });
 }
 // Core fields first, then each module's own. A module check that throws is skipped and reported, never fatal.
 // Quitting to the title drops the hold without a reload, so put any unsold salvage back at sea there too.

@@ -5,9 +5,10 @@ function makeShip(sc, tex, x, y) {
   return { spr, x, y, rot: rand(0, TAU), speed: 0, vx: 0, vy: 0, alive: true, burnT: 0, burnDps: 0, burnFx: 0, wakeT: 0, turnRate: 2.2 };
 }
 function playerGuns() {
-  const mk = id => { const g = GUNS[id], m = gunLvMul(save.gunLv[id]);
-    return { id, dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, chain: !!g.chain, range: g.range, speed: g.speed || BALL_SPEED, interval: 60 / g.rpm, cd: 0 }; };
-  return Object.fromEntries(MOUNTS.map(({ key }) => [key, save[key].map(mk)]));
+  // pi / pn: the gun's port and the port count, so a muzzle sits at its port even with empty ports beside it
+  const mk = (gun, pi, pn) => { const id = gun.g, g = GUNS[id], m = gunLvMul(gun.lv);
+    return { id, pi, pn, dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, chain: !!g.chain, range: g.range, speed: g.speed || BALL_SPEED, interval: 60 / g.rpm, cd: 0 }; };
+  return Object.fromEntries(MOUNTS.map(({ key }) => [key, save[key].flatMap((gun, i, ports) => gun ? [mk(gun, i, ports.length)] : [])]));
 }
 function applyPlayerStats(full) {
   player.maxHp = yardVal("hull");

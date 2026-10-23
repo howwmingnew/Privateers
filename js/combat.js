@@ -48,7 +48,7 @@ function playerFire(only) {
       g.cd = g.interval;
       S.time.delayedCall(shots++ * 70, () => {          // a rolling broadside, not one blast
         if (!player.alive || paused) return;
-        const m = muzzle(player, mount, i, arr.length), life = g.range / g.speed;   // each gun has its own ball speed
+        const m = muzzle(player, mount, g.pi, g.pn), life = g.range / g.speed;   // each gun has its own ball speed
         balls.push({ spr: S.add.image(m.x, m.y, "ball").setDepth(7), x: m.x, y: m.y,
           vx: Math.cos(m.a) * g.speed, vy: Math.sin(m.a) * g.speed, life, life0: life, dmg: g.dmg, burn: g.burn, chain: g.chain, fromPlayer: true, owner: player });
         vfxMuzzle(m.x, m.y, m.a);

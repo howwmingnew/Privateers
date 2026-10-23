@@ -32,7 +32,11 @@ function boot(seed = {}, { failWrites = false } = {}) {
   const json = code => JSON.parse(run(`JSON.stringify(${code})`));
   return { run, json, store, errors, domReady: () => domReady.forEach(fn => fn()) };
 }
-const v2 = o => JSON.stringify({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1, unlocked: { six: true },
+const G = (g, lv = 1) => ({ g, lv });   // a gun item (js/data.js)
+const v2 = o => JSON.stringify({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1,
+  bow: [G("six")], left: [G("six")], right: [G("six")], stern: [], store: [], sunk: 0, wrecks: [], salvage: [], ...o });
+// a v2 save from before per-gun items: one unlock and one level per type, ports hold type names, no store
+const oldV2 = o => JSON.stringify({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1, unlocked: { six: true },
   gunLv: { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 }, bow: ["six"], left: ["six"], right: ["six"], stern: [], sunk: 0, wrecks: [], salvage: [], ...o });
 const loadWith = (o, opts) => boot({ [SAVE_KEY]: typeof o === "string" ? o : v2(o) }, opts);
 
@@ -45,9 +49,9 @@ test("fresh browser gets the default save", () => {
 
 test("sanitising is idempotent and keeps a valid save as it is", () => {
   const g = boot();
-  const rich = { v: 2, gold: 1234, ship: "brig", hull: 4, sails: 3, hold: 5, unlocked: { six: true, long12: true, fire: true },
-    gunLv: { six: 3, long12: 2, carronade: 1, chain: 2, fire: 4 }, bow: ["long12"], left: ["six", "fire", "long12"], right: ["long12", "six", "six"], stern: [],
-    sunk: 17, wrecks: [{ x: 3000, y: 1200, value: 80 }], salvage: [] };
+  const rich = { v: 2, gold: 1234, ship: "brig", hull: 4, sails: 3, hold: 5,
+    bow: [G("long12", 2)], left: [G("six", 3), null, G("long12", 2)], right: [G("long12", 1), G("six", 3), G("fire", 4)], stern: [],
+    store: [G("fire", 1), G("chain", 2)], sunk: 17, wrecks: [{ x: 3000, y: 1200, value: 80 }], salvage: [] };
   const once = g.json(`sanitizeSave(${JSON.stringify(rich)})`);
   assert.deepEqual(once, rich);
   assert.deepEqual(g.json(`sanitizeSave(sanitizeSave(${JSON.stringify(rich)}))`), once);
@@ -67,7 +71,9 @@ test("v1 saves migrate onto the ship matching their gun ports", () => {
     assert.equal(s.ports, undefined);
     const slots = g.json(`SHIPS.${ship}.slots`);
     for (const k of ["bow", "left", "right", "stern"]) assert.equal(s[k].length, slots[k], `${ship} ${k}`);
-    assert.equal(s.left[0], "long12", "owned guns stay mounted");
+    assert.deepEqual(s.left[0], G("long12"), "owned guns stay mounted");
+    if (s.left.length > 1) assert.deepEqual(s.left[1], G("six", 2), "at their type's old level");
+    assert.deepEqual(s.store, [], "every type owned was aboard");
   }
 });
 
@@ -113,9 +119,9 @@ test("hostile numbers are coerced into range", () => {
     [{ gold: [7] }, s => assert.equal(s.gold, 0)],
     [{ hull: 99, sails: -3, hold: "7" }, s => { assert.equal(s.hull, 15); assert.equal(s.sails, 1); assert.equal(s.hold, 7); }],
     [{ hull: "NaN", sails: {}, hold: true }, s => { assert.equal(s.hull, 1); assert.equal(s.sails, 1); assert.equal(s.hold, 1); }],
-    [{ gunLv: { six: '1<img src=x onerror="alert(1)">', long12: 50, carronade: 0, chain: -2, fire: "3" } },
-      s => assert.deepEqual(s.gunLv, { six: 1, long12: 10, carronade: 1, chain: 1, fire: 3 })],
-    [{ gunLv: "lots" }, s => assert.deepEqual(s.gunLv, { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 })],
+    [{ store: [{ g: "six", lv: '1<img src=x onerror="alert(1)">' }, { g: "long12", lv: 50 }, { g: "carronade", lv: 0 }, { g: "chain", lv: -2 }, { g: "fire", lv: "3" }] },
+      s => assert.deepEqual(s.store, [G("six", 1), G("long12", 10), G("carronade", 1), G("chain", 1), G("fire", 3)])],
+    [{ store: "lots" }, s => assert.deepEqual(s.store, [])],
     [{ sunk: -5 }, s => assert.equal(s.sunk, 0)],
     [{ sunk: "12" }, s => assert.equal(s.sunk, 12)],
   ];
@@ -128,13 +134,13 @@ test("hostile numbers are coerced into range", () => {
 });
 
 test("unknown ships and guns are dropped", () => {
-  const s = loadWith({ ship: "galleon", unlocked: { nuke: true, long12: true, six: false, fire: "yes" }, left: ["nuke", "six"], right: ["long12"], bow: [{}], stern: ["fire"] }).json("save");
+  const s = loadWith({ ship: "galleon", left: [{ g: "nuke" }, G("six")], right: [G("long12")], bow: [{}], stern: [G("fire")], store: [G("nuke"), "x", null, G("chain")] }).json("save");
   assert.equal(s.ship, "sloop");
-  assert.deepEqual(s.unlocked, { six: true, long12: true });
-  assert.deepEqual(s.left, ["six"]); assert.deepEqual(s.right, ["long12"]); assert.deepEqual(s.bow, ["six"]); assert.deepEqual(s.stern, []);
+  assert.deepEqual(s.left, [null], "an unknown gun leaves its port empty");
+  assert.deepEqual(s.right, [G("long12")]); assert.deepEqual(s.bow, [null]); assert.deepEqual(s.stern, []);
+  assert.deepEqual(s.store, [G("chain"), G("six"), G("fire")], "guns past the sloop's ports go to the store, after the good stored ones");
   for (const ship of ["__proto__", "constructor", "toString", 42, null]) assert.equal(loadWith({ ship }).json("save").ship, "sloop", String(ship));
-  // a gun mounted on a port but not owned goes back to the 6-pounder
-  assert.deepEqual(loadWith({ ship: "schooner", left: ["carronade", "fire"], right: ["six", "six"] }).json("save").left, ["six", "six"]);
+  assert.equal(loadWith({ store: Array.from({ length: 500 }, () => G("six")) }).json("save").store.length, 200, "the store is capped");
 });
 
 test("wrecks: only finite, in-map, positive entries, at most 50", () => {
@@ -158,8 +164,8 @@ test("prototype keys in a save don't pollute anything", () => {
   const g = loadWith(raw);
   const s = g.json("save");
   assert.equal(s.gold, 10);
-  assert.deepEqual(s.unlocked, { six: true });
-  assert.deepEqual(s.gunLv, { six: 1, long12: 1, carronade: 1, chain: 1, fire: 1 });
+  assert.deepEqual([s.bow, s.left, s.right, s.store], [[G("six")], [G("six")], [G("six")], []], "the inherited unlock and level count for nothing");
+  assert.equal(s.unlocked, undefined); assert.equal(s.gunLv, undefined);
   assert.deepEqual(s.wrecks, [{ x: 1, y: 2, value: 3 }]);
   assert.equal(g.run("Object.getPrototypeOf(save) === Object.prototype"), true);
   assert.equal(g.run("['__proto__', 'constructor', 'prototype'].some(k => Object.hasOwn(save, k))"), false);
@@ -216,7 +222,7 @@ test("yard values and costs rise with level, and ships get pricier", () => {
     assert.ok(b.hp >= a.hp && b.hold >= a.hold, `${ships[i]} is no weaker than ${ships[i - 1]}`);
   }
   for (const id of g.json("GUN_ORDER")) for (let l = 1; l < g.run("GUN_MAX"); l++)
-    assert.ok(g.run(`save.gunLv.${id} = ${l + 1}, gunUpCost("${id}")`) > g.run(`save.gunLv.${id} = ${l}, gunUpCost("${id}")`), `${id} upgrade Lv ${l}`);
+    assert.ok(g.run(`gunUpCost(gunItem("${id}", ${l + 1}))`) > g.run(`gunUpCost(gunItem("${id}", ${l}))`), `${id} upgrade Lv ${l}`);
 });
 
 test("enemies get stronger and richer with level", () => {
@@ -239,17 +245,29 @@ test("every string exists in both languages", () => {
   assert.ok(g.run("Object.values(STR.zh).every(v => typeof v === 'string' && v.trim() !== '')"));
 });
 
+test("saves from before per-gun items: each mounted gun keeps its level, unmounted purchases wait in the store", () => {
+  const s = loadWith(oldV2({ ship: "schooner", unlocked: { six: true, long12: true, carronade: true, fire: "yes" }, gunLv: { six: 3, long12: 2, carronade: 4, fire: 9 },
+    bow: ["long12"], left: ["six", "fire"], right: ["carronade"] })).json("save");
+  assert.deepEqual(s.bow, [G("long12", 2)]);
+  assert.deepEqual(s.left, [G("six", 3), G("six", 3)], "a type never bought (fire: 'yes') becomes a 6-pounder");
+  assert.deepEqual(s.right, [G("carronade", 4), G("six", 3)], "a port the old save left out was a 6-pounder");
+  assert.deepEqual(s.store, [], "every type bought is aboard");
+  const spare = loadWith(oldV2({ unlocked: { six: true, long12: true, chain: true }, gunLv: { six: 1, long12: 5, chain: 2 } })).json("save");
+  assert.deepEqual(spare.store, [G("long12", 5), G("chain", 2)], "bought, never mounted: one of each in the store");
+  assert.equal(spare.unlocked, undefined);
+  const g = loadWith(oldV2({ unlocked: { six: true, long12: true } }));
+  assert.deepEqual(g.json("sanitizeSave(save)"), g.json("save"), "converting once is enough: a second load adds nothing");
+});
+
 // ---------- Combat, guns and economy tables (js/data.js, js/arsenal.js, js/plunder.js) ----------
 const COMBAT_SRC = ["js/volley.js", "js/arsenal.js", "js/plunder.js"].map(f => [f, readFileSync(new URL("../" + f, import.meta.url), "utf8")]);
 
 test("chain shot is a full gun: armoury order, save defaults, sanitiser, old saves", () => {
   const g = boot();
   assert.ok(g.json("GUN_ORDER").includes("chain"));
-  assert.equal(g.json("defaultSave().gunLv.chain"), 1);
-  const old = loadWith({ gunLv: { six: 2, long12: 1, carronade: 1, fire: 1 }, unlocked: { six: true, chain: true }, left: ["chain"] }).json("save");
-  assert.equal(old.gunLv.chain, 1, "a save from before chain shot gets Lv 1");
-  assert.deepEqual(old.left, ["chain"], "an owned chain gun stays mounted");
-  assert.equal(loadWith({ unlocked: { six: true }, left: ["chain"] }).json("save").left[0], "six", "not owned: back to the 6-pounder");
+  const old = loadWith(oldV2({ gunLv: { six: 2, long12: 1, carronade: 1, fire: 1 }, unlocked: { six: true, chain: true }, left: ["chain"] })).json("save");
+  assert.deepEqual(old.left, [G("chain", 1)], "a save from before chain shot: its chain gun stays mounted at Lv 1");
+  assert.deepEqual(loadWith(oldV2({ unlocked: { six: true }, left: ["chain"] })).json("save").left, [G("six")], "not owned: back to the 6-pounder");
   const gun = g.json("GUNS.chain");
   for (const k of ["dmg", "range", "rpm", "speed", "cost", "upBase"]) assert.ok(gun[k] > 0, k);
 });

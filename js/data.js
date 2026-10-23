@@ -4,11 +4,11 @@
 // make (DPS per gold, ship ladder, enemy levels) and .review/combat/play.mjs measures the pacing they give.
 // speed = ball speed (px/s). Long 12 balls are fast (easy at range), carronade balls slow (close range only).
 const GUNS = {
-  six:       { name: "6-pounder",  full: "Iron 6-pounder",   dmg: 10, range: 270, rpm: 36, speed: 480, cost: 0,   upBase: 60,  note: "Reliable all-rounder" },
-  long12:    { name: "Long 12",    full: "Long 12-pounder",  dmg: 18, range: 400, rpm: 26, speed: 620, cost: 350, upBase: 130, note: "Fast balls, outranges most ships" },
-  carronade: { name: "Carronade",  full: "24-pdr Carronade", dmg: 32, range: 200, rpm: 20, speed: 400, cost: 600, upBase: 200, note: "Smashes hulls up close" },
-  chain:     { name: "Chain shot", full: "Chain-shot Gun",   dmg: 5,  range: 240, rpm: 30, speed: 480, cost: 500, upBase: 120, chain: true, note: "Cuts rigging: slows the target" },
-  fire:      { name: "Incendiary", full: "Incendiary Gun",   dmg: 6,  range: 260, rpm: 30, speed: 480, cost: 900, upBase: 260, burn: 5, note: "Each hit starts a fire" },
+  six:       { name: "6-pounder",  full: "Iron 6-pounder",   dmg: 10, range: 270, rpm: 36, speed: 480, cost: 30,   upBase: 12,  note: "Reliable all-rounder" },
+  long12:    { name: "Long 12",    full: "Long 12-pounder",  dmg: 18, range: 400, rpm: 26, speed: 620, cost: 70, upBase: 26, note: "Fast balls, outranges most ships" },
+  carronade: { name: "Carronade",  full: "24-pdr Carronade", dmg: 32, range: 200, rpm: 20, speed: 400, cost: 120, upBase: 40, note: "Smashes hulls up close" },
+  chain:     { name: "Chain shot", full: "Chain-shot Gun",   dmg: 5,  range: 240, rpm: 30, speed: 480, cost: 100, upBase: 24, chain: true, note: "Cuts rigging: slows the target" },
+  fire:      { name: "Incendiary", full: "Incendiary Gun",   dmg: 6,  range: 260, rpm: 30, speed: 480, cost: 180, upBase: 52, burn: 5, note: "Each hit starts a fire" },
 };
 const GUN_ORDER = ["six", "long12", "carronade", "chain", "fire"];
 const GUN_MAX = 10;
@@ -46,7 +46,12 @@ const YARD = {
 function yardVal(k, l = save[k], sh = SHIPS[save.ship]) { return YARD[k].val(l, sh); }
 
 function gunLvMul(lv) { return 1.15 ** (lv - 1); }
-function gunUpCost(id) { return Math.round(GUNS[id].upBase * 1.55 ** (save.gunLv[id] - 1)); }
+// Each gun is its own item { g: type, lv }, bought one at a time and upgraded on its own; the level stays with the gun
+// wherever it goes (a port, or the gun store under the gun deck). Prices are per gun, about a fifth of the old
+// whole-ship unlock, so arming a big hull costs more than a sloop but not fourteen times the old price.
+const gunItem = (g, lv = 1) => ({ g, lv });
+function gunUpCost(gun) { return Math.round(GUNS[gun.g].upBase * 1.55 ** (gun.lv - 1)); }
+function allGuns(s = save) { return MOUNTS.flatMap(({ key }) => s[key] || []).concat(s.store || []).filter(Boolean); }
 
 // Enemy base stats by level L (the brig; js/archetypes.js scales them per class). Merchants are tankier, nearly
 // unarmed and richer. Enemy guns fire a side together after VOLLEY_WARN s of warning (js/volley.js). Every crew aims
@@ -89,8 +94,9 @@ function enemyPower(L) {
 }
 function playerPower() {
   let dps = 0, fireRate = 0, fireDps = 0;
-  for (const { key } of MOUNTS) for (const id of save[key]) {
-    const g = GUNS[id], m = gunLvMul(save.gunLv[id]), rate = g.rpm / 60 * MOUNT_UPTIME;
+  for (const { key } of MOUNTS) for (const gun of save[key]) {
+    if (!gun) continue;   // an empty port
+    const g = GUNS[gun.g], m = gunLvMul(gun.lv), rate = g.rpm / 60 * MOUNT_UPTIME;
     dps += g.dmg * m * rate;
     if (g.burn) { fireRate += rate; fireDps = Math.max(fireDps, g.burn * m); }
   }

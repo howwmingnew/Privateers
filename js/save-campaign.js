@@ -21,7 +21,7 @@ const safeEntries = o => isObj(o) ? Object.entries(o).filter(([k]) => !UNSAFE_KE
 // their wrecks with the harbor); a save with nothing in it yet is a new game and rolls its own map.
 function hasHistory(s) {
   return s.gold > 0 || s.sunk > 0 || s.wrecks.length > 0 || s.ship !== "sloop" || s.hull > 1 || s.sails > 1 || s.hold > 1 ||
-    Object.keys(s.unlocked).length > 1;
+    allGuns(s).some(x => x.g !== "six");
 }
 function sanitizeCampaignSave(s) {
   const storedSeed = toInt(s.seed, 1, 2147483647, 0), legacy = !storedSeed && hasHistory(s);

@@ -106,22 +106,25 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
     await tap(0);
     const a1 = await ev(page, () => ({ d: (() => { const a = document.activeElement; return a.dataset.k || a.id || a.tagName; })(), hull: save.hull, gold: save.gold }));
     ok("pad A buys the hull upgrade and focus stays on it", a1.hull === 2 && a1.gold < g0 && a1.d === "hull", a1);
-    // keyboard: Enter on an upgrade keeps focus; an upgrade that leaves too little gold moves on to the next control
-    const lv0 = await ev(page, () => { document.body.classList.remove("pad-nav"); document.querySelector('#armory [data-act="up"][data-id="six"]').focus(); return save.gunLv.six; });
+    // keyboard: Enter on a picked gun's upgrade keeps focus; an upgrade that leaves too little gold moves on to the next control
+    const lv0 = await ev(page, () => { document.body.classList.remove("pad-nav"); deckSel = { side: "bow", i: 0 }; renderPort();
+      document.querySelector('#gunSel [data-act="gup"]').focus(); return save.bow[0].lv; });
     await page.keyboard.press("Enter");
-    const k1 = await ev(page, () => ({ d: document.activeElement.dataset.act + ":" + document.activeElement.dataset.id, lv: save.gunLv.six }));
-    await ev(page, () => { save.gold = gunUpCost("six"); renderPort(); document.querySelector('#armory [data-act="up"][data-id="six"]').focus(); });
+    const k1 = await ev(page, () => ({ d: document.activeElement.dataset.act + ":" + (document.activeElement.dataset.id || "six"), lv: save.bow[0].lv }));
+    await ev(page, () => { save.gold = gunUpCost(save.bow[0]); renderPort(); document.querySelector('#gunSel [data-act="gup"]').focus(); });
     await page.keyboard.press("Enter");
     const k2 = await ev(page, () => ({ inSheet: sheetEl.contains(document.activeElement) && document.activeElement !== sheetEl, body: document.activeElement === document.body, dis: document.activeElement.disabled, d: document.activeElement.id || document.activeElement.dataset.act }));
     await page.keyboard.press("ArrowUp");
     const k3 = await ev(page, () => document.activeElement !== document.body && sheetEl.contains(document.activeElement));
     ok("keyboard: Enter upgrades and keeps focus; when the item can no longer be bought, focus moves on (never <body>); arrows walk from there",
-      k1.d === "up:six" && k1.lv === lv0 + 1 && k2.inSheet && !k2.body && !k2.dis && k3, { k1, k2, k3 });
-    // a gun bought turns its button from Buy into Upgrade: focus follows it
+      k1.d === "gup:six" && k1.lv === lv0 + 1 && k2.inSheet && !k2.body && !k2.dis && k3, { k1, k2, k3 });
+    // a gun bought goes into the gun store, picked; focus stays on the Buy button so a second Enter buys another
     await ev(page, () => { save.gold = 5000; renderPort(); document.querySelector('#armory [data-act="buy"][data-id="long12"]').focus(); });
+    const n0 = await ev(page, () => save.store.length);
     await page.keyboard.press("Enter");
-    const k4 = await ev(page, () => document.activeElement.dataset.act + ":" + document.activeElement.dataset.id);
-    ok("keyboard: buying a gun keeps focus on that gun's new Upgrade button", k4 === "up:long12", k4);
+    const k4 = await ev(page, () => ({ d: document.activeElement.dataset.act + ":" + document.activeElement.dataset.id, store: save.store.map(x => x.g), sel: deckSel }));
+    ok("keyboard: buying a gun puts it in the gun store, picked, and keeps focus on Buy",
+      k4.d === "buy:long12" && k4.store.length === n0 + 1 && k4.store.at(-1) === "long12" && k4.sel && k4.sel.side === "store" && k4.sel.i === n0, k4);
     // the language switch rebuilds the ledger too
     await ev(page, () => document.querySelector('#yard [data-k="sails"]').focus());
     await ev(page, () => { lang = "zh"; applyLang(); });

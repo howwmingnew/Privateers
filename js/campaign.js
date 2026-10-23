@@ -260,7 +260,7 @@ onHook("lang", () => outpostLabel?.setText(t("outpostMap")));
 // ---------- New Game+: a new map, enemies +3 levels, loot x1.5; guns (and their levels) carry over ----------
 function startNewGamePlus() {
   flushTime();   // js/logbook.js
-  const keep = { unlocked: save.unlocked, gunLv: save.gunLv, bow: save.bow, left: save.left, right: save.right, stern: save.stern,
+  const keep = { bow: save.bow, left: save.left, right: save.right, stern: save.stern, store: save.store,   // guns past the sloop's ports go to the store
     sunk: save.sunk, stats: save.stats, ach: save.ach, ngPlus: save.ngPlus + 1, tutorialDone: true };   // a returning captain needs no first-voyage coaching
   save = fitMounts({ ...defaultSave(), ...keep });
   for (const c of crates) { c.spr.destroy(); c.label?.destroy(); }

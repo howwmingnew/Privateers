@@ -336,16 +336,16 @@ for (const dpr of [1, 2]) {
   await until(page, () => tut.step === 5);
   await ev(page, () => { canDock = true; player.x = PORT.x + 150; player.y = PORT.y; });
   await until(page, () => docked && tut.step === 6);
-  await page.click('[data-act="up"][data-id="six"]');   // too soon after the ledger opened: ignored
-  const early = await ev(page, () => save.gunLv.six);
+  await page.click('[data-act="buy"][data-id="six"]');   // too soon after the ledger opened: ignored
+  const early = await ev(page, () => save.store.length + 1);
   await page.waitForTimeout(400);
   const t6 = await ev(page, () => ({ gold: save.gold, inSheet: document.getElementById("coach").parentElement.classList.contains("sheet"), txt: document.getElementById("coachTxt").textContent }));
   ok("a shop click in the first moments after docking is ignored", early === 1, { early });
   await page.screenshot({ path: join(out, "d-tutorial-ledger.png") });
-  await page.click('[data-act="up"][data-id="six"]');
+  await page.click('[data-act="buy"][data-id="six"]');
   await page.waitForTimeout(150);
   const t7 = await ev(page, () => ({ done: save.tutorialDone, txt: document.getElementById("coachTxt").textContent }));
-  ok("tutorial advances out > aim (red) > fire > sink > scoop > sell > buy > done from game state", t6.gold > 0 && t6.inSheet && /60/.test(t6.txt) && t7.done && /loop/.test(t7.txt), { t6, t7 });
+  ok("tutorial advances out > aim (red) > fire > sink > scoop > sell > buy > done from game state", t6.gold > 0 && t6.inSheet && /12/.test(t6.txt) && t7.done && /loop/.test(t7.txt), { t6, t7 });
   await page.reload({ waitUntil: "load" }); await booted(page);
   await toSea(page);
   ok("finished tutorial stays finished after a reload", await ev(page, () => !tut.active && document.getElementById("coach").hidden && save.tutorialDone));

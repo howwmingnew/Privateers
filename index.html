@@ -54,6 +54,8 @@
       <h2 data-i18n="broadside">Broadside</h2>
       <p class="hint-s" data-i18n="slotHint">Tap a gun port to swap in another cannon you own.</p>
       <div class="deck" id="deck"></div>
+      <div id="gunSel" aria-live="polite"></div>
+      <div class="bay" id="bay"></div>
     </section>
     <section>
       <h2 data-i18n="armory">Armory</h2>
@@ -214,6 +216,7 @@
 <script src="js/plunder.js"></script>
 <script src="js/harbor.js"></script>
 <script src="js/deck-art.js"></script>
+<script src="js/gunbay.js"></script>
 <!-- shell modules load before hud.js: its applyLang() at load must already see their strings -->
 <script src="js/input.js"></script>
 <script src="js/options.js"></script>

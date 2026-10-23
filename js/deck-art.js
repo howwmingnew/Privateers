@@ -16,8 +16,10 @@ function deckMuzzle(a, side, i, n) {   // ship-local point: bow +x, larboard -y 
 }
 function deckHtml() {
   const a = SHIP_ART[save.ship] || SHIP_ART.sloop, { w, h } = texSize(a);
-  const btn = (side, label, i) => { const id = save[side][i];
-    return `<button class="slot" type="button" data-act="slot" data-side="${side}" data-i="${i}" data-k="${side}${i}" aria-label="${t("slotAria", { side: label, n: i + 1, gun: t("gf_" + id) })}">${t("g_" + id)}<small>Lv ${save.gunLv[id]}</small></button>`; };
+  const btn = (side, label, i) => { const gun = save[side][i], cls = (gun ? "slot" : "slot empty") + (isPicked(side, i) ? " sel" : "");   // js/gunbay.js
+    const name = gun ? `${t("gf_" + gun.g)} Lv ${gun.lv}` : t("emptyPort");
+    return `<button class="${cls}" type="button" data-act="slot" data-side="${side}" data-i="${i}" data-k="${side}${i}" aria-pressed="${isPicked(side, i)}" aria-label="${t("slotAria", { side: label, n: i + 1, gun: name })}">` +
+      (gun ? `${t("g_" + gun.g)}<small>Lv ${gun.lv}</small>` : `${t("emptyPort")}<small>&nbsp;</small>`) + `</button>`; };
   const grp = (side, label) => {
     const idx = save[side].map((_, i) => i);
     if (!idx.length) return "";
@@ -63,8 +65,8 @@ function paintGunDeck(el = document.getElementById("deck")) {
     return `<g data-k="${b.dataset.k}"${b.dataset.k === on ? ` class="on"` : ""}><line class="halo" ${ln}/><line ${ln}/><circle cx="${f(mx)}" cy="${f(my)}" r="3"/></g>`;
   }).join("");
 }
-// The hovered or focused port's line lights up, so it is plain which gun on the hull a button sets.
-function deckActive(el) { return (el.querySelector(".slot:hover") || el.querySelector(".slot:focus"))?.dataset.k; }
+// The hovered, picked or focused port's line lights up, so it is plain which gun on the hull a button sets.
+function deckActive(el) { return (el.querySelector(".slot:hover") || el.querySelector(".slot.sel") || el.querySelector(".slot:focus"))?.dataset.k; }
 (() => {
   const el = document.getElementById("deck");
   const mark = () => { const k = deckActive(el); el.querySelectorAll(".dk-lines g").forEach(g => g.classList.toggle("on", g.dataset.k === k)); };

@@ -47,7 +47,7 @@ const tut = { active: false, step: 0, sunk0: 0, gold0: 0, sig: "", target: null,
 
 function hasProgress(s) {
   return s.sunk > 0 || s.gold > 0 || s.ship !== "sloop" || s.hull > 1 || s.sails > 1 || s.hold > 1 ||
-    Object.values(s.gunLv || {}).some(l => l > 1) || Object.keys(s.unlocked || {}).some(k => k !== "six" && s.unlocked[k]) ||
+    allGuns(s).some(x => x.lv > 1 || x.g !== "six") || (s.store || []).length > 0 ||
     (Array.isArray(s.wrecks) && s.wrecks.length > 0);
 }
 // Saves from before the tutorial existed have no tutorialDone field: a captain with progress already knows the ropes.
@@ -63,10 +63,11 @@ if (typeof SAVE_SANITIZERS !== "undefined") SAVE_SANITIZERS.push(s => ({ ...s,
   tutorialDone: s.tutorialDone === true, tutorialStep: Number.isInteger(s.tutorialStep) ? clamp(s.tutorialStep, 0, TUT.length - 1) : 0 }));
 
 const tutEl = id => document.getElementById(id);
-const purchaseSig = () => JSON.stringify([save.ship, save.hull, save.sails, save.hold, save.gunLv, save.unlocked]);
+const purchaseSig = () => JSON.stringify([save.ship, save.hull, save.sails, save.hold, allGuns().map(x => x.g + x.lv).sort(), allGuns().length]);
 function cheapestBuy() {
   const c = [];
-  for (const id of GUN_ORDER) { if (!save.unlocked[id]) c.push(GUNS[id].cost); else if (save.gunLv[id] < GUN_MAX) c.push(gunUpCost(id)); }
+  for (const id of GUN_ORDER) c.push(GUNS[id].cost);
+  for (const gun of allGuns()) if (gun.lv < GUN_MAX) c.push(gunUpCost(gun));
   for (const [k, y] of Object.entries(YARD)) if (save[k] < y.max) c.push(y.cost(save[k]));
   for (const id of SHIP_ORDER.slice(SHIP_ORDER.indexOf(save.ship) + 1)) c.push(SHIPS[id].cost);
   const m = Math.min(...c.filter(v => v > 0));
@@ -79,7 +80,7 @@ function aimOnTarget() {
     const arr = player.guns[mount.key];
     for (let i = 0; i < arr.length; i++) {
       if (arr[i].cd > 0) continue;
-      const m = muzzle(player, mount, i, arr.length);
+      const m = muzzle(player, mount, arr[i].pi, arr[i].pn);
       if (lineHits(m.x, m.y, m.a, arr[i].range)) return true;
     }
   }

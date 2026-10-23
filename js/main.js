@@ -166,7 +166,7 @@ function drawOverlays() {
     for (const mount of mounts) {
       const arr = player.guns[mount.key];
       arr.forEach((gun, i) => {
-        const m = muzzle(player, mount, i, arr.length), ready = gun.cd <= 0;
+        const m = muzzle(player, mount, gun.pi, gun.pn), ready = gun.cd <= 0;
         const len = gun.range * (ready ? 1 : 1 - gun.cd / gun.interval);
         const tg = ready ? lineHits(m.x, m.y, m.a, gun.range) : null;
         if (tg) marked.add(tg);
