@@ -3,7 +3,8 @@
 // Several modules write their own fields into this one key (audio stores { volume }), so writes always merge
 // into what is stored now instead of overwriting it with a stale copy.
 const SETTINGS_KEY = "privateers-settings";
-const SETTINGS_DEFAULTS = { shake: true, textScale: 1 };
+// Screen shake starts off for players whose system asks for reduced motion; their own choice wins once made.
+const SETTINGS_DEFAULTS = { shake: !(typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches), textScale: 1 };
 function readSettings() {
   try { const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); return s && typeof s === "object" && !Array.isArray(s) ? s : {}; }
   catch (e) { return {}; }
