@@ -1,0 +1,68 @@
+"use strict";
+// ---------- Language ----------
+const UI_FONT = '"Barlow Semi Condensed", "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+const STR = {
+  en: {
+    hull: "Hull", cargo: "Cargo", gold: "Gold", shipLv: "Ship Lv {n}", ledger: "Harbor ledger", harbor: "Safe Harbor", harborMap: "SAFE HARBOR",
+    broadside: "Gun deck", slotHint: "Tap a gun port to swap in another cannon you own.", armory: "Armory", shipwright: "Shipwright",
+    ships: "New ships", shipsHint: "A new ship starts with hull, sails and hold back at Lv 1. Your cannons move aboard.",
+    yourShip: "Your ship", shipArm: "Tap again to buy", boughtShip: "The <em>{ship}</em> is yours. Hull, sails and hold start again at Lv 1, and your cannons are aboard.",
+    shipDs: "Bow <b>{b}</b> · <b>{s}</b> per side · stern <b>{t}</b> · starts at <b>{hp}</b>, <b>{kn}</b>, hold <b>{cargo}</b>",
+    s_sloop: "Sloop", s_schooner: "Schooner", s_brig: "Brig", s_frigate: "Frigate", s_line: "Ship of the Line",
+    reset: "Reset progress", resetArm: "Tap again to wipe all progress", sail: "Set sail", langBtn: "中文",
+    hintTouch: "Drag to steer · when aim lines appear, let go to fire", hintDesk: "Drag or WASD to steer · when aim lines appear, let go (or Space) to fire", releaseTip: "Let go to fire!",
+    bow: "Bow", larboard: "Larboard", starboard: "Starboard", stern: "Stern", slotAria: "{side} gun port {n}: {gun}",
+    statLv: "Ship <b>Lv {n}</b>", statHold: "Hold <b>{n}</b>", statSunk: "Ships sunk <b>{n}</b>",
+    buy: "Buy {n}", upgrade: "Upgrade {n}", max: "Max level", notOwned: "Not owned",
+    dmg: "<b>{n}</b> dmg", burn: " + <b>{n}</b> burn", range: "range <b>{n}</b>", rpm: "<b>{n}</b>/min",
+    welcome: "Drag to sail. When an enemy comes near your bow or a broadside, aim lines appear. Each ball flies straight along its line, so turn the ship to point the lines at the enemy, then let go to fire. Sink ships, scoop up their plunder, and bring it back here to sell. Deeper waters hold richer and deadlier ships.",
+    welcomeBack: "Welcome back, captain. Your ledger is as you left it.",
+    sunkMsg: "The crew swam ashore. Your hold was lost at sea, but the shipwright patched the hull for free.",
+    sold: "Sold the hold for <em>{n} gold</em>. Hull repaired.", empty: "Hull repaired. Your hold is empty.",
+    bought: "Bought the <em>{gun}</em>. Tap a gun port to mount it.",
+    toastSunk: "Your ship went down. The cargo is lost.", toastFull: "Hold is full. Sail back to the harbor to sell.",
+    fSunk: "Sunk!", fCargo: "+{n} cargo", gaveUp: "Gave up", wreckLabel: "Your wreck",
+    toastSunkWreck: "Your ship went down. The cargo waits at the wreck.",
+    sunkWreck: "The crew swam ashore and the shipwright patched the hull for free. <em>{n} cargo</em> sank with your ship. The wreck stays where you went down (red ✕ on the map) until you recover it, even if you close the game.", badge: "Lv {n}  ·  {g}g",
+    g_six: "6-pounder", gf_six: "Iron 6-pounder", gn_six: "Reliable all-rounder",
+    g_long12: "Long 12", gf_long12: "Long 12-pounder", gn_long12: "Outranges most ships",
+    g_carronade: "Carronade", gf_carronade: "24-pdr Carronade", gn_carronade: "Smashes hulls up close",
+    g_fire: "Incendiary", gf_fire: "Incendiary Gun", gn_fire: "Sets hulls burning for 3 s",
+    y_hull: "Hull", y_sails: "Sails", y_hold: "Cargo hold",
+    u_hp: "{n} HP", u_kn: "{n} kn", u_cargo: "{n} cargo",
+  },
+  zh: {
+    hull: "船體", cargo: "貨艙", gold: "金幣", shipLv: "船艦 Lv {n}", ledger: "港口帳簿", harbor: "安全港", harborMap: "安全港",
+    broadside: "火砲配置", slotHint: "點一下砲位，換上你擁有的其他火砲。", armory: "軍械庫", shipwright: "造船廠",
+    ships: "新船", shipsHint: "換新船後，船體、船帆、貨艙的升級會從 Lv 1 重新開始。火砲會一起搬上新船。",
+    yourShip: "目前的船", shipArm: "再點一次購買", boughtShip: "<em>{ship}</em>是你的了。船體、船帆、貨艙從 Lv 1 重新開始，火砲已經搬上船。",
+    shipDs: "船首 <b>{b}</b> 門 · 每舷 <b>{s}</b> 門 · 船尾 <b>{t}</b> 門 · 起始 <b>{hp}</b>、<b>{kn}</b>、貨艙 <b>{cargo}</b>",
+    s_sloop: "單桅帆船", s_schooner: "縱帆船", s_brig: "雙桅橫帆船", s_frigate: "巡防艦", s_line: "戰列艦",
+    reset: "重置進度", resetArm: "再點一次會清除所有進度", sail: "啟航", langBtn: "EN",
+    hintTouch: "拖曳來轉向 · 出現瞄準線時放開就開火", hintDesk: "拖曳或 WASD 轉向 · 出現瞄準線時放開（或按空白鍵）開火", releaseTip: "放開就開火！",
+    bow: "船首", larboard: "左舷", starboard: "右舷", stern: "船尾", slotAria: "{side}第 {n} 個砲位：{gun}",
+    statLv: "船艦 <b>Lv {n}</b>", statHold: "貨艙 <b>{n}</b>", statSunk: "擊沉 <b>{n}</b> 艘",
+    buy: "購買 {n}", upgrade: "升級 {n}", max: "已滿級", notOwned: "未擁有",
+    dmg: "傷害 <b>{n}</b>", burn: " + 燃燒 <b>{n}</b>", range: "射程 <b>{n}</b>", rpm: "<b>{n}</b> 發/分",
+    welcome: "拖曳來航行。敵船靠近船首或舷側時會出現瞄準線。砲彈會沿著瞄準線直直飛出去，所以要轉動船身讓瞄準線對準敵船，再放開手開火。擊沉敵船、撿起戰利品，再帶回這裡賣掉。離港口越遠，敵船越富有，也越危險。",
+    welcomeBack: "歡迎回來，船長。帳簿和你離開時一樣。",
+    sunkMsg: "船員游上了岸。貨艙裡的東西沉入海底，造船廠免費修好了船體。",
+    sold: "貨艙賣得 <em>{n} 金幣</em>。船體已修好。", empty: "船體已修好。貨艙是空的。",
+    bought: "已購買<em>{gun}</em>。點一下砲位就能裝上。",
+    toastSunk: "你的船沉了，貨物全部損失。", toastFull: "貨艙已滿，回港口賣掉貨物。",
+    fSunk: "擊沉！", fCargo: "+{n} 貨物", gaveUp: "放棄追擊", wreckLabel: "你的殘骸",
+    toastSunkWreck: "你的船沉了，貨物留在殘骸那裡。",
+    sunkWreck: "船員游上了岸，造船廠免費修好了船體。<em>{n} 貨物</em>跟著船沉了。殘骸會一直留在沉沒的地方（地圖上的紅色 ✕），直到你撈回來，關掉遊戲也不會消失。", badge: "Lv {n}  ·  {g} 金",
+    g_six: "6 磅砲", gf_six: "鐵製 6 磅砲", gn_six: "可靠的通用火砲",
+    g_long12: "長 12 磅", gf_long12: "長管 12 磅砲", gn_long12: "射程勝過大多數船",
+    g_carronade: "卡隆砲", gf_carronade: "24 磅卡隆砲", gn_carronade: "近距離重創船體",
+    g_fire: "燃燒砲", gf_fire: "燃燒砲", gn_fire: "讓船體燃燒 3 秒",
+    y_hull: "船體", y_sails: "船帆", y_hold: "貨艙",
+    u_hp: "{n} HP", u_kn: "{n} 節", u_cargo: "{n} 貨物",
+  },
+};
+const LANG_KEY = "privateers-lang";
+let lang = (() => { try { const l = localStorage.getItem(LANG_KEY); if (l === "en" || l === "zh") return l; } catch (e) {}
+  return /^zh/i.test(navigator.language || "") ? "zh" : "en"; })();
+function t(key, vars) { let s = (STR[lang] && STR[lang][key]) ?? STR.en[key] ?? key;
+  if (vars) for (const k in vars) s = s.split("{" + k + "}").join(vars[k]); return s; }
