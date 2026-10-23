@@ -89,13 +89,17 @@ window.addEventListener("keydown", e => {
     if (e.button !== 0 || !sailing() || mouseHold) return;
     mouseHold = { id: e.pointerId, t: performance.now(), x: e.clientX, y: e.clientY, steer: false };
   });
+  // With another button also down, letting go of the left one is a pointermove (buttons bit 1 cleared), not a pointerup.
+  const leftUp = e => {
+    if (!mouseHold || e.pointerId !== mouseHold.id || (e.buttons & 1)) return false;
+    mouseHold = null; playerFire();   // a long hold and a quick click both fire on release
+    return true;
+  };
   window.addEventListener("pointermove", e => {
+    if (leftUp(e)) return;
     if (mouseHold && e.pointerId === mouseHold.id && Math.hypot(e.clientX - mouseHold.x, e.clientY - mouseHold.y) > CLICK_PX) mouseHold.steer = true;
   });
-  window.addEventListener("pointerup", e => {
-    if (!mouseHold || e.pointerId !== mouseHold.id || e.button !== 0) return;
-    mouseHold = null; playerFire();   // a long hold and a quick click both fire on release
-  });
+  window.addEventListener("pointerup", leftUp);
   window.addEventListener("pointercancel", e => { if (mouseHold && e.pointerId === mouseHold.id) mouseHold = null; });
 })();
 function cancelPointerInput() {
@@ -116,6 +120,9 @@ function mouseSteer() {
 }
 
 // ---------- Gamepad ----------
+// A cross-origin iframe without allow="gamepad" makes getGamepads() throw, and Phaser's plugin calls it every frame,
+// so only enable the plugin when the call works (js/main.js boot config).
+function padsAllowed() { try { return typeof navigator.getGamepads === "function" && (navigator.getGamepads(), true); } catch (e) { return false; } }
 // Phaser keeps a stale pad object after a disconnect, so only trust pads the browser still lists.
 function readPad() {
   const gp = S && S.input && S.input.gamepad;

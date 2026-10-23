@@ -207,7 +207,7 @@ function boot() {
     type: Phaser.AUTO, parent: "game", backgroundColor: "#155a73",
     scale: viewScaleConfig(),   // device-pixel canvas shown at CSS size (js/view.js)
     callbacks: { preBoot: g => { if (typeof watchBoot === "function") watchBoot(g); } },   // crash message (js/boot-guard.js)
-    input: { gamepad: true },
+    input: { gamepad: padsAllowed() },   // js/input.js
     render: { antialias: true }, scene: [Main], audio: { noAudio: true },   // all sound goes through Snd (js/audio.js)
   });
 }

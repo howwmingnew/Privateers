@@ -6,6 +6,7 @@ body.on-title #hud, body.on-title #hint, body.on-title #joy, body.on-title #coac
 body.on-title #toast { z-index: 25; top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); }
 body.on-pause #hint, body.on-pause #joy { display: none !important; }
 #port .sheet { scroll-padding: 16px 0 96px; }   /* focus moves never land behind the sticky footer */
+#port .sheet:focus { outline: none; }            /* the sheet only holds focus so stray fire keys press nothing */
 
 .shell { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow: hidden;
   padding-block: calc(env(safe-area-inset-top, 0px) + 12px) calc(env(safe-area-inset-bottom, 0px) + 12px);

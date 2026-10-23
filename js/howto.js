@@ -2,7 +2,7 @@
 // ---------- How to play + credits (static rich text; menu.js renders [data-i18n-html] on every language change) ----------
 // The swatches (<i class="sw-...">) are drawn in css/menu.css with the same colours the game uses.
 Object.assign(STR.en, {
-  ht_replay: "Replay the first-voyage tutorial", ht_replayed: "The tutorial starts on your next voyage.",
+  ht_replay: "Replay the first-voyage tutorial", ht_replayed: "The tutorial starts on your next voyage.", ht_restarted: "First-voyage tutorial restarted.",
   ht_controls: `<h3>Controls</h3><dl class="ctl">
     <dt>Keyboard</dt><dd><kbd>A</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>→</kbd> turn. <kbd>W</kbd> <kbd>S</kbd> or <kbd>↑</kbd> <kbd>↓</kbd> raise and lower the sail (stopped, slow, half, full); the ship holds that speed. <kbd>Space</kbd> fires every loaded gun that bears. <kbd>Esc</kbd> or <kbd>P</kbd> pauses.</dd>
     <dt>Mouse</dt><dd>Hold the left button to steer toward the cursor: the farther the cursor, the more sail. Let go to fire. A quick click just fires.</dd>
@@ -28,7 +28,7 @@ Object.assign(STR.en, {
     <p class="note">Fonts: IM Fell English SC, Barlow Semi Condensed, Noto Serif TC and Noto Sans TC, from Google Fonts under the SIL Open Font License.</p>`,
 });
 Object.assign(STR.zh, {
-  ht_replay: "重玩首航教學", ht_replayed: "下次出航時會開始教學。",
+  ht_replay: "重玩首航教學", ht_replayed: "下次出航時會開始教學。", ht_restarted: "首航教學已重新開始。",
   ht_controls: `<h3>操作方式</h3><dl class="ctl">
     <dt>鍵盤</dt><dd><kbd>A</kbd> <kbd>D</kbd> 或 <kbd>←</kbd> <kbd>→</kbd> 轉向。<kbd>W</kbd> <kbd>S</kbd> 或 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆（收帆、慢速、半帆、滿帆），船會維持這個速度。<kbd>空白鍵</kbd>讓所有對準目標且已裝填的火砲開火。<kbd>Esc</kbd> 或 <kbd>P</kbd> 暫停。</dd>
     <dt>滑鼠</dt><dd>按住左鍵，船會朝游標駛去；游標離船越遠，帆張得越滿。放開就開火，快速點一下則只開火。</dd>

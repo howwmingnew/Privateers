@@ -100,7 +100,7 @@ function forgivingSpawn() {
 function tutorialOnVoyage() {
   const easy = forgivingSpawn();
   tutorialStart();
-  if (easy) tut.target = easy;
+  tut.target = easy || null;   // the old sea was just destroyed (resetEnemies), so drop any old target too
 }
 function tutorialStart() {
   if (save.tutorialDone || tut.active) return;
@@ -136,6 +136,7 @@ function tutorialTick(dt) {
   if (!tut.active) { if (tut.g) tut.g.clear(); return; }
   if (tut.doneT > 0) { tut.doneT -= dt; if (tut.doneT <= 0) tut.active = false; renderCoach(); if (tut.g) tut.g.clear(); return; }
   const at = TUT[tut.step];
+  if (at === "buy" && !cheapestBuy()) { finish(); renderCoach(); return; }   // a replay on a maxed-out save: nothing left to buy
   let next = tut.step;
   if (!docked && !paused) {
     if (save.sunk > tut.sunk0 && next < 4) next = 4;                       // played ahead of the card: catch up
@@ -183,9 +184,10 @@ document.addEventListener("devicechange", () => { tut.html = ""; renderCoach(); 
 function guideTarget(dt) {
   const at = TUT[tut.step];
   if (at === "aim" || at === "fire" || at === "sink") {
-    if (tut.target && tut.target.alive) return { x: tut.target.x, y: tut.target.y, r: 46 };
+    const live = tut.target && tut.target.alive && enemies.includes(tut.target);   // not sunk, not removed from the sea
+    if (live) return { x: tut.target.x, y: tut.target.y, r: 46 };
     tut.pickT -= dt;
-    if (tut.pickT <= 0 || !tut.target || !tut.target.alive) {
+    if (tut.pickT <= 0 || !live) {
       tut.pickT = 0.5;
       const mine = shipRating();
       tut.target = enemies.filter(e => e.alive && e.L <= mine && dist(e, player) < 1600).sort((a, b) => dist(a, player) - dist(b, player))[0] || null;

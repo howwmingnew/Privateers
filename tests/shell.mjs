@@ -76,10 +76,13 @@ const tank = page => ev(page, () => { player.maxHp = player.hp = 1e6; });
   ok("title: camera drifts, ships stay still", Math.hypot(after.cam[0] - before.cam[0], after.cam[1] - before.cam[1]) > 1 && after.e === before.e);
   await page.screenshot({ path: join(out, "d-title-en.png") });
 
-  await page.click("[data-smoke=start]");
+  await page.keyboard.down("Enter");                  // a held Enter starts the game once and stops at the ledger
+  await page.keyboard.down("Enter"); await page.keyboard.down("Enter");   // (Playwright sends these as auto-repeats)
+  await page.keyboard.up("Enter");
   await until(page, () => docked);
   await page.waitForTimeout(100);
-  ok("ledger opens at the top with Set sail focused", await ev(page, () => document.querySelector("#port .sheet").scrollTop === 0 && document.activeElement.id === "sail"));
+  ok("held Enter on the title stops at the ledger; it opens at the top with focus on the sheet, not Set sail", await ev(page, () =>
+    docked && document.querySelector("#port .sheet").scrollTop === 0 && document.activeElement === document.querySelector("#port .sheet")));
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("PageDown");
   await page.waitForTimeout(500);                     // keyboard scrolling is animated
@@ -90,9 +93,13 @@ const tank = page => ev(page, () => { player.maxHp = player.hp = 1e6; });
   await ev(page, () => { canDock = true; player.x = PORT.x + 150; player.y = PORT.y; });
   await until(page, () => docked);
   ok("ledger reopens scrolled to the top after a voyage", await ev(page, () => document.querySelector("#port .sheet").scrollTop === 0));
+  for (let i = 0; i < 3; i++) { await page.keyboard.press("Space"); await page.waitForTimeout(60); }   // still mashing fire
+  const mash = await ev(page, () => ({ docked, top: document.querySelector("#port .sheet").scrollTop, act: document.activeElement.id || document.activeElement.className }));
+  await page.keyboard.press("Enter");
+  const first = await ev(page, () => ({ docked, act: document.activeElement.id }));
   await page.keyboard.press("Enter");
   await until(page, () => !docked && !paused);
-  ok("Enter on the focused Set sail sets sail", true);
+  ok("fire keys mashed into the ledger press nothing; Enter goes to Set sail, Enter again sails", mash.docked && mash.top === 0 && first.docked && first.act === "sail", { mash, first });
   await tank(page);
 
   // keyboard: sail steps hold speed after release, turning keys never fire
@@ -180,6 +187,16 @@ const tank = page => ev(page, () => { player.maxHp = player.hp = 1e6; });
   await page.mouse.down({ button: "right" }); await page.waitForTimeout(250); await page.mouse.up({ button: "right" });
   const ctxm = await ev(page, () => { const e = new MouseEvent("contextmenu", { bubbles: true, cancelable: true }); document.querySelector("#game canvas").dispatchEvent(e); return e.defaultPrevented; });
   ok("right button neither steers nor fires; context menu suppressed", ctxm && await ev(page, () => window.__fires === 2 && !mouseHold));
+  await page.mouse.down(); await page.mouse.down({ button: "right" }); await page.waitForTimeout(250);
+  await page.mouse.up(); await page.waitForTimeout(50);   // left let go first, right still held
+  const lr = await ev(page, () => ({ hold: !!mouseHold, fires: window.__fires }));
+  await page.mouse.up({ button: "right" });
+  ok("left released while right is held still ends the steer and fires", !lr.hold && lr.fires === 3, lr);
+  // holding Esc pauses once; auto-repeats do not flip it back
+  await page.keyboard.down("Escape"); await page.keyboard.down("Escape"); await page.keyboard.down("Escape"); await page.keyboard.up("Escape");
+  const held = await ev(page, () => pauseOpen);
+  await page.keyboard.press("Escape");
+  ok("a held Esc pauses once (auto-repeat ignored)", held && await ev(page, () => !pauseOpen));
 
   // quit to title with cargo asks twice, then Continue docks at the harbor
   await ev(page, () => { cargo = 40; });
@@ -258,8 +275,14 @@ for (const dpr of [1, 2]) {
   await until(page, () => docked);
   await page.waitForTimeout(100);
   ok("pad on title: D-pad moves focus, A starts; pad focus ring class on", f1 === "howto" && await ev(page, () => device === "pad" && document.body.classList.contains("pad-nav")), { f1 });
-  await tap(0);                                     // A on the focused Set sail
+  await tap(0);                                     // fire-mashing into the ledger: ignored while it appears
+  const stillSheet = await ev(page, () => docked && document.activeElement === document.querySelector("#port .sheet"));
+  await page.waitForTimeout(700);
+  await tap(0);                                     // A on the sheet moves to Set sail...
+  const onSail = await ev(page, () => docked && document.activeElement.id === "sail");
+  await tap(0);                                     // ...and A again sails
   await until(page, () => !docked && !paused);
+  ok("pad in the ledger: A ignored as it opens, then the first A goes to Set sail and the second sails", stillSheet && onSail, { stillSheet, onSail });
   await tank(page); await spyFire(page);
   await ev(page, () => { player.rot = Math.PI; __pad.axes = [1, 0, 0, 0]; });
   await page.waitForTimeout(2200);                   // a half turn from standstill takes about two seconds
@@ -313,8 +336,11 @@ for (const dpr of [1, 2]) {
   await until(page, () => tut.step === 5);
   await ev(page, () => { canDock = true; player.x = PORT.x + 150; player.y = PORT.y; });
   await until(page, () => docked && tut.step === 6);
-  await page.waitForTimeout(150);
+  await page.click('[data-act="up"][data-id="six"]');   // too soon after the ledger opened: ignored
+  const early = await ev(page, () => save.gunLv.six);
+  await page.waitForTimeout(400);
   const t6 = await ev(page, () => ({ gold: save.gold, inSheet: document.getElementById("coach").parentElement.classList.contains("sheet"), txt: document.getElementById("coachTxt").textContent }));
+  ok("a shop click in the first moments after docking is ignored", early === 1, { early });
   await page.screenshot({ path: join(out, "d-tutorial-ledger.png") });
   await page.click('[data-act="up"][data-id="six"]');
   await page.waitForTimeout(150);

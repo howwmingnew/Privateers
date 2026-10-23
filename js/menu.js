@@ -40,8 +40,8 @@ function shellBoot(sc) {
 function shellTick(dt) {
   if (titleOpen && sailing()) { closeAllPanels(); closeTitle(); }   // set sail without the title (a script or test): step aside
   if (docked !== wasDocked) {            // the ledger opened or closed (harbor.js dock / setSail)
-    wasDocked = docked;
-    if (docked) onDocked(); else if (!paused) onVoyage();
+    wasDocked = docked;                  // toTitle() resets wasDocked itself, so a close here is always a departure,
+    if (docked) onDocked(); else onVoyage();   // even if a blur paused the game in the same frame
   }
   const sea = sailing();
   if (sea !== capOn) {                   // let menus and the ledger keep their native keys (arrows scroll, Space presses)
@@ -52,11 +52,24 @@ function shellTick(dt) {
   if (titleOpen) driftCamera(dt);
   tutorialTick(dt);
 }
-function onDocked() {
-  setSailLevel(0); cancelPointerInput();
-  if (!panels.length) $m("sail").focus({ preventScroll: true });   // Enter / pad A sets sail straight away
-}
+function onDocked() { setSailLevel(0); cancelPointerInput(); }
 function onVoyage() { setSailLevel(0); tutorialOnVoyage(); }
+
+// The ledger opens under keys and clicks that were meant for the sea (fire is Space / A / a click), so it takes focus on
+// the sheet itself: the first Enter, Space or pad A only moves to Set sail, and shop buttons ignore clicks for a moment.
+const portEl = $m("port"), sheetEl = portEl.querySelector(".sheet");
+let portOpenedAt = 0;
+sheetEl.tabIndex = -1;
+$m("sail").classList.add("primary");    // what pad A / focusFirst() lands on in the ledger
+new MutationObserver(() => {            // a microtask after dock() shows it, so before the next input event
+  if (portEl.hidden) return;
+  portOpenedAt = performance.now();
+  if (!panels.length) sheetEl.focus({ preventScroll: true });
+}).observe(portEl, { attributes: true, attributeFilter: ["hidden"] });
+portEl.addEventListener("click", e => {
+  const age = performance.now() - portOpenedAt;   // a double-click on Continue lands its second click here too
+  if (e.target.closest("[data-act]") && (age < 350 || (e.detail > 1 && age < 700))) { e.stopImmediatePropagation(); e.preventDefault(); }
+}, true);
 
 // ---------- title ----------
 function showTitle() {
@@ -208,7 +221,7 @@ function menuAction(act, b) {
     case "resume": resumeGame(); break;
     case "quit": pressQuit(); break;
     case "skip-tut": tutorialSkip(); if (pauseOpen) { renderPause(); focusFirst($m("pause")); } break;
-    case "replay-tut": tutorialReplay(); toast(t("ht_replayed")); closePanel(); if (pauseOpen) resumeGame(); break;
+    case "replay-tut": tutorialReplay(); toast(t(titleOpen ? "ht_replayed" : "ht_restarted")); closePanel(); if (pauseOpen) resumeGame(); break;
   }
 }
 document.addEventListener("click", e => {
@@ -263,7 +276,8 @@ const DIRS = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRig
 // Runs in the capture phase, before Phaser. Never preventDefault Space at sea: Phaser drops prevented events.
 window.addEventListener("keydown", e => {
   if (e.ctrlKey || e.altKey || e.metaKey || !S) return;
-  const k = e.key, isP = k === "p" || k === "P";
+  const k = e.key, isP = k === "p" || k === "P", press = k === " " || k === "Enter";
+  if (e.repeat && (k === "Escape" || isP)) { e.preventDefault(); return; }   // holding Esc must not flicker pause / resume
   if (sailing()) {
     if (k === "Escape" || isP) { e.preventDefault(); pauseGame(); return; }
     const a = document.activeElement;
@@ -274,10 +288,15 @@ window.addEventListener("keydown", e => {
   }
   const root = activeRoot();
   if (!root) return;
+  if (press && e.repeat) { e.preventDefault(); return; }   // a held Enter must not run title > ledger > sea on its own
   if (k === "Escape") { e.preventDefault(); goBack(); return; }
   if (isP && pauseOpen && !panels.length) { e.preventDefault(); resumeGame(); return; }
   if (k === "Tab") { trapTab(e, root); return; }
-  if (root.matches("#port .sheet")) return;          // the ledger keeps native arrow scrolling
+  if (root === sheetEl) {                              // the ledger keeps native arrow scrolling
+    // Space is the fire key, so on the bare sheet it does nothing; Enter (never a fire key) moves to Set sail
+    if (press && document.activeElement === sheetEl) { e.preventDefault(); if (k === "Enter") $m("sail").focus({ preventScroll: true }); }
+    return;
+  }
   const dir = DIRS[k], a = document.activeElement;
   if (!dir || (a && a.type === "range" && dir[0])) return;   // left / right still move a slider
   e.preventDefault(); moveFocus(root, dir[0], dir[1]);
@@ -293,7 +312,8 @@ function padTick(dt) {
     padVec = { x: 0, y: 0, m: 0 };
     padNav(s, dt);
     const root = activeRoot(), a = document.activeElement;
-    if (pressed("a") && root) { if (a && root.contains(a) && a.matches("button")) a.click(); else focusFirst(root); }
+    const quiet = docked && performance.now() - portOpenedAt < 650;   // A is also fire: ignore it as the ledger appears
+    if (pressed("a") && root && !quiet) { if (a && root.contains(a) && a.matches("button")) a.click(); else focusFirst(root); }
     if (pressed("b")) goBack();
   }
   padPrev = s;
