@@ -16,8 +16,8 @@ const ok = (name, pass, info) => {
 };
 const D = { width: 1280, height: 720 }, M = { width: 390, height: 844 };
 
-async function open(viewport, { mobile = false, locale = "en-US", keep = false, tag = "" } = {}) {
-  const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, locale, isMobile: mobile, hasTouch: mobile });
+async function open(viewport, { mobile = false, locale = "en-US", keep = false, tag = "", dpr = 1 } = {}) {
+  const ctx = await browser.newContext({ viewport, deviceScaleFactor: dpr, locale, isMobile: mobile, hasTouch: mobile });
   const page = await ctx.newPage();
   page.on("pageerror", e => errors.push(`[${tag}] pageerror: ${e.message}`));
   page.on("console", m => { if (m.type() === "error" && !/favicon/i.test(m.text())) errors.push(`[${tag}] console: ${m.text()}`); });
@@ -195,6 +195,22 @@ const tank = page => ev(page, () => { player.maxHp = player.hp = 1e6; });
   await ctx.close();
 }
 
+// ---------- 1b. HiDPI: the mouse's sail step follows CSS distance, so 2x screens behave like 1x ----------
+for (const dpr of [1, 2]) {
+  const { ctx, page } = await open(D, { tag: `dpr${dpr}`, dpr });
+  await toSea(page); await tank(page);
+  const lv = [];
+  for (const cssDist of [80, 150, 260]) {
+    await ev(page, () => { player.rot = 0; player.speed = 0; setSailLevel(0); });
+    const at = await ev(page, d => { const c = S.game.canvas.getBoundingClientRect(), cam = S.cameras.main, k = S.game.canvas.width / c.width;
+      return { x: (player.x - cam.worldView.x) * cam.zoom / k, y: (player.y - cam.worldView.y) * cam.zoom / k - d }; }, cssDist);
+    await page.mouse.move(at.x, at.y); await page.mouse.down(); await page.waitForTimeout(260);
+    lv.push(await ev(page, () => sailLevel)); await page.mouse.up(); await page.waitForTimeout(80);
+  }
+  ok(`dpr ${dpr}: mouse distance 80 / 150 / 260 CSS px gives slow / half / full sail`, lv.join() === "1,2,3", lv);
+  await ctx.close();
+}
+
 // ---------- 2. touch stick unchanged (CDP touch on a phone viewport) ----------
 {
   const { ctx, page } = await open(M, { mobile: true, tag: "touch" });
@@ -346,6 +362,15 @@ const tank = page => ev(page, () => { player.maxHp = player.hp = 1e6; });
   const { ctx, page } = await open(D, { tag: "set" });
   await page.click("#title [data-menu=settings]");
   const audioHidden = await ev(page, () => document.getElementById("setAudio").hidden === (typeof Snd === "undefined"));
+  if (await ev(page, () => typeof Snd !== "undefined")) {     // the audio group drives the real Snd
+    await page.click('[data-set="sound"][data-v="off"]');
+    const mu = await ev(page, () => ({ muted: Snd.isMuted(), pressed: document.querySelector('[data-set="sound"][data-v="off"]').getAttribute("aria-pressed") }));
+    await page.click('[data-set="sound"][data-v="on"]');
+    await page.fill('[data-vol="music"]', "40");
+    const mv = await ev(page, () => ({ muted: Snd.isMuted(), music: Snd.getVolume("music"), out: document.querySelector('[data-vol="music"]').nextElementSibling.textContent }));
+    ok("settings: All sound off/on mutes Snd; the music slider sets Snd's music volume", mu.muted && mu.pressed === "true" && !mv.muted && Math.abs(mv.music - 0.4) < 1e-9 && mv.out === "40%", { mu, mv });
+    await page.screenshot({ path: join(out, "d-settings-audio-en.png") });
+  }
   await page.click('[data-set="shake"][data-v="off"]');
   await page.click('[data-set="ts"][data-v="1.3"]');
   await page.click('[data-set="lang"][data-v="zh"]');

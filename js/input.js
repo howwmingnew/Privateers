@@ -110,7 +110,7 @@ function mouseSteer() {
   const cam = S.cameras.main, p = S.input.mousePointer || S.input.activePointer;
   p.updateWorldPoint(cam);   // the camera follows the ship, so the world point moves even when the mouse does not
   const dx = p.worldX - player.x, dy = p.worldY - player.y;
-  const css = Math.hypot(dx, dy) * cam.zoom / ((S.scale.displayScale && S.scale.displayScale.x) || 1);
+  const css = Math.hypot(dx, dy) * cam.zoom / (typeof VIEW !== "undefined" ? VIEW.dpr : 1);   // zoom includes dpr (js/view.js)
   setSailLevel(MOUSE_SAIL_PX.filter(px => css >= px).length);
   return Math.atan2(dy, dx);
 }

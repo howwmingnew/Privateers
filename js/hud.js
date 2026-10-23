@@ -1,7 +1,7 @@
 "use strict";
 // ---------- HUD ----------
 let toastTimer;
-function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("on"), 2400); }
+function toast(msg) { const el = document.getElementById("toast"); el.textContent = msg; el.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("on"), 2400); }
 function hud(force) {
   const $ = id => document.getElementById(id);
   $("hpFill").style.width = clamp(player.hp / player.maxHp, 0, 1) * 100 + "%";
@@ -74,7 +74,7 @@ function applyLang() {
   document.dispatchEvent(new Event("langchange"));   // modules with their own dynamic text re-render on this
 }
 document.querySelectorAll("[data-lang-toggle]").forEach(el => el.addEventListener("click", () => {
-  lang = lang === "zh" ? "en" : "zh";
+  lang = lang === "zh" ? "en" : "zh"; Snd.play("uiClick");
   try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
   applyLang();
 }));

@@ -30,7 +30,7 @@ const ringOf = L => ({ r0: Math.max(SPAWN_R_MIN, SAFE_R + (L - 1) * ZONE_STEP), 
 function spawnEnemy(sc, at) {
   let x, y, ok = !!at;
   if (at) ({ x, y } = at);
-  for (let t = 0; t < 40 && !ok; t++) {
+  for (let tries = 0; tries < 40 && !ok; tries++) {
     // radius (not area) is uniform, so every ring gets a similar share and low levels stay common near the harbor
     const r = rand(SPAWN_R_MIN, SPAWN_R_MAX), a = rand(0, TAU);
     x = PORT.x + Math.cos(a) * r; y = PORT.y + Math.sin(a) * r;

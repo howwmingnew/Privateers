@@ -29,10 +29,10 @@ class Main extends Phaser.Scene {
     cam.startFollow(player.spr, true, 0.15, 0.15);
     this.keys = this.input.keyboard.addKeys("W,A,S,D,UP,DOWN,LEFT,RIGHT");
     this.input.keyboard.on("keydown-SPACE", () => playerFire());
+    this.input.keyboard.on("keydown-M", () => toast(t(Snd.toggleMute() ? "muted" : "unmuted")));
     for (let i = 0; i < ENEMY_COUNT; i++) spawnEnemy(this);
     for (const w of save.wrecks) addCrate(w.x, w.y, w.value, w);
-    const fit = () => cam.setZoom(clamp(Math.min(this.scale.width, this.scale.height) / 720, 0.55, 1.1));
-    this.scale.on("resize", fit); fit();
+    fitView(this);   // camera zoom, crisp text and canvas size for HiDPI screens (js/view.js)
     buildMiniBase();
     player.spr.setPosition(player.x, player.y);
     cam.centerOn(player.x, player.y);
@@ -75,6 +75,7 @@ function step(dt) {
     if (s.speed > 25 && s.wakeT <= 0) { s.wakeT = 0.07; S.fx.wake.emitParticleAt(s.x - Math.cos(s.rot) * 30, s.y - Math.sin(s.rot) * 30, 1); }
     if (s.burnT > 0) { s.burnT -= dt; s.hp -= s.burnDps * dt; s.burnFx -= dt;
       if (s.burnFx <= 0) { s.burnFx = 0.08; S.fx.spark.emitParticleAt(s.x + rand(-20, 20), s.y + rand(-8, 8), 1); }
+      s.burnSnd = (s.burnSnd || 0) - dt; if (s.burnSnd <= 0) { s.burnSnd = rand(0.2, 0.45); Snd.play("burn", { x: s.x, y: s.y }); }
       if (s.hp <= 0) sink(s, s.burnSrc); }
     if (s.badge) s.badge.setPosition(s.x, s.y - 38);
   }
@@ -86,6 +87,16 @@ function step(dt) {
   if (tip) { releaseTips++; toast(t(tip)); }
   engagedPrev = engaged;
   for (const e of living) fire(e, e.target && isHostile(e, e.target) ? [e.target] : [], dt);
+  // --- audio: ears on the player, combat music while a hostile ship is close ---
+  Snd.setListener(player.x, player.y);
+  Snd.setMotion(player.alive ? player.speed / player.maxSpeed : 0);
+  Snd.setIntensity(player.alive ? threatLevel(living, engaged) : 0);
+  if (player.alive && player.hp < player.maxHp * 0.3) Snd.play("lowHull");   // rate-limited inside Snd
+  for (const m of MOUNTS) {   // a soft knock when a whole mount has reloaded
+    const arr = player.guns[m.key], ready = arr.every(g => g.cd <= 0);
+    if (arr.length && ready && reloadWas[m.key] === false && player.alive) Snd.play("reload", { pan: Math.cos(player.rot + m.ang) * 0.4 });
+    reloadWas[m.key] = ready;
+  }
   // --- cannonballs ---
   for (let i = balls.length - 1; i >= 0; i--) {
     const b = balls[i];
@@ -99,6 +110,7 @@ function step(dt) {
     if (hit) { S.fx.spark.explode(10, b.x, b.y); hurt(hit, b.dmg, b.burn, b.owner); }
     if (hit || onRock || b.life <= 0) {
       if (!hit) S.fx.splash.explode(onRock ? 4 : 8, b.x, b.y);
+      if (!hit && !onRock) Snd.play("splash", { x: b.x, y: b.y });
       b.spr.destroy(); balls.splice(i, 1);
     }
   }
@@ -108,9 +120,9 @@ function step(dt) {
     const d = dist(c, player), room = player.cap - cargo;
     if (player.alive && d < 150 && room > 0) { const k = Math.min(1, 260 * dt / Math.max(d, 1)); c.x += (player.x - c.x) * k; c.y += (player.y - c.y) * k; }
     if (player.alive && d < 32) {
-      if (room > 0) { const take = Math.min(room, c.value); cargo += take; c.value -= take; floatText(c.x, c.y - 10, t("fCargo", { n: fmt(take) }), "#f0c766", 17);
+      if (room > 0) { const take = Math.min(room, c.value); cargo += take; c.value -= take; floatText(c.x, c.y - 10, t("fCargo", { n: fmt(take) }), "#f0c766", 17); Snd.play("pickup");
         if (c.wreck) { c.wreck.value = c.value; if (c.value <= 0) save.wrecks = save.wrecks.filter(w => w !== c.wreck); persist(); } }
-      else if (S.time.now - lastHoldToast > 3000) { lastHoldToast = S.time.now; toast(t("toastFull")); }
+      else if (S.time.now - lastHoldToast > 3000) { lastHoldToast = S.time.now; toast(t("toastFull")); Snd.play("denied"); }
     }
     if (c.wreck) { c.wreck.x = Math.round(c.x); c.wreck.y = Math.round(c.y); }
     c.spr.setPosition(c.x, c.y + Math.sin(c.t * 3) * 2).setAlpha(!c.wreck && c.t > 55 ? clamp((60 - c.t) / 5, 0, 1) : 1);
@@ -129,6 +141,18 @@ function step(dt) {
   }
   spawnT -= dt;
   if (spawnT <= 0) { spawnT = 1.2; if (enemies.filter(e => e.alive).length < ENEMY_COUNT) spawnEnemy(S); }
+}
+
+const reloadWas = {};   // per mount: were all its guns loaded last frame? (for the reload knock)
+// 0..1 for the music's combat layer: 1 when a ship is closing on us, less when hostiles are merely about.
+function threatLevel(living, engaged) {
+  let k = engaged ? 0.6 : 0;
+  for (const e of living) {
+    const d = dist(e, player); if (d > 900) continue;
+    if (e.target === player) k = Math.max(k, d < 600 ? 1 : 0.75);
+    else if (isHostile(e, player)) k = Math.max(k, 0.35);
+  }
+  return k;
 }
 
 function drawOverlays() {
@@ -172,9 +196,10 @@ function drawOverlays() {
 function boot() {
   new Phaser.Game({
     type: Phaser.AUTO, parent: "game", backgroundColor: "#155a73",
-    scale: { mode: Phaser.Scale.RESIZE, width: "100%", height: "100%" },
+    scale: viewScaleConfig(),   // device-pixel canvas shown at CSS size (js/view.js)
+    callbacks: { preBoot: g => { if (typeof watchBoot === "function") watchBoot(g); } },   // crash message (js/boot-guard.js)
     input: { gamepad: true },
-    render: { antialias: true }, scene: [Main],
+    render: { antialias: true }, scene: [Main], audio: { noAudio: true },   // all sound goes through Snd (js/audio.js)
   });
 }
 Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 1500))]).then(boot);

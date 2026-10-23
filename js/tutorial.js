@@ -54,8 +54,11 @@ function hasProgress(s) {
 (() => {
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) {}
-  if (!(raw && typeof raw === "object" && "tutorialDone" in raw) && hasProgress(save)) save.tutorialDone = true;
+  if (!(raw && typeof raw === "object" && "tutorialDone" in raw) && hasProgress(save)) save = { ...save, tutorialDone: true };
 })();
+// js/save.js runs these on every load (and once more after all scripts): a bad or missing value means "not done yet".
+if (typeof SAVE_SANITIZERS !== "undefined") SAVE_SANITIZERS.push(s => ({ ...s,
+  tutorialDone: s.tutorialDone === true, tutorialStep: Number.isInteger(s.tutorialStep) ? clamp(s.tutorialStep, 0, TUT.length - 1) : 0 }));
 
 const tutEl = id => document.getElementById(id);
 const purchaseSig = () => JSON.stringify([save.ship, save.hull, save.sails, save.hold, save.gunLv, save.unlocked]);
@@ -199,14 +202,15 @@ function drawGuide(dt) {
   if (docked || paused) return;
   const tg = guideTarget(dt);
   if (!tg) return;
-  const cam = S.cameras.main, v = cam.worldView, z = cam.zoom, now = S.time.now / 1000;
-  if (tg.r) { g.lineStyle(3 / z, 0xf0c766, 0.9); g.strokeCircle(tg.x, tg.y, tg.r + Math.sin(now * 4) * 4); }
-  // keep the arrow clear of the HUD strip at the top (in screen px, so divide by zoom)
-  const L = v.x + 48 / z, R = v.right - 48 / z, T = v.y + 130 / z, B = v.bottom - 56 / z;
+  // px = CSS pixels on screen in world units (camera zoom includes the device pixel ratio, js/view.js)
+  const cam = S.cameras.main, v = cam.worldView, px = (typeof VIEW !== "undefined" ? VIEW.dpr : 1) / cam.zoom, now = S.time.now / 1000;
+  if (tg.r) { g.lineStyle(3 * px, 0xf0c766, 0.9); g.strokeCircle(tg.x, tg.y, tg.r + Math.sin(now * 4) * 4); }
+  // keep the arrow clear of the HUD strip at the top
+  const L = v.x + 48 * px, R = v.right - 48 * px, T = v.y + 130 * px, B = v.bottom - 56 * px;
   if (tg.x > L && tg.x < R && tg.y > T && tg.y < B) return;
   const cx = (L + R) / 2, cy = (T + B) / 2, a = Math.atan2(tg.y - cy, tg.x - cx);
   const k = Math.min((R - L) / 2 / Math.max(Math.abs(Math.cos(a)), 1e-6), (B - T) / 2 / Math.max(Math.abs(Math.sin(a)), 1e-6));
-  const ax = cx + Math.cos(a) * k, ay = cy + Math.sin(a) * k, s = 18 / z;
+  const ax = cx + Math.cos(a) * k, ay = cy + Math.sin(a) * k, s = 18 * px;
   g.fillStyle(0x08222d, 0.6); g.fillCircle(ax, ay, s * 1.15);
   g.fillStyle(0xf0c766, 1);
   g.fillTriangle(ax + Math.cos(a) * s, ay + Math.sin(a) * s, ax + Math.cos(a + 2.4) * s * 0.8, ay + Math.sin(a + 2.4) * s * 0.8, ax + Math.cos(a - 2.4) * s * 0.8, ay + Math.sin(a - 2.4) * s * 0.8);

@@ -8,25 +8,26 @@ function fire(s, targets, dt) {
     arr.forEach((g, i) => {
       g.cd -= dt; if (g.cd > 0) return;
       let best = null, bd = 1e9;
-      for (const t of targets) {
-        if (!t.alive) continue;
-        const dx = t.x - s.x, dy = t.y - s.y, d = Math.hypot(dx, dy);
+      for (const tg of targets) {
+        if (!tg.alive) continue;
+        const dx = tg.x - s.x, dy = tg.y - s.y, d = Math.hypot(dx, dy);
         if (d > g.range || d >= bd) continue;
         if (Math.abs(angDiff(Math.atan2(dy, dx), normal)) > ARC) continue;
-        best = t; bd = d;
+        best = tg; bd = d;
       }
       if (!best) { g.cd = 0; return; }
       const off = n === 1 ? 0 : -18 + 36 * i / (n - 1);
       const mx = s.x + Math.cos(s.rot) * off + Math.cos(normal) * 13;
       const my = s.y + Math.sin(s.rot) * off + Math.sin(normal) * 13;
-      const lead = s.isPlayer ? 1 : s.aimLead, t = bd / BALL_SPEED;
-      const tx = best.x + best.vx * t * lead, ty = best.y + best.vy * t * lead;
+      const lead = s.isPlayer ? 1 : s.aimLead, tof = bd / BALL_SPEED;   // ball time of flight
+      const tx = best.x + best.vx * tof * lead, ty = best.y + best.vy * tof * lead;
       const ang = Math.atan2(ty - my, tx - mx) + rand(-1, 1) * (s.isPlayer ? 0.05 : s.aimSpread);
       const life = g.range * 1.08 / BALL_SPEED;
       const spr = S.add.image(mx, my, "ball").setDepth(7);
       balls.push({ spr, x: mx, y: my, vx: Math.cos(ang) * BALL_SPEED + s.vx * 0.3, vy: Math.sin(ang) * BALL_SPEED + s.vy * 0.3,
         life, life0: life, dmg: g.dmg, burn: g.burn, fromPlayer: !!s.isPlayer, owner: s });
       S.fx.smoke.emitParticleAt(mx + Math.cos(normal) * 6, my + Math.sin(normal) * 6, 3);
+      Snd.play("cannonFar", { x: mx, y: my });
       g.cd = g.interval * rand(0.85, 1.15);
     });
   }
@@ -76,6 +77,7 @@ function playerFire() {
         balls.push({ spr: S.add.image(m.x, m.y, "ball").setDepth(7), x: m.x, y: m.y,
           vx: Math.cos(m.a) * BALL_SPEED, vy: Math.sin(m.a) * BALL_SPEED, life, life0: life, dmg: g.dmg, burn: g.burn, fromPlayer: true, owner: player });
         S.fx.smoke.emitParticleAt(m.x + Math.cos(m.a) * 6, m.y + Math.sin(m.a) * 6, 3);
+        Snd.play("cannon", { pan: Math.cos(m.a) * 0.35 });
       });
     });
   }
@@ -89,9 +91,9 @@ function hitShip(s, x, y) {
   return Math.hypot(dx - c * along, dy - sn * along) < 13;
 }
 function floatText(x, y, str, color, size = 16) {
-  const t = S.add.text(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
+  const txt = S.add.text(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
     .setOrigin(0.5).setDepth(10);
-  S.tweens.add({ targets: t, y: y - 34, alpha: 0, duration: 900, ease: "Cubic.easeOut", onComplete: () => t.destroy() });
+  S.tweens.add({ targets: txt, y: y - 34, alpha: 0, duration: 900, ease: "Cubic.easeOut", onComplete: () => txt.destroy() });
 }
 function hurt(s, dmg, burn, src) {
   if (!s.alive) return;
@@ -102,6 +104,7 @@ function hurt(s, dmg, burn, src) {
     const byPlayer = src === player;
     floatText(s.x + rand(-10, 10), s.y - 22, Math.round(dmg), s.isPlayer ? "#ff8a75" : byPlayer ? "#fff4d6" : "#a9c3cb", byPlayer || s.isPlayer ? 16 : 13);
   }
+  Snd.play("hit", { x: s.x, y: s.y, big: s.isPlayer });
   if (!s.isPlayer && src) { s.attacker = src; s.angry = 8; s.ignore.delete(src); }
   if (s.isPlayer) camShake(90, 0.004);
   if (s.hp <= 0) sink(s, src);
@@ -119,6 +122,8 @@ function sink(s, killer) {
   if (!s.alive) return;
   s.alive = false; s.speed = 0; s.hp = 0;
   S.fx.spark.explode(26, s.x, s.y); S.fx.smoke.explode(14, s.x, s.y);
+  Snd.play("sink", { x: s.x, y: s.y, big: s.isPlayer });
+  if (s.isPlayer) Snd.play("defeat"); else if (killer === player) Snd.play("victory", { delay: 0.25 });
   if (s.badge) { s.badge.destroy(); s.badge = null; }
   S.tweens.add({ targets: s.spr, alpha: 0, scale: 0.6, angle: s.spr.angle + 25, duration: 1300, ease: "Quad.easeIn",
     onComplete: () => { if (!s.isPlayer) { s.spr.destroy(); s.dead = true; } } });

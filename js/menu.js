@@ -63,6 +63,7 @@ function showTitle() {
   document.body.classList.add("on-title");
   renderTitle();
   $m("title").hidden = false;
+  if (typeof Snd !== "undefined") { Snd.music("harbor"); Snd.ambience("sea"); }   // starts on the first click (autoplay rules)
   const cam = S.cameras.main;
   cam.stopFollow();
   Object.assign(drift, { x: cam.midPoint.x, y: cam.midPoint.y, t: 0 });
@@ -205,7 +206,7 @@ function menuAction(act, b) {
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-menu]");
-  if (b && !b.disabled) menuAction(b.dataset.menu, b);
+  if (b && !b.disabled) { if (typeof Snd !== "undefined") Snd.play("uiClick"); menuAction(b.dataset.menu, b); }
   // HUD buttons must not keep focus at sea, or Space (fire) would press them again
   const hb = e.target.closest("#hud button");
   if (hb && sailing()) hb.blur();

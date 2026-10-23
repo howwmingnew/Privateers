@@ -126,6 +126,8 @@
     <h2 id="setTitle" data-i18n="set_title">Settings</h2>
     <section class="sg" id="setAudio">
       <h3 data-i18n="set_audio">Sound</h3>
+      <div class="srow"><span data-i18n="set_sound">All sound</span><span class="seg">
+        <button type="button" data-set="sound" data-v="on" data-i18n="set_on">On</button><button type="button" data-set="sound" data-v="off" data-i18n="set_off">Off</button></span></div>
       <label class="srow"><span data-i18n="set_master">Master volume</span><input type="range" min="0" max="100" step="5" data-vol="master"><output></output></label>
       <label class="srow"><span data-i18n="set_music">Music</span><input type="range" min="0" max="100" step="5" data-vol="music"><output></output></label>
       <label class="srow"><span data-i18n="set_sfx">Sound effects</span><input type="range" min="0" max="100" step="5" data-vol="sfx"><output></output></label>
@@ -171,10 +173,13 @@
   </div>
 </div>
 
+<script src="js/boot-guard.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
 <script src="js/config.js"></script>
 <script src="js/util.js"></script>
+<script src="js/view.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/audio.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/data.js"></script>
 <script src="js/save.js"></script>
