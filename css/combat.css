@@ -4,4 +4,7 @@
   animation: streak-in .25s ease-out; }
 .streak.max { border-color: var(--brass); color: #f0c766; box-shadow: 0 0 0 2px rgba(192,143,46,.35); }
 @keyframes streak-in { from { transform: scale(1.15); } to { transform: none; } }
-@media (prefers-reduced-motion: reduce) { .streak { animation: none; } }
+/* a streak worth banking on a failing hull: red, pulsing (js/juice-ui.js); the reduced-motion form stays red, still */
+.streak.risk { border-color: #e2553f; color: #ffd0c4; background: rgba(110,24,14,.85); animation: streak-risk .7s ease-in-out infinite alternate; }
+@keyframes streak-risk { from { box-shadow: 0 0 0 0 rgba(226,85,63,.0); } to { box-shadow: 0 0 0 4px rgba(226,85,63,.55); background: rgba(170,38,22,.92); } }
+@media (prefers-reduced-motion: reduce) { .streak, .streak.risk { animation: none; } }

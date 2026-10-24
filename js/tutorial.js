@@ -103,9 +103,19 @@ function forgivingSpawn() {
     if (!e) return null;
     e.maxHp = e.hp = Math.ceil(e.maxHp * TUT_MARK_HULL);
     e.loot = Math.max(e.loot || 0, cheapestBuy());
+    retireSpare(e);
     return e;
   }
   return null;
+}
+// The mark comes out of the sea's ENEMY_COUNT, not on top of it: a fresh sea is already full, so the farthest calm
+// ordinary ship goes (off screen, one of its own ring first). The population top-up then keeps the count where it was.
+function retireSpare(mark) {
+  const pool = enemies.filter(o => o !== mark && o.alive && isOrdinary(o) && !(o.angry > 0));
+  if (seaCensus().total <= ENEMY_COUNT || !pool.length) return;
+  const score = o => (onScreen(o.x, o.y, 200) ? 0 : 1e7) + (o.ring === mark.ring ? 1e6 : 0) + dist(o, player);   // out of view first
+  const o = pool.reduce((a, b) => (score(b) > score(a) ? b : a));
+  o.alive = false; o.spr.destroy(); o.badge?.destroy(); enemies.splice(enemies.indexOf(o), 1);
 }
 // Called by the shell when a voyage begins (the ledger closed and the sea is live).
 function tutorialOnVoyage() {

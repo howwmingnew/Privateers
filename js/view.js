@@ -23,10 +23,13 @@ function viewScaleConfig() {
   return { mode: Phaser.Scale.NONE, width: b.w, height: b.h, zoom: 1 / VIEW.dpr };
 }
 // World zoom: shorter side / 720 in CSS pixels, so every desktop size frames the same patch of sea as 1280x720 does
-// (the old 1.1 cap left a 1080p fight a speck in a field of islands); 0.55 floor for phones. Then the render dpr,
+// (the old 1.1 cap left a 1080p fight a speck in a field of islands). Phones get a 0.72 floor: at 0.55 the sloop read
+// ~44 CSS px tall in clips; 0.72 makes it ~58 and still shows ~540 x 1170 world px (past a Long 12's 400 px reach on
+// the long axis). Only screens whose short side is under ~520 CSS px reach the floor. Then the render dpr,
 // the player's ship class (bigger ships see further, js/art.js shipZoomK) and the player's own wheel zoom.
+const VIEW_PHONE_ZOOM = 0.72;
 const ZOOM_USER = { min: 0.75, max: 1.25, step: 0.05 };
-const viewZoom = () => clamp(Math.min(VIEW.cssW, VIEW.cssH) / 720, 0.55, 2.4) * VIEW.dpr
+const viewZoom = () => clamp(Math.min(VIEW.cssW, VIEW.cssH) / 720, VIEW_PHONE_ZOOM, 2.4) * VIEW.dpr
   * (typeof shipZoomK === "function" ? shipZoomK() : 1) * SETTINGS.zoom;
 function nudgeZoom(dir) {
   const z = clamp(Math.round((SETTINGS.zoom + dir * ZOOM_USER.step) * 100) / 100, ZOOM_USER.min, ZOOM_USER.max);

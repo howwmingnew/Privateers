@@ -15,12 +15,15 @@ const SND_SFX = (() => {
   function body(v, t, f0, f1, slide, peak, d, k = 3) { const o = O(v, "sine", f0, t, t + d + 0.1), g = G(); sweep(o.frequency, t, f0, f1, slide); perc(g.gain, t, peak, 0.003, d); wire(o, drive(k), g, v.out); }
   return {
     cannon: { max: 6, gap: 0.03, pv: 0.06, gv: 0.1, gain: 1.15, wet: 0.3, duck: 6, hold: 0.24, fn(v) { const { t, p } = v;
-      hiss(v, t, "highpass", 1800 * p, 0.7, 0.45, 0.001, 0.07);                                          // the crack
+      // v.crowd (js/audio.js): two more of these already ringing, so the fine detail below is masked; skip it and save
+      // ~40% of the nodes in a broadside. A lone shot is unchanged.
+      if (!v.crowd) hiss(v, t, "highpass", 1800 * p, 0.7, 0.45, 0.001, 0.07);                            // the crack
       sweep(hiss(v, t, "lowpass", 4000 * p, 0.8, 0.85, 0.003, 0.6).frequency, t, 4000 * p, 600 * p, 0.45);  // the blast, dying into the mids
       tone(v, t, "sine", 82 * p, 34 * p, 0.32, 0.85, 0.003, 0.5);                                         // the thump, for headphones
       body(v, t, 130 * p, 76 * p, 0.25, 0.42, 0.24);                                                      // its body, for small speakers
       tone(v, t, "triangle", 460 * p, 170 * p, 0.12, 0.8, 0.002, 0.2);                                   // the boom: a pitched mid punch
       hiss(v, t, "bandpass", 620 * p, 0.55, 1.5, 0.002, 0.22); hiss(v, t, "bandpass", 340 * p, 0.7, 0.9, 0.002, 0.24);   // the blast's chest
+      if (v.crowd) return;
       const tc = t + rand(0.035, 0.055);                                                                  // the carriage recoils into its tackle
       tone(v, tc, "triangle", 260 * p, 190 * p, 0.05, 0.45, 0.001, 0.09); tone(v, tc, "sine", 610 * p, 590 * p, 0, 0.16, 0.001, 0.06);
       hiss(v, tc, "bandpass", 950 * p, 2, 0.3, 0.001, 0.03);
@@ -33,13 +36,16 @@ const SND_SFX = (() => {
     cannonFar: { max: 6, gap: 0.04, pv: 0.08, gv: 0.15, gain: 0.8, wet: 0.45, far: 1900, pri: 2, duck: 3, hold: 0.18, fn(v) { const { t, p } = v;
       sweep(hiss(v, t, "lowpass", 1600 * p, 0.7, 0.8, 0.004, 0.9).frequency, t, 1600 * p, 300 * p, 0.5);
       tone(v, t, "sine", 64 * p, 30 * p, 0.3, 0.5, 0.004, 0.55);
-      body(v, t, 105 * p, 62 * p, 0.25, 0.42, 0.22, 2.5);
       hiss(v, t, "bandpass", 420 * p, 0.6, 1.1, 0.003, 0.22);
+      if (v.crowd) return;
+      body(v, t, 105 * p, 62 * p, 0.25, 0.42, 0.22, 2.5);
       hiss(v, t + 0.05, "bandpass", 160 * p, 0.8, 0.25, 0.08, 1.4, true); } },
     hit: { max: 5, gap: 0.025, pv: 0.12, gv: 0.15, gain: 1.05, wet: 0.2, far: 1300, pri: 2, duck: 4, hold: 0.18, fn(v) { const { t, p } = v, k = v.big ? 1.25 : 1;
       tone(v, t, "triangle", 160 * p, 58 * p, 0.12, 0.5 * k, 0.002, 0.16);                                // hull thud
-      body(v, t, 240 * p, 140 * p, 0.1, 0.35 * k, 0.12, 2.5);                                            // the thud's edge
-      hiss(v, t, "bandpass", 1100 * p, 1.3, 0.7 * k, 0.002, 0.17);                                       // planks crunch
+      if (!v.crowd) {
+        body(v, t, 240 * p, 140 * p, 0.1, 0.35 * k, 0.12, 2.5);                                          // the thud's edge
+        hiss(v, t, "bandpass", 1100 * p, 1.3, 0.7 * k, 0.002, 0.17);                                     // planks crunch
+      }
       const c = N(v, t, t + 0.3), bp = F("bandpass", 600 * p, 0.6), cg = G(); wire(c, bp, cg, v.out);    // the crunch's body, in bursts
       let tc = t; for (let i = 0; i < 4; i++) { const d = rand(0.02, 0.04); perc(cg.gain, tc, rand(0.9, 1.3) * k, 0.001, d); tc += d + rand(0.004, 0.012); }
       const s = N(v, t, t + 0.4), hp = F("highpass", 3200 * p, 0.8), g = G(); wire(s, hp, g, v.out);   // splinters

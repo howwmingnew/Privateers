@@ -21,14 +21,14 @@
 @media (max-width: 600px) { #tally { top: calc(env(safe-area-inset-top, 0px) + 33vh); } }   /* clear of the phone's minimap */
 #tally .t-sunk { display: flex; gap: 3px; align-items: center; justify-content: center; flex-wrap: wrap; margin-bottom: 4px; }
 #tally .t-sunk span { margin-right: 6px; text-transform: uppercase; letter-spacing: .08em; font-size: .8em; opacity: .8; }
-#tally .t-sunk img, #tally .jskull { width: 16px; height: 16px; }
-#tally .jskull { display: inline-block; border-radius: 50%; background: #f6f1e3; }
+#tally .t-sunk .jsk { width: 17px; height: 17px; display: block; filter: drop-shadow(0 1px 1px rgba(0,0,0,.6)); }
 #tally .t-math b { color: #9fe0a0; }
 #tally .t-gold { font-size: 1.9em; font-weight: 700; color: #f0c766; font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 2px; }
 #tally .t-gold b { display: inline-block; }
 #tally .t-gold small { font-size: .45em; text-transform: uppercase; letter-spacing: .08em; color: #f6f1e3; opacity: .8; }
 #tally.done .t-gold b { animation: jPop .28s cubic-bezier(.2,.9,.3,1.4); }
 #tally .t-best { margin-top: 4px; color: #ffd04a; font-weight: 700; letter-spacing: .04em; opacity: 0; }
+#tally .t-rec { margin-top: 4px; font-size: .82em; letter-spacing: .04em; opacity: .7; }
 #tally.done .t-best { opacity: 1; animation: jPop .35s cubic-bezier(.2,.9,.3,1.4); }
 
 /* Ship Lv rise and a claimed bounty: a big word over the sea (or the ledger), in and out */
