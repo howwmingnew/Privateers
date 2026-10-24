@@ -53,6 +53,7 @@ function startRun(kind, seed = 0, opts = {}) {
   applyPlayerStats(true); hud(true);
   setSail();   // a fresh sea, the captain takes up his lair (js/harbor.js, js/campaign.js)
   wasDocked = false;
+  syncPorts();   // no harbor, stations or trade ports in the daily sea (js/ports.js)
   const b = run.bounty;
   toast(kind === "daily" ? t("dr_start", { n, boss: bossName(b), m: DAILY_SECONDS / 60, trait: t("dtrait_" + b.trait) }) + " " + dailyTierLabel(n) : t("dr_seed", { seed: sd }));
   renderClock();
@@ -65,6 +66,7 @@ function runLeave() {
   save = realSave; realSave = null; saveLocked = false;
   clearBoss(); restoreCrates(); cargo = 0; streak = 0;
   syncWorld();   // the real islands again
+  syncPorts();   // and the harbor and stations
   applyPlayerStats(true); hud(true);
   renderClock();
 }

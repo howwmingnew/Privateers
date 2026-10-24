@@ -3,7 +3,7 @@
 // All of it is painted once into canvas textures at boot (artRes(): 2x on HiDPI) and shown as plain images, so the sea
 // costs a few quads per frame. Soft layers (shallows, sea depth) are baked at low resolution on purpose: the GPU's
 // linear filtering blurs them for free. Light comes from the top-left, as the old island rocks implied.
-let harborBeams = [];
+let harborBeams = [], harborObjs = [];   // harborObjs: the town image and its moored ships, hidden in the daily sea (js/ports.js)
 // Deeper water further from the harbour: one radial gradient on a small texture stretched over the whole map. Its hue
 // follows the seas (the chart's tints): turquoise Shallows, blue-green Reef, deep navy Lanes, a bruised Maelstrom.
 function bakeSeaDepth(sc) {
