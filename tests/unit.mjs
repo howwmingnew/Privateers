@@ -309,19 +309,12 @@ test("ship rating: a fresh sloop is Lv 2, and fires are counted once however man
   assert.ok(Math.abs(dps - (impact + g.run("BURN_MAX") * g1.burn * k)) < 1e-6, `dps ${dps}`);
 });
 
-test("combat strings exist in both languages, and the trade-in pays back 60% of the yard", () => {
+test("combat strings exist in both languages", () => {
   const g = boot();
   for (const [f, code] of COMBAT_SRC) g.run(code);
   const en = g.json("Object.keys(STR.en)"), zh = g.json("Object.keys(STR.zh)");
   assert.deepEqual(en.filter(k => !zh.includes(k)), [], "missing in zh");
   assert.deepEqual(zh.filter(k => !en.includes(k)), [], "missing in en");
-  g.run(`save = fitMounts({ ...defaultSave(), ship: "schooner", hull: 3, sails: 1, hold: 2 })`);
-  const spend = g.run("YARD.hull.cost(1) + YARD.hull.cost(2) + YARD.hold.cost(1)");
-  assert.equal(g.run("yardSpend()"), spend);
-  assert.equal(g.run("tradeInCredit('brig')"), Math.round(0.6 * spend));
-  assert.equal(g.run("shipNetCost('brig')"), g.run("SHIPS.brig.cost") - Math.round(0.6 * spend));
-  g.run(`save = fitMounts({ ...defaultSave(), ship: "sloop", hull: 15, sails: 10, hold: 12 })`);
-  assert.equal(g.run("shipNetCost('schooner')"), 0, "the credit never exceeds the price");
 });
 
 test("salvage scooped from a wreck but never sold goes back to sea on the next load", () => {

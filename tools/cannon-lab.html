@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privateers 火砲音效試聽台</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f3f52'/><circle cx='16' cy='16' r='7' fill='%23f0c766'/></svg>">
+<style>
+  :root { --bg: #0f2a35; --panel: #163947; --line: #2a5566; --ink: #f6f1e3; --dim: #a9c3cb; --gold: #f0c766; --red: #d9493a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 16px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; color: var(--gold); margin: 0 0 10px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 14px; }
+  .bar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0 10px; border-bottom: 1px solid var(--line); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-top: 8px; }
+  .seg { display: inline-flex; gap: 0; }
+  .seg button { border-radius: 0; margin-left: -1px; }
+  .seg button:first-child { border-radius: 8px 0 0 8px; margin-left: 0; } .seg button:last-child { border-radius: 0 8px 8px 0; }
+  button { font: inherit; color: var(--ink); background: #1f4b5c; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button:hover { background: #276076; } button:active { transform: translateY(1px); }
+  button.on { background: var(--gold); color: #1b1410; border-color: var(--gold); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .card { background: #10303c; border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .card.now { border-style: dashed; }
+  .card .code { font-size: 22px; font-weight: 700; color: var(--gold); }
+  .card .name { font-weight: 600; }
+  .card .desc { color: var(--dim); font-size: 13px; flex: 1; }
+  .play { font-size: 18px; padding: 12px; background: #2b6b4f; border-color: #3f8f6d; }
+  .play:hover { background: #348260; }
+  .salvo { font-size: 13px; padding: 5px 8px; }
+  label { color: var(--dim); display: inline-flex; gap: 6px; align-items: center; }
+  select { font: inherit; background: #0c2129; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+  input[type=range] { accent-color: var(--gold); width: 130px; }
+  #meter { height: 10px; background: #0c2129; border-radius: 5px; overflow: hidden; margin-top: 8px; }
+  #meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #86c46f, var(--gold) 75%, var(--red)); }
+  .note { color: var(--dim); font-size: 13px; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
+  .warn { color: var(--red); font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <div class="bar">
+    <h1>火砲音效試聽台 · Cannon Lab</h1>
+    <div class="note" id="status">點一下任何地方啟動音訊（此頁有聲音，不靜音）</div>
+    <div class="row">
+      <label>砲種 <span class="seg" id="kind"></span></label>
+      <label>船 <span class="seg" id="size"></span></label>
+      <label>距離 <span class="seg" id="dist"></span></label>
+      <label>總音量 <input id="vol" type="range" min="0" max="1" step="0.05"></label>
+    </div>
+    <div id="meter"><i></i></div>
+    <div class="note" id="dbg"></div>
+  </div>
+
+  <section><h2>① 發射 · 開砲聲</h2><div class="cards" id="fire"></div>
+    <p class="note">「齊射」= 10 門砲，每門間隔 0.04–0.08 秒。砲種與船大小會改變輕重（「現在的」遊戲裡不分砲種與船，所以聽起來都一樣）。</p></section>
+  <section><h2>② 擊中船體</h2><div class="cards" id="hit"></div>
+    <p class="note">「大」船 = 我方船被打中（從船艙裡聽，多一點悶響與木頭呻吟）。</p></section>
+  <section><h2>③ 擊中水面</h2><div class="cards" id="splash"></div></section>
+
+  <section><h2>④ 組合試聽（照真實時序：發射 → 約 0.6 秒後擊中或落水）</h2>
+    <div class="row">
+      <label>發射 <select id="cf"></select></label>
+      <label>擊中 <select id="ch"></select></label>
+      <label>水花 <select id="cs"></select></label>
+      <label><span class="seg" id="ctarget"></span></label>
+      <button class="play" id="combo" type="button" style="font-size:16px">▶ 播放組合</button>
+      <button id="comboSalvo" type="button">▶ 10 門齊射＋全部擊中／落水</button>
+    </div>
+    <div class="row"><button id="mag" type="button">火藥庫爆炸（現在的，暴擊用）</button></div>
+  </section>
+</main>
+<script src="../js/util.js"></script>
+<script src="../js/audio-kit.js"></script>
+<script src="../js/audio-sfx.js"></script>
+<script src="../js/audio-juice.js"></script>
+<script src="../js/audio-cannon-lab.js"></script>
+<script src="../js/audio-music.js"></script>
+<script src="../js/audio.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const FIRE = [
+  ["now", "現在的", "目前遊戲內的版本（遠距用 cannonFar）", "cannon", "cannonFar"],
+  ["A", "低沉長尾轟鳴", "低沉、尾音長，像大砲在遠處轟", "labFireA"],
+  ["B", "短促乾脆爆裂", "短、脆、啪一聲，幾乎沒有尾巴", "labFireB"],
+  ["C", "重砲空氣衝擊", "空氣被打扁的衝擊，加上船板跟著震動", "labFireC"],
+  ["D", "我推薦（均衡）", "爆裂＋胸腔＋低頻，一段中等尾音和水面回音", "labFireD"],
+];
+const HIT = [
+  ["now", "現在的", "目前遊戲內的版本", "hit"],
+  ["A", "木頭碎裂", "一連串碎木爆裂和高頻碎片，脆、碎", "labHitA"],
+  ["B", "悶重撞擊", "沉悶的一聲重擊，像砲彈嵌進船身，沒有碎片", "labHitB"],
+  ["C", "碎裂＋碎片散落", "先一聲裂開，接著碎木片噠噠噠掉下來", "labHitC"],
+  ["D", "我推薦（重擊＋碎木）", "低沉重擊加短促碎裂和幾片碎木，與發射 D 同一個低音", "labHitD"],
+];
+const SPLASH = [
+  ["now", "現在的", "目前遊戲內的版本", "splash"],
+  ["A", "水花", "明亮的水花落進海裡，帶幾滴水珠", "labSplashA"],
+  ["B", "深水悶響", "砲彈沉入水中的悶響和低沉水湧", "labSplashB"],
+  ["C", "高水柱", "一聲爆開，然後水柱落下變成長長的嘩啦聲", "labSplashC"],
+  ["D", "我推薦（短噗＋水花）", "短促的噗聲和低頻，中段水花，柔和尾音", "labSplashD"],
+];
+const KINDS = ["6 磅砲", "長 12 磅", "卡隆砲", "鏈彈", "燃燒彈"];
+const st = { kind: 0, big: false, far: false };
+
+function seg(el, items, get, set) {
+  items.forEach((text, i) => { const b = document.createElement("button"); b.type = "button"; b.textContent = text;
+    b.addEventListener("click", () => { set(i); for (const c of el.children) c.classList.toggle("on", c === b); }); el.append(b); });
+  el.children[get()].classList.add("on");
+}
+seg($("kind"), KINDS, () => st.kind, i => st.kind = i);
+seg($("size"), ["小船", "大船"], () => 0, i => st.big = i === 1);
+seg($("dist"), ["近", "遠"], () => 0, i => st.far = i === 1);
+
+// one shot: near = at the listener (spread by `pan`), far = ~700 px away so the game's distance filter and echo apply
+function shot(entry, pan = 0, spread = 0) {
+  const name = st.far && entry[4] ? entry[4] : entry[3], o = { amount: st.kind + 1, big: st.big };
+  if (st.far) { o.x = 600 + spread * 250; o.y = 360; } else o.pan = pan;
+  Snd.play(name, o);
+}
+function salvo(entry, n = 10) {
+  let t = 0;
+  for (let i = 0; i < n; i++) { const pan = (i / (n - 1)) * 1.2 - 0.6; setTimeout(() => shot(entry, pan, pan), t * 1000); t += rand(0.04, 0.08); }
+}
+function cards(parent, list) {
+  for (const e of list) {
+    const c = document.createElement("div"); c.className = "card" + (e[0] === "now" ? " now" : "");
+    c.innerHTML = `<div class="code"></div><div class="name"></div><div class="desc"></div>`;
+    c.children[0].textContent = e[0] === "now" ? "現在" : e[0]; c.children[1].textContent = e[1]; c.children[2].textContent = e[2];
+    const p = document.createElement("button"); p.type = "button"; p.className = "play"; p.textContent = "▶ 播放"; p.addEventListener("click", () => { Snd.unlock(); shot(e); });
+    const s = document.createElement("button"); s.type = "button"; s.className = "salvo"; s.textContent = "齊射 ×10"; s.addEventListener("click", () => { Snd.unlock(); salvo(e); });
+    c.append(p, s); parent.append(c);
+  }
+}
+cards($("fire"), FIRE); cards($("hit"), HIT); cards($("splash"), SPLASH);
+
+for (const [sel, list] of [["cf", FIRE], ["ch", HIT], ["cs", SPLASH]]) {
+  list.forEach((e, i) => { const o = document.createElement("option"); o.value = i; o.textContent = (e[0] === "now" ? "現在" : e[0]) + " " + e[1]; $(sel).append(o); });
+}
+let target = 0;
+seg($("ctarget"), ["打中船", "落水"], () => 0, i => target = i);
+function combo(n = 1) {
+  Snd.unlock();
+  const f = FIRE[+$("cf").value], h = (target === 0 ? HIT : SPLASH)[+$(target === 0 ? "ch" : "cs").value];
+  for (let i = 0; i < n; i++) {
+    const at = i * rand(0.05, 0.08) * 1000 * (n > 1 ? 1 : 0), pan = n > 1 ? (i / (n - 1)) * 1.2 - 0.6 : 0;
+    setTimeout(() => shot(f, pan, pan), at);
+    setTimeout(() => shot(h, pan, pan), at + 600 + rand(-40, 80));
+  }
+}
+$("combo").addEventListener("click", () => combo(1));
+$("comboSalvo").addEventListener("click", () => combo(10));
+$("mag").addEventListener("click", () => { Snd.unlock(); Snd.play("magazine", st.far ? { x: 600, y: 360 } : {}); });
+
+$("vol").value = Snd.getVolume("master");
+$("vol").addEventListener("input", () => Snd.setVolume("master", +$("vol").value));
+Snd.setMuted(false);   // this page is for listening
+Snd.setVolume("sfx", 0.8);
+
+let hold = 0, maxPk = 0;
+(function frame() {
+  const d = Snd.debug(), pk = Snd.meter().peak;
+  hold = Math.max(pk, hold * 0.97); maxPk = Math.max(maxPk, pk);
+  $("meter").firstElementChild.style.width = Math.min(100, hold * 100) + "%";
+  $("status").textContent = d.state === "locked" ? "點一下任何地方啟動音訊（此頁有聲音，不靜音）" : `音訊 ${d.state}`;
+  $("dbg").innerHTML = `目前峰值 ${pk > 0 ? (20 * Math.log10(pk)).toFixed(1) + " dBFS" : "-∞"} · 最高峰值 ${maxPk.toFixed(3)}${maxPk >= 0.95 ? ' <span class="warn">（接近破音）</span>' : ""} · 同時發聲 ${d.voices}`;
+  requestAnimationFrame(frame);
+})();
+$("dbg").addEventListener("click", () => { maxPk = 0; });
+setInterval(() => { maxPk = Math.max(maxPk, Snd.meter().peak); }, 20);   // the meter reads a 43 ms window: poll faster than that so no peak slips between reads
+window.labPeak =() => maxPk; window.labResetPeak = () => { maxPk = 0; };
+</script>
+</body>
+</html>
