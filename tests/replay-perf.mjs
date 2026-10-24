@@ -30,6 +30,7 @@ await page.evaluate(() => {
   }
   Object.assign(player, { x: ax, y: ay, maxHp: 1e9, hp: 1e9 });
   window.__pack = () => {
+    player.hp = player.maxHp;   // collision damage (#30) is a share of max hull, so 1e9 hp alone no longer keeps the player afloat in a 34-ship crush
     for (let i = 0; i < 6 && enemies.filter(e => e.alive).length < 34; i++) spawnEnemy(S);
     for (const e of enemies) if (e.alive && dist(e, player) > 800) {
       const a = Math.random() * Math.PI * 2, r = 220 + Math.random() * 450;
@@ -61,6 +62,7 @@ const stepped = (on, frames) => page.evaluate(async ({ on, frames }) => {
 }, { on, frames });
 const live = on => page.evaluate(async on => {
   saveSettings({ replay: on });
+  player.hp = player.maxHp;
   await new Promise(r => setTimeout(r, 600));
   const iv = []; let last = performance.now();
   await new Promise(res => { const end = last + 3000; const f = n => { iv.push(n - last); last = n; n < end ? requestAnimationFrame(f) : res(); }; requestAnimationFrame(f); });
