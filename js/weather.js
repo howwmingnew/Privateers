@@ -57,8 +57,8 @@ function wxCalmCheck() {
 }
 
 // ---------- the sky: a tint under the ships, rain, lightning ----------
-let wxTintHour, wxTintWx, wxFlash, wxDrops = [], wxDialEl = null, wxDialT = 0, wxCalmT = 0;
-const WX_TINT = { day: [0xffffff, 0], dusk: [0xb4552f, 0.24], night: [0x0b1a3a, 0.5] };
+let wxWarm, wxTintHour, wxTintWx, wxFlash, wxDrops = [], wxDialEl = null, wxDialT = 0, wxCalmT = 0;
+const WX_TINT = { day: [0xffffff, 0], dusk: [0xff5a14, 0.37], night: [0x060f2a, 0.64] };
 const wxMixCol = (a, b, k) => {
   const r = (a >> 16 & 255) + ((b >> 16 & 255) - (a >> 16 & 255)) * k, g = (a >> 8 & 255) + ((b >> 8 & 255) - (a >> 8 & 255)) * k, l = (a & 255) + ((b & 255) - (a & 255)) * k;
   return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(l);
@@ -74,7 +74,7 @@ function wxBuildSky(sc) {
   });
   // the tint sits above the sea and the islands but below every ship, ball and aim line: a dark night never dims what you must read
   const wxQuad = d => sc.add.image(0, 0, "wx-px").setDepth(d).setVisible(false);
-  wxTintHour = wxQuad(3.5); wxTintWx = wxQuad(3.6);
+  wxTintHour = wxQuad(3.5); wxWarm = wxQuad(3.55).setBlendMode(Phaser.BlendModes.ADD); wxTintWx = wxQuad(3.6);
   wxFlash = wxQuad(30).setTint(0xe8f1ff);
   wxDrops = Array.from({ length: WX_DROPS }, () => ({ img: sc.add.image(0, 0, "wx-drop").setDepth(8.5).setVisible(false), x: 0, y: 0, sp: rand(0.85, 1.2), fresh: true }));
 }
@@ -86,6 +86,7 @@ function wxSky(dt, live, fx) {
   const v = S.cameras.main.worldView, rain = live && fx ? wx.w.rain : 0, storm = live && fx ? wx.w.storm : 0;
   const [hc, ha] = live && fx ? WX_TINT[wx.w.hour] : [0, 0];
   wxCover(wxTintHour, v, hc, ha);
+  wxCover(wxWarm, v, 0xff7a30, wx.w.hour === "dusk" && live && fx ? 0.13 : 0);   // dusk: a golden glow on top of the red, so the sea reads orange, not grey
   wxCover(wxTintWx, v, wxMixCol(0x2a3d4d, 0x0f1a24, storm), 0.2 * rain + 0.2 * storm);
   if (S.sea1) { const k = 0.36 + 0.14 * storm, k2 = 0.2 + 0.12 * storm; S.sea1.setAlpha(k); if (S.sea2) S.sea2.setAlpha(k2); }   // higher, whiter swell
   // lightning: a double flash, thunder a beat behind it

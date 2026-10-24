@@ -63,8 +63,25 @@ function wxRoll(s, I, t) {
   s.wxK = 1 + WX_ROLL.heave * I * q * Math.sin(t * 1.15 + ph * 1.3 + 1);
   sp.rotation += s.wxR; sp.setScale(sp.scaleX * s.wxK, sp.scaleY * s.wxK); s.wxRot = sp.rotation; s.wxSc = sp.scaleX;
 }
+// Lanterns: after dusk every hull carries a soft warm glow (additive, under the hull), so ships stay easy to find in the dark.
+const wxDark = () => (wxLive() && wxFx() ? (wx.w.hour === "night" ? 1 : wx.w.hour === "dusk" ? 0.35 : 0) : 0);
+const wxLamps = new Set();
+function wxLamp(s, dark) {
+  if (dark < 0.05 || !s.alive || !s.spr || !s.spr.active || !(s.isPlayer || onScreen(s.x, s.y, 160))) { if (s.wxLamp) s.wxLamp.setVisible(false); return; }
+  if (!s.wxLamp || !s.wxLamp.active) s.wxLamp = S.add.image(0, 0, "wx-glow").setDepth(4.9).setBlendMode(Phaser.BlendModes.ADD);
+  wxLamps.add(s);
+  const a = s.art || SHIP_ART.sloop, k = (a.len * 1.9) / 128, flick = 0.9 + 0.1 * Math.sin(wx.t * 5 + (s.wxPh || 0) * 3);
+  s.wxLamp.setVisible(true).setPosition(s.x, s.y).setScale(k).setAlpha(dark * (s.isPlayer ? 0.55 : 0.42) * flick).setTint(s.isPlayer ? 0xffe3a0 : 0xffa24a);
+}
+onHook("ready", () => bakeCanvas(S, "wx-glow", 128, 128, 1, c => {
+  const g = c.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,.85)"); g.addColorStop(0.35, "rgba(255,255,255,.35)"); g.addColorStop(1, "rgba(255,255,255,0)");
+  c.fillStyle = g; c.fillRect(0, 0, 128, 128);
+}));
 onHook("frame", dt => {
   if (!S || !player || !wxWaves.length) return;
+  const dark = wxDark(); wxLamp(player, dark); for (const e of enemies) wxLamp(e, dark);
+  for (const s of wxLamps) if (!s.alive || !s.spr || !s.spr.active) { if (s.wxLamp) s.wxLamp.destroy(); s.wxLamp = null; wxLamps.delete(s); }   // sunk or removed hulls take their lantern with them
   const I = wxSwell();
   wxSwellDraw(dt, I);
   const t = wx.t;

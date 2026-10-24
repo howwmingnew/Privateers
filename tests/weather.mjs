@@ -304,6 +304,15 @@ console.log("Swell and roll");
   await page.evaluate(() => document.querySelector('[data-set="weatherfx"][data-v="on"]').click());
   await sky(page, "storm", "night"); await page.evaluate(() => { wx.t = 3; }); await sleep(2500);
   await page.screenshot({ path: `${out}/wave-storm-night.png` });
+  // night: lanterns glow under the hulls and a lantern goes with its ship; dusk is a warm orange
+  await sky(page, "clear", "night"); await sleep(700);
+  const lamp = await page.evaluate(() => { const e = enemies.find(e => e.alive && !e.fixed); return { n: [...wxLamps].filter(s => s.wxLamp && s.wxLamp.visible).length, depth: player.wxLamp ? player.wxLamp.depth : null, ship: player.spr.depth, add: player.wxLamp && player.wxLamp.blendMode, a: player.wxLamp && player.wxLamp.alpha, ta: wxTintHour.alpha, e: !!e.wxLamp }; });
+  check(lamp.n >= 1 && lamp.depth < lamp.ship && lamp.a > 0.3 && lamp.ta >= 0.6, "night: darker sky and a lantern glow under the player's hull", lamp);
+  const gone = await page.evaluate(async () => { const e = enemies.find(e => e.alive && !e.fixed); e.x = player.x + 300; e.y = player.y; await new Promise(r => setTimeout(r, 300)); const l = e.wxLamp; e.alive = false; e.spr.destroy(); enemies.splice(enemies.indexOf(e), 1); await new Promise(r => setTimeout(r, 300)); return { had: !!l, left: !!e.wxLamp, active: l ? l.active : null }; });
+  check(gone.had && !gone.left && gone.active === false, "a sunk ship's lantern is removed with it", gone);
+  await sky(page, "clear", "dusk"); await sleep(700);
+  const dusk = await page.evaluate(() => ({ a: wxTintHour.alpha, c: wxTintHour.tintTopLeft }));
+  check(dusk.a >= 0.33 && (dusk.c >> 16) > 0xc0, "dusk: a strong orange-red tint", dusk);
   check(errors.length === 0, "0 page errors (swell and roll)", errors);
   await ctx.close();
 
