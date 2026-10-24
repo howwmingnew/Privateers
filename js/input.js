@@ -55,7 +55,7 @@ function fireTipKey() {
   if (device === "pad") return "tip_pad";
   if (device === "desk") return "tip_desk";
   if (device === "mouse") return mouseHold ? "releaseTip" : "tip_click";
-  return joyVec.m > 0 ? "releaseTip" : null;
+  return joyVec.m > 0 && !(typeof sinkingNear === "function" && sinkingNear(200)) ? "releaseTip" : null;   // not over a sinking hull
 }
 function setSailLevel(l) {
   l = clamp(l, 0, SAIL_THR.length - 1);
@@ -76,7 +76,7 @@ window.addEventListener("keydown", e => {
   setDevice("keys");
   if (!sailing() || e.repeat) return;
   if (e.code === "KeyW" || e.code === "ArrowUp") setSailLevel(sailLevel + 1);
-  else if (e.code === "KeyS" || e.code === "ArrowDown") setSailLevel(sailLevel - 1);
+  else if (e.code === "KeyS" || e.code === "ArrowDown") setSailLevel(inMoorRing() ? 0 : sailLevel - 1);   // in the dock ring S stops dead
   else if (e.code === "KeyQ") playerFire(["left"]);
   else if (e.code === "KeyE") playerFire(["right"]);
 }, true);
@@ -154,7 +154,7 @@ function padSea(s, pressed) {
   padVec = m > PAD_DEAD ? { x: s.lx, y: s.ly, m } : { x: 0, y: 0, m: 0 };
   if (pressed("a") || pressed("rt")) playerFire();
   if (pressed("up")) setSailLevel(sailLevel + 1);
-  if (pressed("down")) setSailLevel(sailLevel - 1);
+  if (pressed("down")) setSailLevel(inMoorRing() ? 0 : sailLevel - 1);
 }
 
 // ---------- Per-frame steering, called from step() ----------

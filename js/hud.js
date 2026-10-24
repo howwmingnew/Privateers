@@ -9,7 +9,11 @@ function hud(force) {
   $("cargoTxt").textContent = `${fmt(cargo)} / ${fmt(player.cap)}`;
   $("cargoBar").classList.toggle("full", cargo >= player.cap);
   $("gold").textContent = fmt(save.gold);
-  if (force || !hud.lv) { hud.lv = shipRating(); $("lv").textContent = t("shipLv", { n: hud.lv }); }
+  if (force || !hud.lv) {
+    const lv = shipRating();
+    if (hud.lv && lv > hud.lv && typeof lvBanner === "function") lvBanner(lv);   // a purchase raised it (js/juice-ui.js)
+    hud.lv = lv; $("lv").textContent = t("shipLv", { n: lv });
+  }
 }
 const mini = document.getElementById("mini"), mctx = mini.getContext("2d");
 let miniBase;
@@ -26,6 +30,12 @@ function buildMiniBase() {
 function drawMini() {
   const M = mini.width, k = M / W, u = M / 224;
   mctx.save();
+  if (typeof chartLite === "function" && chartLite()) {   // first voyage: harbor, player, the gold-ringed mark, wrecks (js/onboard.js)
+    mctx.drawImage(miniLiteBase(), 0, 0);
+    for (const c of crates) if (c.wreck) miniWreck(mctx, c.x * k, c.y * k, u);
+    miniLiteMark(mctx, k, u); miniPlayer(mctx, player.x * k, player.y * k, player.rot, u);
+    return mctx.restore();
+  }
   mctx.drawImage(miniBase, 0, 0);
   const treasure = new Set(typeof fortSites !== "undefined" ? fortSites.map(s => s.crate).filter(Boolean) : []);
   for (const c of crates) if (!c.wreck) miniChest(mctx, c.x * k, c.y * k, u, treasure.has(c));

@@ -1,0 +1,29 @@
+// Unit checks for the page upkeep: the subset font link covers every character the game can show.
+// Usage: node --test tests/unit-tech.mjs
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fontsHref, glyphs } from "../tools/font-subset.mjs";
+
+const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+
+test("the &text= font link in index.html covers every character in the scripts, styles and page", () => {
+  const m = html.match(/<link id="fonts" rel="stylesheet" href="([^"]*)">/);
+  assert.ok(m, 'index.html has <link id="fonts">');
+  const href = m[1].replace(/&amp;/g, "&");
+  const text = new URL(href).searchParams.get("text") || "";
+  const missing = [...glyphs()].filter(ch => !text.includes(ch));
+  assert.deepEqual(missing, [], "new characters: run `node tools/font-subset.mjs --write`");
+  assert.equal(href, fontsHref(), "the font link is out of date: run `node tools/font-subset.mjs --write`");
+});
+
+test("every CJK headline glyph is in the subset (the title, the victory and the ledger)", () => {
+  const text = glyphs();
+  for (const s of ["私掠者", "私掠許可狀", "自由港屹立不搖", "安全港", "港口帳簿", "擊沉君權號所花的時間", "對方降旗投降"]) for (const ch of s) assert.ok(text.includes(ch), ch);
+});
+
+test("the page carries its link-preview metadata", () => {
+  for (const re of [/<meta name="description"/, /og:title/, /og:url" content="https:\/\/howwmingnew\.github\.io\/Privateers\/"/, /twitter:card/, /theme-color" content="#0f3f52"/,
+    /og:locale:alternate" content="zh_TW"/, /<title>Privateers: Letters of Marque/]) assert.match(html, re);
+  assert.doesNotMatch(html, /og:image/, "og:image waits for an owner decision");
+});

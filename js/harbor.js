@@ -4,6 +4,7 @@
 function dock(kind, prior = { sold: 0, bonus: 0 }) {
   runHook("dock", kind, cargo);   // kind "outpost" docks at the Hulk Outpost (js/campaign.js)
   paused = true; docked = true; deckSel = null;
+  const tally = { sunk: streak, cargo: Math.round(cargo) };
   const sale = sellHold(kind);   // the hold sells at the sortie's plunder-streak price (js/plunder.js)
   const sold = sale.sold + prior.sold, bonus = Math.max(sale.bonus, prior.bonus);
   save.gold += sale.sold; cargo = 0; save.salvage = [];   // salvage aboard is sold now
@@ -19,7 +20,8 @@ function dock(kind, prior = { sold: 0, bonus: 0 }) {
   paintGunDeck();   // the ship needs the shown layout; the deck's ResizeObserver only fires on the next rendered frame
   document.querySelector("#port .sheet").scrollTop = 0;   // the result message is at the top; never open scrolled past it
   Snd.music("harbor"); Snd.ambience("harbor");
-  if (kind === "return") { Snd.play("bell"); if (sale.sold > 0) Snd.play("coin", { amount: sale.sold, delay: 0.45 }); }
+  if (kind === "return") Snd.play("bell");
+  if (sale.sold > 0 && (kind === "return" || kind === "outpost")) sortieTally({ ...tally, bonus: sale.bonus, gold: sale.sold });   // count-up (js/juice-ui.js)
   document.getElementById("joy").hidden = true; joyVec = { x: 0, y: 0, m: 0 };
 }
 function setSail() {
@@ -117,5 +119,11 @@ document.getElementById("port").addEventListener("click", ev => {
 });
 // Not enough gold: a disabled button never receives a click, so listen for the press itself.
 document.getElementById("port").addEventListener("pointerdown", ev => { const b = ev.target.closest("[data-act]"); if (b && b.disabled) Snd.play("denied"); });
-document.getElementById("sail").addEventListener("click", setSail);
+// A ship with every gun in the store can't fight back, so it stays in port and the ledger says why (js/tech.js).
+function trySail() {
+  if (MOUNTS.some(({ key }) => save[key].some(Boolean))) { setSail(); return; }
+  portMsg = ["noGuns"]; renderPort(); Snd.play("denied");
+  document.getElementById("pMsg").scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+document.getElementById("sail").addEventListener("click", trySail);
 // "Reset progress" moved to the settings panel (js/options.js, wipeProgress).

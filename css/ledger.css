@@ -18,15 +18,15 @@
 body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: center; width: 1.25em; height: 1.25em; margin-right: .45em; border-radius: 50%;
   background: var(--foam); color: var(--blood); font: 700 .6em/1 var(--f-ui); vertical-align: .2em; }
 
-/* ---- Wanted poster: recommended ship level, with the same threat glyph as the badges ---- */
-.poster .p-rec .tier { display: inline-block; padding: 0 6px; border-radius: 3px; font-weight: 700; color: #1b1410; }
-.poster .p-rec .tier.dark { color: #fff6ea; }
+/* ---- Wanted poster: the ship level to be ready at, a goal rather than a warning (js/bounty-rec.js) ---- */
+.poster .p-rec .goal { font-weight: 700; color: #6b4a12; }
+.poster .p-rec .goal.ok { color: #3f6b2a; }
+.poster .p-rec .goal.ok::before { content: "\2713\00a0"; }
 .poster .p-rec .you { color: var(--ink-soft); }
 
 /* ---- toasts: a plated lane under every sheet and menu (never over the ledger: js/notices.js holds them while docked) ---- */
 #toast { z-index: 9; background: rgba(8,34,45,.82); border: 1px solid rgba(240,199,102,.35); border-radius: 3px; padding: 3px 14px 5px; }
-/* on a phone the toast lane and the sea banner share a band: drop the toast below the banner while it shows */
-@media (max-width: 560px) { body:has(#seaBanner.on) #toast { top: calc(env(safe-area-inset-top, 0px) + 24vh + 150px); } }
+/* the toast lane and the sea banner share a band: toasts wait for the banner instead (js/notices.js, js/onboard.js) */
 
 /* ---- hit markers: who just hit you. Over the shooter when it is on screen, at the screen edge (pointing at it) when not ---- */
 #hitDirs { position: fixed; inset: 0; z-index: 4; pointer-events: none; }

@@ -139,7 +139,7 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 .btn.max { background: transparent; color: var(--ink-soft); border: 1.5px solid rgba(42,29,16,.3); }
 button:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
 
-.sheet footer { position: sticky; bottom: 0; margin: 0 -20px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px) * 0); background: linear-gradient(transparent, var(--parch) 30%); display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.sheet footer { position: sticky; bottom: 0; z-index: 3; margin: 0 -20px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px) * 0); background: linear-gradient(transparent, var(--parch) 30%); display: flex; gap: 10px; align-items: center; justify-content: space-between; }
 .sail { font-family: var(--f-display); font-size: calc(24px * var(--ts)); padding: 8px 28px; border: 0; border-radius: 3px; background: var(--blood); color: var(--foam); cursor: pointer; box-shadow: 0 3px 0 #6e2416; }
 .sail:active { transform: translateY(2px); box-shadow: 0 1px 0 #6e2416; }
 .textbtn { font: inherit; font-size: calc(13px * var(--ts)); background: none; border: 0; color: var(--ink-soft); text-decoration: underline; cursor: pointer; padding: 6px 0; }

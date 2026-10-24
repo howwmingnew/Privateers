@@ -53,7 +53,8 @@ function enemyFire(s, targets, dt) {
     if (Math.hypot(a.x - s.x, a.y - s.y) > guns[0].range) continue;   // it will have sailed out of reach: hold fire
     v.warn = VOLLEY_WARN; v.tgt = tg; v.aims = aims;
     if (tg.isPlayer) { playerVolleyAt = now; Snd.play("volleyWarn", { x: s.x, y: s.y }); }   // the warning is heard as well as seen
-    if (tg.isPlayer && volleyTips < 2 && onScreen(s.x, s.y)) { volleyTips++; toast(t("volleyTip")); }
+    // the tip waits for a volley after the first voyage's coach card (js/onboard.js): a later one says it instead
+    if (tg.isPlayer && volleyTips < 2 && onScreen(s.x, s.y) && !(typeof coachUp === "function" && coachUp())) { volleyTips++; toast(t("volleyTip")); }
   }
 }
 // Pick an aim point per gun when the warning starts. The whole side shares one misjudgement of the target's speed.

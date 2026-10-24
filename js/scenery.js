@@ -4,15 +4,17 @@
 // costs a few quads per frame. Soft layers (shallows, sea depth) are baked at low resolution on purpose: the GPU's
 // linear filtering blurs them for free. Light comes from the top-left, as the old island rocks implied.
 let harborBeams = [];
-// Deeper water further from the harbour: one radial gradient on a small texture stretched over the whole map.
+// Deeper water further from the harbour: one radial gradient on a small texture stretched over the whole map. Its hue
+// follows the seas (the chart's tints): turquoise Shallows, blue-green Reef, deep navy Lanes, a bruised Maelstrom.
 function bakeSeaDepth(sc) {
   const N = 192, M = Math.max(16, Math.round(N * H / W)), k = N / W;
   const far = Math.max(...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Math.hypot(x - PORT.x, y - PORT.y)));
   const at = d => clamp(d / far, 0, 1);
   bakeCanvas(sc, "sea-depth", N, M, 1, c => {
     const g = c.createRadialGradient(PORT.x * k, PORT.y * k, 0, PORT.x * k, PORT.y * k, far * k);
-    [[0, "#2b97a1"], [at(PORT_ISLAND_R + 160), "#21838f"], [at(SAFE_R), "#1a6c81"], [at(SAFE_R + ZONE_STEP * 3), "#155a73"],
-      [at(SAFE_R + ZONE_STEP * 6), "#0f4762"], [1, "#0a2d46"]].forEach(([o, col]) => g.addColorStop(o, col));
+    [[0, "#2ea6a6"], [at(PORT_ISLAND_R + 160), "#26959c"], [at(SAFE_R), "#1f8293"], [at(SAFE_R + ZONE_STEP * 2), "#1a6a84"],
+      [at(SAFE_R + ZONE_STEP * 4.5), "#145273"], [at(SAFE_R + ZONE_STEP * 5.5), "#103f68"], [at(SAFE_R + ZONE_STEP * 7.5), "#122f5c"],
+      [at(SAFE_R + ZONE_STEP * 8.5), "#1d2650"], [1, "#161a3a"]].forEach(([o, col]) => g.addColorStop(o, col));
     c.fillStyle = g; c.fillRect(0, 0, N, M);
   });
   sc.add.image(0, 0, "sea-depth").setOrigin(0).setDisplaySize(W, H).setDepth(-1);

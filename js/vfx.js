@@ -13,12 +13,14 @@
 //   vfxSink(s, killer)      the sinking: lists, darkens and goes under with bubbles, foam and planks; sets s.dead (AI)
 //   vfxRespawn(s)           put a sunk player's sprite back to normal
 //   vfxHitStop(sec)         freeze the simulation briefly; particles and tweens keep moving
+//   vfxSlowMo(sec, k)       run the simulation at k (< 1) for a while: a boss going down
 const VFX_LOW = (() => { try { return matchMedia("(pointer: coarse)").matches; } catch (e) { return false; } })();
+let PERF_LOW = false;   // set by js/tech.js while frames run long: thinner smoke, flames, sparks and off-screen wakes
 const vfxCap = n => Math.round(n * (VFX_LOW ? 0.55 : 1));
-const FX = { deg: 0, tint: 0xffffff };
+const FX = { deg: 0, tint: 0xffffff, sTint: 0xe9e5dc };
 const SINK_TINT = 0x1d4e60;   // the hull fades toward the sea colour, so it goes under rather than into thin air
 const DEBRIS_MAX = 60;
-let hitStopT = 0, vigOn = false, vigEl = null, halo = null, debris = 0;
+let hitStopT = 0, slowT = 0, slowK = 1, vigOn = false, vigEl = null, halo = null, debris = 0;
 const toDeg = r => r * 180 / Math.PI;
 const lerpColor = (a, b, k) => { const ch = s => Math.round(((a >> s) & 255) * (1 - k) + ((b >> s) & 255) * k) << s; return ch(16) | ch(8) | ch(0); };
 
@@ -51,7 +53,11 @@ function vfxInit(sc) {
   Object.assign(FX, {
     flash: E("fx-flash", 8.6, { lifespan: 90, speed: 0, rotate: { onEmit: () => FX.deg }, scale: { start: 1.15, end: 0.7 }, alpha: { start: 1, end: 0 }, blendMode: "ADD", maxAliveParticles: vfxCap(60) }),
     smoke: E("fx-soft", 8, { lifespan: { min: 900, max: 1500 }, speed: { min: 18, max: 85 }, angle: { onEmit: () => FX.deg + rand(-26, 26) },
-      scale: { start: 0.5, end: 1.9 }, alpha: { start: 0.8, end: 0 }, tint: 0xe9e5dc, maxAliveParticles: vfxCap(260) }),
+      scale: { start: 0.5, end: 1.9 }, alpha: { start: 0.55, end: 0 }, tint: { onEmit: () => FX.sTint }, maxAliveParticles: vfxCap(260) }),
+    // a broadside's 1-2 frame bloom, and the embers it spits: what makes a still frame read as a gun going off
+    bloom: E("fx-soft", 8.7, { lifespan: 50, speed: 0, scale: { start: 1.7, end: 1.2 }, alpha: { start: 0.95, end: 0 }, tint: 0xffd890, blendMode: "ADD", maxAliveParticles: vfxCap(30) }),
+    ember: E("dot", 8.6, { lifespan: { min: 450, max: 850 }, speed: { min: 40, max: 120 }, angle: { onEmit: () => FX.deg + rand(-28, 28) }, scale: { start: 0.42, end: 0 },
+      tint: [0xffb347, 0xff7a2a, 0xffd27a], blendMode: "ADD", maxAliveParticles: vfxCap(60) }),
     splinter: E("fx-splinter", 7.5, { lifespan: { min: 350, max: 700 }, speed: { min: 60, max: 170 }, rotate: { min: 0, max: 360 }, scale: { start: 1.1, end: 0.5 },
       alpha: { start: 1, end: 0 }, tint: [0xc79a62, 0x8a5a2b, 0xe3c08a, 0x5a3a20], maxAliveParticles: vfxCap(140) }),
     ring: E("fx-ring", 3, { lifespan: 520, speed: 0, scale: { start: 0.12, end: 0.55 }, alpha: { start: 0.75, end: 0 }, maxAliveParticles: vfxCap(60) }),
@@ -69,19 +75,25 @@ function vfxInit(sc) {
   vigEl = document.getElementById("vignette") || document.body.appendChild(Object.assign(document.createElement("div"), { id: "vignette" }));
 }
 function vfxHitStop(sec) { hitStopT = Math.max(hitStopT, sec); }
+// Slow motion for a big kill: the simulation runs at k for sec real seconds (js/juice.js also slows tweens and particles).
+function vfxSlowMo(sec, k) { slowT = Math.max(slowT, sec); slowK = k; }
 function vfxFrame(dt) {
   if (typeof sceneryFrame === "function") sceneryFrame();
   if (halo && !(player && player.alive && !docked)) halo.setVisible(false);
   const low = !!(player && player.alive && !docked && !paused && player.hp < player.maxHp * 0.3);
   if (vigEl && low !== vigOn) { vigOn = low; vigEl.classList.toggle("on", low); }
+  if (paused) return 1;   // hit-stop and slow motion are sea time: a pause (or the ledger) must not use them up
   if (hitStopT > 0) { hitStopT -= dt; return 0.05; }
+  if (slowT > 0) { slowT -= dt; return slowK; }
   return 1;
 }
+const vfxSlowLeft = () => Math.max(0, slowT);
 function vfxShip(s, dt) {
   const a = s.art || SHIP_ART.sloop, c = Math.cos(s.rot), sn = Math.sin(s.rot), vis = onScreen(s.x, s.y, 100);
   s.wakeT -= dt;
+  if (s.kick) kickApply(s);   // hit knockback / broadside recoil, drawn on the sprite only (js/juice.js)
   if (s.speed > 25 && s.wakeT <= 0) {
-    s.wakeT = 0.07;
+    s.wakeT = PERF_LOW && !vis ? 0.2 : 0.07;   // frames running long: off-screen wakes go sparser (nobody sees them form)
     const back = a.len * 0.46;
     S.fx.wake.emitParticleAt(s.x - c * back, s.y - sn * back, 1);
     if (vis && s.speed > s.maxSpeed * 0.4) {   // bow spray: foam peeling off both shoulders in a V
@@ -92,11 +104,11 @@ function vfxShip(s, dt) {
   if (vis && s.maxHp) {   // damage states: grey smoke under half hull, black smoke and flames under a quarter
     const f = s.hp / s.maxHp;
     if (f < 0.5 && (s.smokeT = (s.smokeT || 0) - dt) <= 0) {
-      s.smokeT = f < 0.25 ? 0.1 : 0.22; FX.tint = f < 0.25 ? 0x1e1a17 : 0x9a958e;
+      s.smokeT = (f < 0.25 ? 0.1 : 0.22) * (PERF_LOW ? 2 : 1); FX.tint = f < 0.25 ? 0x1e1a17 : 0x9a958e;
       const k = rand(-0.35, 0.35) * a.len; FX.dmg.emitParticleAt(s.x + c * k, s.y + sn * k, 1);
     }
     if ((f < 0.25 || s.burnT > 0) && (s.flameT = (s.flameT || 0) - dt) <= 0) {
-      s.flameT = s.burnT > 0 ? 0.04 : 0.06;
+      s.flameT = (s.burnT > 0 ? 0.04 : 0.06) * (PERF_LOW ? 2 : 1);
       const k = rand(-0.3, 0.3) * a.len, w = rand(-0.3, 0.3) * a.beam;
       FX.flame.emitParticleAt(s.x + c * k - sn * w, s.y + sn * k + c * w, 1);
     }
@@ -115,8 +127,16 @@ function vfxMuzzle(x, y, a) {
   const c = Math.cos(a), s = Math.sin(a);
   FX.deg = toDeg(a);
   FX.flash.emitParticleAt(x + c * 12, y + s * 12, 1);   // the teardrop's base sits on the muzzle
-  FX.smoke.emitParticleAt(x + c * 6, y + s * 6, 5);
+  FX.bloom.emitParticleAt(x + c * 10, y + s * 10, 1);
+  // smoke strung out along the barrel line, the outer puffs dirtier: a plume, not a white disc on the muzzle
+  for (let i = PERF_LOW ? 2 : 0; i < 5; i++) {   // frames running long: the three outer puffs only
+    const d = 4 + i * 6.5 + rand(-2, 2), w = rand(-2.5, 2.5);
+    FX.sTint = i >= 3 ? 0xb3a998 : 0xe9e5dc;
+    FX.smoke.emitParticleAt(x + c * d - s * w, y + s * d + c * w, 1);
+  }
+  FX.sTint = 0xe9e5dc;
   S.fx.spark.emitParticleAt(x + c * 8, y + s * 8, 2);
+  FX.ember.emitParticleAt(x + c * 10, y + s * 10, 2);
 }
 function vfxFlash(s) {
   if (!s.spr || !s.alive) return;
@@ -126,25 +146,34 @@ function vfxFlash(s) {
 }
 function vfxHit(x, y) {
   if (!onScreen(x, y, 80)) return;
-  S.fx.spark.explode(8, x, y); FX.splinter.explode(7, x, y);
+  const lo = PERF_LOW;   // frames running long: fewer sparks and splinters, the same flash
+  S.fx.spark.explode(lo ? 5 : 8, x, y); FX.splinter.explode(lo ? 4 : 7, x, y);
   FX.deg = rand(0, 360); FX.smoke.emitParticleAt(x, y, 2);
 }
 function vfxSplash(x, y, rock) {
   if (!onScreen(x, y, 60)) return;
   if (rock) { FX.dust.explode(5, x, y); S.fx.splash.explode(3, x, y); return; }
-  FX.ring.emitParticleAt(x, y, 1); FX.column.explode(3, x, y); S.fx.splash.explode(7, x, y);
+  FX.ring.emitParticleAt(x, y, 1); FX.column.explode(3, x, y); S.fx.splash.explode(PERF_LOW ? 4 : 7, x, y);
 }
-function vfxPunch(amt) {   // a quick zoom kick that hands the zoom back untouched unless something else changed it meanwhile
+// A quick zoom kick that hands the zoom back untouched unless something else changed it meanwhile. One punch at a
+// time: a bigger one takes over from a running one at its base zoom (a boss kill's +9% comes in the same frame as the
+// ordinary kill's +3.5%, which used to stop it), and a smaller one during a bigger one is dropped.
+let punchNow = null;   // { tw, z0, amt, last }
+function vfxPunch(amt) {
   if (!SETTINGS.shake) return;
-  const cam = S.cameras.main, z0 = cam.zoom; let last = z0;
-  S.tweens.addCounter({ from: 1, to: 0, duration: 180, ease: "Quad.easeOut",
-    onUpdate: tw => { if (Math.abs(cam.zoom - last) > 1e-9) return tw.stop(); last = z0 * (1 + amt * tw.getValue()); cam.setZoom(last); },
-    onComplete: () => { if (Math.abs(cam.zoom - last) < 1e-9) cam.setZoom(z0); } });
+  const cam = S.cameras.main, run = punchNow && punchNow.tw.isPlaying() && Math.abs(cam.zoom - punchNow.last) < 1e-9 ? punchNow : null;
+  if (run && run.amt >= amt) return;
+  if (run) { run.tw.stop(); cam.setZoom(run.z0); }
+  const p = { z0: cam.zoom, amt, last: cam.zoom };
+  p.tw = S.tweens.addCounter({ from: 1, to: 0, duration: 180, ease: "Quad.easeOut",
+    onUpdate: tw => { if (Math.abs(cam.zoom - p.last) > 1e-9) return tw.stop(); p.last = p.z0 * (1 + amt * tw.getValue()); cam.setZoom(p.last); },
+    onComplete: () => { if (Math.abs(cam.zoom - p.last) < 1e-9) cam.setZoom(p.z0); } });
+  punchNow = p;
 }
 function vfxSink(s, killer) {
   const spr = s.spr, a = s.art || SHIP_ART.sloop, base = s.artScale || 1, vis = onScreen(s.x, s.y, 120);
   if (s.isPlayer) { vfxHitStop(0.12); camShake(220, 0.008); }
-  else if (killer === player) { vfxHitStop(0.065); camShake(140, 0.006); vfxPunch(0.035); }
+  else if (killer === player) { vfxHitStop(0.065); camShake(160, 0.0063); vfxPunch(0.035); if (vis && typeof magazineBurst === "function") magazineBurst(s); }
   spr.setTintFill(0xffffff);
   const side = Math.random() < 0.5 ? -1 : 1;
   // she lists (rolls: narrower from above), swings a little and darkens toward the sea colour as she goes down

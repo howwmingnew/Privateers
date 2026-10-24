@@ -42,10 +42,10 @@ function lootDrop(s, killer) {
     if (warship && value > 0) {
       const g = Math.round(value * BOUNTY_K);
       save.gold += g; value -= g; statsGold(g); persist();
-      floatText(s.x, s.y - 52, t("fBounty", { n: fmt(g) }), "#ffe08a", 15);
-      Snd.play("coin", { amount: g, delay: 0.2 });
+      s.pay = { gold: g };
+      Snd.play("bounty", { amount: g, delay: 0.2 });
     }
-    if (streak * STREAK_STEP <= STREAK_MAX + 1e-9) floatText(s.x, s.y + 8, t("fStreak", { p: Math.round(streakBonus() * 100) }), "#9fe0a0", 14);
+    s.pay = { ...s.pay, streak: streakBonus() };   // shown on the kill card (js/juice.js)
   }
   return value > 0 ? addCrate(s.x, s.y, value, null) : null;
 }
@@ -54,6 +54,7 @@ function sellHold(kind) {
   const bonus = kind === "return" || kind === "outpost" ? streakBonus() : 0, sold = Math.round(cargo * (1 + bonus));
   streak = 0; streakChip();
   statsGold(sold - Math.round(cargo));   // the logbook's "dock" hook already counted the hold at its plain value
+  if (sold > 0) runHook("sale", sold, kind);   // the tutorial's "sell" step (js/tutorial.js)
   return { sold, bonus };
 }
 // Lifetime gold in the captain's log (js/logbook.js), for gold that doesn't pass through its own hooks.

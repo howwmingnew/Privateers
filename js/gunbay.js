@@ -55,7 +55,7 @@ function gunAct(act, d) {
     save = withGun({ ...save, gold: save.gold - cost }, deckSel.side, deckSel.i, gunItem(gun.g, gun.lv + 1));
     return "upgrade";
   }
-  if (act === "unload" && deckSel.side !== "store") {
+  if (act === "unload" && deckSel.side !== "store" && save.store.length < MAX_STORE) {   // a full store would drop it on the next load
     save = { ...withGun(save, deckSel.side, deckSel.i, null), store: save.store.concat([gun]) };
     deckSel = { side: "store", i: save.store.length - 1 };
     return "uiClick";
@@ -79,7 +79,7 @@ function gunCardHtml() {
   const G = GUNS[gun.g], max = gun.lv >= GUN_MAX, cost = max ? 0 : gunUpCost(gun);
   const up = max ? `<button class="btn max" type="button" disabled>${t("max")}</button>`
     : `<button class="btn" type="button" data-act="gup" ${save.gold < cost ? "disabled" : ""}>${t("upgrade", { n: fmt(cost) })}</button>`;
-  const off = deckSel.side === "store" ? "" : `<button class="btn ghost" type="button" data-act="unload">${t("toStore")}</button>`;
+  const off = deckSel.side === "store" || save.store.length >= MAX_STORE ? "" : `<button class="btn ghost" type="button" data-act="unload">${t("toStore")}</button>`;
   const next = max ? "" : ` <span class="up">→ ${Math.round(G.dmg * gunLvMul(gun.lv + 1))}</span>`;
   return `<div class="gcard"><div class="nm">${t("gf_" + gun.g)}<small>Lv ${gun.lv}</small></div><div class="gacts">${up}${off}</div>
     <div class="ds">${gunStats(gun.g, gun.lv)}${next} · ${t("range", { n: G.range })} · ${t("rpm", { n: G.rpm })}${G.chain ? t("chainFx", { n: CHAIN_T }) : ""}</div>

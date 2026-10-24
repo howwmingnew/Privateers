@@ -6,7 +6,7 @@
 @media (min-width: 760px) and (min-height: 560px) { #mini { --mini-w: calc(156px * var(--mini, 1)); } }
 
 /* Sea banner */
-#seaBanner { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 24vh); transform: translateX(-50%); z-index: 6; pointer-events: none;
+#seaBanner { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + min(24vh, 120px)); transform: translateX(-50%); z-index: 6; pointer-events: none;
   display: grid; justify-items: center; gap: 4px; text-align: center; width: max-content; max-width: calc(100vw - 32px); opacity: 0;
   color: var(--foam); text-shadow: 0 2px 10px rgba(0,0,0,.75), 0 0 2px rgba(0,0,0,.6); }
 #seaBanner.on { animation: seaIn 3.8s ease forwards; }

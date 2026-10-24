@@ -3,7 +3,7 @@
 Object.assign(STR.en, {
   wanted: "Wanted", marque: "Letter of Marque {n} of {m}", sunkOrTaken: "Sunk or taken",
   pTarget: "Target", pSeen: "Last seen", pReward: "Reward",
-  pEscort1: "1 escort", pEscorts: "{n} escorts", pWhere: "{sea}, {dir} of the harbour", pGold: "{n} gold",
+  pEscort1: "1 escort", pEscorts: "{n} escorts", pWhere: "{sea}, {dir} of the harbor", pGold: "{n} gold",
   pUnlocks: "unlocks the {ship}", pUnlocksOutpost: "unlocks the {ship} and the Hulk Outpost", pFinal: "ends the war",
   dir_0: "east", dir_1: "south-east", dir_2: "south", dir_3: "south-west", dir_4: "west", dir_5: "north-west", dir_6: "north", dir_7: "north-east",
   rankLbl: "Rank", ngLbl: "New Game+ {n}", logBtn: "Captain's log",

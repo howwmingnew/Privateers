@@ -32,8 +32,8 @@ function shellBoot(sc) {
   if (sc.input.mouse) sc.input.mouse.disableContextMenu();
   const gp = sc.input.gamepad;
   if (gp) {
-    gp.on("connected", () => toast(t("m_padOn")));
-    gp.on("disconnected", () => { toast(t("m_padOff")); if (sailing()) pauseGame(); });
+    gp.on("connected", () => toast(t("m_padOn"), true));
+    gp.on("disconnected", () => { toast(t("m_padOff"), true); if (sailing()) pauseGame(); });
   }
   showTitle();
 }
@@ -84,25 +84,53 @@ function showTitle() {
   renderCoach();
   focusFirst($m("title"));
 }
-// The harbor seen from a slow boat: glide from wherever the camera was, then circle the harbor.
+// The harbor seen from a slow boat: glide from wherever the camera was, then circle the harbor, or hang over the
+// nearest AI fight near it (attract mode, js/onboard.js), framed in the open sea beside the title card.
 function driftCamera(dt) {
   drift.t += dt;
-  const a = drift.t * 0.05, tx = PORT.x + Math.cos(a) * 280, ty = PORT.y + Math.sin(a * 0.8) * 170, k = 1 - Math.exp(-dt * 0.8);
+  const f = typeof attractFocus === "function" ? (attractTick(dt), attractFocus(dt)) : null;
+  const a = drift.t * 0.05, k = 1 - Math.exp(-dt * 0.8);
+  // the fight sits in the widest open band of sea beside the title card (left/right on a wide screen, above/below on a
+  // portrait phone), not behind the crest or the buttons
+  const v = S.cameras.main.worldView, zk = VIEW.cssW / v.width, o = titleBand(dt), sway = f ? 1 / Math.max(1, 1.6 * zk) : 1;
+  const tx = f ? f.x + (VIEW.cssW / 2 - o.x) / zk + Math.cos(a * 2) * 40 * sway : PORT.x + Math.cos(a) * 280;
+  const ty = f ? f.y + (VIEW.cssH / 2 - o.y) / zk + Math.sin(a * 1.6) * 30 * sway : PORT.y + Math.sin(a * 0.8) * 170;
   drift.x += (tx - drift.x) * k; drift.y += (ty - drift.y) * k;
   S.cameras.main.centerOn(drift.x, drift.y);
+}
+// The centre (CSS px) of the widest strip of screen the title card leaves open. Read twice a second: a layout read.
+const TITLE_BAND_MIN = 120;   // CSS px: a narrower strip cannot hold a pair of hulls
+let titleBandAt = { x: 0, y: 0 }, titleBandT = 0;
+function titleBand(dt) {
+  if ((titleBandT -= dt) > 0) return titleBandAt;
+  titleBandT = 0.5;
+  const el = document.querySelector("#title .title-card"), r = el && el.getBoundingClientRect(), w = VIEW.cssW, h = VIEW.cssH;
+  if (!r || !r.width) { titleBandAt = { x: w / 2, y: h / 2 }; return titleBandAt; }
+  const bands = [{ s: r.left, x: r.left / 2, y: h / 2 }, { s: w - r.right, x: (r.right + w) / 2, y: h / 2 },
+    { s: r.top, x: w / 2, y: r.top / 2 }, { s: h - r.bottom, x: w / 2, y: (r.bottom + h) / 2 }];
+  const best = bands.reduce((a, b) => (b.s > a.s + 1 ? b : a));
+  titleBandAt = best.s >= TITLE_BAND_MIN ? best : { x: w / 2, y: h / 2 };   // no room beside the card: the fight stays in frame
+  return titleBandAt;
 }
 function renderTitle() {
   const prog = hasProgress(save), cont = $m("tContinue"), neu = $m("tNew");
   cont.hidden = !prog;
   cont.classList.toggle("primary", prog); neu.classList.toggle("primary", !prog);
+  neu.dataset.i18n = prog ? "m_new" : "sail"; neu.textContent = t(neu.dataset.i18n);   // a fresh captain: "Set sail", straight to sea
   delete cont.dataset.smoke; delete neu.dataset.smoke;
   (prog ? cont : neu).dataset.smoke = "start";
   $m("titleMenu").hidden = false; $m("tConfirm").hidden = true;
 }
 function startGame(fresh) {
+  const skipped = fresh && save.tutorialDone && !hasProgress(save);   // skipped the tutorial, earned nothing: keep it skipped
   if (fresh) wipeProgress();
+  if (skipped) { save = { ...save, tutorialDone: true }; persist(); }
   closeTitle();
-  dock("welcome");
+  dock("welcome");   // the bookkeeping (sell, stats, save) is the same either way
+  // A new captain goes straight to sea ("Set sail" means the sea); the ledger and Red Ned's poster first show at the
+  // first sale. shellTick only runs onVoyage on a docked change, and docked never shows here, so start the voyage (the
+  // easy mark, and the tutorial unless it was skipped) by hand.
+  if (fresh) { setSail(); wasDocked = false; onVoyage(); }
 }
 function closeTitle() {
   titleOpen = false;

@@ -39,13 +39,13 @@ function lineHits(x, y, a, len) {
 // `only`: mount keys to fire (Q / E fire one broadside); all of them when omitted.
 function playerFire(only) {
   if (paused || docked || !player.alive) return;
-  let shots = 0;
+  let shots = 0, rx = 0, ry = 0;
   for (const mount of MOUNTS) {
     if ((only && !only.includes(mount.key)) || !mountEngaged(mount)) continue;
     const arr = player.guns[mount.key];
     arr.forEach((g, i) => {
       if (g.cd > 0) return;
-      g.cd = g.interval;
+      g.cd = g.interval; rx -= Math.cos(player.rot + mount.ang); ry -= Math.sin(player.rot + mount.ang);
       S.time.delayedCall(shots++ * 70, () => {          // a rolling broadside, not one blast
         if (!player.alive || paused) return;
         const m = muzzle(player, mount, g.pi, g.pn), life = g.range / g.speed;   // each gun has its own ball speed
@@ -56,14 +56,16 @@ function playerFire(only) {
       });
     });
   }
-  if (shots) camShake(70, Math.min(0.005, 0.0015 + 0.0003 * shots));   // a bigger broadside kicks harder
+  if (shots) { camShake(70, Math.min(0.004, 0.0015 + 0.0002 * shots)); playerRecoil(rx, ry); }   // a bigger broadside kicks harder (js/juice.js)
 }
 
 // ship hit test: capsule along the hull axis, sized to the drawn hull by applyShipArt (s.hl / s.hw)
 function hitShip(s, x, y) {
-  const dx = x - s.x, dy = y - s.y, c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28;
+  const dx = x - s.x, dy = y - s.y, hl = s.hl ?? 28, hw = s.hw ?? 13;
+  if (dx > hl + hw || dx < -hl - hw || dy > hl + hw || dy < -hl - hw) return false;   // far off: skip the trig
+  const c = Math.cos(s.rot), sn = Math.sin(s.rot);
   const along = clamp(dx * c + dy * sn, -hl, hl);
-  return Math.hypot(dx - c * along, dy - sn * along) < (s.hw ?? 13);
+  return Math.hypot(dx - c * along, dy - sn * along) < hw;
 }
 function floatText(x, y, str, color, size = 16) {
   const txt = S.add.text(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
@@ -76,13 +78,14 @@ function hurt(s, dmg, burn, src, ball) {
   dmg = onHit(s, dmg, burn, src, ball);   // raking, fires, chain shot, merchants and convoys raising the alarm (js/arsenal.js)
   s.hp -= dmg;
   vfxFlash(s);
-  if (onScreen(s.x, s.y)) {
-    const byPlayer = src === player;
+  const byPlayer = src === player, lethal = s.hp <= 0 && byPlayer && !s.isPlayer;
+  if (byPlayer && !lethal) juiceHit(s, ball);   // hit-stop and knockback (js/juice.js)
+  if (onScreen(s.x, s.y) && !lethal) {   // the killing blow shows the kill card instead of a number
     dmgNumber(s, dmg, s.isPlayer ? "#ff8a75" : byPlayer ? "#fff4d6" : "#a9c3cb", byPlayer || s.isPlayer ? 16 : 13);   // a broadside merges (js/notices.js)
   }
   Snd.play("hit", { x: s.x, y: s.y, big: s.isPlayer });
   if (!s.isPlayer && src) { s.attacker = src; s.angry = 8; s.ignore.delete(src); }
-  if (s.isPlayer) camShake(90, 0.004);
+  if (s.isPlayer) camShake(90, 0.0024);
   runHook("hurt", s, dmg, src);   // stats, achievements, bounty assists (js/hooks.js)
   if (s.hp <= 0) sink(s, src);
 }
@@ -109,7 +112,7 @@ function sink(s, killer) {
     if (lastLost > 0) { const w = { x: Math.round(s.x), y: Math.round(s.y), value: lastLost }; save.wrecks.push(w); addCrate(w.x, w.y, w.value, w); }
     save.salvage = [];   // whatever was salvaged went down again inside the new wreck
     cargo = 0; persist();
-    toast(t(lastLost > 0 ? "toastSunkHalf" : "toastSunk"));
+    toast(t(lastLost > 0 ? "toastSunkHalf" : "toastSunk"), true);
     S.time.delayedCall(1700, () => {
       cargo = 0;
       Object.assign(player, { x: PORT.x + 140, y: PORT.y, rot: 0, speed: 0, alive: true, burnT: 0 });
@@ -119,6 +122,6 @@ function sink(s, killer) {
   }
   // whoever sank it, the loot floats here (not saved); the player's kills pay bounty + streak (js/plunder.js)
   const loot = s.isPlayer ? null : lootDrop(s, killer);
-  if (!s.isPlayer && killer === player) { save.sunk++; floatText(s.x, s.y - 30, t("fSunk"), "#f0c766", 20); }
+  if (!s.isPlayer && killer === player) { save.sunk++; killCard(s); }   // one card: Sunk!, then its pay flies to the HUD (js/juice.js)
   runHook("sunk", s, killer, loot);   // bounties, stats, achievements (js/hooks.js)
 }

@@ -1,0 +1,34 @@
+/* Notice order, the title subtitle and share-ready wordmarks (js/notify-order.js, js/title-attract.js, js/juice-ui.js). */
+
+/* Title: the subtitle the tab and link previews already carry, under the logo */
+.logo-sub { margin: -2px 0 0; font-family: var(--f-display); font-size: calc(17px * var(--ts)); letter-spacing: .14em; color: #f0c766;
+  text-shadow: 0 1px 4px #000, 0 0 12px rgba(0,0,0,.5); }
+.logo-sub [lang="zh-Hant"] { font-family: "Noto Serif TC", var(--f-display); font-weight: 600; letter-spacing: .2em; }
+
+/* The URL footer on the victory sheet and the Captain's log: big and solid enough to survive a compressed screenshot */
+.wordmark { font-size: 16px; font-weight: 700; letter-spacing: .04em; color: var(--ink); opacity: 1; }
+
+/* The boss card: the Captain's Chest under the name, then the wordmark (the most clipped frame carries the link) */
+#bossCard .b-chest { display: block; margin-top: 6px; font-family: "Barlow Semi Condensed", "Noto Sans TC", sans-serif; font-weight: 700;
+  font-size: calc(24px * var(--ts, 1)); color: #ffe08a; letter-spacing: .04em; }
+#bossCard .b-chest:empty { display: none; }
+#bossCard .jmark { display: block; margin-top: 8px; font-family: "Barlow Semi Condensed", "Noto Sans TC", sans-serif; font-style: normal;
+  font-weight: 700; font-size: 16px; letter-spacing: .06em; color: #f6f1e3; }
+
+/* Kill #1: no plunder-streak chip until a second ship goes down */
+#streak.quiet { display: none !important; }
+
+/* Portrait phones: the achievement card sits just above the hint (its height is --hintH), far below the ship */
+@media (orientation: portrait) and (max-width: 600px) {
+  #achToast { top: auto; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 28px + var(--hintH, 64px));
+    transform: translate(-50%, 12px); width: max-content; }
+  #achToast.on { transform: translate(-50%, 0); }
+}
+
+/* Landscape phones: the sea banner is a slim strip at the top, clear of the ship in the middle of the screen */
+@media (max-height: 500px) {
+  #seaBanner { top: calc(env(safe-area-inset-top, 0px) + 6px); gap: 0; }
+  #seaBanner small { font-size: 11px; }
+  #seaBanner b { font-size: 28px; padding: 1px 16px; }
+  #seaBanner span { display: none; }
+}

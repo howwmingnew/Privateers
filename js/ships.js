@@ -61,6 +61,7 @@ function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
   e.badge = sc.add.text(x, y - 36, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#1b1410", padding: { x: 5, y: 1 } })
     .setOrigin(0.5).setDepth(9);
   outfitEnemy(e, cls);   // numbers, guns, and the class's art + hitbox via applyShipArt (js/art.js)
+  if (typeof tameFirstVoyage === "function") tameFirstVoyage(e);   // no ▲▲ ship in the Shallows on a first voyage (js/notify-order.js)
   refreshBadge(e);
   enemies.push(e);
   return e;
@@ -125,9 +126,11 @@ function isHostile(e, o) {
 const ignoring = (e, o, now) => (e.ignore.get(o) || 0) > now;
 function pickTarget(e, now) {
   const aggro = 520 + e.L * 15;
+  // the first voyage's opening: only the tutorial's mark, or a ship the player hit, goes for the player (js/tutorial.js)
+  const calm = typeof tutorialCalm === "function" && tutorialCalm() && e !== tut.target && !(e.attacker === player && e.angry > 0);
   let best = null, bd = 1e9;
   for (const o of enemies.concat([player])) {
-    if (!isHostile(e, o) || ignoring(e, o, now)) continue;
+    if (!isHostile(e, o) || ignoring(e, o, now) || (calm && o === player)) continue;
     const d = dist(e, o), lim = e.attacker === o && e.angry > 0 ? 1100 : aggro;
     if (d < lim && d < bd) { best = o; bd = d; }
   }
@@ -149,7 +152,7 @@ function think(e, dt) {
   e.retarget -= dt;
   if (e.retarget <= 0) {
     e.retarget = 0.5;
-    const nt = pickTarget(e, now);
+    const nt = (e.backOffT || 0) > now ? null : pickTarget(e, now);   // turning back out of the Shallows (js/sea-guard.js)
     if (nt && nt !== e.target) { e.target = nt; e.chaseFrom = { x: e.x, y: e.y }; }
   }
   let desired = null, thr = 0.55;

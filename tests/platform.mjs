@@ -33,6 +33,7 @@ const ready = page => page.waitForFunction(() => typeof player !== "undefined" &
 async function leaveTitle(page) {
   if (!(await page.evaluate(() => typeof titleOpen !== "undefined" && titleOpen))) return;
   await page.click("[data-smoke=start]");
+  await page.evaluate(() => { if (!docked) dock("welcome"); });   // a fresh save sails straight out (js/menu.js)
   await page.waitForFunction(() => docked, null, { polling: 50, timeout: 5000 });
 }
 const seaFrozen = async page => { await leaveTitle(page); await page.evaluate(() => { setSail(); paused = true; }); };

@@ -24,6 +24,7 @@ const Snd = (() => {
   const DEFAULT_VOL = { master: 0.8, music: 0.5, sfx: 0.8, ambient: 0.6 };
   const BUSES = Object.keys(DEFAULT_VOL);
   const NEAR = 160, FAR = 1500, PAN_SPAN = 900;  // world px: full volume inside NEAR, silent past a sound's `far`
+  const CROWD_AT = 2, CROWD_SKIP = 0.06;          // a 3rd+ voice of one effect is "crowded"; see play()
   const MAX_VOICES = 40;                          // all effects together; low-priority ones are dropped past this
   const LOOKAHEAD = 0.3, TICK_MS = 40;            // music scheduler: queue bars this far ahead, wake this often
   const HOLD = 2.5;                               // seconds the combat layer holds on after the threat drops
@@ -69,11 +70,15 @@ const Snd = (() => {
     }
     const list = voices[name] || (voices[name] = []);
     if (activeCount(now) >= MAX_VOICES && (def.pri || 1) >= 2) return false;
+    // Big fights: a full set whose newest voice is still in its attack would mask a new one, so skip it rather than
+    // steal a voice and build a fresh graph (~6% of a phone frame went on node creation in autofire).
+    if (list.length >= def.max && now - list[list.length - 1].t < CROWD_SKIP) return false;
     if (list.length >= def.max) steal(list.shift(), now);
     lastAt[name] = now;
     // distant sounds lose their highs to the air and carry relatively more echo
     const v = voice(t, bus.sfx, pan, far > 0.02 ? 16000 * Math.pow(0.08, far) : 0, (def.wet || 0) * (1 + 1.5 * far), bus.sfxWet);
     v.p = (+opts.pitch || 1) * rand(1 - def.pv, 1 + def.pv); v.big = !!opts.big; v.amount = +opts.amount || 0;
+    v.crowd = list.length >= CROWD_AT;   // cannon / hit voices drop their masked detail layers (js/audio-sfx.js)
     if (def.chord) v.ch = curChord();
     const k = opts.gain == null ? 1 : clamp(+opts.gain || 0, 0, 2);
     v.out.gain.value = att * def.gain * k * rand(1 - def.gv, 1);

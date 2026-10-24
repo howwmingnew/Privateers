@@ -38,7 +38,8 @@ async function until(page, fn, arg = null, { timeout = 8000 } = {}) {
 }
 // From the title to open sea, tutorial off, no enemy near the harbor to interfere.
 async function toSea(page, { tutorial = false } = {}) {
-  await page.click("[data-smoke=start]");
+  await page.click("[data-smoke=start]");   // a fresh save sails straight out (js/menu.js); dock for a clean departure
+  await ev(page, () => { if (!docked) dock("welcome"); });
   await until(page, () => docked);
   if (!tutorial) await ev(page, () => { save.tutorialDone = true; tutorialReset(); });
   await page.waitForTimeout(450);
@@ -58,7 +59,8 @@ const atRingEdge = (page, setup = {}) => ev(page, s => {
 }, setup);
 const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold, cargo, hp: +(player.hp / player.maxHp).toFixed(2), sp: Math.round(player.speed),
   t: +moor.t.toFixed(2), inside: moor.inside, prompt: document.getElementById("moor").hidden ? "" : document.getElementById("moor").textContent,
-  toast: document.getElementById("toast").textContent, sorties: save.stats.sorties, statGold: save.stats.gold, enemies: enemies.length }));
+  toast: document.getElementById("toast").classList.contains("on") ? document.getElementById("toast").textContent : "",
+  tally: document.getElementById("tally")?.classList.contains("on") ? document.getElementById("tally").textContent : "", sorties: save.stats.sorties, statGold: save.stats.gold, enemies: enemies.length }));
 
 // ---------- 1. desktop: pass through = quick resupply; stop for 3 s = the ledger ----------
 {
@@ -67,7 +69,8 @@ const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold
   // just set sail, still inside the ring and stopped: the ledger must not reopen by itself
   await page.waitForTimeout(3600);
   const s0 = await state(page);
-  ok("after Set sail the ship sits in the ring without the ledger reopening or a prompt", !s0.docked && !s0.canDock && !s0.prompt, s0);
+  ok("after Set sail the ship sits in the ring without the ledger reopening; the only prompt says to sail out first",
+    !s0.docked && !s0.canDock && /Sail out of the ring/.test(s0.prompt), s0);
 
   const before = await state(page);
   await ev(page, () => { window.__resets = 0; const orig = resetEnemies; window.resetEnemies = sc => { window.__resets++; orig(sc); }; });
@@ -77,9 +80,16 @@ const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold
   await page.waitForTimeout(250);
   const s1 = await state(page);
   const resets = await ev(page, () => window.__resets);
-  ok("sailing into the ring sells the hold at once, with a toast, and no ledger", !s1.docked && !s1.paused && s1.gold - before.gold === 80 && /Sold the hold for 80/.test(s1.toast), s1);
+  ok("sailing into the ring sells the hold at once, reported by the tally alone (no toast), and no ledger",
+    !s1.docked && !s1.paused && s1.gold - before.gold === 80 && /cargo/.test(s1.tally) && !/Sold the hold/.test(s1.toast), s1);
   ok("quick resupply keeps the sortie: no sea reset, no new sortie, gold counted in the log", resets === 0 && s1.sorties === before.sorties && s1.statGold - before.statGold === 80, { resets, s1 });
-  ok("moving in the ring: the prompt says how to stop for the ledger", /Drop sail/.test(s1.prompt) && s1.t === 0, s1.prompt);
+  ok("while the tally is up the stop prompt waits (one report of the sale)", s1.prompt === "" && s1.t === 0, s1.prompt);
+  await until(page, () => /\+80/.test(document.getElementById("tally").textContent), null, { timeout: 3000 });
+  ok("the tally counts up to the 80 gold paid", true);
+  await ev(page, () => { tallyUntil = 0; });   // the tally's 3.2 s would outlast the pass: end it here
+  await until(page, () => !document.getElementById("moor").hidden || !moor.inside, null, { timeout: 2000 });
+  const s1b = await state(page);
+  ok("moving in the ring after the tally: the prompt says how to stop for the ledger", /Drop sail/.test(s1b.prompt), s1b.prompt);
   await page.waitForTimeout(500);
   const s2 = await state(page);
   ok("the hull mends quickly while inside the ring", s2.hp > s1.hp && s2.hp >= 0.5, { from: s1.hp, to: s2.hp });
@@ -127,7 +137,10 @@ const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold
   const m1 = await state(page);
   await page.screenshot({ path: join(out, "touch-pass.png") });
   ok("touch: steering into the ring sells the hold with no menu", !m1.docked && m1.gold - g0 === 30, m1);
-  ok("touch: the prompt tells a phone player to let go of the stick", /Let go of the stick/.test(m1.prompt), m1.prompt);
+  await ev(page, () => { tallyUntil = 0; });
+  await until(page, () => !document.getElementById("moor").hidden || !moor.inside, null, { timeout: 2000 });
+  const m1b = await state(page);
+  ok("touch: the prompt tells a phone player to let go of the stick", /Let go of the stick/.test(m1b.prompt), m1b.prompt);
   await tp("touchEnd");
   await until(page, () => moor.t > 1);
   await page.screenshot({ path: join(out, "touch-holding.png") });

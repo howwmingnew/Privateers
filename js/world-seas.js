@@ -164,6 +164,7 @@ function renderSeaBanner(id) {
   seaBanner.innerHTML = `<small>${t("seaLv", { a: s.L0 + b + warLevels(s.L0), b: s.L1 + b + warLevels(s.L1) })}</small><b>${t("sea_" + id)}</b><span>${t("seaLine_" + id)}</span>`;
 }
 function showSeaBanner(id) {
+  if (typeof bannerGate === "function" && !bannerGate("seaBanner", () => showSeaBanner(id), id)) return;   // one banner at a time (js/notify-order.js)
   seaShown = id; renderSeaBanner(id);
   seaBanner.classList.remove("on"); void seaBanner.offsetWidth; seaBanner.classList.add("on");   // restart the fade
   clearTimeout(seaBannerT); seaBannerT = setTimeout(hideSeaBanner, 3800);
@@ -181,7 +182,7 @@ onHook("frame", dt => {
   runHook("sea", here);
   const fresh = !seaSortie.has(here) && !(now - (seaLastIn[here] ?? -Infinity) < SEA_AGAIN_MS);
   seaSortie = new Set([...seaSortie, here]);
-  if (fresh) showSeaBanner(here);
+  if (fresh && !(typeof firstVoyage === "function" && firstVoyage())) showSeaBanner(here);   // the coach has the floor
 });
 onHook("sail", () => { seaNow = seaHere(); seaPend = null; seaSortie = new Set(); hideSeaBanner(); });
 onHook("dock", hideSeaBanner);
