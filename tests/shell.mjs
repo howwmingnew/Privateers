@@ -38,7 +38,8 @@ async function until(page, fn, arg = null, { timeout = 8000 * SLOW } = {}) {
   try { await page.waitForFunction(fn, arg, { polling: 50, timeout }); }
   catch (e) {
     const s = await page.evaluate(() => typeof player === "undefined" || !player ? "not booted" : JSON.stringify({ paused, docked, pauseOpen, titleOpen, canDock,
-      x: Math.round(player.x), y: Math.round(player.y), frame: S.game.loop.frame, tut: tut.step })).catch(() => "n/a");
+      x: Math.round(player.x), y: Math.round(player.y), frame: S.game.loop.frame, tut: tut.step, run: S.game.loop.running, hid: document.hidden, focus: document.hasFocus(), sp: Math.round(player.speed), moor: JSON.stringify(moor) })).catch(() => "n/a");
+    if (process.env.CI) { await page.waitForTimeout(1000); console.log("frame 1 s later:", await page.evaluate(() => S.game.loop.frame).catch(() => "n/a")); }
     throw new Error(`timed out waiting for ${fn.toString().slice(0, 90)} | state ${s}`);
   }
 }
