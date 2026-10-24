@@ -8,33 +8,52 @@
 //                              when it is off screen, for HIT_SHOW seconds after its last hit.
 
 // ---------- toasts ----------
-const TOAST_MS = 2400, TOAST_GAP_MS = 350, TOAST_QUEUE_MAX = 3;
+// One at a time: a toast that arrives while another is up (or the ledger, or a banner) waits its turn in a short queue.
+// Repeats of the same line fold into one; a line that has waited TOAST_STALE_MS at sea is old news and is dropped.
+// toast(msg, true) is direct feedback on a key press (mute, pad) or a sinking: it shows at once, and a news line that
+// was up goes back to the head of the queue.
+const TOAST_MS = 2400, TOAST_GAP_MS = 350, TOAST_QUEUE_MAX = 4, TOAST_STALE_MS = 6000;
 const toastEl = document.getElementById("toast");
-let toastTimer, toastOn = false, toastQueue = [];
-function toast(msg) {
-  // the sheet is up, or the sea banner is (js/onboard.js): hold it (newest kept, no repeats)
-  if ((typeof docked !== "undefined" && docked) || (typeof toastHeld === "function" && toastHeld())) {
-    toastQueue = [...toastQueue.filter(m => m !== msg), msg].slice(-TOAST_QUEUE_MAX);
+let toastTimer, toastOn = false, toastQueue = [], toastNowOn = false;   // toastQueue: [{ msg, at }]
+function queueToast(msg, front) {
+  const rest = toastQueue.filter(q => q.msg !== msg), q = { msg, at: performance.now() };
+  toastQueue = front ? [q, ...rest].slice(0, TOAST_QUEUE_MAX) : [...rest, q].slice(-TOAST_QUEUE_MAX);
+}
+function toast(msg, now) {
+  const held = (typeof docked !== "undefined" && docked) || (typeof toastHeld === "function" && toastHeld());
+  if (now && !held) {
+    if (toastOn && !toastNowOn && toastEl.textContent !== msg) queueToast(toastEl.textContent, true);
+    showToast(msg, true);
     return;
   }
+  if (toastOn && !held && toastEl.textContent === msg) return;   // already saying it
+  if (held || toastOn) { queueToast(msg); return; }
   showToast(msg);
 }
-function showToast(msg) {
-  toastEl.textContent = msg; toastEl.classList.add("on"); toastOn = true;
+function showToast(msg, now) {
+  toastEl.textContent = msg; toastEl.classList.add("on"); toastOn = true; toastNowOn = !!now;
   clearTimeout(toastTimer); toastTimer = setTimeout(endToast, TOAST_MS);
 }
 function endToast() {
-  toastEl.classList.remove("on"); toastOn = false;
+  toastEl.classList.remove("on"); toastOn = false; toastNowOn = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(nextToast, TOAST_GAP_MS);
 }
 function nextToast() {
-  if (toastOn || !toastQueue.length || docked || (typeof toastHeld === "function" && toastHeld())) return;
-  const [msg, ...rest] = toastQueue; toastQueue = rest;
-  showToast(msg);
+  if (toastOn || docked || (typeof toastHeld === "function" && toastHeld())) return;
+  const now = performance.now();
+  toastQueue = toastQueue.filter(q => now - q.at <= TOAST_STALE_MS);
+  if (!toastQueue.length) return;
+  const [q, ...rest] = toastQueue; toastQueue = rest;
+  showToast(q.msg);
 }
-// The sinking toast fires just before dock("sunk"): it must not sit on the ledger's first line.
-onHook("dock", () => { clearTimeout(toastTimer); toastEl.classList.remove("on"); toastOn = false; });
-onHook("sail", () => { if (!toastOn) { clearTimeout(toastTimer); toastTimer = setTimeout(nextToast, 700); } });   // a live toast chains on by itself
+// The sinking toast fires just before dock("sunk"): it must not sit on the ledger's first line. Docking also drops sea news
+// still waiting its turn (old by the time the ledger closes); lines raised while docked wait for the sea.
+onHook("dock", () => { clearTimeout(toastTimer); toastEl.classList.remove("on"); toastOn = false; toastNowOn = false; toastQueue = []; });
+onHook("sail", () => {   // lines held through the ledger start their wait now; a live toast chains on by itself
+  const at = performance.now();
+  toastQueue = toastQueue.map(q => ({ ...q, at }));
+  if (!toastOn) { clearTimeout(toastTimer); toastTimer = setTimeout(nextToast, 700); }
+});
 
 // ---------- damage numbers ----------
 const DMG_MERGE_MS = 300;

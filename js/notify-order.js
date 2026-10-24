@@ -2,10 +2,11 @@
 // ---------- Notice order: one banner at a time, achievements after the ledger, a quiet first kill and Shallows ----------
 // Banners rank: the boss name card > the Ship Lv banner > the sea banner. One that arrives while a higher (or equal)
 // one is up waits; a lower one already up is taken down and waits. A waiting sea banner goes stale once the ship has
-// left that sea, docked, or SEA_STALE_MS passed, and is dropped. Toasts and achievement cards wait for any banner
-// (toastHeld / achHeld, js/onboard.js).
+// left that sea, docked, or SEA_STALE_MS passed, and is dropped. A Ship Lv banner that waited over LV_STALE_MS (say,
+// behind a boss card) would replay out of context: it becomes a plain toast instead. Toasts and achievement cards wait
+// for any banner (toastHeld / achHeld, js/onboard.js).
 const BANNER_RANK = { bossCard: 3, lvBanner: 2, seaBanner: 1 };
-const SEA_STALE_MS = 5000, BANNER_GAP_MS = 250;
+const SEA_STALE_MS = 5000, LV_STALE_MS = 2000, BANNER_GAP_MS = 250;
 let bannerWait = [], bannerLive = {}, bannerFreeAt = 0;
 const bannerOn = id => { const el = document.getElementById(id); return !!(el && el.classList.contains("on")); };
 const bannerUp = () => Object.keys(BANNER_RANK).some(bannerOn);
@@ -18,11 +19,11 @@ function bannerDown(id) {
 // May banner `id` show now? If not, `show` is kept and called again when the floor is free. sea: the sea's id.
 function bannerGate(id, show, sea) {
   const r = BANNER_RANK[id], up = Object.keys(BANNER_RANK).filter(k => k !== id && bannerOn(k));
-  const entry = { id, show, sea, at: performance.now() };
+  const entry = { id, show, sea, at: performance.now(), waitAt: performance.now() };
   if (up.some(k => BANNER_RANK[k] >= r)) { bannerWait = [...bannerWait.filter(w => w.id !== id), entry]; return false; }
   for (const k of up) {
     bannerDown(k);
-    if (bannerLive[k]) bannerWait = [...bannerWait.filter(w => w.id !== k), bannerLive[k]];
+    if (bannerLive[k]) bannerWait = [...bannerWait.filter(w => w.id !== k), { ...bannerLive[k], waitAt: performance.now() }];
   }
   bannerLive = { ...bannerLive, [id]: entry };
   bannerWait = bannerWait.filter(w => w.id !== id);
@@ -31,11 +32,13 @@ function bannerGate(id, show, sea) {
 }
 const seaStale = (w, now) => w.id === "seaBanner" &&
   (docked || now - w.at > SEA_STALE_MS || (typeof seaNow !== "undefined" && seaNow !== w.sea));
+const lvStale = (w, now) => w.id === "lvBanner" && now - w.waitAt > LV_STALE_MS;
 onHook("frame", () => {
   const now = performance.now();
   if (bannerUp()) { bannerFreeAt = now; return; }
   if (!bannerWait.length) return;
-  bannerWait = bannerWait.filter(w => !seaStale(w, now));
+  if (bannerWait.some(w => lvStale(w, now)) && !docked) toast(t("lvUp", { n: shipRating() }));   // news, not a fanfare
+  bannerWait = bannerWait.filter(w => !seaStale(w, now) && !lvStale(w, now));
   if (!bannerWait.length || now - bannerFreeAt < BANNER_GAP_MS) return;
   const next = bannerWait.reduce((a, b) => (BANNER_RANK[b.id] > BANNER_RANK[a.id] ? b : a));
   bannerWait = bannerWait.filter(w => w !== next);
@@ -77,8 +80,10 @@ function tameFirstVoyage(e) {
 }
 
 // ---------- phones: the achievement card sits just above the hint, whatever its height ----------
-let hintH = -1;
-onHook("frame", () => {
+let hintH = -1, hintPollT = 0;
+onHook("frame", dt => {
+  if ((hintPollT -= dt) > 0) return;
+  hintPollT = 0.25;   // getBoundingClientRect forces a layout: every frame it cost ~2.5% of a phone fight
   const h = document.getElementById("hint"), px = h && !h.hidden ? Math.round(h.getBoundingClientRect().height) : 0;   // fixed: no offsetParent
   if (px !== hintH) { hintH = px; document.documentElement.style.setProperty("--hintH", px + "px"); }
 });

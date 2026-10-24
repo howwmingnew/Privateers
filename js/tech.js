@@ -34,15 +34,16 @@ function thinPlates(dt) {
   for (const e of enemies) if (e.badge) e.badge.setVisible(keep.has(e) || !!e.boss);
 }
 
-// Frame cost: the CPU time of the scene's update (the simulation, not the GPU), smoothed. Over PERF_HI ms a frame the
-// damage smoke and flames (js/vfx.js) puff half as often; back under PERF_OK they return.
+// Frame cost: the CPU time of a whole game step, simulation and render submission (not the GPU), smoothed. A phone's
+// big fight is mostly render, so the update alone never crossed the line. Over PERF_HI ms a frame the damage smoke and
+// flames puff half as often and muzzle smoke is thinner (js/vfx.js); back under PERF_OK they return.
 const PERF_HI = 12, PERF_OK = 8, PERF_K = 0.05;
 let perfT0 = 0, perfEma = 0;
 onHook("ready", () => {
-  S.events.on("preupdate", () => { perfT0 = performance.now(); });
-  S.events.on("postupdate", () => {
+  S.game.events.on("prestep", () => { perfT0 = performance.now(); });
+  S.game.events.on("postrender", () => {
     perfEma += (performance.now() - perfT0 - perfEma) * PERF_K;
     PERF_LOW = PERF_LOW ? perfEma > PERF_OK : perfEma > PERF_HI;
   });
 });
-onHook("frame", dt => { if (player && !docked) thinPlates(dt); });
+onHook("frame", dt => { if (player && !docked && !titleOpen) thinPlates(dt); });

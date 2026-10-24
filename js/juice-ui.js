@@ -112,8 +112,9 @@ function sortieTally({ sunk, cargo: c, bonus, gold }) {
   if (better) { save = { ...save, bestRun: run }; persist(); }
   const el = juiceEl("tally", "");
   const icons = Math.min(sunk, 12);
+  const firstSale = typeof firstVoyage === "function" && firstVoyage();   // the first sale reads cargo -> gold, no multiplier math
   el.innerHTML = (sunk > 0 ? `<div class="t-sunk"><span>${t("tallySunk")}</span>${SKULL_SVG.repeat(icons)}${sunk > icons ? `<em>+${sunk - icons}</em>` : ""}</div>` : "") +
-    `<div class="t-math">${t("tallyCargo", { n: fmt(c) })}${bonus > 0 ? ` <b>× ${(1 + bonus).toFixed(1)}</b>` : ""}</div>` +
+    `<div class="t-math">${t("tallyCargo", { n: fmt(c) })}${bonus > 0 && !firstSale ? ` <b>× ${(1 + bonus).toFixed(1)}</b>` : ""}</div>` +
     `<div class="t-gold">+<b>0</b> <small>${t("tallyGold")}</small></div>` +
     (record ? `<div class="t-best">${t("tallyBest")}</div>` : (save.bestRun.sunk > 0 ? `<div class="t-rec">${t("tallyRec", { n: save.bestRun.sunk })}</div>` : ""));
   el.classList.remove("on", "done"); void el.offsetWidth; el.classList.add("on");
