@@ -33,8 +33,8 @@ function lootDrop(s, killer) {
     streak++;
     const warship = (s.faction === "pirate" || s.faction === "navy") && !s.boss;   // a bounty target pays its Captain's Chest instead (js/campaign.js)
     if (warship && value > 0) {
-      const g = Math.round(value * BOUNTY_K);
-      save.gold += g; value -= g; statsGold(g); persist();
+      const g0 = Math.round(value * BOUNTY_K), g = Math.round(g0 * (typeof heatMulNow === "function" ? heatMulNow() : 1));   // Navy heat pays more (js/heat.js)
+      save.gold += g; value -= g0; statsGold(g); persist();
       s.pay = { gold: g };
       Snd.play("bounty", { amount: g, delay: 0.2 });
     }
