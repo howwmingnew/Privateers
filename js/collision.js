@@ -43,6 +43,7 @@ function crashDue(book, key, now, cd = CRASH_COOLDOWN) {
 const crashSafe = (s, isl) => isl.harbor || isl.outpost || (typeof inSafe === "function" && inSafe(s)) || (s.isPlayer && docked);
 
 function crashLand(s, dmg, src, x, y, nx, ny) {
+  if (typeof disCrashCap === "function") dmg = disCrashCap(s, dmg);   // a crash a disaster drove: the same 10% floor and 8 s rest (js/disasters.js)
   const frac = dmg / s.maxHp;
   s.hp -= dmg;
   vfxFlash(s);
@@ -69,6 +70,7 @@ function crashIsland(s, isl, nx, ny) {
 }
 // Called by step() (js/main.js) for two overlapping hulls; (nx, ny) is the unit vector from a to b.
 function crashShips(a, b, nx, ny) {
+  if (a.struck || b.struck) return;   // a ship that struck her colours (js/strike.js) is never rammed to the bottom, and lying alongside her to board (js/boarding.js) is no collision
   if (a.fixed || b.fixed || (a.A && a.A.boom) || (b.A && b.A.boom) || (docked && (a.isPlayer || b.isPlayer))) return;
   if ((typeof inSafe === "function") && (inSafe(a) || inSafe(b))) return;
   const now = S.time.now / 1000, book = a.crashBook || (a.crashBook = new Map());

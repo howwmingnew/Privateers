@@ -16,8 +16,9 @@ await page.reload({ waitUntil: "load" });
 await page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S);
 await page.waitForTimeout(600);
 if (process.env.PERF_NOGUNART) await page.evaluate(() => { window.gaSync = () => {}; window.gunFired = () => {}; });   // the "before" run: no gun layers (js/gun-art.js), the hulls as they were
-const WX = process.env.PERF_WX || "";   // "storm-night": run the benchmark in a night storm (js/weather.js); empty: the harbor-side default, no weather
-const res = await page.evaluate(async ({ N, WX }) => {
+const WX = process.env.PERF_WX || "";
+const DIS = process.env.PERF_DIS || "";   // "1": keep a sea disaster running all the time (js/disasters.js): fog from the start, then spouts, whirlpools, waves, strikes in turn   // "storm-night": run the benchmark in a night storm (js/weather.js); empty: the harbor-side default, no weather
+const res = await page.evaluate(async ({ N, WX, DIS }) => {
   save = fitMounts({ ...save, ship: "line", unlocked: { six: true, long12: true, carronade: true, fire: true } });
   ["left", "right"].forEach(k => save[k] = save[k].map((_, i) => gunItem(["six", "long12", "carronade", "fire"][i % 4], 3)));   // gun slots hold { g, lv } items
   applyPlayerStats(true);
@@ -26,6 +27,7 @@ const res = await page.evaluate(async ({ N, WX }) => {
     const [kind, hour] = WX.split("-");
     for (let s = 1; s < 9000; s++) { const w = weatherAt(s, 1); if (w.kind === kind && w.hour === hour && w.spell === 0) { Object.assign(wx, { seed: s, t: 1, easy: false, on: true }); break; } }
   }
+  if (DIS) { Object.assign(wx, { on: true, easy: false, t: 100 }); save.tutorialDone = true; }
   // open water well outside the safe ring
   let ax = PORT.x + 1700, ay = PORT.y + 300;
   for (let a = 0; a < 64; a++) {
@@ -47,6 +49,10 @@ const res = await page.evaluate(async ({ N, WX }) => {
   const step = i => {
     if (i % 30 === 0) pack();
     if (i % 45 === 0) playerFire();
+    if (DIS) {   // always something running, around the player: the busiest case
+      if (i === 0) disForce("fog", null, { warn: 0.5, end: wx.t + 1e5 });
+      if (i % 120 === 60 && !dis.live.some(e => e.kind !== "fog")) disForce(["vortex", "spout", "tsunami", "rogue", "lightning"][(i / 120 | 0) % 5], { x: player.x + 160, y: player.y }, { warn: 1.5, a2: i });
+    }
     joyVec = { x: Math.cos(i / 90), y: Math.sin(i / 90), m: 0.6 };
     const t0 = performance.now(); t += 16.667;
     game.step(t, 16.667); if (gl) gl.finish();
@@ -66,7 +72,7 @@ const res = await page.evaluate(async ({ N, WX }) => {
   return { frames: N, mean: +(times.reduce((a, b) => a + b, 0) / N).toFixed(2), p50: +q(0.5).toFixed(2), p95: +q(0.95).toFixed(2), max: +s[s.length - 1].toFixed(2),
     ships: enemies.filter(e => e.alive).length + 1, onScreen: enemies.filter(e => e.alive && onScreen(e.x, e.y, 0)).length,
     sunk: save.sunk, peakParticles, peakObjs, zoom: +S.cameras.main.zoom.toFixed(3), renderer: gl ? "webgl" : "canvas" };
-}, { N, WX });
-console.log(JSON.stringify({ wx: WX || "none", ...res }));
+}, { N, WX, DIS });
+console.log(JSON.stringify({ wx: WX || "none", dis: DIS || "none", ...res }));
 if (errors.length) { console.error("page errors:\n" + errors.join("\n")); process.exitCode = 1; }
 await browser.close();

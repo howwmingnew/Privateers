@@ -32,6 +32,7 @@ function powderBlast(s) {
   const near = [...enemies.filter(e => e.alive && !e.fixed && e !== s), ...(player.alive && !docked ? [player] : [])]
     .filter(t => dist(t, s) < POWDER_R);
   powderFx(s);
+  if (s.boss || near.length >= 2) runHook("moment", "powder");   // a boss, or a blast that takes a crowd with it (js/replay.js)
   for (const t of near) {
     const d = powderSplash(t, dist(t, s));
     if (d > 0) hurt(t, d, 0, t.isPlayer ? s : player);   // the crit is the player's: its kills pay out (js/plunder.js)

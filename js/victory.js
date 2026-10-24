@@ -79,6 +79,7 @@ function renderVictory() {
     </footer>`;
   drawRose(vicEl.querySelector(".v-rose"));
   vicEl.querySelector(".v-choices").appendChild(postcardButton("btn v-card"));   // the finale as a postcard (js/postcard.js)
+  if (typeof replayButton === "function" && replaySupported()) vicEl.querySelector(".v-choices").appendChild(replayButton("btn v-card"));   // the last seconds as a video (js/replay.js)
   vicEl.querySelector(".v-choices").appendChild(shareButton(() => shareSpec("victory", { winTime: save.winTime, sunk: save.sunk, gold: save.stats.gold }), "btn v-card"));   // and as a share card (js/sharecard.js)
 }
 function showVictory() {
