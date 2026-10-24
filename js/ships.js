@@ -47,9 +47,9 @@ function spawnEnemy(sc, at) {
   const d0 = Math.hypot(x - PORT.x, y - PORT.y), L = at ? ringAt(d0) + levelBonus() : levelAt(d0);
   const faction = at && at.faction ? at.faction : pickFaction();
   const e = makeEnemy(sc, x, y, L, faction);
-  // placed ships (bosses, escorts, the tutorial's target) sail alone; a convoy only fills what its own ring is short of
-  // its quota (js/world-seas.js), so it never starves the other rings
-  if (e.merchant && !at) maybeConvoy(sc, e, convoyRoom(e));
+  // placed ships (bosses, escorts, the tutorial's target) sail alone; a fleet only fills what its own ring is short of
+  // its quota (js/world-seas.js), so it never starves the other rings (js/fleet.js)
+  if (!at) maybeFleet(sc, e);
   return e;
 }
 // One enemy of level L and faction at (x, y); its class (js/archetypes.js) is picked by level and faction unless given.
@@ -155,7 +155,7 @@ function think(e, dt) {
     const nt = (e.backOffT || 0) > now ? null : pickTarget(e, now);   // turning back out of the Shallows (js/sea-guard.js)
     if (nt && nt !== e.target) { e.target = nt; e.chaseFrom = { x: e.x, y: e.y }; }
   }
-  let desired = null, thr = 0.55;
+  let desired = null, thr = 0.55, fd = 0, fToT = 0;
   const tg = e.target;
   if (tg) {
     const d = dist(e, tg), toT = Math.atan2(tg.y - e.y, tg.x - e.x);
@@ -165,9 +165,9 @@ function think(e, dt) {
     // an ordinary ship breaks off once its quarry has fled two or more rings shallower than the ring it calls home
     const shoal = tg === player && !e.boss && !e.escortOf && e.ring && ringAt(dist(player, PORT)) <= e.ring - 2;
     if ((chased > LEASH && d > range) || d > GIVE_UP_DIST || shoal) giveUp(e, tg, now);
-    else ({ desired, thr } = archTactic(e, tg, d, toT, now));   // each class's battle plan (js/archetypes.js)
+    else { ({ desired, thr } = archTactic(e, tg, d, toT, now)); fd = d; fToT = toT; }   // each class's battle plan (js/archetypes.js)
   }
-  if (desired == null) { const c = convoyIdle(e); if (c) ({ desired, thr } = c); }
+  if (e.fleet) { const c = fleetSteer(e, tg, fd, fToT, now); if (c) ({ desired, thr } = c); }   // formation, flanking, a lost lead (js/fleet.js)
   if (desired == null && e.merchant) {
     // merchants run from any pirate or the player that comes close, even before a shot is fired
     let threat = null, td = 480;

@@ -41,3 +41,14 @@ const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,
 const REMATCH_PCT = 0.25;                     // a rematch sinking pays this share of the bounty's Captain's Chest (js/rematch.js)
 const REMATCH_MAX = 2;                        // beaten captains that sail again at once; the farthest lairs first
 const CHAIN_GAP = 20;                        // seconds between sinkings that still count as one kill chain (js/hall.js)
+// AI fleets (js/fleet.js): a lead ship and 1-4 wingmen of one faction that keep formation. [PLACEHOLDER] until playtested.
+const FLEET_CHANCE = { shallows: 0.08, reef: 0.18, lanes: 0.22, maelstrom: 0.22 };   // share of new ships that lead a fleet, by sea
+const FLEET_MAX = 4;          // fleets at sea at once
+const FLEET_SHIPS = 14;       // ships in fleets at once (of ENEMY_COUNT), so the sea keeps loners
+const FLEET_FIRE = 0.8;       // a wingman's effective firepower against the same ship as a lead (owner's call, #36 / #44)
+const FLEET_GAP = 88;         // px between formation slots
+const FLEET_STRAY = 420;      // a wingman this far from its slot for FLEET_STRAY_T s leaves the fleet and sails alone
+const FLEET_STRAY_T = 12;
+const FLEET_HDG_LAG = 1.2;   // s: how slowly the formation turns after its lead
+const FLEET_STUCK_T = 8, FLEET_STUCK_R = 140;   // a fleet ship that stays inside this circle this long claws off the nearest rock
+const FLEET_RAGE_T = 12, FLEET_SCATTER_T = 8;   // after the lead sinks: seconds the wingmen charge or flee

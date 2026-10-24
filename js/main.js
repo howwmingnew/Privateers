@@ -109,7 +109,7 @@ function step(dt) {
     b.spr.setPosition(b.x, b.y).setScale(1 + Math.sin(Math.PI * clamp(p, 0, 1)) * 0.6);
     let hit = null;
     if (!b.fromPlayer && player.alive && hitShip(player, b.x, b.y)) hit = player;
-    if (!hit) for (const e of living) if (e !== b.owner && e.alive && hitShip(e, b.x, b.y)) { hit = e; break; }
+    if (!hit) for (const e of living) if (e !== b.owner && e.alive && !sameFleet(b.owner, e) && hitShip(e, b.x, b.y)) { hit = e; break; }
     const onRock = !hit && islands.some(isl => Math.hypot(isl.x - b.x, isl.y - b.y) < isl.r * 0.9);
     if (hit) { vfxHit(b.x, b.y); hurt(hit, b.dmg, b.burn, b.owner, b); }
     if (hit || onRock || b.life <= 0) {
