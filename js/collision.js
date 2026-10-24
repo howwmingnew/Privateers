@@ -69,6 +69,7 @@ function crashIsland(s, isl, nx, ny) {
 }
 // Called by step() (js/main.js) for two overlapping hulls; (nx, ny) is the unit vector from a to b.
 function crashShips(a, b, nx, ny) {
+  if (a.struck || b.struck) return;   // a ship that struck her colours (js/strike.js) is never rammed to the bottom, and lying alongside her to board (js/boarding.js) is no collision
   if (a.fixed || b.fixed || (a.A && a.A.boom) || (b.A && b.A.boom) || (docked && (a.isPlayer || b.isPlayer))) return;
   if ((typeof inSafe === "function") && (inSafe(a) || inSafe(b))) return;
   const now = S.time.now / 1000, book = a.crashBook || (a.crashBook = new Map());
