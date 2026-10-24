@@ -88,8 +88,9 @@ function steer(s, desired, thr, dt) {
     } else s.coastT = 0;
     s.helmThr = desired == null ? 0 : thr;
   }
+  if (typeof disLost === "function" && disLost(s)) { s.rot += (s.disSpin || 1) * dt; desired = null; }   // a rogue wave has torn the helm away (js/disasters.js)
   const torn = s.chainT > 0;
-  const turn = s.turnRate * (torn ? CHAIN_TURN : 1) * dt * (0.45 + 0.55 * Math.min(1, s.speed / Math.max(1, s.maxSpeed) + 0.2));
+  const turn = s.turnRate * (torn ? CHAIN_TURN : 1) * (typeof disTurn === "function" ? disTurn(s) : 1) * dt * (0.45 + 0.55 * Math.min(1, s.speed / Math.max(1, s.maxSpeed) + 0.2));
   if (desired != null) s.rot += clamp(angDiff(desired, s.rot), -turn, turn);
   else if (typeof wxYaw === "function") s.rot += wxYaw(s) * dt;   // a storm slews a hull whose helm is let go (js/weather.js)
   const target = thr * s.maxSpeed * (torn ? CHAIN_SPEED : 1);
@@ -127,13 +128,13 @@ function isHostile(e, o) {
 }
 const ignoring = (e, o, now) => (e.ignore.get(o) || 0) > now;
 function pickTarget(e, now) {
-  const aggro = 520 + e.L * 15;
+  const aggro = 520 + e.L * 15, sight = typeof disSight === "function" ? disSight() : Infinity;   // fog: an AI sees only so far (js/disasters.js)
   // the first voyage's opening: only the tutorial's mark, or a ship the player hit, goes for the player (js/tutorial.js)
   const calm = typeof tutorialCalm === "function" && tutorialCalm() && e !== tut.target && !(e.attacker === player && e.angry > 0);
   let best = null, bd = 1e9;
   for (const o of enemies.concat([player])) {
     if (!isHostile(e, o) || ignoring(e, o, now) || (calm && o === player)) continue;
-    const d = dist(e, o), lim = e.attacker === o && e.angry > 0 ? 1100 : aggro;
+    const d = dist(e, o), lim = Math.min(e.attacker === o && e.angry > 0 ? 1100 : aggro, sight);
     if (d < lim && d < bd) { best = o; bd = d; }
   }
   return best;
@@ -157,6 +158,7 @@ function think(e, dt) {
     const nt = (e.backOffT || 0) > now ? null : pickTarget(e, now);   // turning back out of the Shallows (js/sea-guard.js)
     if (nt && nt !== e.target) { e.target = nt; e.chaseFrom = { x: e.x, y: e.y }; }
   }
+  if (typeof disFogLose === "function") disFogLose(e);   // a target lost in the fog is chased to where it was last seen
   let desired = null, thr = 0.55, fd = 0, fToT = 0;
   const tg = e.target;
   if (tg) {
@@ -199,11 +201,13 @@ function think(e, dt) {
   steer(e, desired, thr, dt);
 }
 
+const NO_PUSH = { x: 0, y: 0 };
 function move(s, dt) {
   if (s.fixed) { s.vx = s.vy = s.speed = 0; return; }   // shore batteries stand on their island
-  const wm = typeof wxMul === "function" ? wxMul(s) : 1, lee = typeof wxLee === "function" ? wxLee(s) : { x: 0, y: 0 };   // wind and storm (js/weather.js)
+  const wm = (typeof wxMul === "function" ? wxMul(s) : 1) * (typeof disMul === "function" ? disMul(s) : 1), lee = typeof wxLee === "function" ? wxLee(s) : NO_PUSH;   // wind and storm (js/weather.js), disasters (js/disasters.js)
+  const dp = typeof disPush === "function" ? disPush(s) : NO_PUSH;   // a whirl's pull or a wave's shove, on every hull alike
   s.vx = Math.cos(s.rot) * s.speed * wm; s.vy = Math.sin(s.rot) * s.speed * wm;
-  s.x = clamp(s.x + (s.vx + lee.x) * dt, 60, W - 60); s.y = clamp(s.y + (s.vy + lee.y) * dt, 60, H - 60);
+  s.x = clamp(s.x + (s.vx + lee.x + dp.x) * dt, 60, W - 60); s.y = clamp(s.y + (s.vy + lee.y + dp.y) * dt, 60, H - 60);
   // islands are solid to the whole hull: the hit capsule (s.hl / s.hw, cutter to man-o'-war) is kept off the rock
   const solid = islands.concat([{ x: PORT.x, y: PORT.y, r: PORT_ISLAND_R / 0.9 }]);
   const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28, hw = s.hw ?? 13;

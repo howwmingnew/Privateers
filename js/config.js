@@ -78,3 +78,22 @@ const WEATHER = {
   yaw: 0.32, leeway: 26, calmRadius: 230,             // storm: rad/s the hull is slewed beam-on at full gale, px/s pushed downwind, px from a coast inside which neither acts
   ballDrift: 45,                                      // storm: px/s a cannonball is blown downwind
 };
+
+// Sea disasters (js/disasters-core.js is the plan and the maths, js/disasters.js the sea). Every figure is gameplay, the same
+// for every player whatever the weather-effects setting says. [PLACEHOLDER] until playtested.
+// warn: seconds of warning before the strike · ring: the nearest ring it may happen in (the Shallows are rings 1-2, so no
+// deadly event there) · p: chance per 10-second slot (scaled by wx, the weight in [clear, rain, storm]) · max: per voyage ·
+// dmg / dps / cap: % of the hull max (a hit, per second in the core, and the most one event may take off one ship).
+const DISASTER = {
+  start: 70, horizon: 1800, slot: 10,   // first event no sooner than this many seconds into the voyage; the plan covers this many seconds
+  gap: 90, maxHigh: 2, protect: 8,      // two high-threat events start at least `gap` s apart; at most `maxHigh` a voyage; s of no disaster damage to you after an event
+  floor: 0.10,                          // a disaster never takes the player below this share of the hull (enemy guns still can)
+  retry: 8, tries: 4,                   // a spot that is not fair (a coast, the harbor, the Shallows): look again after this many seconds, this many times
+  tsunami: { high: 1, warn: [12, 18], max: 1, ring: 6, p: 0.0015, wx: [1, 1, 1], dmg: [0.08, 0.15], len: 1500, thick: 110, speed: 260, travel: 2800, push: [90, 300], bowK: 0.28, boost: 0.25, boostT: 4, lead: 6 },
+  spout:   { high: 1, warn: [8, 12], max: 1, ring: 4, p: 0.01, wx: [0, 1, 1.5], dps: [0.02, 0.03], cap: 0.18, R: 340, core: 110, pull: 0.5, swirl: 0.45, life: 30, speed: 55, mast: 0.35, mastT: 7, away: [700, 900] },
+  vortex:  { high: 1, warn: [6, 10], max: 1, ring: 4, p: 0.004, wx: [1, 1, 1], dps: [0.01, 0.02], cap: 0.15, R: 360, core: 80, pull: 0.5, swirl: 0.5, life: 24, away: [650, 850] },
+  rogue:   { high: 1, warn: [4, 6], max: 2, ring: 3, p: 0.01, wx: [0.1, 1, 1.4], dmg: [0.10, 0.18], R: 240, bowK: 0.3, bowAng: 0.6, lostT: 1.6, stableT: 3, stableK: 1.35, push: 140 },
+  lightning: { high: 0, warn: [3, 5], max: 2, ring: 4, p: 0.04, wx: [0, 0, 1], dmg: [0.08, 0.12], R: 80, mastT: 7, stunT: 1.5, own: 40, track: 700, lock: 1.2 },
+  fog:     { high: 0, warn: [8, 12], max: 1, ring: 1, p: 0.006, wx: [1, 1, 0], dur: [45, 70], sight: 380, fade: 6, react: [0.5, 2] },
+  mastK: 0.8, stunK: 0.4,               // a snapped mast leaves 80% of the speed; a lightning stun 40%
+};
