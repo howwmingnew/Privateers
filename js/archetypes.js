@@ -32,7 +32,6 @@ const ARCH_MIX = {
     [8, { brig: 0.25, frigate: 0.4, manowar: 0.35 }], [9, { frigate: 0.5, manowar: 0.5 }]],
   merchant: [[1, { fluyt: 1 }]],
 };
-const CONVOY_P = 0.3;          // share of merchants that sail as a convoy: 1-2 more fluyts and an armed escort brig
 const FUSE_R = 420;   // a fireship lights its fuse this close to its target: ~1.5 s of warning at its closing speed
 const BOOM_R = 70, BOOM_K = 0.25, BOOM_BOSS_K = 0.08;   // fireship blast: radius, share of each hull's max HP (bosses less)
 
@@ -163,42 +162,7 @@ const BROAD_TILT = 0.5;
 const broadside = (side, toT, d, r0, band) => toT + side * (Math.PI / 2 - BROAD_TILT * clamp((d - r0) / band, -1, 1));
 
 // ---------- Convoys ----------
-// A merchant may sail with 1-2 more fluyts and an armed escort brig. The escort guards the fluyts against pirates and
-// anyone who fires on them; the fluyts keep station on the lead ship.
-function maybeConvoy(sc, lead, room = 3) {
-  if (room < 2 || grandom() >= CONVOY_P) return;   // room: ships the sea may still add (a fluyt and the escort at least)
-  const cv = { lead, ships: [lead] }; lead.convoy = cv;
-  const slots = [[-90, 70], [-90, -70], [-180, 0]], n = Math.min(1 + (grandom() < 0.5 ? 1 : 0), room - 1);
-  const d0 = Math.hypot(lead.x - PORT.x, lead.y - PORT.y), r0 = SAFE_R + (lead.ring - 1) * ZONE_STEP + 6, r1 = r0 + ZONE_STEP - 12;
-  slots.slice(0, n + 1).forEach(([ax, ay], i) => {
-    const c = Math.cos(lead.rot), s = Math.sin(lead.rot);
-    let x = lead.x + c * ax - s * ay, y = lead.y + s * ax + c * ay;
-    // keep every ship of the convoy in the lead's level ring (its level is the lead's; the census counts it there)
-    const a = Math.atan2(y - PORT.y, x - PORT.x), r = clamp(Math.hypot(x - PORT.x, y - PORT.y), r0, lead.ring >= MAX_RING ? Math.max(r1, d0 + 200) : r1);
-    x = PORT.x + Math.cos(a) * r; y = PORT.y + Math.sin(a) * r;
-    if (islands.some(isl => Math.hypot(isl.x - x, isl.y - y) < isl.r + 30)) return;
-    const e = makeEnemy(sc, x, y, lead.L, "merchant", i === n ? "brig" : "fluyt");
-    e.rot = lead.rot; e.convoy = cv; e.station = { ax, ay }; cv.ships.push(e);
-    if (i === n) e.escort = cv;
-  });
-}
-// Ships a convoy may add beside its lead: what the lead's ring is still short of its quota (the ring census of
-// js/world-seas.js, which already counts the lead), or the room under the ship count without it.
-function convoyRoom(lead) {
-  if (typeof seaCensus === "function" && player) { const c = seaCensus(); return (c.quota[lead.ring] || 0) - (c.count[lead.ring] || 0); }
-  return ENEMY_COUNT - enemies.filter(o => o.alive && !o.boss && !o.escortOf && !o.fixed).length;
-}
-// Idle heading for a convoy ship that is not the lead: keep its station, at the lead's pace. null = roam as usual.
-function convoyIdle(e) {
-  const cv = e.convoy;
-  if (!cv) return null;
-  if (!cv.lead.alive) { cv.lead = cv.ships.find(s => s.alive && s.merchant) || cv.lead; if (!cv.lead.alive) return null; }
-  const L = cv.lead;
-  if (L === e) return null;
-  const { ax, ay } = e.station || { ax: -100, ay: 0 }, c = Math.cos(L.rot), s = Math.sin(L.rot);
-  const x = L.x + c * ax - s * ay, y = L.y + s * ax + c * ay, d = Math.hypot(x - e.x, y - e.y);
-  return tac(d < 25 ? L.rot : Math.atan2(y - e.y, x - e.x), d > 140 ? 0.8 : d > 40 ? 0.55 : 0.45);
-}
+// A merchant fleet (js/fleet.js) is the old convoy: fluyts in a column with an armed escort brig.
 // Someone fired on a convoy ship: the whole convoy knows who, the escort turns on them, the fluyts run.
 function convoyAlarm(e, src) {
   if (!e.convoy || !src || src.faction === "merchant") return;
