@@ -284,7 +284,7 @@ for (const dpr of [1, 2]) {
   await ev(page, () => { tutorialReset(); dock("welcome"); });   // the ledger checks below
   await until(page, () => docked);
   await page.waitForTimeout(100 * SLOW);
-  ok("pad on title: D-pad moves focus, A starts; pad focus ring class on", f1 === "howto" && await ev(page, () => device === "pad" && document.body.classList.contains("pad-nav")), { f1 });
+  ok("pad on title: D-pad moves focus (Set sail, then the daily sea), A starts; pad focus ring class on", f1 === "daily" && await ev(page, () => device === "pad" && document.body.classList.contains("pad-nav")), { f1 });
   await tap(0);                                     // fire-mashing into the ledger: ignored while it appears
   const stillSheet = await ev(page, () => docked && document.activeElement === document.querySelector("#port .sheet"));
   await page.waitForTimeout(700 * SLOW);
