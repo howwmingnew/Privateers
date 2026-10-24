@@ -134,6 +134,15 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 .dk-left .lbl, .dk-right .lbl { font-size: min(calc(12px * var(--ts)), 5cqw); }
 .deck .slot { font-size: min(calc(13px * var(--ts)), 5.2cqw); overflow-wrap: anywhere; }
 .deck .slot small { font-size: min(calc(11px * var(--ts)), 4.4cqw); }
+/* Big gun deck (10+ ports a side, js/gundeck.js): tight one-line ports, and a ship cell as tall as the longest side so the
+   rows line up with the hull; the picked gun's card sticks above the sheet's footer so it stays in view while you tap through. */
+.deck.dense { row-gap: 8px; }
+.deck.dense .dk-ship { aspect-ratio: auto; height: calc(var(--rows) * 30px * var(--ts)); }
+.deck.dense .dk-left .slots, .deck.dense .dk-right .slots { gap: 3px; }
+.deck.dense .slot { padding: 5px 2px; line-height: 1.15; font-size: min(calc(12px * var(--ts)), 4.4cqw); }
+.deck.dense .slot small { display: inline; margin-left: 3px; font-size: min(calc(10px * var(--ts)), 3.8cqw); }
+.deck.dense .slot.empty small { display: none; }
+.deck.dense:has(.dk-left .slot:nth-child(8)) ~ #gunSel:not(:empty) { position: sticky; bottom: calc(66px * var(--ts)); z-index: 2; background: var(--parch); padding-top: 1px; }
 
 .list { display: grid; gap: 8px; }
 .item { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(42,29,16,.25); }

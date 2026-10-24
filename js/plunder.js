@@ -45,7 +45,7 @@ function lootDrop(s, killer) {
 }
 // Docking: the hold sells at the streak's price, and the streak ends with the sortie either way.
 function sellHold(kind) {
-  const bonus = kind === "return" || kind === "outpost" ? streakBonus() : 0, sold = Math.round(cargo * (1 + bonus));
+  const bonus = kind === "return" || kind === "outpost" || kind === "trade" ? streakBonus() : 0, sold = Math.round(cargo * (1 + bonus));
   streak = 0; streakChip();
   statsGold(sold - Math.round(cargo));   // the logbook's "dock" hook already counted the hold at its plain value
   if (sold > 0) runHook("sale", sold, kind);   // the tutorial's "sell" step (js/tutorial.js)

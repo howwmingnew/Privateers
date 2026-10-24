@@ -21,7 +21,7 @@ SAVE_DEFAULTS.push(() => ({ shipId: "s1", fleet: [], shipSeq: 2 }));
 
 const SHIP_ID = /^s\d{1,6}$/;
 const idNum = id => Number(id.slice(1));
-const activeShip = (s = save) => ({ id: s.shipId, ship: s.ship, hull: s.hull, sails: s.sails, hold: s.hold });
+const activeShip = (s = save) => ({ id: s.shipId, ship: s.ship, hull: s.hull, sails: s.sails, hold: s.hold, ...(s.shipName ? { name: s.shipName } : {}) });   // name: js/flags.js
 // Every ship owned, the one you sail included, in the order bought.
 const ownedShips = (s = save) => [activeShip(s), ...s.fleet].sort((a, b) => idNum(a.id) - idNum(b.id));
 // The starter sloop is free, so the yard does not sell it (it would be an endless supply of ships).
@@ -31,7 +31,7 @@ const canBuyShip = (s, type) => forSale(type) && s.gold >= SHIPS[type].cost && s
 // Pure: a new save aboard `ship` (or `entry`), with the ship you left parked in the yard.
 function boardShip(s, entry, patch = {}) {
   const parked = activeShip(s);
-  return fitMounts({ ...s, ...patch, shipId: entry.id, ship: entry.ship, hull: entry.hull, sails: entry.sails, hold: entry.hold,
+  return fitMounts({ ...s, ...patch, shipId: entry.id, ship: entry.ship, hull: entry.hull, sails: entry.sails, hold: entry.hold, shipName: entry.name || "",
     fleet: s.fleet.filter(e => e.id !== entry.id).concat(parked) });
 }
 // Buy a new ship of `type` at full price and sail it (hull, sails and hold at Lv 1). Returns the save, or null if it can't.
@@ -51,7 +51,8 @@ SAVE_SANITIZERS.push(s => {
   for (const e of Array.isArray(s.fleet) ? s.fleet : []) {
     if (!isObj(e) || typeof e.id !== "string" || !SHIP_ID.test(e.id) || seen.has(e.id) || !Object.hasOwn(SHIPS, e.ship) || fleet.length + 1 >= FLEET_MAX) continue;
     seen.add(e.id);
-    fleet.push({ id: e.id, ship: e.ship, hull: toInt(e.hull, 1, YARD.hull.max, 1), sails: toInt(e.sails, 1, YARD.sails.max, 1), hold: toInt(e.hold, 1, YARD.hold.max, 1) });
+    fleet.push({ id: e.id, ship: e.ship, hull: toInt(e.hull, 1, YARD.hull.max, 1), sails: toInt(e.sails, 1, YARD.sails.max, 1), hold: toInt(e.hold, 1, YARD.hold.max, 1),
+      ...(typeof e.name === "string" && e.name ? { name: e.name.slice(0, 80) } : {}) });   // js/flags.js cleans the text
   }
   const top = Math.max(...[...seen].map(idNum));
   return { ...s, shipId: active, fleet, shipSeq: Math.max(toInt(s.shipSeq, 1, 999999, 1), top + 1) };

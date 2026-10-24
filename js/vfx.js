@@ -122,11 +122,12 @@ function vfxShip(s, dt) {
   if (s.isPlayer && halo) halo.setPosition(s.x, s.y).setRotation(s.rot).setDisplaySize(a.len * 1.45, a.beam * 2.7)
     .setVisible(true).setAlpha(0.32 + 0.12 * Math.sin(S.time.now * 0.004));
 }
-function vfxMuzzle(x, y, a) {
+function vfxMuzzle(x, y, a, lite) {   // lite: one gun of a big broadside, flash and a puff but no plume (js/gundeck.js)
   if (!onScreen(x, y, 120)) return;
   const c = Math.cos(a), s = Math.sin(a);
   FX.deg = toDeg(a);
   FX.flash.emitParticleAt(x + c * 12, y + s * 12, 1);   // the teardrop's base sits on the muzzle
+  if (lite) { FX.smoke.emitParticleAt(x + c * 10, y + s * 10, 1); return; }
   FX.bloom.emitParticleAt(x + c * 10, y + s * 10, 1);
   // smoke strung out along the barrel line, the outer puffs dirtier: a plume, not a white disc on the muzzle
   for (let i = PERF_LOW ? 2 : 0; i < 5; i++) {   // frames running long: the three outer puffs only
