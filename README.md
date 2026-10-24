@@ -30,6 +30,18 @@ A top-down pirate naval battle game. Turn your ship to lay the aim lines on an e
 
 瞄準線顏色：紅色＝現在開火會打中，黃色＝會打空，淡白色＝裝填中。敵船標籤的顏色和符號（▼ ● ▲ ▲▲）表示它和你的船艦等級相比有多危險。
 
+## 更新路線圖 / Roadmap
+
+接下來要做的新功能分成幾個階段，一次聚焦一個階段。下面兩張圖會在 GitHub issue 變動時自動重畫；遊戲標題選單的「更新路線圖」可以看到即時版本，也能切換各階段。
+
+What's coming next, one phase at a time. These images redraw themselves whenever an issue changes; the live, clickable version is under **Roadmap** on the title menu.
+
+**▶ [查看更新路線圖 / Open the roadmap](https://howwmingnew.github.io/Privateers/roadmap/)**
+
+![更新路線圖總覽：各階段進度](roadmap/roadmap-overview.svg)
+
+![目前階段的功能](roadmap/roadmap-current.svg)
+
 ## 開發
 
 ```bash
@@ -42,4 +54,5 @@ npm run test:all     # 全部測試（外殼、戰役、修補、平台、音效
 - Phaser 3.80.1 從 cdnjs 載入；程式是 `js/` 下的一般 `<script>`（不是 ES module），所以 `file://` 也能直接開。
 - 存檔在瀏覽器的 localStorage（`privateers-save-v2`，舊版 v1 存檔會自動轉換）；設定另存在 `privateers-settings`。
 - `tools/sound-test.html` 可以試聽所有音效和音樂，`tools/art-test.html` 可以檢視所有船型與塗裝。
+- 更新路線圖：`roadmap/index.html` 讀取標記為 `enhancement` 的 GitHub issue。每個要上圖的 issue 開頭有一行隱藏註解 `<!-- roadmap: phase=3; en=English title; deps=10 -->`（階段、英文標題、前置 issue）；加上 `in progress` 標籤會顯示為「進行中」。`.github/workflows/roadmap.yml` 在 issue 變動時執行 `node tools/roadmap-build.mjs`，重畫 README 的圖和離線快照。
 - 部署在 GitHub Pages，直接發布 `main` 分支根目錄；push 後約 1～2 分鐘自動更新。
