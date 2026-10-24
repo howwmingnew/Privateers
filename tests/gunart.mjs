@@ -155,6 +155,43 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
   await ctx.close();
 }
 
+// ---- a gun taken by boarding (js/boarding.js) and the sea's disasters (js/disasters.js) ----
+{
+  const { ctx, page } = await open(D, { tag: "prize-disasters" });
+  await page.evaluate(`(${armLine})(); (${toSea})(); ${stepper}; __step(10); S.cameras.main.centerOn(player.x, player.y); __step(2);`);
+  const pz = await page.evaluate(() => {
+    const out = {};
+    for (const id of GUN_ORDER) {   // each kind of gun a prize can be: into the store, then onto a port
+      const r = claimPrize(save, gunItem(id, 2)); save = r.save; const i = save.store.length - 1;
+      save = swapGuns({ side: "store", i }, { side: "left", i: 0 });
+      __step(1); out[id] = { kind: r.kind, code: gunSig(player.gl.mounts.left)[0], url: gunSideUrl(id).length > 200 };
+    }
+    return out;
+  });
+  ok("a prize gun of every kind reaches the store, mounts on a port and shows on the hull the next frame, with its side view",
+    Object.values(pz).length === 5 && Object.entries(pz).every(([id, v]) => v.kind === "gun" && v.code === ({ six: "s", long12: "l", carronade: "c", chain: "k", fire: "f" })[id] && v.url), pz);
+  const dz = await page.evaluate(() => {
+    for (let s = 1; s < 9000; s++) { const w = weatherAt(s, 1); if (w.kind === "storm" && w.hour === "day" && w.spell === 0) { Object.assign(wx, { seed: s, t: 100, easy: false, on: true }); break; } }
+    save.tutorialDone = true; resetEnemies(S);
+    const foes = [0, 1, 2].map(i => makeEnemy(S, player.x + 120 + 40 * i, player.y + 100, 5, "navy", "brig"));
+    disForce("fog", null, { warn: 0.5, end: wx.t + 1e5 });
+    let worst = 0, frames = 0, rolled = 0, forced = 0;
+    for (let i = 0; i < 420; i++) {
+      if (i % 100 === 20) { const k = ["vortex", "tsunami", "rogue", "lightning"][i / 100 | 0]; if (disForce(k, { x: player.x + 80, y: player.y }, { warn: 1 })) forced++; }
+      __step(1);
+      for (const sh of [player, ...foes]) {
+        if (!sh.spr || !sh.spr.active || !sh.gl) continue;
+        for (const im of [sh.gl.all, ...Object.values(sh.gl.img)]) if (im.visible) { frames++; worst = Math.max(worst, Math.abs(im.rotation - sh.spr.rotation), Math.abs(im.scaleX - sh.spr.scaleX), Math.abs(im.x - sh.spr.x) > 3 ? 1 : 0); }
+        rolled = Math.max(rolled, Math.abs(sh.spr.rotation - sh.rot));
+      }
+    }
+    return { worst: +worst.toFixed(6), frames, rolled: +rolled.toFixed(3), forced };
+  });
+  ok("through a storm and forced whirlpool, tsunami, rogue wave and lightning, every gun layer stays on its hull's pose (player and AI)", dz.worst < 1e-6 && dz.frames > 300 && dz.rolled > 0.01 && dz.forced >= 3, dz);
+  await page.evaluate(() => { __g.loop.wake(); });
+  await ctx.close();
+}
+
 // ---- 30-gun deck: texture sharing and the cap ----
 {
   const { ctx, page } = await open(D, { tag: "cache" });
