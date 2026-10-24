@@ -7,7 +7,7 @@ const LIGHTHOUSE_A = -0.78;
 function bakeHarbor(sc) {
   const res = artRes(), C = DOCK_R + 26;
   bakeCanvas(sc, "harbor", C * 2, C * 2, res, c => paintHarbor(c, C));
-  sc.add.image(PORT.x, PORT.y, "harbor").setScale(1 / res).setDepth(1);
+  harborObjs = [sc.add.image(PORT.x, PORT.y, "harbor").setScale(1 / res).setDepth(1)];
   // lighthouse beams: an additive cone sweeping slowly over the water
   bakeCanvas(sc, "fx-beam", 256, 96, 1, c => {
     const g = c.createLinearGradient(0, 0, 256, 0);
@@ -28,6 +28,7 @@ function bakeHarbor(sc) {
     const x = PORT.x + Math.cos(a) * d - Math.sin(a) * off * side, y = PORT.y + Math.sin(a) * d + Math.cos(a) * off * side;
     const img = sc.add.image(x, y, key).setScale(1 / artResOf(key)).setRotation(a).setDepth(4.2);
     sc.tweens.add({ targets: img, angle: img.angle + rand(1, 1.8), duration: rand(2200, 3200), yoyo: true, repeat: -1, ease: "Sine.easeInOut", delay: rand(0, 1500) });
+    harborObjs.push(img);
   }
 }
 function sceneryFrame() {

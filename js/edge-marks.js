@@ -43,6 +43,7 @@ function edgeCandidates(v, kx, ky) {
   };
   for (const e of enemies) if (e.alive && !e.fixed && !(typeof disFogHides === "function" && disFogHides(e))) add(e, { kind: "ship", e, boss: !!e.boss, d: threatTier(e.threatL ?? e.L).d });
   if (typeof disMarks === "function") for (const h of disMarks()) add(h, { kind: "hazard", hz: h, d: 2 });   // warning or running disasters (js/disasters.js)
+  if (portsOff()) return out;   // the daily sea has no harbor or stations (js/ports.js)
   add(PORT, { kind: "place", place: "harbor", d: 0 });
   if (save.campaign.outpost) add(OUTPOST, { kind: "place", place: "outpost", d: 0 });
   for (const st of STATIONS) add(st, { kind: "place", place: st.kind, d: 0 });   // supply stations and trade ports (js/ports.js)

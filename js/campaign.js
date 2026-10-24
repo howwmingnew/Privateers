@@ -205,7 +205,7 @@ const PORT_DOCK = { x: PORT.x, y: PORT.y, outpost: false }, OUTPOST_DOCK = { x: 
 const truceCentre = s => save.campaign.outpost && Math.hypot(s.x - OUTPOST.x, s.y - OUTPOST.y) < TRUCE_R ? OUTPOST : stationAt(s);
 const inTruce = s => !!truceCentre(s);
 // An idle ship's wander point is never rolled inside any truce circle (js/ai-nav.js).
-const clearOfTruces = pt => STATIONS.reduce((p, st) => clearOfCircle(p, st, STATION_TRUCE_R), save.campaign.outpost ? clearOfCircle(pt, OUTPOST, TRUCE_R) : pt);
+const clearOfTruces = pt => (portsOff() ? [] : STATIONS).reduce((p, st) => clearOfCircle(p, st, STATION_TRUCE_R), save.campaign.outpost ? clearOfCircle(pt, OUTPOST, TRUCE_R) : pt);
 // The dock the player is nearest to: Safe Harbor, the outpost (once open) or any station.
 const nearestHarbor = () => [PORT_DOCK, ...(save.campaign.outpost ? [OUTPOST_DOCK] : []), ...STATION_DOCKS]
   .reduce((best, d) => dist(player, d) < dist(player, best) ? d : best);

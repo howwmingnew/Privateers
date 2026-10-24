@@ -99,6 +99,7 @@ function hurt(s, dmg, burn, src, ball) {
 }
 // A crate floating on the sea. AI loot is temporary; a player wreck is saved and never expires.
 function addCrate(x, y, value, wreck) {
+  if (!wreck && portsOff()) return null;   // the daily sea drops no cargo, not from a fort or a surrender either (js/ports.js)
   const c = { spr: S.add.image(x, y, wreck ? "wreck" : "crate").setDepth(2), x, y, value, t: 0, wreck: wreck || null, label: null };
   if (wreck) c.label = labelText(S.add.text(x, y - 26, t("wreckLabel"), { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#ffd8cf", stroke: "#0b2530", strokeThickness: 4 })
     .setOrigin(0.5).setDepth(9));
