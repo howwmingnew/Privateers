@@ -46,8 +46,9 @@ const CHAIN_GAP = 20;                        // seconds between sinkings that st
 // Collision damage (js/collision.js): speed is the component of the ship's velocity along the line into the island / the
 // other hull, in px/s. Below CRASH_MIN_V nothing happens (hugging a coast, mooring); CRASH_FULL_V is a sloop at top speed.
 const CRASH_MIN_V = 45, CRASH_FULL_V = 150, CRASH_OVER_MAX = 1.25;   // a faster hull than CRASH_FULL_V hurts up to this many times more
-const CRASH_ISLAND_K = 0.25;      // share of max hull lost ramming an island head-on at CRASH_FULL_V
+const CRASH_ISLAND_K = 0.15;      // share of max hull lost ramming an island head-on at CRASH_FULL_V
 const CRASH_SHIP_K = 0.2;        // ... for the lighter of two equal hulls meeting at CRASH_FULL_V closing speed
+const CRASH_TOUCH = 0.015;       // share of max hull any ship-on-ship contact costs, however slow (weighted by hull size like a blow)
 const CRASH_MASS_MIN = 0.5, CRASH_MASS_MAX = 1.6;   // the share a hull takes of the blow: 2 * (other mass / total mass), kept in this range
 const CRASH_COOLDOWN = 0.8;      // seconds before the same ship may be hurt by the same island / ship again
 const CRASH_SPARE = 0.15;        // above this share of max hull a crash never kills (it leaves 1 hp); an AI is never killed by rock

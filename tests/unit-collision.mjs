@@ -30,7 +30,14 @@ test("normal component: a graze along the coast is far gentler than a head-on hi
   // speed 150 at 75 degrees to the shore normal: component 39 (under the threshold) vs 150 head-on
   const head = run("crashFrac(150, CRASH_ISLAND_K)"), graze = run("crashFrac(150 * Math.cos((75 * Math.PI / 180)), CRASH_ISLAND_K)");
   assert.equal(graze, 0);
-  assert.ok(head >= 0.2);
+  assert.ok(head >= 0.12);
+});
+
+test("ship contact: even a gentle touch costs CRASH_TOUCH, a hard blow costs more", () => {
+  assert.equal(run("shipFrac(0)"), run("CRASH_TOUCH"));
+  assert.equal(run("shipFrac(-50)"), run("CRASH_TOUCH"));
+  assert.ok(run("shipFrac(CRASH_FULL_V)") > run("CRASH_TOUCH"));
+  near(run("shipFrac(CRASH_FULL_V)"), run("CRASH_SHIP_K"));
 });
 
 test("hull mass share: the heavy hull takes less, the light one more, both bounded", () => {
@@ -46,7 +53,7 @@ test("hull mass share: the heavy hull takes less, the light one more, both bound
 test("full-speed island hit: clearly hurts, never a one-hit kill above the spare line", () => {
   const frac = run("crashFrac(CRASH_FULL_V * 2, CRASH_ISLAND_K)");
   const dmg = run(`crashDamage(${frac}, 100, 100, true)`);
-  assert.ok(dmg >= 20 && dmg < 100);
+  assert.ok(dmg >= 15 && dmg < 100);
   assert.equal(run(`crashDamage(5, 100, 100, true)`), 99);   // an absurd blow still leaves 1 hp
   assert.equal(run(`crashDamage(5, 100, 40, true)`), 39);
   assert.equal(run(`crashDamage(0.3, 100, 10, true)`), 30);  // already crippled: it can kill

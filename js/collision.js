@@ -1,5 +1,6 @@
 "use strict";
 // ---------- Collision damage: ramming an island or another hull hurts, by how hard the blow lands ----------
+// Ship on ship: even a gentle touch hurts a little (CRASH_TOUCH).
 // Island: the speed into the rock (the velocity component along the line from the hull to the island's centre) sets the
 // damage. Ship: the closing speed along the line between the two hulls, shared by hull size (hl * hw): the heavier hull
 // deals more and takes less. Below CRASH_MIN_V nothing; the same pair gets CRASH_COOLDOWN seconds of peace, so a ship
@@ -13,6 +14,8 @@ function crashFrac(vn, k) {
   if (!(vn > CRASH_MIN_V)) return 0;
   return k * Math.min(CRASH_OVER_MAX, (vn - CRASH_MIN_V) / (CRASH_FULL_V - CRASH_MIN_V));
 }
+// Ship on ship: even a gentle touch costs CRASH_TOUCH of the hull; harder blows follow crashFrac.
+const shipFrac = vn => Math.max(CRASH_TOUCH, crashFrac(vn, CRASH_SHIP_K));
 const hullMass = s => ((s.hl ?? 28) * (s.hw ?? 13)) / (28 * 13);
 // The share of a ship-on-ship blow ship `a` takes: the lighter one takes more.
 const massShare = (ma, mb) => clamp(2 * mb / (ma + mb), CRASH_MASS_MIN, CRASH_MASS_MAX);
@@ -69,8 +72,8 @@ function crashShips(a, b, nx, ny) {
   if (a.fixed || b.fixed || (a.A && a.A.boom) || (b.A && b.A.boom) || (docked && (a.isPlayer || b.isPlayer))) return;
   if ((typeof inSafe === "function") && (inSafe(a) || inSafe(b))) return;
   const now = S.time.now / 1000, book = a.crashBook || (a.crashBook = new Map());
-  const fresh = crashContact(book, b, now), base = crashFrac((a.vx - b.vx) * nx + (a.vy - b.vy) * ny, CRASH_SHIP_K);
-  if (!base || !fresh || !crashDue(book, b, now)) return;
+  const fresh = crashContact(book, b, now), base = shipFrac((a.vx - b.vx) * nx + (a.vy - b.vy) * ny);
+  if (!fresh || !crashDue(book, b, now)) return;
   a.speed *= CRASH_SHED; b.speed *= CRASH_SHED;   // the blow takes the way off both hulls: two AI ships don't grind on each other
   const mayKill = !!(a.isPlayer || b.isPlayer), ma = hullMass(a), mb = hullMass(b), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
   crashLand(a, crashDamage(base * massShare(ma, mb), a.maxHp, a.hp, mayKill), b, cx, cy, -nx, -ny);

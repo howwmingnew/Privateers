@@ -92,6 +92,18 @@ check(heavy.pl > heavy.en, `the heavy hull wins: the sloop loses more than the m
 check(light.en > light.pl, `the light hull loses: the cutter loses more than the sloop (masses ${masses(light)})`);
 check(heavy.plAlive && light.plAlive && heavy.enAlive && light.enAlive, "nobody died of a single ramming");
 
+// 5b. a slow touch between ships (under the speed threshold) still costs a little, both sides
+const touch = await page.evaluate(async () => {
+  const x0 = 1500, y0 = 1500, e = makeEnemy(S, x0 + 60, y0, 5, "pirate", "brig"), list = [e];
+  e.speed = 0; e.rot = 0; e.hp = e.maxHp; window.__land.length = 0;
+  Object.assign(player, { x: x0, y: y0, rot: 0, hp: player.maxHp, alive: true }); player.crashBook = new Map();
+  const drive = setInterval(() => { player.rot = 0; player.speed = player.maxSpeed * 0.15; e.speed = 0; }, 8);
+  await new Promise(r => setTimeout(r, 1500)); clearInterval(drive); player.speed = 0;
+  const out = { pl: player.maxHp - player.hp, en: e.maxHp - e.hp, blows: window.__land.length };
+  __gone(list); return out;
+});
+check(touch.pl > 0 && touch.en > 0 && touch.pl < 5 && touch.blows <= 2, `a slow touch between ships costs a little (player ${touch.pl.toFixed(1)} hp, enemy ${touch.en.toFixed(1)} hp, ${touch.blows} blows)`);
+
 // 6. AI against AI: two hulls meeting head-on both take damage
 const ai = await page.evaluate(async () => {
   const a = makeEnemy(S, player.x - 80, player.y - 400, 5, "pirate", "brig"), b = makeEnemy(S, player.x + 80, player.y - 400, 5, "navy", "frigate"), list = [a, b];
