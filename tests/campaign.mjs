@@ -261,7 +261,7 @@ console.log("Old saves");
   check(s.wreck.x === 4600 && s.wreck.y === 3300 && s.wreckClear && s.crates === 1, `old wreck moved with the harbor and lies in open water (${s.wreck.x}, ${s.wreck.y})`);
   check(s.gold === 777 && s.ship === "frigate" && s.camp.ships.includes("frigate") && s.camp.bounty === 0, "keeps gold and the frigate it already sails; campaign starts at bounty 1");
   check(s.stats.time >= 0 && s.stats.sunk.pirate === 0 && s.ngPlus === 0, "stats and NG+ get defaults");
-  check(s.shipsList.length === 2 && /Your ship/.test(s.shipsList[0]) && /Commodore Hale/.test(s.shipsList[1]), `ship list: ${s.shipsList.join(" | ")}`);
+  check(s.shipsList.length === 5 && /Your ship/.test(s.shipsList[0]) && s.shipsList.some(r => /Commodore Hale/.test(r)), `ship list (the one owned, then every model for sale except the free sloop): ${s.shipsList.join(" | ")}`);
   await o.shot("desktop-en-10-oldsave");
   await page.reload({ waitUntil: "load" }); await ready(page);
   const again = await page.evaluate(() => ({ seed: save.seed, w: save.wrecks[0] }));

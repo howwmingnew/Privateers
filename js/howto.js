@@ -35,7 +35,7 @@ Object.assign(STR.en, {
     <p>Where marks pile up, the nearest stronger ships and the bounty stay on top, and ships in one spot merge into one mark with a count.</p>`,
   ht_harbor: `<h3>The harbor</h3><p>Sail into the dashed ring <i class="sw-ring"></i> around the harbor to dock. Your hold is sold and the hull is repaired for free. Then spend your gold in the ledger:</p>
     <ul><li><b>Armory</b>: buy cannons one at a time; each lands in the gun store.</li><li><b>Gun deck</b>: tap a gun port or a stored gun, press Swap position, then tap another to swap them. Each cannon has its own level: pick it to upgrade it.</li>
-    <li><b>Shipwright</b>: upgrade the hull, sails and hold.</li><li><b>New ships</b>: more guns and a sturdier hull, but hull, sails and hold start again at Lv 1.</li></ul>
+    <li><b>Shipwright</b>: upgrade the hull, sails and hold.</li><li><b>Switch ship</b>: buy more guns and a sturdier hull. Every ship you buy stays in the yard with its own upgrades, so you can switch back for free, or buy the same model again. Your cannons move aboard.</li></ul>
     <p>The farther from the harbor you sail, the richer and deadlier the ships.</p>`,
   ht_wreck: `<h3>Wrecks</h3><p>If your ship goes down, the cargo in the hold sinks with it. The wreck stays where you sank, marked with a red <i class="sw-x"></i> on the map, even if you close the game. Sail over it to scoop the cargo back up, then bring it home to sell.</p>`,
   cr_body: `<p><b>Privateers</b> · 私掠者</p><p>Made with <b>Phaser 3</b>.</p>
@@ -76,7 +76,7 @@ Object.assign(STR.zh, {
     <p>標記擠在一起時，最近的較強船艦和懸賞目標會顯示在最上面；同一處的船會合併成一個標記並標上數量。</p>`,
   ht_harbor: `<h3>港口</h3><p>駛進港口周圍的虛線圈 <i class="sw-ring"></i> 就會靠港。貨艙裡的貨物會自動賣掉，船體也會免費修好。接著在帳簿裡花掉金幣：</p>
     <ul><li><b>軍械庫</b>：火砲一門一門買，買下的砲會先放進火砲庫存。</li><li><b>火砲配置</b>：點一個砲位或庫存裡的砲，按「切換砲位」，再點另一處才會互換。每門砲有自己的等級，選起來就能升級。</li>
-    <li><b>造船廠</b>：升級船體、船帆和貨艙。</li><li><b>新船</b>：火砲更多、船體更堅固，但船體、船帆和貨艙會從 Lv 1 重新開始。</li></ul>
+    <li><b>造船廠</b>：升級船體、船帆和貨艙。</li><li><b>換船</b>：買火砲更多、船體更堅固的船。買過的每艘船都留在船塢，各自保留升級，可以隨時免費換回來，也能再買一艘相同型號。火砲會一起搬上船。</li></ul>
     <p>離港口越遠，敵船越富有，也越危險。</p>`,
   ht_wreck: `<h3>殘骸</h3><p>船沉的時候，貨艙裡的貨物也會跟著沉下去。殘骸會留在沉沒的地方，地圖上以紅色 <i class="sw-x"></i> 標示，關掉遊戲也不會消失。駛過殘骸就能把貨物撈回來，再帶回港口賣掉。</p>`,
   cr_body: `<p><b>私掠者</b> · Privateers</p><p>使用 <b>Phaser 3</b> 製作。</p>
