@@ -22,31 +22,29 @@ function boot(extra = {}) {
   return { run: code => vm.runInContext(code, ctx), json: code => JSON.parse(vm.runInContext(`JSON.stringify(${code})`, ctx)) };
 }
 
-test("repair: nothing mends until REPAIR_DELAY seconds after the last hit", () => {
+test("repair: a hull below full always mends 1% of max a second, with no wait", () => {
   const g = boot();
-  assert.equal(g.run("REPAIR_DELAY"), 3);
-  const early = g.json("repairStep(2.5, 50, 100, 0.4, false)");   // 2.9 s idle: still waiting
-  assert.deepEqual(early, { idle: 2.9, hp: 50 });
-  const after = g.json("repairStep(3, 50, 100, 1, false)");
-  assert.equal(after.hp, 51);                                    // 1% of max hull per second
-  assert.equal(after.idle, 4);
+  assert.equal(g.run("typeof REPAIR_DELAY"), "undefined");
+  assert.equal(g.run("repairStep(50, 100, 1, false)"), 51);
+  assert.equal(g.run("repairStep(50, 100, 0.016, false)"), 50 + 0.016);
+});
+
+test("repair: a stopped ship mends 3% a second", () => {
+  const g = boot();
+  assert.equal(g.run("repairStep(50, 100, 1, true)"), 53);
 });
 
 test("repair: a hull at full stays full, and mending never overshoots", () => {
   const g = boot();
-  assert.equal(g.json("repairStep(9, 100, 100, 1, false)").hp, 100);
-  assert.equal(g.json("repairStep(9, 99.8, 100, 1, false)").hp, 100);
+  assert.equal(g.run("repairStep(100, 100, 1, false)"), 100);
+  assert.equal(g.run("repairStep(99.8, 100, 1, true)"), 100);
 });
 
-test("repair: fire or a gun-port warning blocks it and restarts the clock", () => {
+test("repair: empty to full takes about 100 s under way and 33 s stopped", () => {
   const g = boot();
-  assert.deepEqual(g.json("repairStep(20, 40, 100, 1, true)"), { idle: 0, hp: 40 });
-});
-
-test("repair: empty to full takes about 100 s of calm", () => {
-  const g = boot();
-  const t = g.run(`(() => { let s = { idle: 3, hp: 0 }, n = 0; while (s.hp < 100 && n < 1e5) { s = repairStep(s.idle, s.hp, 100, 0.05, false); n++; } return n * 0.05; })()`);
-  assert.ok(t > 99 && t < 101.5, `took ${t} s`);
+  const t = still => g.run(`(() => { let hp = 0, n = 0; while (hp < 100 && n < 1e5) { hp = repairStep(hp, 100, 0.05, ${still}); n++; } return n * 0.05; })()`);
+  assert.ok(t(false) > 99 && t(false) < 101.5, `under way took ${t(false)} s`);
+  assert.ok(t(true) > 33 && t(true) < 34.5, `stopped took ${t(true)} s`);
 });
 
 // ---------- powder-magazine crits ----------
