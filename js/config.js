@@ -14,6 +14,9 @@ const MAX_RING = 10;        // the outermost level ring; the corners past it bel
 // A broadside rolls off gun by gun, ROLL_GAP_MS apart but never longer than ROLL_MAX_MS in all; only about FX_GUNS guns of a
 // side get their own muzzle smoke and report; MAX_BALLS caps live shot (the rest of a crowded fight is not drawn).
 const AUTOFIRE_HOLD_MS = 250;   // holding Space this long turns on auto-fire (guns whose aim line is red fire as they reload)
+// Gun art (js/gun-art.js): a mount's layer kicks back GUN_RECOIL_PX px per shot and settles at GUN_RECOIL_DECAY per s; a muzzle flash lasts
+// GUN_FLASH_S s (at most GUN_FLASH_MAX at once); GUN_TEX_CAP baked gun-layer textures are kept (the ones no ship shows go first).
+const GUN_RECOIL_PX = 2.4, GUN_RECOIL_DECAY = 7, GUN_FLASH_S = 0.09, GUN_FLASH_MAX = 36, GUN_TEX_CAP = 64;
 const MAX_PORTS = 15, DENSE_PORTS = 7, ROLL_GAP_MS = 70, ROLL_MAX_MS = 520, FX_GUNS = 6, MAX_BALLS = 220;
 const AIM_FULL_L = 8;       // enemy gunners get more accurate with level, up to this level
 const REPAIR_RATE = 0.01;        // share of max hull mended per second at sea, always (100 s from empty to full; js/repair.js)
