@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const FILES = ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/hooks.js", "js/data.js", "js/save.js", "js/repair.js", "js/powder.js"];
+const FILES = ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/hooks.js", "js/data.js", "js/save.js", "js/repair.js", "js/powder.js", "js/ambush.js"];
 const SRC = FILES.map(f => [f, readFileSync(new URL("../" + f, import.meta.url), "utf8")]);
 
 // A fresh page load. `extra` = more globals the scripts may touch at load time.
@@ -81,4 +81,37 @@ test("powder: the blast fades with distance, and never kills the player or a bos
   assert.equal(g.run("powderSplash({ isPlayer: true, maxHp: 100, hp: 100 }, 0)"), 15, "the player is hurt");
   assert.equal(g.run("powderSplash({ isPlayer: true, maxHp: 100, hp: 5 }, 0)"), 4, "but left alive");
   assert.equal(g.run("powderSplash({ boss: 'x', maxHp: 1000, hp: 30 }, 0)"), 29);
+});
+
+// ---------- first-voyage ambush ----------
+const open = { done: false, sunk: 1, t: 45, calm: false, banner: false, engaged: false, hp: 1, safe: false };
+const ready = o => boot().run(`ambushReady(${JSON.stringify({ ...open, ...o })})`);
+
+test("ambush: comes once, 45 s after the first sinking, and only when the floor is clear", () => {
+  assert.equal(ready({}), true);
+  assert.equal(ready({ t: 44.9 }), false, "not before AMBUSH_DELAY");
+  assert.equal(ready({ sunk: 0 }), false, "the clock starts at the first sinking");
+  assert.equal(ready({ done: true }), false, "once in a lifetime");
+  assert.equal(ready({ calm: true }), false, "the tutorial's opening is still on");
+  assert.equal(ready({ banner: true }), false, "a boss card / sea banner is up or waiting");
+  assert.equal(ready({ engaged: true }), false, "still fighting the tutorial merchant (or anything else)");
+  assert.equal(ready({ hp: 0.59 }), false, "a hurt captain is given time to mend");
+  assert.equal(ready({ safe: true }), false, "never in the safe waters");
+});
+
+test("ambush: the pirates start on the island's far side, a shore's width apart", () => {
+  const g = boot();
+  const isl = { x: 1000, y: 1000, r: 100 }, from = { x: 400, y: 1000 };
+  const a = g.json(`ambushSpot(${JSON.stringify(isl)}, ${JSON.stringify(from)}, -1)`), b = g.json(`ambushSpot(${JSON.stringify(isl)}, ${JSON.stringify(from)}, 1)`);
+  assert.ok(a.x > 1000 + 100 && b.x > 1000 + 100, "beyond the island as seen from the player");
+  assert.ok(Math.abs(a.x - b.x) < 1e-6 && Math.abs(a.y - b.y) > 100 && Math.abs(a.y - b.y) < 160, "side by side");
+});
+
+test("ambush: the flag is in new saves; old saves that already sank a ship never get it", () => {
+  const g = boot();
+  assert.equal(g.run("defaultSave().ambushDone"), false);
+  assert.equal(g.run("sanitizeSave({ v: 2, sunk: 0 }).ambushDone"), false, "no sinking yet: the first voyage is still ahead");
+  assert.equal(g.run("sanitizeSave({ v: 2, sunk: 7 }).ambushDone"), true);
+  assert.equal(g.run("sanitizeSave({ v: 2, sunk: 7, ambushDone: false }).ambushDone"), false, "a stored flag wins");
+  assert.equal(g.run("sanitizeSave({ v: 2, ambushDone: 'yes' }).ambushDone"), false, "junk is not a flag");
 });
