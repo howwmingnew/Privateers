@@ -16,7 +16,7 @@ function applyPlayerStats(full) {
   player.maxSpeed = yardVal("sails");
   player.cap = yardVal("hold");
   player.guns = playerGuns();
-  applyShipArt(player, save.ship, "player");   // hull art, hitbox, muzzles and view follow the ship in the save
+  applyShipArt(player, save.ship, liveryFor(player));   // hull art, hitbox, muzzles and view follow the ship in the save
 }
 function makePlayer(sc) {
   const p = makeShip(sc, "ship-player", PORT.x + 140, PORT.y);
@@ -71,7 +71,7 @@ function refreshBadge(e) {
   const tier = threatTier(e.threatL ?? e.L), c = tier.color;   // glyph + colour (by how hard it fights, js/archetypes.js), readable without colour vision
   // the plunder aboard only reads through the spyglass, so a distant fleet is a tidy row of levels, not a price list
   // the number is how hard it fights (threatL), the same figure its colour and glyph compare with your Ship Lv
-  const n = e.threatL ?? e.L, label = e.lootSeen ? t("badge", { n, g: fmt(e.loot) }) : t("badgeLv", { n });
+  const n = e.threatL ?? e.L, label = e.lootSeen ? t("badge", { n, g: fmt(e.loot + (e.stolen || 0)) }) : t("badgeLv", { n });
   e.badge.setText(tier.glyph + " " + label).setBackgroundColor(c).setColor(c === "#d9493a" ? "#fff6ea" : "#1b1410");
 }
 
@@ -96,14 +96,16 @@ function steer(s, desired, thr, dt) {
   s.speed += clamp(target - s.speed, -s.maxSpeed * 1.1 * dt, s.maxSpeed * 0.7 * dt);
 }
 function avoidIslands(s, desired) {
-  for (const isl of islands) { const slid = slideOff(s, isl, desired); if (slid !== desired) return slid; }   // about to touch a rock: turn along it (js/ai-nav.js)
-  const lx = s.x + Math.cos(s.rot) * 120, ly = s.y + Math.sin(s.rot) * 120;
+  const away = s.shoreAway;   // just rammed a rock (js/collision.js): head out from it for a moment
+  if (away && away.until > S.time.now / 1000) return Math.atan2(s.y - away.y, s.x - away.x);
+  const look = 120 + s.speed * 0.5, lx = s.x + Math.cos(s.rot) * look, ly = s.y + Math.sin(s.rot) * look;   // a faster hull needs more warning
   for (const isl of islands) {
-    if (Math.hypot(isl.x - lx, isl.y - ly) < isl.r * 1.05 + 45) {
+    if (Math.hypot(isl.x - lx, isl.y - ly) < isl.r * 1.05 + 45 + (s.hw ?? 13)) {
       const cross = Math.cos(s.rot) * (isl.y - s.y) - Math.sin(s.rot) * (isl.x - s.x);
       return s.rot - Math.sign(cross || 1) * 1.3;
     }
   }
+  for (const isl of islands) { const slid = slideOff(s, isl, desired); if (slid !== desired) return slid; }   // about to touch a rock: turn along it (js/ai-nav.js)
   return desired;
 }
 // Who fights whom:
@@ -170,6 +172,8 @@ function think(e, dt) {
     else { ({ desired, thr } = archTactic(e, tg, d, toT, now)); fd = d; fToT = toT; }   // each class's battle plan (js/archetypes.js)
   }
   if (e.fleet) { const c = fleetSteer(e, tg, fd, fToT, now); if (c) ({ desired, thr } = c); }   // formation, flanking, a lost lead (js/fleet.js)
+  const plunder = typeof aipSeek === "function" && (desired == null || (tg && dist(e, tg) >= AIP_BREAK)) ? aipSeek(e, tg ? dist(e, tg) : 0, dt) : null;   // loose loot (js/ai-plunder.js)
+  if (plunder) ({ desired, thr } = plunder);
   if (desired == null && e.merchant) {
     // merchants run from any pirate or the player that comes close, even before a shot is fired
     let threat = null, td = 480;
@@ -187,10 +191,10 @@ function think(e, dt) {
       const a = Math.atan2(e.y - PORT.y, e.x - PORT.x) + rand(-1, 1) * 600 / r;
       e.thinkT = rand(5, 10);
       const pt = { x: clamp(PORT.x + Math.cos(a) * r, 200, W - 200), y: clamp(PORT.y + Math.sin(a) * r, 200, H - 200) };
-      e.wander = save.campaign.outpost ? clearOfCircle(pt, OUTPOST, TRUCE_R) : pt;   // never a point on the outpost's hulk (js/ai-nav.js)
+      e.wander = clearOfTruces(pt);   // never a point on the outpost's hulk or inside a station's circle (js/campaign.js, js/ai-nav.js)
     }
     desired = Math.atan2(e.wander.y - e.y, e.wander.x - e.x); thr = 0.5;
-    if (inTruce(e)) { desired = Math.atan2(e.y - OUTPOST.y, e.x - OUTPOST.x); thr = 0.7; }   // an idle ship inside the truce circle sails out of it
+    const tc = truceCentre(e); if (tc) { desired = Math.atan2(e.y - tc.y, e.x - tc.x); thr = 0.7; }   // an idle ship inside the truce circle sails out of it
   }
   // stay out of the harbor's safe waters
   const dPort = Math.hypot(e.x - PORT.x, e.y - PORT.y);
@@ -205,13 +209,13 @@ function move(s, dt) {
   s.vx = Math.cos(s.rot) * s.speed * wm; s.vy = Math.sin(s.rot) * s.speed * wm;
   s.x = clamp(s.x + (s.vx + lee.x) * dt, 60, W - 60); s.y = clamp(s.y + (s.vy + lee.y) * dt, 60, H - 60);
   // islands are solid to the whole hull: the hit capsule (s.hl / s.hw, cutter to man-o'-war) is kept off the rock
-  const solid = islands.concat([{ x: PORT.x, y: PORT.y, r: PORT_ISLAND_R / 0.9 }]);
+  const solid = islands.concat([{ x: PORT.x, y: PORT.y, r: PORT_ISLAND_R / 0.9, harbor: true }]);
   const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28, hw = s.hw ?? 13;
   for (const isl of solid) {
     const R = isl.r * 0.9 + hw + 5, ix = isl.x - s.x, iy = isl.y - s.y;
     if (Math.abs(ix) > R + hl || Math.abs(iy) > R + hl) continue;
     const k = clamp(ix * c + iy * sn, -hl, hl), qx = s.x + c * k - isl.x, qy = s.y + sn * k - isl.y, d = Math.hypot(qx, qy);
-    if (d < R && d > 0.01) { s.x += qx / d * (R - d); s.y += qy / d * (R - d); s.speed *= 0.9; }
+    if (d < R && d > 0.01) { crashIsland(s, isl, -qx / d, -qy / d); s.x += qx / d * (R - d); s.y += qy / d * (R - d); s.speed *= 0.9; }   // damage by the speed it arrived at (js/collision.js)
   }
 }
 // Radius two hulls keep between them (half capsule length + beam): 20 px for the old one-size hull, more for big ships.

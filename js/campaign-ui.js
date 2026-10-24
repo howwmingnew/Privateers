@@ -100,7 +100,7 @@ function posterHtml(b) {
 function renderWanted() {
   const c = save.campaign, b = activeBounty();
   const story = storyKey ? `<p class="story">${t(storyKey, { n: save.ngPlus })}</p>` : "";
-  const note = atOutpost ? `<p class="hint-s">${t("outpostNote")}</p>` : "";
+  const note = atOutpost ? `<p class="hint-s">${t(dockNoteKey())}</p>` : "";
   const body = b ? posterHtml(b)
     : `<div class="poster done"><div class="p-wanted">${t("allDoneT")}</div><p class="p-story">${t("allDone")}</p>
        <button class="btn ngbtn" type="button" data-camp="ng">${t(ngArmed ? "ngArm" : "ngBtn")}</button></div>`;
@@ -125,7 +125,7 @@ wantedEl.addEventListener("click", ev => {
 });
 onHook("renderPort", () => {
   for (const id of ["deck", "armory", "yard", "ships"]) { const sec = document.getElementById(id)?.closest("section"); if (sec) sec.hidden = atOutpost; }
-  document.getElementById("portTitle").textContent = t(atOutpost ? "outpostName" : "harbor");
+  document.getElementById("portTitle").textContent = t(atOutpost ? dockTitleKey() : "harbor");
   renderWanted();
 });
 

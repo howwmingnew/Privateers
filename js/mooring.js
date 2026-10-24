@@ -38,10 +38,14 @@ const moorEl = (() => { const el = document.createElement("div"); el.id = "moor"
 function moorTick(dt, hb, dPort) {
   const inside = player.alive && dPort < DOCK_R;
   if (!inside) { if (moor.inside) moorReset(); return; }
-  const kind = hb.outpost ? "outpost" : "return";
-  if (!moor.inside) { moor = { ...moor, inside: true }; if (player.hp < player.maxHp) floatText(player.x, player.y - 40, t("fRepair"), "#9fe0a0", 15); }
-  if (cargo > 0) quickSell(kind);
-  if (player.hp < player.maxHp) player.hp = Math.min(player.maxHp, player.hp + player.maxHp * MOOR_HEAL * dt);
+  const kind = hb.kind || (hb.outpost ? "outpost" : "return"), svc = serviceOf(kind);   // what this dock does (js/ports.js)
+  if (!moor.inside) {
+    moor = { ...moor, inside: true };
+    if (svc.heal && player.hp < player.maxHp) floatText(player.x, player.y - 40, svc.fee ? t("fSupplyIn", { n: supplyFee(hb.ring) }) : t("fRepair"), "#9fe0a0", 15);
+  }
+  if (cargo > 0 && svc.sell) quickSell(kind);
+  if (svc.fee) stationHeal(hb, dt);
+  else if (svc.heal && player.hp < player.maxHp) player.hp = Math.min(player.maxHp, player.hp + player.maxHp * MOOR_HEAL * dt);
   player.burnT = 0;
   // the ledger: only once the ship has left the ring since it last set sail (canDock, js/main.js)
   const still = player.speed < player.maxSpeed * MOOR_STOP;
@@ -61,6 +65,7 @@ function quickSell(kind) {
   sortieTally({ ...tally, bonus, gold: sold });   // the sale's one report: the count-up and its coin roll (js/juice-ui.js)
 }
 function moorReset() {
+  stationLeft();   // settles a supply station's fee (js/ports.js)
   moor = { inside: false, t: 0, sold: 0, bonus: 0 };
   if (moorG) moorG.clear();
   if (!moorEl.hidden) moorEl.hidden = true;

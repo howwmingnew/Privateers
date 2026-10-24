@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
 const FILES = ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/hooks.js", "js/data.js", "js/save.js", "js/save-campaign.js",
-  "js/postcard.js", "js/logbook.js", "js/hall.js", "js/daily.js", "js/sharecard.js", "js/archetypes.js", "js/world-seas.js", "js/campaign.js"];
+  "js/postcard.js", "js/logbook.js", "js/hall.js", "js/daily.js", "js/sharecard.js", "js/archetypes.js", "js/world-seas.js", "js/ports.js", "js/campaign.js"];
 const SRC = FILES.map(f => [f, readFileSync(new URL("../" + f, import.meta.url), "utf8")]);
 
 // Any property, call or assignment on a stand-in DOM object is accepted: several files build elements at load time.

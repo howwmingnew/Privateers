@@ -337,9 +337,9 @@ window.addEventListener("keydown", e => {
   if (root === sheetEl) {                              // the bare ledger keeps native arrow scrolling
     // Space is the fire key, so on the bare sheet it does nothing; Enter (never a fire key) moves to Set sail
     if (press && document.activeElement === sheetEl) { e.preventDefault(); if (k === "Enter") $m("sail").focus({ preventScroll: true }); }
-    // from a control, arrows walk the shop like the D-pad does
+    // from a control, arrows walk the shop like the D-pad does (a text field keeps its caret keys)
     const d = DIRS[k], at = document.activeElement;
-    if (d && k.length > 1 && at !== sheetEl && sheetEl.contains(at)) { e.preventDefault(); ledgerMove(d[0], d[1]); }
+    if (d && k.length > 1 && at !== sheetEl && sheetEl.contains(at) && !(at.type === "text" && d[0])) { e.preventDefault(); ledgerMove(d[0], d[1]); }
     return;
   }
   const dir = DIRS[k], a = document.activeElement;

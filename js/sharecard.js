@@ -37,7 +37,7 @@ const stamp = d => `privateers-${d.getUTCFullYear()}${pad2(d.getUTCMonth() + 1)}
 // a friend can open the same sea. `d` is plain data so the card can be made from any screen.
 function shareSpec(kind, d = {}) {
   const link = d.link ?? (typeof runLink === "function" ? runLink() : ""), url = SHARE_URL + link, ship = d.ship || (typeof save !== "undefined" ? save.ship : "sloop");
-  const base = { kind, url, ship, name: `${stamp(new Date())}-${kind}.png` };
+  const base = { kind, url, ship, flag: typeof flagOf === "function" ? flagOf() : null, shipName: typeof shipDisplayName === "function" ? shipDisplayName() : "", name: `${stamp(new Date())}-${kind}.png` };
   switch (kind) {
     case "sortie": return { ...base, title: t("sc_t_sortie"), sub: "",
       stats: [[t("sc_sunk"), fmt(d.sunk)], [t("sc_gold"), fmt(d.gold)], [t("sc_time"), fmtDur(d.secs)]],
@@ -102,6 +102,14 @@ function drawCard(c, spec) {
   c.fillStyle = "#b4412c"; c.font = `400 40px ${CARD_FONT.disp}`; c.fillText(spec.title, px + 216, py + 164);
   if (spec.sub) { c.fillStyle = "#6b5a3e"; c.font = `600 28px ${CARD_FONT.ui}`; c.fillText(spec.sub, px + 216, py + 202); }
   drawShipMark(c, px + pw - 160, py + 150, spec.ship);
+  if (spec.flag) {   // the captain's flag on the stern staff, streaming aft, and the ship's name beneath her (js/flags.js)
+    const k = 1, len = (150 + (SHIP_SAILS[spec.ship] || 2) * 30) * k, sx = px + pw - 160 - len / 2 + 8;
+    c.save(); c.translate(sx, py + 150 - 86); c.scale(-1, 1); drawBanner(c, 0, 0, 74, 50, spec.flag, 66); c.restore();
+    c.fillStyle = "#2a1d10"; c.textAlign = "center";
+    let size = 30; c.font = `400 ${size}px ${CARD_FONT.disp}`;
+    while (c.measureText(spec.shipName).width > 300 && size > 16) { size -= 2; c.font = `400 ${size}px ${CARD_FONT.disp}`; }
+    c.fillText(spec.shipName, px + pw - 160, py + 208); c.textAlign = "left";
+  }
   // stats: up to four tiles side by side
   const n = spec.stats.length, gap = 20, tw = (pw - 72 - gap * (n - 1)) / n, ty = py + 232;
   spec.stats.forEach(([label, value], i) => {

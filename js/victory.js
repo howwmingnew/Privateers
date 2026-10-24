@@ -64,7 +64,7 @@ function renderVictory() {
   const rows = [
     ["vRank", t("rank_" + save.campaign.rank)], ["st_time", fmtDur(st.time)], ["st_gold", fmt(st.gold)],
     ["st_total", t("vSunkOf", { n: fmt(save.sunk), p: fmt(sunk.pirate), v: fmt(sunk.navy), m: fmt(sunk.merchant) })],
-    ["st_deaths", fmt(st.deaths)], ["st_bounties", `${save.campaign.bounty} / ${BOUNTIES.length}`], ["st_longest", fmtDur(st.longest)],
+    ["flShip", typeof shipDisplayName === "function" ? shipDisplayName() : ""], ["st_deaths", fmt(st.deaths)], ["st_bounties", `${save.campaign.bounty} / ${BOUNTIES.length}`], ["st_longest", fmtDur(st.longest)],
   ];
   vicEl.firstElementChild.innerHTML = `
     <canvas class="v-rose" width="240" height="240" aria-hidden="true"></canvas>

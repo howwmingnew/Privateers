@@ -54,6 +54,28 @@ const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,
 const REMATCH_PCT = 0.25;                     // a rematch sinking pays this share of the bounty's Captain's Chest (js/rematch.js)
 const REMATCH_MAX = 2;                        // beaten captains that sail again at once; the farthest lairs first
 const CHAIN_GAP = 20;                        // seconds between sinkings that still count as one kill chain (js/hall.js)
+// AI plunder (js/ai-plunder.js): pirate and navy ships scoop floating loot and level up on the spot, for this sortie only.
+const AIP_SEEK_R = 420;      // px: loose loot this close pulls an idle ship off its course
+const AIP_BREAK = 700;       // px: a ship whose target is nearer than this keeps fighting and ignores loot
+const AIP_PICK_R = 44;       // px from a crate that a ship takes it
+const AIP_PATIENCE = 14;     // s a ship chases one crate before it gives up on it for a while
+const AIP_COST_K = 1;        // loot needed for the next level = this x the loot of one of its own level (enemyStats) ...
+const AIP_COST_GROW = 0.5;   // ... x (1 + this x levels already gained)
+const AIP_MAX_UP = 5;        // levels a ship can gain in one sortie
+const AIP_HP = 1.12, AIP_DMG = 1.1;   // per level: hull and gun damage multipliers
+
+// Collision damage (js/collision.js): speed is the component of the ship's velocity along the line into the island / the
+// other hull, in px/s. Below CRASH_MIN_V nothing happens (hugging a coast, mooring); CRASH_FULL_V is a sloop at top speed.
+const CRASH_MIN_V = 45, CRASH_FULL_V = 150, CRASH_OVER_MAX = 1.25;   // a faster hull than CRASH_FULL_V hurts up to this many times more
+const CRASH_ISLAND_K = 0.15;      // share of max hull lost ramming an island head-on at CRASH_FULL_V
+const CRASH_SHIP_K = 0.2;        // ... for the lighter of two equal hulls meeting at CRASH_FULL_V closing speed
+const CRASH_TOUCH = 0.015;       // share of max hull any ship-on-ship contact costs, however slow (weighted by hull size like a blow)
+const CRASH_MASS_MIN = 0.5, CRASH_MASS_MAX = 1.6;   // the share a hull takes of the blow: 2 * (other mass / total mass), kept in this range
+const CRASH_COOLDOWN = 0.8;      // seconds before the same ship may be hurt by the same island / ship again
+const CRASH_SPARE = 0.15;        // above this share of max hull a crash never kills (it leaves 1 hp); an AI is never killed by rock
+const CRASH_GAP = 0.3;           // a blow needs this long without contact before it: pressing on or scraping along a rock is one blow, not many
+const CRASH_SHED = 0.6;          // share of its speed a ship keeps after a ship-on-ship blow
+const CRASH_BIG = 0.1;           // a blow this share of max hull or more shakes the screen hard and shows "Crash!"
 // AI fleets (js/fleet.js): a lead ship and 1-4 wingmen of one faction that keep formation. [PLACEHOLDER] until playtested.
 const FLEET_CHANCE = { shallows: 0.08, reef: 0.18, lanes: 0.22, maelstrom: 0.22 };   // share of new ships that lead a fleet, by sea
 const FLEETS_AT_SEA = 4;          // fleets at sea at once
@@ -84,3 +106,13 @@ const WEATHER = {
 const REPLAY_FPS = 30, REPLAY_MAX_W = 960, REPLAY_BITRATE = 2000000;   // recording rate, widest picture, bits per second
 const REPLAY_SEG_S = 6, REPLAY_MIN_S = 3;   // clip length; the second recorder starts this long after the first
 const REPLAY_TAIL_S = 1.5, REPLAY_COOL_S = 6, REPLAY_OFFER_MS = 10000;   // footage after the moment, quiet time between clips, how long the chip stays
+// Supply stations and trade ports (js/ports.js): a ring-docked service point on the open sea.
+const STATION_TRUCE_R = 280;     // no ship opens fire on the player this close to a station, and idle ships sail out of it
+const SUPPLY_FEE_PER_RING = 25;  // gold for a hull from empty to full at a supply station, per level ring it lies in
+const SUPPLY_HEAL = 0.4;         // share of max hull a supply station mends per second inside its ring (while gold lasts)
+// Ship name and flag (js/flags.js). Name width counts a CJK character as 2, so 10 Chinese or 20 Latin characters fit.
+const FLAG_NAME_UNITS = 20;
+const FLAG_COLORS = ["red", "blue", "green", "black", "gold", "purple", "teal", "orange", "white", "grey"];   // main and second colour ids
+const FLAG_HEX = { red: "#b02626", blue: "#2f8ad6", green: "#3d8b4a", black: "#1a1618", gold: "#e0b44a", purple: "#7a3f98", teal: "#1f9aa0", orange: "#e07b2c", white: "#f4efe2", grey: "#6b6f78" };
+const FLAG_EMBLEMS = ["diag", "skull", "anchor", "swords", "star", "cross"];
+const DEFAULT_FLAG = { main: "blue", alt: "white", emblem: "diag" };   // what the player's ensign always looked like

@@ -40,11 +40,12 @@ function lootDrop(s, killer) {
     }
     s.pay = { ...s.pay, streak: streakBonus() };   // shown on the kill card (js/juice.js)
   }
+  value += s.stolen || 0;   // what the ship scooped up at sea (js/ai-plunder.js) floats out for the taking, bounty-free
   return value > 0 ? addCrate(s.x, s.y, value, null) : null;
 }
 // Docking: the hold sells at the streak's price, and the streak ends with the sortie either way.
 function sellHold(kind) {
-  const bonus = kind === "return" || kind === "outpost" ? streakBonus() : 0, sold = Math.round(cargo * (1 + bonus));
+  const bonus = kind === "return" || kind === "outpost" || kind === "trade" ? streakBonus() : 0, sold = Math.round(cargo * (1 + bonus));
   streak = 0; streakChip();
   statsGold(sold - Math.round(cargo));   // the logbook's "dock" hook already counted the hold at its plain value
   if (sold > 0) runHook("sale", sold, kind);   // the tutorial's "sell" step (js/tutorial.js)
