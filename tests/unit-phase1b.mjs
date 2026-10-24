@@ -169,3 +169,15 @@ test("gun bay: the swap button, its on state and the hint show while swapping", 
   const html = g.run("gunCardHtml()");
   assert.match(html, /gcard swapping/); assert.match(html, /aria-pressed="true"[^>]*>Cancel swap/); assert.match(html, /Esc cancels/);
 });
+
+// ---------- #33: letter of marque, level warning (js/bounty-rec.js) ----------
+test("letter of marque: only a ship level below the asked one is short, and both languages have the sentence", () => {
+  const store = new Map([["privateers-lang", "zh"]]);
+  const ctx = vm.createContext({ localStorage: { getItem: k => (store.has(k) ? store.get(k) : null), setItem() {}, removeItem() {} }, navigator: { language: "en-US" },
+    document: dom, window: dom, matchMedia: () => ({ matches: false, addEventListener() {} }), console });
+  for (const f of ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/bounty-rec.js"]) vm.runInContext(readFileSync(new URL("../" + f, import.meta.url), "utf8"), ctx, { filename: f });
+  const run = code => vm.runInContext(code, ctx);
+  assert.deepEqual([run("recShort(4, 2)"), run("recShort(4, 3)"), run("recShort(4, 4)"), run("recShort(4, 9)")], [true, true, false, false]);
+  assert.equal(run('t("pRecLow")'), "建議先升級再出戰");
+  assert.equal(run('STR.en.pRecLow'), "Level up before you sail");
+});

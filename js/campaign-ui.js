@@ -88,6 +88,7 @@ function posterHtml(b) {
     <div class="p-marque">${t("marque", { n: i + 1, m: BOUNTIES.length })}</div>
     <div class="p-head"><canvas class="p-flag" width="240" height="170" aria-hidden="true"></canvas>
       <div><div class="p-wanted">${t("wanted")}</div><div class="p-name">${bossName(b)}</div><div class="p-sub">${t("sunkOrTaken")}</div></div></div>
+    ${posterShipHtml(b)}
     <p class="p-story">${t("intro_" + b.id)}</p>
     <dl class="p-facts">
       <div><dt>${t("pTarget")}</dt><dd>${t("cls_" + b.cls)}${escorts}</dd></div>
@@ -108,6 +109,8 @@ function renderWanted() {
     `<button class="logbtn" type="button" data-camp="log">${t("logBtn")}</button></div>`;
   const cv = wantedEl.querySelector(".p-flag");
   if (cv && b) drawFlag(cv, b.id);
+  const ship = wantedEl.querySelector(".p-ship");
+  if (ship && b) paintPosterShip(ship, b);   // js/poster-ship.js
 }
 wantedEl.addEventListener("click", ev => {
   const btn = ev.target.closest("[data-camp]");

@@ -157,6 +157,46 @@ for (const [tag, viewport, mobile] of [["desktop", { width: 1280, height: 720 },
   await ctx.close();
 }
 
+// ---------- #33: letter of marque poster: red level warning and the captain's ship ----------
+for (const [tag, viewport, mobile] of [["desktop", { width: 1280, height: 720 }, false], ["phone", { width: 390, height: 844 }, true]]) {
+  const { ctx, page } = await openHarbor(viewport, { mobile });
+  const poster = () => ev(page, () => {
+    const el = document.querySelector("#wanted .p-rec"), warn = el.querySelector(".warn"), cs = getComputedStyle(el.querySelector(".goal"));
+    const lum = rgb => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g).slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+    const bg = getComputedStyle(document.querySelector("#wanted .poster")).backgroundColor, a = lum(cs.color), b = lum(bg);
+    return { low: el.classList.contains("low"), warn: warn ? warn.textContent : null, warnVisible: !!warn && warn.getBoundingClientRect().height > 0,
+      color: cs.color, ratio: +((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toFixed(2), need: bountyRecLv(activeBounty()), me: shipRating() };
+  });
+  await ev(page, () => { renderPort(); });
+  const low = await poster();
+  ok(`#33 ${tag}: a captain under the asked ship level sees the red line and the "level up" sentence (contrast >= 4.5)`,
+    low.me < low.need && low.low && low.warn === "Level up before you sail" && low.warnVisible && low.ratio >= 4.5, low);
+  await page.locator("#wanted").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(out, `poster-low-${tag}.png`) });
+  // level up: the same poster, reopened, is back to its normal colour with no warning
+  const up = await ev(page, () => { const real = shipRating; shipRating = () => 99; try { renderPort(); } finally { shipRating = real; }
+    const el = document.querySelector("#wanted .p-rec"); return { low: el.classList.contains("low"), warn: !!el.querySelector(".warn"), ok: el.querySelector(".goal").classList.contains("ok") }; });
+  ok(`#33 ${tag}: at the asked level the warning is gone and the goal shows as ready`, !up.low && !up.warn && up.ok, up);
+  // all five captains: their own hull and livery are painted (non-empty, all different) and each class is the bounty's own
+  const all = await ev(page, () => BOUNTIES.map((b, i) => { save.campaign.bounty = i; renderPort();
+    const cv = document.querySelector("#wanted .p-ship"), px = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data;
+    let lit = 0; for (let k = 3; k < px.length; k += 4) if (px[k] > 0) lit++;
+    return { id: b.id, art: artClass(b.cls), livery: bossLivery(b), lit, url: cv.toDataURL().length, sig: cv.toDataURL().slice(-60) }; }));
+  ok(`#33 ${tag}: each captain's own hull class and livery is painted on the poster (Carey and St. Ant share a brig, so four different pictures)`,
+    all.map(a => a.id).join() === "ned,carey,saint,hale,thorne" && all.every(a => a.lit > 3000) && new Set(all.map(a => a.sig + a.url)).size === 4
+      && all.map(a => a.livery).join() === "boss,boss,boss,bossNavy,admiral" && all[4].art === "manowar" && all[0].art === "cutter", all.map(a => ({ ...a, sig: undefined })));
+  for (const [i, a] of all.entries()) if (tag === "desktop" || i === 4) {
+    await ev(page, i => { save.campaign.bounty = i; renderPort(); }, i);
+    await page.locator("#wanted .poster").scrollIntoViewIfNeeded();
+    await page.locator("#wanted .poster").screenshot({ path: join(out, `poster-${a.id}-${tag}.png`) });
+  }
+  // Chinese strings and no horizontal overflow on a phone
+  const zh = await ev(page, () => { lang = "zh"; applyLang(); save.campaign.bounty = 0; renderPort(); return { warn: document.querySelector("#wanted .p-rec .warn")?.textContent,
+    over: document.documentElement.scrollWidth > innerWidth || document.querySelector("#wanted .poster").scrollWidth > document.querySelector("#wanted").clientWidth + 2 }; });
+  ok(`#33 ${tag}: Chinese sentence shown and the poster fits`, zh.warn === "建議先升級再出戰" && !zh.over, zh);
+  await ctx.close();
+}
+
 ok("no page errors", errors.length === 0, errors.slice(0, 5));
 await browser.close();
 if (failed) { console.log(`\n${failed} check(s) failed`); process.exit(1); }
