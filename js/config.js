@@ -49,3 +49,12 @@ const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,
 const REMATCH_PCT = 0.25;                     // a rematch sinking pays this share of the bounty's Captain's Chest (js/rematch.js)
 const REMATCH_MAX = 2;                        // beaten captains that sail again at once; the farthest lairs first
 const CHAIN_GAP = 20;                        // seconds between sinkings that still count as one kill chain (js/hall.js)
+// AI plunder (js/ai-plunder.js): pirate and navy ships scoop floating loot and level up on the spot, for this sortie only.
+const AIP_SEEK_R = 420;      // px: loose loot this close pulls an idle ship off its course
+const AIP_BREAK = 700;       // px: a ship whose target is nearer than this keeps fighting and ignores loot
+const AIP_PICK_R = 44;       // px from a crate that a ship takes it
+const AIP_PATIENCE = 14;     // s a ship chases one crate before it gives up on it for a while
+const AIP_COST_K = 1;        // loot needed for the next level = this x the loot of one of its own level (enemyStats) ...
+const AIP_COST_GROW = 0.5;   // ... x (1 + this x levels already gained)
+const AIP_MAX_UP = 5;        // levels a ship can gain in one sortie
+const AIP_HP = 1.12, AIP_DMG = 1.1;   // per level: hull and gun damage multipliers
