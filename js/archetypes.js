@@ -40,11 +40,11 @@ function pickArch(L, faction) {
   const rows = ARCH_MIX[faction] || ARCH_MIX.pirate;
   let mix = rows[0][1];
   for (const [from, m] of rows) if (L >= from) mix = m;
-  let r = Math.random() * Object.values(mix).reduce((a, b) => a + b, 0);
+  let r = grandom() * Object.values(mix).reduce((a, b) => a + b, 0);
   for (const k in mix) if ((r -= mix[k]) <= 0) return k;
   return Object.keys(mix)[0];
 }
-const pickFaction = () => Math.random() < 0.35 ? "merchant" : Math.random() < 0.5 ? "pirate" : "navy";
+const pickFaction = () => grandom() < 0.35 ? "merchant" : grandom() < 0.5 ? "pirate" : "navy";
 
 // (Re)build an enemy's numbers and guns from its level, class and multipliers. Safe to call again.
 function outfitEnemy(e, key, b = {}) {
@@ -92,7 +92,7 @@ function threatLevelOf(e) {
 // man-o'-war with its broadsides and stern chaser.
 function campaignOutfit(e) {
   e.campaignFit = true;
-  const b = e.boss && typeof BOUNTIES !== "undefined" ? BOUNTIES.find(x => x.id === e.boss) : null;
+  const b = e.boss && typeof findBounty === "function" ? findBounty(e.boss) : null;
   const want = b ? b.cls : e.cls === "line" ? "manowar" : e.cls;   // applyShipArt may have renamed it to its hull art
   const key = Object.hasOwn(ARCH, want) ? want : e.arch, frac = e.maxHp > 0 ? clamp(e.hp / e.maxHp, 0, 1) : 1;
   const art = e.art && e.cls, livery = e.livery;   // the hull and colours the campaign chose (Thorne's own flagship)
@@ -166,9 +166,9 @@ const broadside = (side, toT, d, r0, band) => toT + side * (Math.PI / 2 - BROAD_
 // A merchant may sail with 1-2 more fluyts and an armed escort brig. The escort guards the fluyts against pirates and
 // anyone who fires on them; the fluyts keep station on the lead ship.
 function maybeConvoy(sc, lead, room = 3) {
-  if (room < 2 || Math.random() >= CONVOY_P) return;   // room: ships the sea may still add (a fluyt and the escort at least)
+  if (room < 2 || grandom() >= CONVOY_P) return;   // room: ships the sea may still add (a fluyt and the escort at least)
   const cv = { lead, ships: [lead] }; lead.convoy = cv;
-  const slots = [[-90, 70], [-90, -70], [-180, 0]], n = Math.min(1 + (Math.random() < 0.5 ? 1 : 0), room - 1);
+  const slots = [[-90, 70], [-90, -70], [-180, 0]], n = Math.min(1 + (grandom() < 0.5 ? 1 : 0), room - 1);
   const d0 = Math.hypot(lead.x - PORT.x, lead.y - PORT.y), r0 = SAFE_R + (lead.ring - 1) * ZONE_STEP + 6, r1 = r0 + ZONE_STEP - 12;
   slots.slice(0, n + 1).forEach(([ax, ay], i) => {
     const c = Math.cos(lead.rot), s = Math.sin(lead.rot);

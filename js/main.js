@@ -138,7 +138,8 @@ function step(dt) {
   // --- harbor (or the Hulk Outpost once a bounty has opened it: js/campaign.js) ---
   const hb = nearestHarbor(), dPort = Math.hypot(player.x - hb.x, player.y - hb.y);
   if (!canDock && dPort > DOCK_R + 80) canDock = true;
-  moorTick(dt, hb, dPort);   // quick resupply in the ring; stopped there for 3 s, the ledger opens (js/mooring.js)
+  // quick resupply in the ring; stopped there for 3 s, the ledger opens (js/mooring.js). A daily run has no harbor (js/run.js).
+  if (!runActive() || runKind() !== "daily") moorTick(dt, hb, dPort);
   // --- population: ring quotas (js/world-seas.js) ---
   managePopulation(dt);
 }

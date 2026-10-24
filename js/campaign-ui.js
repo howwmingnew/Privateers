@@ -153,7 +153,7 @@ onHook("frame", () => {
   const near = dist(player, bossShip) < 1200;
   bossBar.hidden = !near;
   if (near) {
-    bossBar.firstElementChild.textContent = bossName(BOUNTIES.find(b => b.id === bossShip.boss));
+    bossBar.firstElementChild.textContent = bossName(findBounty(bossShip.boss));
     bossBar.querySelector("i").style.width = clamp(bossShip.hp / bossShip.maxHp, 0, 1) * 100 + "%";
   }
 });

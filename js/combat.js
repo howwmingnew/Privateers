@@ -117,6 +117,7 @@ function sink(s, killer) {
       cargo = 0;
       Object.assign(player, { x: PORT.x + 140, y: PORT.y, rot: 0, speed: 0, alive: true, burnT: 0 });
       vfxRespawn(player); player.spr.setPosition(player.x, player.y);
+      if (runActive() && runKind() === "daily") { runPlayerSunk(); return; }   // a daily run ends here, no ledger (js/run.js)
       dock("sunk");
     });
   }

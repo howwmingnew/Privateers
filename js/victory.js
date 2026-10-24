@@ -79,11 +79,13 @@ function renderVictory() {
     </footer>`;
   drawRose(vicEl.querySelector(".v-rose"));
   vicEl.querySelector(".v-choices").appendChild(postcardButton("btn v-card"));   // the finale as a postcard (js/postcard.js)
+  vicEl.querySelector(".v-choices").appendChild(shareButton(() => shareSpec("victory", { winTime: save.winTime, sunk: save.sunk, gold: save.stats.gold }), "btn v-card"));   // and as a share card (js/sharecard.js)
 }
 function showVictory() {
   if (!vicEl.hidden) return;
   flushTime();
   if (!save.campaign.won && !(save.winTime > 0)) { save.winTime = Math.max(1, save.stats.time - save.cycleT0); persist(); }
+  runHook("victory", save.winTime);   // the hall of fame keeps the fastest (js/hall.js)
   paused = true;
   document.getElementById("joy").hidden = true; joyVec = { x: 0, y: 0, m: 0 };
   vicNgArmed = false; renderVictory();
