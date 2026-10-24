@@ -93,6 +93,7 @@ function killCard(s) {
   killTimes = [...killTimes.filter(t0 => now - t0 < MULTI_MS), now];
   const n = killTimes.length;
   if (n >= 2) vfxHitStop(MULTI_STOP);
+  if (n >= 3) runHook("moment", "massacre");   // js/replay.js
   if (onScreen(s.x, s.y, 60) && !s.boss) {   // a boss gets its own name card (bossMoment)
     const word = n >= 3 ? "fMassacre" : n === 2 ? "fDouble" : "fSunk";
     if (J.word && J.word.active) { S.tweens.killTweensOf(J.word); J.word.destroy(); }   // one big word on screen at a time: a Double replaces the Sunk!

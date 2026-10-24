@@ -54,6 +54,15 @@ const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,
 const REMATCH_PCT = 0.25;                     // a rematch sinking pays this share of the bounty's Captain's Chest (js/rematch.js)
 const REMATCH_MAX = 2;                        // beaten captains that sail again at once; the farthest lairs first
 const CHAIN_GAP = 20;                        // seconds between sinkings that still count as one kill chain (js/hall.js)
+// AI plunder (js/ai-plunder.js): pirate and navy ships scoop floating loot and level up on the spot, for this sortie only.
+const AIP_SEEK_R = 420;      // px: loose loot this close pulls an idle ship off its course
+const AIP_BREAK = 700;       // px: a ship whose target is nearer than this keeps fighting and ignores loot
+const AIP_PICK_R = 44;       // px from a crate that a ship takes it
+const AIP_PATIENCE = 14;     // s a ship chases one crate before it gives up on it for a while
+const AIP_COST_K = 1;        // loot needed for the next level = this x the loot of one of its own level (enemyStats) ...
+const AIP_COST_GROW = 0.5;   // ... x (1 + this x levels already gained)
+const AIP_MAX_UP = 5;        // levels a ship can gain in one sortie
+const AIP_HP = 1.12, AIP_DMG = 1.1;   // per level: hull and gun damage multipliers
 
 // Collision damage (js/collision.js): speed is the component of the ship's velocity along the line into the island / the
 // other hull, in px/s. Below CRASH_MIN_V nothing happens (hugging a coast, mooring); CRASH_FULL_V is a sloop at top speed.
@@ -108,7 +117,28 @@ const WEATHER = {
   yaw: 0.32, leeway: 26, calmRadius: 230,             // storm: rad/s the hull is slewed beam-on at full gale, px/s pushed downwind, px from a coast inside which neither acts
   ballDrift: 45,                                      // storm: px/s a cannonball is blown downwind
 };
+// Navy heat and the Admiral's fleet (js/heat.js). Heat is per sortie (not saved): sinking Navy ships raises it, quiet cools it, any harbor clears it.
+// [PLACEHOLDER] until playtested. Off in the daily sea and #seed voyages (their ships come from a fixed seed).
+const HEAT_STARS = 5, HEAT_STAR_SIZE = 20;   // heat 0..100; a star lights every 20
+const HEAT_PER_SINK = 14, HEAT_HUNTER_SINK = 7, HEAT_FLAGSHIP_SINK = 30;   // heat for a Navy ship, a hunter (half: no treadmill), the Admiral's flagship
+const HEAT_CALM_S = 15, HEAT_COOL = 1.5;   // seconds since the last Navy sinking before heat cools, then heat lost per second (100 to 0 in about 67 s)
+const HEAT_BOUNTY_STEP = 0.2;              // warship bounties pay +20% per star: double at five stars
+const HEAT_HUNT_FROM = 2;                  // stars from which the Navy puts hunting fleets to sea (heat 1 only pays more)
+const HEAT_HUNT_EVERY = [0, 0, 70, 50, 36, 26];   // seconds between hunting fleets, by stars
+const HEAT_HUNT_MAX = [0, 0, 1, 1, 2, 2];         // hunting fleets alive at once, by stars
+const HEAT_HUNT_LV = [0, 0, 0, 1, 1, 2];          // levels above the local ring a hunter's lead is, by stars (wingmen = stars - 1, up to the sea's size cap)
+const HEAT_HUNT_FIRST = 10, HEAT_HUNT_R = [850, 1250];   // s before the first hunter after heat 2; px from the player they come over the horizon
+const ADMIRAL_AFTER = 4;                   // bounties claimed before the Admiral's fleet patrols (after the 4th poster, ahead of the last)
+const ADMIRAL_EVERY = [190, 300];          // s between sightings; heat shortens it by ADMIRAL_HEAT per star
+const ADMIRAL_HEAT = 0.12, ADMIRAL_R = [1400, 2000], ADMIRAL_RING = 3;   // the player must be in at least this ring to meet him
+const ADMIRAL_GONE = 4500;                 // px: an Admiral's fleet left this far behind sails off for good
+const ADMIRAL_HP = 1.3, ADMIRAL_LOOT = 2.5, ADMIRAL_LV = 1;   // flagship: hull x, plunder x, levels above the ring
 
+// Highlight replay (js/replay.js): two recorders, staggered by half a clip, each lives exactly REPLAY_SEG_S; the first one that ends
+// at least REPLAY_TAIL_S after a big moment is the clip, so a clip is always REPLAY_SEG_S long.
+const REPLAY_FPS = 30, REPLAY_MAX_W = 960, REPLAY_BITRATE = 2000000;   // recording rate, widest picture, bits per second
+const REPLAY_SEG_S = 6, REPLAY_MIN_S = 3;   // clip length; the second recorder starts this long after the first
+const REPLAY_TAIL_S = 1.5, REPLAY_COOL_S = 6, REPLAY_OFFER_MS = 10000;   // footage after the moment, quiet time between clips, how long the chip stays
 // Supply stations and trade ports (js/ports.js): a ring-docked service point on the open sea.
 const STATION_TRUCE_R = 280;     // no ship opens fire on the player this close to a station, and idle ships sail out of it
 const SUPPLY_FEE_PER_RING = 25;  // gold for a hull from empty to full at a supply station, per level ring it lies in

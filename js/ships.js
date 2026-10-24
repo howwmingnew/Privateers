@@ -71,7 +71,7 @@ function refreshBadge(e) {
   const tier = threatTier(e.threatL ?? e.L), c = tier.color;   // glyph + colour (by how hard it fights, js/archetypes.js), readable without colour vision
   // the plunder aboard only reads through the spyglass, so a distant fleet is a tidy row of levels, not a price list
   // the number is how hard it fights (threatL), the same figure its colour and glyph compare with your Ship Lv
-  const n = e.threatL ?? e.L, label = e.lootSeen ? t("badge", { n, g: fmt(e.loot) }) : t("badgeLv", { n });
+  const n = e.threatL ?? e.L, label = e.lootSeen ? t("badge", { n, g: fmt(e.loot + (e.stolen || 0)) }) : t("badgeLv", { n });
   e.badge.setText(tier.glyph + " " + label).setBackgroundColor(c).setColor(c === "#d9493a" ? "#fff6ea" : "#1b1410");
 }
 
@@ -172,6 +172,8 @@ function think(e, dt) {
     else { ({ desired, thr } = archTactic(e, tg, d, toT, now)); fd = d; fToT = toT; }   // each class's battle plan (js/archetypes.js)
   }
   if (e.fleet) { const c = fleetSteer(e, tg, fd, fToT, now); if (c) ({ desired, thr } = c); }   // formation, flanking, a lost lead (js/fleet.js)
+  const plunder = typeof aipSeek === "function" && (desired == null || (tg && dist(e, tg) >= AIP_BREAK)) ? aipSeek(e, tg ? dist(e, tg) : 0, dt) : null;   // loose loot (js/ai-plunder.js)
+  if (plunder) ({ desired, thr } = plunder);
   if (desired == null && e.merchant) {
     // merchants run from any pirate or the player that comes close, even before a shot is fired
     let threat = null, td = 480;
