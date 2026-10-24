@@ -11,3 +11,5 @@ const ARC = 0.62;           // half-angle (rad) of each broadside firing arc
 const ZONE_STEP = 320;      // every this many px from the harbor, enemy level +1: the axis edge reaches Lv 10
 const MAX_RING = 10;        // the outermost level ring; the corners past it belong to it too
 const AIM_FULL_L = 8;       // enemy gunners get more accurate with level, up to this level
+const REPAIR_DELAY = 3;     // seconds without a hit before the hull starts to mend at sea (js/repair.js)
+const REPAIR_RATE = 0.01;   // share of max hull mended per second after that (100 s from empty to full)

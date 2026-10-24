@@ -8,3 +8,8 @@
 .streak.risk { border-color: #e2553f; color: #ffd0c4; background: rgba(110,24,14,.85); animation: streak-risk .7s ease-in-out infinite alternate; }
 @keyframes streak-risk { from { box-shadow: 0 0 0 0 rgba(226,85,63,.0); } to { box-shadow: 0 0 0 4px rgba(226,85,63,.55); background: rgba(170,38,22,.92); } }
 @media (prefers-reduced-motion: reduce) { .streak, .streak.risk { animation: none; } }
+
+/* the crew is patching the hull (js/repair.js): a soft green glow on the hull bar */
+.bar.hp.mend { border-color: #9fe0a0; box-shadow: 0 0 8px 1px rgba(159,224,160,.55); animation: mend-glow 1.4s ease-in-out infinite; }
+@keyframes mend-glow { 50% { box-shadow: 0 0 12px 3px rgba(159,224,160,.85); } }
+@media (prefers-reduced-motion: reduce) { .bar.hp.mend { animation: none; } }
