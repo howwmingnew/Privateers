@@ -86,7 +86,7 @@ function maybeFleet(sc, lead) {
   const type = fleetTypeFor(lead.faction), sea = seaOfRing(lead.ring);
   if (!type || grandom() >= (FLEET_CHANCE[sea.id] || 0)) return null;
   const live = fleetsLive(), used = live.reduce((a, f) => a + f.ships.filter(s => s.alive).length, 0);
-  if (live.length >= FLEET_MAX || used + 2 > FLEET_SHIPS) return null;
+  if (live.length >= FLEETS_AT_SEA || used + 2 > FLEET_SHIPS) return null;
   const classes = fleetPlan(type, lead, Math.min(FLEET_SHIPS - used - 1, fleetRoom(lead)));
   if (!classes.length) return null;
   const slots = formationSlots(FLEET_TYPES[type].formation, classes.length), d0 = dist(lead, PORT);

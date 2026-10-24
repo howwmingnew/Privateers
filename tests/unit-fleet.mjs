@@ -88,7 +88,7 @@ test("firepower: stacking on the same ship multiplies, and a custom share works"
 });
 
 test("caps: a fleet never fills the sea, and the share the config grants is bounded", () => {
-  assert.ok(run("FLEET_MAX") * 5 >= run("FLEET_SHIPS") - 6);
+  assert.ok(run("FLEETS_AT_SEA") * 5 >= run("FLEET_SHIPS") - 6);
   assert.ok(run("FLEET_SHIPS") < run("ENEMY_COUNT"));   // loners always remain
   assert.ok(run("fleetMaxSize(10)") <= 5 && run("fleetMaxSize(1)") >= 2);
   for (const sea of ["shallows", "reef", "lanes", "maelstrom"]) assert.ok(run(`FLEET_CHANCE.${sea}`) > 0 && run(`FLEET_CHANCE.${sea}`) < 0.5);
