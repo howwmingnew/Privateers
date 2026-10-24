@@ -105,6 +105,7 @@ body.scale-preview #title, body.scale-preview #pause { opacity: 0; pointer-event
 .sw-aim.reload { color: rgba(42,29,16,.3); border-top-width: 2px; width: 60%; }
 .sw-badge { font-style: normal; font-weight: 700; font-size: .85em; text-align: center; padding: 1px 6px; border-radius: 2px; background: var(--c); color: #1b1410; }
 .sw-badge.dark { color: #fff6ea; }
+.sw-mark { width: 56px; height: 28px; border-radius: 3px; background: #1d4766; }   /* painted by js/chart-legend.js */
 .sw-ring { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -.2em; border-radius: 50%; border: 2px dashed var(--ink-soft); }
 .sw-x { display: inline-block; width: .9em; height: .9em; vertical-align: -.1em; position: relative; }
 .sw-x::before, .sw-x::after { content: ""; position: absolute; left: 45%; top: -10%; width: 2.5px; height: 120%; background: #d9493a; transform: rotate(45deg); }

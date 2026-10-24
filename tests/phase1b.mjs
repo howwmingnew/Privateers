@@ -197,6 +197,126 @@ for (const [tag, viewport, mobile] of [["desktop", { width: 1280, height: 720 },
   await ctx.close();
 }
 
+// ---------- #42: chart marks ----------
+{
+  const { ctx, page } = await openSea({ width: 1280, height: 720 });
+  await ev(page, () => { save.campaign.outpost = true; syncOutpost(); });
+  // no dashed lines, no ring / frame strokes in the chart's base layer, and none of the old frames around ships and the outpost
+  const lines = await ev(page, () => {
+    const dashed = [], strokes = { n: 0 }, proto = CanvasRenderingContext2D.prototype, sd = proto.setLineDash, st = proto.stroke;
+    proto.setLineDash = function (a) { if (a && a.length) dashed.push(a.slice()); return sd.call(this, a); };
+    proto.stroke = function (...a) { if (this.canvas === miniBase || this.canvas.__base) strokes.n++; return st.apply(this, a); };
+    try { buildMiniBase(); drawMini(); } finally { proto.setLineDash = sd; proto.stroke = st; }
+    return { dashed: dashed.length, baseStrokes: strokes.n };
+  });
+  ok("#42 the chart draws no dashed line, and its base (seas, land, labels) has no stroked ring or border", lines.dashed === 0, lines);
+  const frames = await ev(page, () => {
+    const u = 4, bg = [29, 71, 102], W2 = 140, res = {};
+    const bgOk = (d, i) => Math.abs(d[i] - bg[0]) < 6 && Math.abs(d[i + 1] - bg[1]) < 6 && Math.abs(d[i + 2] - bg[2]) < 6;
+    const probe = (name, draw, pts) => {
+      const cv = document.createElement("canvas"); cv.width = cv.height = W2; const c = cv.getContext("2d");
+      c.fillStyle = `rgb(${bg})`; c.fillRect(0, 0, W2, W2); draw(c, W2 / 2, W2 / 2);
+      const d = c.getImageData(0, 0, W2, W2).data;
+      res[name] = pts.map(([dx, dy]) => { const i = (Math.round(W2 / 2 + dy) * W2 + Math.round(W2 / 2 + dx)) * 4; return bgOk(d, i); });
+    };
+    const ring = r => Array.from({ length: 16 }, (_, i) => [Math.cos(i / 16 * TAU) * r, Math.sin(i / 16 * TAU) * r]);
+    const e = f => ({ faction: f, L: shipRating() + 1, threatL: shipRating() + 1, speed: 0, rot: 0, merchant: f === "merchant" });
+    probe("navyDiamond", (c, x, y) => miniShip(c, e("navy"), x, y, u), [[7.4 * u, 0], [-7.4 * u, 0], [0, 7.4 * u], [0, -7.4 * u], [5 * u, 5 * u].map(v => v * 0.9)]);
+    probe("merchantRing", (c, x, y) => miniShip(c, e("merchant"), x, y, u), ring(6 * u));
+    probe("outpostSquare", (c, x, y) => miniOutpost(c, x, y, u), [[5.5 * u, 5.5 * u], [-5.5 * u, 5.5 * u], [5.5 * u, -5.5 * u], [-5.5 * u, -5.5 * u]]);
+    return Object.fromEntries(Object.entries(res).map(([k, v]) => [k, v.every(Boolean)]));
+  });
+  ok("#42 no diamond frame round a navy ship, no ring round a merchant, no square round the outpost", frames.navyDiamond && frames.merchantRing && frames.outpostSquare, frames);
+  // the sea is one continuous shade, darker out toward the Maelstrom
+  const sea = await ev(page, () => {
+    const M = 400, cv = document.createElement("canvas"); cv.width = cv.height = M; const c = cv.getContext("2d"); drawSeaChart(c, M);
+    const k = M / W, d = c.getImageData(0, 0, M, M).data, lum = x => { const i = (Math.round(PORT.y * k) * M + Math.round(x)) * 4; return 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2]; };
+    const xs = []; for (let x = PORT.x * k + SAFE_R * k + 2; x < M - 1; x += 2) xs.push(lum(x));
+    const jumps = xs.slice(1).map((v, i) => Math.abs(v - xs[i]));
+    return { maxJump: Math.max(...jumps), near: xs[0], far: xs.at(-1) };
+  });
+  ok("#42 the sea is one smooth shade (no band edges) and darker the farther from the harbor", sea.maxJump < 5 && sea.far < sea.near - 15, sea);
+  // draw order: chests, wrecks, forts, ordinary ships, harbor, outpost, near stronger ships, bounty, player
+  const order = await ev(page, () => {
+    const log = [], names = ["miniChest", "miniWreck", "miniFort", "miniShip", "miniHarbor", "miniOutpost", "miniPlayer"], orig = {};
+    for (const n of names) { orig[n] = window[n]; window[n] = (...a) => { log.push(n === "miniShip" ? (a[1].near ? "near" : "ship") : n); return orig[n](...a); }; }
+    const far = makeEnemy(S, player.x + 1800, player.y, 1, "pirate", "brig"), near = makeEnemy(S, player.x + 300, player.y + 100, 12, "pirate", "frigate");
+    far.mine = near.mine = true; near.near = true; near.threatL = shipRating() + 3; far.threatL = shipRating() - 1;
+    crates.push({ x: player.x + 500, y: player.y, wreck: false, spr: { destroy() {} } }); crates.push({ x: player.x - 500, y: player.y, wreck: true, spr: { destroy() {} } });
+    try { drawMini(); } finally { for (const n of names) window[n] = orig[n]; crates.length -= 2; far.alive = near.alive = false; far.spr.destroy(); near.spr.destroy(); }
+    const at = n => log.lastIndexOf(n);
+    return { log: log.join(" "), ok: at("miniChest") < at("miniFort") + 99 && log.indexOf("miniChest") < log.indexOf("ship") && log.indexOf("miniWreck") < log.indexOf("ship") && log.indexOf("ship") < log.indexOf("miniHarbor")
+      && log.indexOf("miniHarbor") < log.indexOf("miniOutpost") && log.indexOf("miniOutpost") < log.indexOf("near") && log.indexOf("near") < log.indexOf("miniPlayer") && log.at(-1) === "miniPlayer" };
+  });
+  ok("#42 overlap order: chests and wrecks, then ships, harbor, outpost, close stronger ships, the player on top", order.ok, order.log);
+  // ships piled in one spot merge into one mark
+  const pile = await ev(page, () => {
+    let n = 0; const orig = window.miniShip; window.miniShip = (...a) => { n++; return orig(...a); };
+    const es = [0, 1, 2, 3].map(i => { const e = makeEnemy(S, player.x + 1200 + i * 6, player.y - 900, 3, "pirate", "brig"); e.mine = true; e.threatL = shipRating() - 1; return e; });
+    for (const e of enemies) if (!es.includes(e) && e.alive) e.alive = false;   // only the pile
+    try { drawMini(); } finally { window.miniShip = orig; for (const e of es) { e.alive = false; e.spr.destroy(); } }
+    return n;
+  });
+  ok("#42 four ships in one spot draw as one mark", pile === 1, pile);
+  await ctx.close();
+}
+// colour-blind check: with every fill forced to one grey, the four kinds still differ by their inner detail alone
+{
+  const { ctx, page } = await openSea({ width: 1280, height: 720 });
+  const diffs = await ev(page, () => {
+    const origTM = window.threatMark; window.threatMark = (c, x, y, tier, r) => origTM(c, x, y, { ...tier, color: "#888" }, r);
+    const shot = (f, arch, d, u) => { const cv = document.createElement("canvas"); cv.width = cv.height = 40; const c = cv.getContext("2d"); c.fillStyle = "#1d4766"; c.fillRect(0, 0, 40, 40);
+      miniShip(c, { faction: f, arch, L: shipRating() + d, threatL: shipRating() + d, speed: 0, rot: 0, merchant: f === "merchant" }, 20, 20, u);
+      // light-dark only (what a colour-blind or grey-scale reader still gets)
+      const px = c.getImageData(0, 0, 40, 40).data, out = []; for (let i = 0; i < px.length; i += 4) out.push(Math.round((0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]) / 16)); return out; };
+    const res = {};
+    try {
+      for (const [label, u] of [["u1.0", 1.0], ["u0.7", 0.7]]) for (const d of [-1, 0, 1, 2]) {
+        const ims = { pirate: shot("pirate", "brig", d, u), navy: shot("navy", "brig", d, u), trade: shot("merchant", "fluyt", d, u), fire: shot("pirate", "fireship", d, u) };
+        const names = Object.keys(ims), min = []; for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) {
+          let n = 0; for (let p = 0; p < ims[names[i]].length; p++) if (ims[names[i]][p] !== ims[names[j]][p]) n++; min.push(n); }
+        res[`${label} d=${d}`] = Math.min(...min);
+      }
+    } finally { window.threatMark = origTM; }
+    return res;
+  });
+  const worst = Math.min(...Object.values(diffs));
+  ok("#42 pirate, navy, merchant and fireship differ in shape + detail alone (fills forced grey), at 100% chart size and a smaller one", worst >= 3, diffs);
+  await ctx.close();
+}
+// screenshots of the chart at the three screens, 100% and 50% marks, plus the legend in How to play
+for (const [tag, viewport, mobile] of [["1280", { width: 1280, height: 720 }, false], ["3840", { width: 3840, height: 2160 }, false], ["390", { width: 390, height: 844 }, true]]) {
+  const { ctx, page } = await openSea(viewport, { mobile });
+  await ev(page, () => {
+    save.campaign.outpost = true; syncOutpost(); player.x = PORT.x + 1700; player.y = PORT.y - 500;
+    const mk = (dx, dy, L, f, cls) => { const e = makeEnemy(S, player.x + dx, player.y + dy, L, f, cls); e.mine = true; e.speed = 0; };
+    mk(-700, -300, 1, "pirate", "brig"); mk(-500, 300, 3, "pirate", "brig"); mk(600, -500, 4, "pirate", "brig"); mk(800, 200, 7, "pirate", "frigate");
+    mk(-900, 100, 3, "navy", "frigate"); mk(900, -200, 6, "navy", "frigate"); mk(300, 700, 3, "merchant", "fluyt"); mk(-1100, -600, 5, "merchant", "fluyt");
+    mk(-100, 900, 3, "pirate", "fireship"); mk(1000, 900, 6, "pirate", "fireship");
+  });
+  await page.waitForTimeout(600 * SLOW);
+  await (await page.$("#mini")).screenshot({ path: join(out, `chart-${tag}-100.png`) });
+  if (tag === "1280") await page.screenshot({ path: join(out, "sea-1280.png") });
+  await ev(page, () => { saveSettings({ miniPct: 50 }); applyMiniSize(); });
+  await page.waitForTimeout(500 * SLOW);
+  await (await page.$("#mini")).screenshot({ path: join(out, `chart-${tag}-50.png`) });
+  await ctx.close();
+}
+{
+  const { ctx, page } = await openHarbor({ width: 1280, height: 900 });
+  for (const lg of ["en", "zh"]) {
+    await ev(page, lg => { lang = lg; applyLang(); }, lg);
+    await ev(page, () => { document.querySelector('[data-menu="howto"]').click(); });
+    await page.waitForTimeout(400 * SLOW);
+    const sw = await ev(page, () => [...document.querySelectorAll("#p-howto canvas.sw-mark")].map(cv => {
+      const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; }));
+    ok(`#42 how-to-play legend (${lg}): 12 chart swatches, every one painted`, sw.length === 12 && sw.every(n => n > 60), sw);
+    if (lg === "en") { await ev(page, () => document.querySelector("#p-howto canvas.sw-mark").scrollIntoView({ block: "start" })); await page.screenshot({ path: join(out, "howto-chart-legend-en.png") }); }
+    await ev(page, () => { goBack(); });
+  }
+  await ctx.close();
+}
+
 ok("no page errors", errors.length === 0, errors.slice(0, 5));
 await browser.close();
 if (failed) { console.log(`\n${failed} check(s) failed`); process.exit(1); }

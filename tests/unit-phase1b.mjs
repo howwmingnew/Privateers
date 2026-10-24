@@ -181,3 +181,52 @@ test("letter of marque: only a ship level below the asked one is short, and both
   assert.equal(run('t("pRecLow")'), "建議先升級再出戰");
   assert.equal(run('STR.en.pRecLow'), "Level up before you sail");
 });
+
+// ---------- #42: chart marks (js/mini-marks.js) ----------
+function marks() {
+  const ctx = vm.createContext({ console });
+  for (const f of ["js/config.js", "js/util.js", "js/mini-marks.js"]) vm.runInContext(readFileSync(new URL("../" + f, import.meta.url), "utf8"), ctx, { filename: f });
+  return { run: code => vm.runInContext(code, ctx), json: code => JSON.parse(vm.runInContext(`JSON.stringify(${code})`, ctx)) };
+}
+
+test("chart marks: each ship kind has its own mark kind, from faction and class", () => {
+  const g = marks();
+  const kind = e => g.run(`shipKind(${JSON.stringify(e)})`);
+  assert.equal(kind({ faction: "pirate" }), "pirate");
+  assert.equal(kind({ faction: "navy" }), "navy");
+  assert.equal(kind({ faction: "merchant" }), "trade");
+  assert.equal(kind({ faction: "navy", merchant: true }), "trade", "an escort's flag does not matter once it is a merchantman");
+  assert.equal(kind({ faction: "pirate", arch: "fireship" }), "fire");
+  assert.equal(kind({ faction: "pirate", arch: "brig" }), "pirate");
+});
+
+test("chart marks: one solid part for ▼ ● ▲, two for ▲▲, so the inner detail sits inside every one", () => {
+  const g = marks();
+  for (const d of [-3, -1, 0, 1]) assert.equal(g.json(`threatCenters({ d: ${d} }, 10, 10, 4)`).length, 1, "d=" + d);
+  const two = g.json("threatCenters({ d: 2 }, 10, 10, 4)");
+  assert.equal(two.length, 2);
+  assert.ok(two[0][0] < 10 && two[1][0] > 10 && two[0][1] === 10 && two[0][2] > 0, "left and right of the centre");
+});
+
+test("chart marks: ships in one cell merge into the scariest one with a count; far-apart ones stay", () => {
+  const g = marks();
+  const out = g.json(`clusterMarks([{ id: "a", x: 10, y: 10, rank: -1 }, { id: "b", x: 12, y: 11, rank: 2 }, { id: "c", x: 13, y: 12, rank: 0 }, { id: "d", x: 60, y: 10, rank: 1 }], 20)`);
+  assert.equal(out.length, 2);
+  const merged = out.find(o => o.n === 3);
+  assert.equal(merged.id, "b", "the highest rank represents the group");
+  assert.equal(out.find(o => o.n === 1).id, "d");
+  assert.deepEqual(g.json("clusterMarks([], 20)"), []);
+});
+
+test("chart marks: a speck of island becomes a 4-5 sided chip, the same every time, around its centre", () => {
+  const g = marks();
+  const seen = new Set();
+  for (let s = 0; s < 1; s += 0.037) {
+    const poly = g.json(`smallIslandPoly(${s}, 100, 50, 3)`), again = g.json(`smallIslandPoly(${s}, 100, 50, 3)`);
+    assert.deepEqual(poly, again);
+    assert.ok(poly.length >= 4 && poly.length <= 5, `seed ${s}: ${poly.length} sides`);
+    seen.add(poly.length);
+    for (const [x, y] of poly) { const r = Math.hypot(x - 100, y - 50); assert.ok(r > 2.4 && r < 4, `radius ${r}`); }
+  }
+  assert.equal(seen.size, 2, "both 4 and 5 sides occur");
+});

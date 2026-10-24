@@ -161,11 +161,8 @@ onHook("frame", () => {
   }
 });
 
-// ---------- Chart marks: the bounty (live ship, or its lair while in port) and the outpost ----------
+// ---------- Chart marks: the bounty (live ship, or its lair while in port); the outpost is drawn by js/hud.js ----------
 onHook("mini", (c, k, u) => {
-  if (save.campaign.outpost) {
-    miniOutpost(c, OUTPOST.x * k, OUTPOST.y * k, u);   // js/mini-marks.js
-  }
   const b = activeBounty();
   if (!b || (bountyHeld && !docked)) return;   // the first voyage: no bounty until the tutorial is done (js/campaign.js)
   const p = bossShip && bossShip.alive ? bossShip : lairOf(b), x = p.x * k, y = p.y * k, pulse = 1 + 0.25 * Math.sin(performance.now() / 260);
