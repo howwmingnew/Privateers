@@ -71,7 +71,7 @@ function cheapestBuy() {
   for (const id of GUN_ORDER) c.push(GUNS[id].cost);
   for (const gun of allGuns()) if (gun.lv < GUN_MAX) c.push(gunUpCost(gun));
   for (const [k, y] of Object.entries(YARD)) if (save[k] < y.max) c.push(y.cost(save[k]));
-  for (const id of SHIP_ORDER.slice(SHIP_ORDER.indexOf(save.ship) + 1)) c.push(SHIPS[id].cost);
+  for (const id of SHIP_ORDER) if (SHIPS[id].tier > SHIPS[save.ship].tier) c.push(SHIPS[id].cost);
   const m = Math.min(...c.filter(v => v > 0));
   return Number.isFinite(m) ? m : 0;
 }

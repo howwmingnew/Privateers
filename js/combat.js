@@ -53,6 +53,7 @@ function playerFire(only, pick) {
         balls.push({ spr: S.add.image(m.x, m.y, "ball").setDepth(7), x: m.x, y: m.y,
           vx: Math.cos(m.a) * g.speed, vy: Math.sin(m.a) * g.speed, life, life0: life, dmg: g.dmg, burn: g.burn, chain: g.chain, fromPlayer: true, owner: player });
         vfxMuzzle(m.x, m.y, m.a, !loud);
+        gunFired(player, mount.key, g.pi, g.pn);   // the mount recoils, a flash at the gun (js/gun-art.js)
         if (loud) Snd.play("cannon", { pan: Math.cos(m.a) * 0.35 });
       });
     });
@@ -98,6 +99,7 @@ function hurt(s, dmg, burn, src, ball) {
 }
 // A crate floating on the sea. AI loot is temporary; a player wreck is saved and never expires.
 function addCrate(x, y, value, wreck) {
+  if (!wreck && portsOff()) return null;   // the daily sea drops no cargo, not from a fort or a surrender either (js/ports.js)
   const c = { spr: S.add.image(x, y, wreck ? "wreck" : "crate").setDepth(2), x, y, value, t: 0, wreck: wreck || null, label: null };
   if (wreck) c.label = labelText(S.add.text(x, y - 26, t("wreckLabel"), { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#ffd8cf", stroke: "#0b2530", strokeThickness: 4 })
     .setOrigin(0.5).setDepth(9));

@@ -67,7 +67,7 @@ const shareFull = spec => `${spec.text} ${spec.url}`;
 // ---------- the card ----------
 const CARD_W = 1200, CARD_H = 630;
 const CARD_FONT = { disp: `"IM Fell English SC", "Noto Serif TC", serif`, ui: `"Barlow Semi Condensed", "Noto Sans TC", system-ui, sans-serif` };
-const SHIP_SAILS = { sloop: 1, schooner: 2, brig: 2, frigate: 3, line: 3 };
+const SHIP_SAILS = { sloop: 1, schooner: 2, gunboat: 2, brigantine: 2, brig: 2, cruiser: 3, frigate: 3, corsair: 3, line: 3 };
 // A ship in profile, in ink: hull, masts, square sails; its size is the sail count. (x, y) is the waterline's centre.
 function drawShipMark(c, x, y, ship, k = 1) {
   const sails = SHIP_SAILS[ship] || 2, len = (150 + sails * 30) * k;

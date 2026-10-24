@@ -81,9 +81,9 @@ document.getElementById("pStats").after(wantedEl);
 let ngArmed = false, ngArmT;
 const dirWord = a => t("dir_" + (Math.round(((a % TAU) + TAU) % TAU / (Math.PI / 4)) % 8));
 function posterHtml(b) {
-  const i = BOUNTIES.indexOf(b), sea = t("sea_" + seaOfRing(b.L).id), ship = shipFor(i);
+  const i = BOUNTIES.indexOf(b), sea = t("sea_" + seaOfRing(b.L).id), ship = shipsFor(i).map(id => t("s_" + id)).join(" / ");
   const escorts = b.escorts.length ? " · " + t(b.escorts.length === 1 ? "pEscort1" : "pEscorts", { n: b.escorts.length }) : "";
-  const prize = b.final ? t("pFinal") : t(i + 1 === OUTPOST_BOUNTY ? "pUnlocksOutpost" : "pUnlocks", { ship: t("s_" + ship) });
+  const prize = b.final ? t("pFinal") : t(i + 1 === OUTPOST_BOUNTY ? "pUnlocksOutpost" : "pUnlocks", { ship });
   return `<div class="poster" data-boss="${b.id}">
     <div class="p-marque">${t("marque", { n: i + 1, m: BOUNTIES.length })}</div>
     <div class="p-head"><canvas class="p-flag" width="240" height="170" aria-hidden="true"></canvas>

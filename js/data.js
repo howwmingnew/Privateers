@@ -17,19 +17,34 @@ const BURN_T = 4, BURN_MAX = 4;
 // Chain shot: torn rigging costs the target 40% of its speed and 30% of its turn for CHAIN_T s (a new hit renews it).
 const CHAIN_T = 4, CHAIN_SPEED = 0.6, CHAIN_TURN = 0.7;
 
-// Ships for sale. Bigger ships carry more guns and start sturdier, but their yard upgrades begin again at Lv 1, so each
-// one's base stats beat the previous ship at a typical refit (hull Lv 4-5, hold Lv 3-4). The yard pays back 60% of the
-// old refit on purchase (js/plunder.js). refit scales yard prices: a bigger hull costs more to refit.
+// Ships for sale, two lines from tier 2 up (js/ship-lines.js has the names and the ledger's comparison): the FAST line
+// (schooner, brigantine, cruiser, corsair) trades guns, hold and some hull for speed and turn; the HEAVY line (gunboat,
+// brig, frigate, ship of the line) trades speed for guns, hull and hold. A tier costs about the same on either line.
+// Bigger ships carry more guns and start sturdier, but their yard upgrades begin again at Lv 1, so each one's base stats
+// beat the previous ship on its line at a typical refit (hull Lv 4-5, hold Lv 3-4; the fast line may dip to 80% of the
+// hull, tests/unit-shiplines.mjs). The yard pays back 60% of the old refit on purchase (js/plunder.js). refit scales yard
+// prices: a bigger hull costs more to refit. line: "fast" | "heavy" (the sloop is both); tier 1-5 is the Letter of Marque
+// step that opens it (SHIP_GATE, js/save-campaign.js). turn: the captain's turn rate x this (default 1). The brig,
+// frigate and ship of the line keep every number they had before the lines existed, so an old save loses nothing.
 const SHIPS = {
-  sloop:    { slots: { bow: 1, left: 1, right: 1, stern: 0 }, hp: 100,  speed: 150, hold: 240,  cost: 0,     refit: 1 },
-  schooner: { slots: { bow: 1, left: 2, right: 2, stern: 0 }, hp: 180,  speed: 165, hold: 440,  cost: 400,   refit: 1.7 },
-  brig:     { slots: { bow: 1, left: 3, right: 3, stern: 0 }, hp: 325,  speed: 155, hold: 1250, cost: 2000,  refit: 3.2 },
-  frigate:  { slots: { bow: 2, left: 7, right: 7, stern: 1 }, hp: 585,  speed: 150, hold: 2200, cost: 6000,  refit: 6,   gunK: 0.81 },
-  line:     { slots: { bow: 3, left: 12, right: 12, stern: 3 }, hp: 1050, speed: 140, hold: 4100, cost: 16000, refit: 11, gunK: 0.58 },
+  sloop:      { tier: 1, slots: { bow: 1, left: 1, right: 1, stern: 0 }, hp: 100,  speed: 150, hold: 240,  cost: 0,     refit: 1 },
+  schooner:   { tier: 2, line: "fast",  turn: 1.1, slots: { bow: 1, left: 2, right: 2, stern: 0 }, hp: 180,  speed: 165, hold: 440,  cost: 400,   refit: 1.7 },
+  gunboat:    { tier: 2, line: "heavy", turn: 0.9, slots: { bow: 1, left: 3, right: 3, stern: 0 }, hp: 180,  speed: 140, hold: 600,  cost: 450,   refit: 2 },
+  brigantine: { tier: 3, line: "fast",  turn: 1.2, slots: { bow: 1, left: 2, right: 2, stern: 1 }, hp: 270,  speed: 190, hold: 900,  cost: 1800,  refit: 2.6 },
+  brig:       { tier: 3, line: "heavy", slots: { bow: 1, left: 3, right: 3, stern: 0 }, hp: 325,  speed: 155, hold: 1250, cost: 2000,  refit: 3.2 },
+  cruiser:    { tier: 4, line: "fast",  turn: 1.3, slots: { bow: 1, left: 4, right: 4, stern: 1 }, hp: 470,  speed: 212, hold: 1600, cost: 5400,  refit: 4.8 },
+  frigate:    { tier: 4, line: "heavy", slots: { bow: 2, left: 7, right: 7, stern: 1 }, hp: 585,  speed: 150, hold: 2200, cost: 6000,  refit: 6,   gunK: 0.81 },
+  corsair:    { tier: 5, line: "fast",  turn: 1.4, slots: { bow: 2, left: 5, right: 5, stern: 2 }, hp: 800,  speed: 235, hold: 2800, cost: 14500, refit: 8.5 },
+  line:       { tier: 5, line: "heavy", slots: { bow: 3, left: 12, right: 12, stern: 3 }, hp: 1050, speed: 140, hold: 4100, cost: 16000, refit: 11, gunK: 0.58 },
 };
 // gunK: damage per gun on that hull (default 1). A big gun deck carries 2-3x the guns of the old ladder, so each gun hits for
 // less and the whole battery lands about a quarter more than the old one did (tests/unit-gundeck.mjs).
 const shipGunK = (id = save.ship) => (SHIPS[id] && SHIPS[id].gunK) || 1;
+const shipTurn = (id = save.ship) => (SHIPS[id] && SHIPS[id].turn) || 1;
+// Fast hulls dodge: above EVADE_FROM px/s of base speed, each 1% of extra speed counts as EVADE_K% more hull when the
+// ship rating (and so the threat badges and the Wanted poster's goal) is worked out. Nothing slower than a schooner changes.
+const EVADE_FROM = 165, EVADE_K = 0.8;
+const shipEvade = (id = save.ship) => 1 + EVADE_K * Math.max(0, ((SHIPS[id] && SHIPS[id].speed) || 0) / EVADE_FROM - 1);
 const SHIP_ORDER = Object.keys(SHIPS);
 // Gun mounts. ang = firing direction relative to the bow; muzzles sit `out` px that way,
 // spread over `span` px along the direction (s.rot + perp).
@@ -104,6 +119,6 @@ function playerPower() {
     if (g.burn) { fireRate += rate; fireDps = Math.max(fireDps, g.burn * m * shipGunK()); }
   }
   dps += Math.min(BURN_MAX, fireRate * BURN_T) * fireDps;
-  return Math.sqrt(yardVal("hull") * dps);
+  return Math.sqrt(yardVal("hull") * shipEvade() * dps);
 }
 function shipRating() { const p = playerPower(); let L = 1; while (L < 40 && enemyPower(L + 1) <= p) L++; return L; }

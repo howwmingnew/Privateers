@@ -56,4 +56,4 @@ function attractGunsClear() { for (const b of taBalls) b.spr?.destroy(); taBalls
 onHook("sail", attractGunsClear);
 onHook("dock", attractGunsClear);
 // The in-world harbor name would sit half under the title card: the title shows the logo instead.
-onHook("frame", () => { if (harborLabel && harborLabel.visible === titleOpen) harborLabel.setVisible(!titleOpen); });
+onHook("frame", () => { const show = !titleOpen && !portsOff(); if (harborLabel && harborLabel.visible !== show) harborLabel.setVisible(show); });   // and none in the daily sea (js/ports.js)

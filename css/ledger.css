@@ -58,3 +58,4 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 .item.esc .esc-row .btn { grid-row: auto; grid-column: auto; min-width: 0; padding: 5px 11px; font-size: calc(13px * var(--ts)); }
 .item.esc .esc-row .btn.on { background: var(--ink); color: var(--parch); box-shadow: 0 0 0 2px var(--brass); }
 .item.esc .esc-note { grid-column: 1 / -1; }
+.poster .p-rec .speed { display: block; margin-top: 2px; color: var(--ink-soft); font-style: italic; }

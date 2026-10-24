@@ -41,7 +41,8 @@ function moorTick(dt, hb, dPort) {
   const kind = hb.kind || (hb.outpost ? "outpost" : "return"), svc = serviceOf(kind);   // what this dock does (js/ports.js)
   if (!moor.inside) {
     moor = { ...moor, inside: true };
-    if (svc.heal && player.hp < player.maxHp) floatText(player.x, player.y - 40, svc.fee ? t("fSupplyIn", { n: supplyFee(hb.ring) }) : t("fRepair"), "#9fe0a0", 15);
+    if (isStationKind(kind)) stationGreet(hb, kind);
+    else if (svc.heal && player.hp < player.maxHp) floatText(player.x, player.y - 40, t("fRepair"), "#9fe0a0", 15);
   }
   if (cargo > 0 && svc.sell) quickSell(kind);
   if (svc.fee) stationHeal(hb, dt);

@@ -129,6 +129,9 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 .bay .lbl { margin-bottom: 6px; }
 .bay .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(84px * var(--ts)), 1fr)); gap: 6px; }
 .bay .hint-s { margin: 0; }
+/* side views of the guns (js/gun-art.js): beside a name in the card and armory, above it on a stored-gun button */
+.gsv { height: calc(22px * var(--ts)); width: auto; vertical-align: middle; margin-right: 8px; image-rendering: auto; }
+.gsv.sm { display: block; height: calc(18px * var(--ts)); margin: 0 auto 2px; }
 .slot small { display: block; font-weight: 500; font-size: calc(11px * var(--ts)); color: var(--ink-soft); }
 /* in the deck the text follows the deck's own width (a container), so the large UI sizes still fit a phone's narrow gun columns */
 .dk-left .lbl, .dk-right .lbl { font-size: min(calc(12px * var(--ts)), 5cqw); }
@@ -175,3 +178,8 @@ button:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
 @media (min-width: 2400px) and (min-height: 1300px) {
   #hud, #hint, #toast, #coach, #achToast, #bossBar, #seaBanner, #port, #title, #pause, #logbook, #victory, #wanted { zoom: 1.5; }
 }
+/* ship lines: the yard's comparison with the ship you sail (js/ship-lines.js) */
+.item .ds.cmp { font-size: calc(12.5px * var(--ts)); }
+.item .ds.cmp i { font-style: normal; color: var(--ink-soft); }
+.item .ds.cmp .gain { color: #2f6b2b; font-weight: 700; }
+.item .ds.cmp .loss { color: var(--blood); font-weight: 700; }

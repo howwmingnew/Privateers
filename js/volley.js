@@ -82,6 +82,7 @@ function releaseVolley(s, key, v, guns) {
     balls.push({ spr: S.add.image(p.x, p.y, "ball").setDepth(7), x: p.x, y: p.y, vx: Math.cos(ang) * g.speed, vy: Math.sin(ang) * g.speed,
       life, life0: life, dmg: g.dmg, burn: g.burn || 0, chain: !!g.chain, fromPlayer: false, friendly: !!s.ally, owner: s });   // an escort's guns may burn or tear rigging
     vfxMuzzle(p.x, p.y, ang, !plan[i].loud);
+    if (!s.fixed) gunFired(s, key, i, n);
   });
   Snd.play("cannonFar", { x: s.x, y: s.y });
   v.aims = null; v.cd = guns[0].interval * rand(0.9, 1.1);

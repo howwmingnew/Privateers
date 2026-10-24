@@ -28,7 +28,8 @@ const streakBonus = () => Math.min(STREAK_MAX, streak * STREAK_STEP);
 function lootDrop(s, killer) {
   s.killedBy = killer;
   if (s.A && s.A.boom) fireshipBoom(s);
-  let value = s.loot || 0;
+  const dry = portsOff();   // the daily sea pays no gold and drops no cargo (js/ports.js); the sinking itself still counts
+  let value = dry ? 0 : s.loot || 0;
   if (killer === player && player.alive) {
     streak++;
     const warship = (s.faction === "pirate" || s.faction === "navy") && !s.boss;   // a bounty target pays its Captain's Chest instead (js/campaign.js)
@@ -40,7 +41,7 @@ function lootDrop(s, killer) {
     }
     s.pay = { ...s.pay, streak: streakBonus() };   // shown on the kill card (js/juice.js)
   }
-  value += s.stolen || 0;   // what the ship scooped up at sea (js/ai-plunder.js) floats out for the taking, bounty-free
+  value += dry ? 0 : s.stolen || 0;   // what the ship scooped up at sea (js/ai-plunder.js) floats out for the taking, bounty-free
   return value > 0 ? addCrate(s.x, s.y, value, null) : null;
 }
 // Docking: the hold sells at the streak's price, and the streak ends with the sortie either way.

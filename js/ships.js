@@ -14,13 +14,14 @@ function applyPlayerStats(full) {
   player.maxHp = yardVal("hull");
   if (full) player.hp = player.maxHp;
   player.maxSpeed = yardVal("sails");
+  player.turnRate = PLAYER_TURN * shipTurn();   // the fast line turns tighter, the gunboat wider (js/data.js)
   player.cap = yardVal("hold");
   player.guns = playerGuns();
   applyShipArt(player, save.ship, liveryFor(player));   // hull art, hitbox, muzzles and view follow the ship in the save
 }
 function makePlayer(sc) {
   const p = makeShip(sc, "ship-player", PORT.x + 140, PORT.y);
-  p.isPlayer = true; p.rot = 0; p.turnRate = 2.5; p.spr.setDepth(6);
+  p.isPlayer = true; p.rot = 0; p.spr.setDepth(6);
   player = p; applyPlayerStats(true);
   return p;
 }
@@ -219,7 +220,7 @@ function move(s, dt) {
   s.vx = Math.cos(s.rot) * s.speed * wm + dp.x; s.vy = Math.sin(s.rot) * s.speed * wm + dp.y;   // a wave's shove counts as speed, so a hull driven onto a rock is hurt by it (js/collision.js)
   s.x = clamp(s.x + (s.vx + lee.x) * dt, 60, W - 60); s.y = clamp(s.y + (s.vy + lee.y) * dt, 60, H - 60);
   // islands are solid to the whole hull: the hit capsule (s.hl / s.hw, cutter to man-o'-war) is kept off the rock
-  const solid = islands.concat([{ x: PORT.x, y: PORT.y, r: PORT_ISLAND_R / 0.9, harbor: true }]);
+  const solid = portsOff() ? islands : islands.concat([{ x: PORT.x, y: PORT.y, r: PORT_ISLAND_R / 0.9, harbor: true }]);   // no harbor island in the daily sea (js/ports.js)
   const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28, hw = s.hw ?? 13;
   for (const isl of solid) {
     const R = isl.r * 0.9 + hw + 5, ix = isl.x - s.x, iy = isl.y - s.y;
