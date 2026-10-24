@@ -55,6 +55,12 @@ const SND_SFX = (() => {
         const lp = F("lowpass", 700, 0.7); lp.connect(v.out);
         tone(v, t, "sine", 96 * p, 44 * p, 0.25, 0.35, 0.003, 0.4, lp); creak(v, t + 0.04, rand(68, 86) * p, 0.6, 0.5, lp);
       } } },
+    // thunder: a sharp crack, then a rumble that rolls away and dies; the mids are there for small speakers
+    thunder: { max: 2, gap: 1.2, pv: 0.12, gv: 0.1, gain: 1, wet: 0.6, fn(v) { const { t, p } = v;
+      hiss(v, t, "highpass", 2200 * p, 0.7, 0.5, 0.002, 0.14);
+      sweep(hiss(v, t + 0.04, "lowpass", 1100 * p, 0.8, 1.1, 0.05, 2.8, true).frequency, t + 0.04, 1100 * p, 110 * p, 2.4);
+      tone(v, t + 0.05, "sine", 62 * p, 30 * p, 2.2, 0.6, 0.08, 2.4);
+      hiss(v, t + 0.3, "bandpass", 380 * p, 0.7, 0.7, 0.4, 2, true); } },
     splash: { max: 6, gap: 0.03, pv: 0.15, gv: 0.2, gain: 0.55, wet: 0.15, far: 1200, pri: 3, fn(v) { const { t, p } = v;
       sweep(hiss(v, t, "bandpass", 2600 * p, 1.1, 0.6, 0.012, 0.45).frequency, t, 2600 * p, 650 * p, 0.4);
       tone(v, t, "sine", 520 * p, 150 * p, 0.07, 0.35, 0.002, 0.08);                                    // the plop

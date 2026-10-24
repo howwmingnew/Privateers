@@ -8,6 +8,7 @@
 //   Snd.music("sea" | "harbor" | "title" | "ending" | null)           "sea" plays the current sea's variant, or the boss theme
 //   Snd.setSea(id) · Snd.setBoss(bool) · Snd.setIntensity(0..1)       which sea, a bounty boss in the fight, combat layer
 //   Snd.ambience("sea" | "harbor" | null) · Snd.setShore(0..1, pan)   ambience; how close land is (gulls, surf)
+//   Snd.setWeather(rain, wind, storm)  each 0..1: rain and gale beds, the score muffled in a storm (js/weather.js)
 //   Snd.setVolume(bus, 0..1) · Snd.getVolume(bus)                     bus = master | music | sfx | ambient
 //   Snd.setMuted(b) · Snd.toggleMute() · Snd.isMuted()
 //   Snd.pauseAll(reason) · Snd.resumeAll(reason)                       the tab being hidden pauses on its own
@@ -216,8 +217,13 @@ const Snd = (() => {
     const windBp = F("bandpass", 620, 3.5), wind = G(0.05); lfo(0.043, 240, windBp.frequency, t); lfo(0.029, 0.03, wind.gain, t); wire(loopNoise(false, t), windBp, wind, sea);   // wind
     wire(loopNoise(false, t), F("bandpass", 950, 0.8), wash, sea);   // water rushing past our own hull (setMotion)
     const ll = F("lowpass", 600, 0.7), lg = G(0.22); lfo(0.29, 0.1, lg.gain, t); lfo(0.47, 0.07, lg.gain, t); wire(loopNoise(true, t), ll, lg, harbor);   // lapping at the quay
-    amb = { sea, harbor, wash, swell, swellLp, foam, wind, windBp };
-    ambColour();
+    // weather (Snd.setWeather): rain hissing on the water, and a gale howling through the rigging; both silent until asked for
+    const rain = G(0), rainHp = F("highpass", 1500, 0.5), rainBp = F("bandpass", 4200, 0.6), rainLow = G(0.5);
+    wire(loopNoise(false, t), rainHp, rain, sea); wire(loopNoise(false, t), rainBp, rainLow, rain);
+    const gale = G(0), galeBp = F("bandpass", 430, 1.4), galeLp = F("lowpass", 240, 0.6), galeLow = G(1.6);
+    lfo(0.17, 150, galeBp.frequency, t); lfo(0.11, 0.35, gale.gain, t); wire(loopNoise(false, t), galeBp, gale, sea); wire(loopNoise(true, t), galeLp, galeLow, gale);
+    amb = { sea, harbor, wash, swell, swellLp, foam, wind, windBp, rain, gale };
+    ambColour(); weatherApply();
   }
   function ambColour() {
     if (!amb) return;
@@ -234,6 +240,20 @@ const Snd = (() => {
     ambKind = wantAmb;
     const t = ctx.currentTime, [s, h] = ambKind === "sea" ? [1.75, 0] : ambKind === "harbor" ? [0.6, 1.75] : [0, 0];
     amb.sea.gain.setTargetAtTime(s, t, 1); amb.harbor.gain.setTargetAtTime(h, t, 1);
+  }
+  // rain / wind / storm, each 0..1, from the sea (js/weather.js): the beds above, and the score heard through weather
+  let wxRain = 0, wxWind = 0, wxStorm = 0;
+  function weatherApply() {
+    if (!amb) return;
+    const t = ctx.currentTime;
+    amb.rain.gain.setTargetAtTime(0.1 * Math.pow(wxRain, 1.2), t, 1.2);
+    amb.gale.gain.setTargetAtTime(wxStorm > 0 || wxRain > 0 ? 0.03 + 0.13 * wxWind * (0.4 + 0.6 * Math.max(wxStorm, wxRain * 0.6)) : 0, t, 1.5);
+    bus.musicLp.frequency.setTargetAtTime(20000 - 16500 * wxStorm - 5000 * wxRain * (1 - wxStorm), t, 1.5);   // a storm muffles the score
+  }
+  function setWeather(rain, wind, storm) {
+    const a = unit(rain), b = unit(wind), c = unit(storm);
+    if (a === null || b === null || c === null || (Math.abs(a - wxRain) < 0.02 && Math.abs(b - wxWind) < 0.04 && Math.abs(c - wxStorm) < 0.02)) return;
+    wxRain = a; wxWind = b; wxStorm = c; weatherApply();
   }
   function setMotion(k) {
     const u = unit(k); if (!amb || u === null || Math.abs(u - washK) < 0.03) return;
@@ -294,9 +314,9 @@ const Snd = (() => {
     clip.curve = softClip(); meter.fftSize = 2048;
     wire(mix, comp, master, G(LIMIT.pre), clip, ctx.destination); clip.connect(meter);
     bus = { mix, master, meter, musicIn: G(1), scMusic: G(1), musicEq: F("lowshelf", 180, 0.7), ambIn: G(1), scAmb: G(1) };
-    bus.musicEq.gain.value = 0;
+    bus.musicEq.gain.value = 0; bus.musicLp = F("lowpass", 20000, 0.5);
     for (const b of ["music", "sfx", "ambient"]) { bus[b] = G(taper(vol[b])); bus[b].connect(mix); }
-    wire(bus.musicIn, bus.scMusic, bus.musicEq, bus.music); wire(bus.ambIn, bus.scAmb, bus.ambient);
+    wire(bus.musicIn, bus.scMusic, bus.musicEq, bus.musicLp, bus.music); wire(bus.ambIn, bus.scAmb, bus.ambient);
     const verb = ctx.createConvolver(); verb.buffer = impulse(1.7); verb.connect(mix);
     bus.sfxWet = G(taper(vol.sfx)); bus.ambWet = G(taper(vol.ambient)); bus.sfxWet.connect(verb); bus.ambWet.connect(verb);
     const mWet = G(0.25); bus.music.connect(mWet); mWet.connect(verb);
@@ -346,7 +366,7 @@ const Snd = (() => {
   }
   return Object.freeze({
     names: Object.freeze(Object.keys(SFX)), themes: Object.freeze(Object.keys(THEMES)), seas: Object.freeze(Object.keys(SEA_THEME)), buses: Object.freeze(BUSES.slice()),
-    unlock, play, music, ambience, setMotion, setSea, setBoss, pauseAll, resumeAll, setVolume, setMuted, meter, debug,
+    unlock, play, music, ambience, setMotion, setWeather, setSea, setBoss, pauseAll, resumeAll, setVolume, setMuted, meter, debug,
     setListener(x, y) { if (Number.isFinite(x) && Number.isFinite(y)) { listener.x = x; listener.y = y; } },
     setIntensity(v) { const u = unit(v); if (u !== null) intWant = u; },
     setShore(k, pan) { const u = unit(k); if (u !== null) { shore = u; shorePan = clamp(+pan || 0, -1, 1); } },
