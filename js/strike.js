@@ -21,7 +21,9 @@ function strikeColors(e, src) {
     if (!coach && (src === player || dist(e, player) < 900)) toast(t("toastStruck"));
   }
 }
-const canStrike = s => s.merchant && !s.isPlayer && !s.boss && !s.escortOf && s.alive && !s.struck;
+// the tutorial's target starts at 40% hull: it must sink, not surrender, so the first kill gets its full payoff
+const canStrike = s => s.merchant && !s.isPlayer && !s.boss && !s.escortOf && s.alive && !s.struck
+  && !(typeof tut !== "undefined" && s === tut.target);
 onHook("ready", () => { if (typeof shipArt === "function") shipArt("fluyt", "struck", {}, S); });   // baked now, not mid-fight
 onHook("hurt", (s, dmg, src) => {
   if (s.struck && s.alive && dmg > 0) { s.hp = 0; return; }   // one more hit sinks her
