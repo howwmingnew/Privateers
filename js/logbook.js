@@ -82,7 +82,8 @@ function renderLog() {
       ...(save.ngPlus ? [["st_ng", save.ngPlus]] : [])])}</dl></section>
     <section><h2>${t("logSunk")}</h2><p class="hint-s">${t("st_total")} <b>${fmt(save.sunk)}</b></p>
       <div class="fbars">${factions}</div><h3>${t("byLevel")}</h3><div class="lvbars">${levels}</div></section>
-    <section><h2>${t("logAch", { n: got, m: ACH.length })}</h2><ul class="achs">${achs}</ul></section>`;
+    <section><h2>${t("logAch", { n: got, m: ACH.length })}</h2><ul class="achs">${achs}</ul></section>
+    ${typeof wordmarkHtml === "function" ? wordmarkHtml() : ""}`;
 }
 function openLog() {
   flushTime(); renderLog();

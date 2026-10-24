@@ -1,0 +1,20 @@
+/* Page upkeep (js/tech.js), the brag line and wordmark on the victory sheet and Captain's log (js/victory.js). */
+
+/* A long press or a drag on a phone selects nothing and opens no callout; text fields stay editable. */
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, [contenteditable="true"] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+
+/* Victory: the time it took, big, as the number people post. */
+.sheet.victory .v-brag { display: grid; justify-items: center; gap: 0; margin: 2px 0 4px; text-align: center; }
+.v-brag small { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+.v-brag b { font-family: var(--f-display); font-weight: 400; font-size: 44px; line-height: 1.05; color: var(--blood); }
+.wordmark { margin: 0; font-size: 12px; letter-spacing: .06em; color: var(--ink-soft); text-align: center; opacity: .85; }
+.v-choices .wordmark { flex-basis: 100%; order: 2; }
+.sheet.log > .wordmark { margin-top: 6px; }
+
+/* Portrait phones: the hint under the ship wraps to two or three lines, so the achievement card goes up under the chart
+   and the one-line toast there (css/style.css #toast), instead of sitting on the hint. */
+@media (orientation: portrait) and (max-width: 600px) {
+  #achToast { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + 146px + min(124px * var(--mini, 1), 44vw)); left: 50%; transform: translate(-50%, -12px); }
+  #achToast.on { transform: translate(-50%, 0); }
+}

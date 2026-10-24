@@ -14,7 +14,10 @@ const SAVE_DEFAULTS = [];
 const defaultSave = () => Object.assign({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1,
   bow: [gunItem("six")], left: [gunItem("six")], right: [gunItem("six")], stern: [], store: [], sunk: 0,
   wrecks: [], salvage: [] }, ...SAVE_DEFAULTS.map(fn => fn()));
-const MAX_STORE = 200;   // a hand-edited save can't make the ledger build thousands of buttons
+const MAX_STORE = 200;   // the armory and "to store" stop here, so a hand-edited save can't build thousands of buttons
+// Loading cuts the store only past twice that: guns moved off a bigger ship (New Game+) can push a full store over
+// MAX_STORE, and every one of them was paid for.
+const MAX_STORE_SAVED = MAX_STORE * 2;
 // A gun item from untrusted data, or null. A bare type name (an old save's port) becomes a gun at level `lv`.
 function cleanGun(v, lv = 1) {
   if (typeof v === "string") return Object.hasOwn(GUNS, v) ? gunItem(v, lv) : null;
@@ -30,7 +33,7 @@ function fitMounts(s) {
     spill.push(...old.slice(n).filter(Boolean));
     return [key, Array.from({ length: n }, (_, i) => old[i] || null)];
   }));
-  const store = (Array.isArray(s.store) ? s.store : []).map(v => cleanGun(v)).filter(Boolean).concat(spill).slice(0, MAX_STORE);
+  const store = (Array.isArray(s.store) ? s.store : []).map(v => cleanGun(v)).filter(Boolean).slice(0, MAX_STORE_SAVED - spill.length).concat(spill);
   return { ...rest, ship, ...mounts, store };
 }
 // v1 sold extra gun ports instead of ships: move each captain onto the ship with as many guns per side.

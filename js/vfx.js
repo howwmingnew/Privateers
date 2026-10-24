@@ -14,6 +14,7 @@
 //   vfxRespawn(s)           put a sunk player's sprite back to normal
 //   vfxHitStop(sec)         freeze the simulation briefly; particles and tweens keep moving
 const VFX_LOW = (() => { try { return matchMedia("(pointer: coarse)").matches; } catch (e) { return false; } })();
+let PERF_LOW = false;   // set by js/tech.js while frames run long: damage smoke and flames puff half as often
 const vfxCap = n => Math.round(n * (VFX_LOW ? 0.55 : 1));
 const FX = { deg: 0, tint: 0xffffff };
 const SINK_TINT = 0x1d4e60;   // the hull fades toward the sea colour, so it goes under rather than into thin air
@@ -92,11 +93,11 @@ function vfxShip(s, dt) {
   if (vis && s.maxHp) {   // damage states: grey smoke under half hull, black smoke and flames under a quarter
     const f = s.hp / s.maxHp;
     if (f < 0.5 && (s.smokeT = (s.smokeT || 0) - dt) <= 0) {
-      s.smokeT = f < 0.25 ? 0.1 : 0.22; FX.tint = f < 0.25 ? 0x1e1a17 : 0x9a958e;
+      s.smokeT = (f < 0.25 ? 0.1 : 0.22) * (PERF_LOW ? 2 : 1); FX.tint = f < 0.25 ? 0x1e1a17 : 0x9a958e;
       const k = rand(-0.35, 0.35) * a.len; FX.dmg.emitParticleAt(s.x + c * k, s.y + sn * k, 1);
     }
     if ((f < 0.25 || s.burnT > 0) && (s.flameT = (s.flameT || 0) - dt) <= 0) {
-      s.flameT = s.burnT > 0 ? 0.04 : 0.06;
+      s.flameT = (s.burnT > 0 ? 0.04 : 0.06) * (PERF_LOW ? 2 : 1);
       const k = rand(-0.3, 0.3) * a.len, w = rand(-0.3, 0.3) * a.beam;
       FX.flame.emitParticleAt(s.x + c * k - sn * w, s.y + sn * k + c * w, 1);
     }

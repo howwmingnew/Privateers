@@ -140,7 +140,7 @@ test("unknown ships and guns are dropped", () => {
   assert.deepEqual(s.right, [G("long12")]); assert.deepEqual(s.bow, [null]); assert.deepEqual(s.stern, []);
   assert.deepEqual(s.store, [G("chain"), G("six"), G("fire")], "guns past the sloop's ports go to the store, after the good stored ones");
   for (const ship of ["__proto__", "constructor", "toString", 42, null]) assert.equal(loadWith({ ship }).json("save").ship, "sloop", String(ship));
-  assert.equal(loadWith({ store: Array.from({ length: 500 }, () => G("six")) }).json("save").store.length, 200, "the store is capped");
+  assert.equal(loadWith({ store: Array.from({ length: 500 }, () => G("six")) }).json("save").store.length, 400, "the store is capped (at twice the armory limit)");
 });
 
 test("wrecks: only finite, in-map, positive entries, at most 50", () => {
