@@ -40,6 +40,7 @@ function lootDrop(s, killer) {
     }
     s.pay = { ...s.pay, streak: streakBonus() };   // shown on the kill card (js/juice.js)
   }
+  value += s.stolen || 0;   // what the ship scooped up at sea (js/ai-plunder.js) floats out for the taking, bounty-free
   return value > 0 ? addCrate(s.x, s.y, value, null) : null;
 }
 // Docking: the hold sells at the streak's price, and the streak ends with the sortie either way.
