@@ -230,9 +230,16 @@ function disTick(dt) {
     }
   }
   dis.fog = fog;
+  for (const s of ships) if (s.dvx || s.dvy) s.disInfT = now + 2;   // under the sea's hand: see disCrashCap
   for (let i = dis.live.length - 1; i >= 0; i--) if (dis.live[i].st === "done") { dis.live[i].txt?.destroy(); dis.live.splice(i, 1); }
   // the whirl's roar while the player is near
   if ((dis.whirlT -= dt) <= 0) { dis.whirlT = 2.4; if (dis.live.some(e => e.st === "live" && (e.kind === "spout" || e.kind === "vortex") && dist(e, player) < DISASTER[e.kind].R * 1.4)) sfx("disWhirl"); }
+}
+// A crash (js/collision.js) that a disaster drove, in the 2 s after the sea last shoved or pulled the hull, follows the disaster rules for the
+// player: it never takes him under 10% and does nothing inside the rest after an event. Any other crash is #30's, untouched.
+function disCrashCap(s, dmg) {
+  if (!s.isPlayer || !(s.disInfT > wx.t)) return dmg;
+  return disDamage(s, dmg / s.maxHp, 0, 1, wx.t < dis.protectUntil);
 }
 // The marks for the chart and the screen edge: events that are warning or running (the fog has none).
 const disMarks = () => dis.live.filter(e => e.kind !== "fog" && e.st !== "done");

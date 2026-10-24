@@ -116,7 +116,7 @@ console.log("Waterspout: path warning, pull, damage in the core, mast, escape by
   await shot("spout-2-live");
   await ev(() => { stage(7); window.sp = disForce("spout", { x: player.x, y: player.y }, { warn: 0.5, v2: 1 }); sp.h = Math.PI / 2; window.mer = addShip(120, 0, 0); stepN(40); });   // right on top of us, both in the core
   await ev(() => stepN(900));
-  const core = await ev(() => ({ pct: hpPct(player), merPct: hpPct(mer), alive: player.alive, merAlive: mer.alive }));
+  const core = await ev(() => ({ pct: +(sp.spent[player.id] * 100).toFixed(2), merPct: +((sp.spent[mer.id] || 0) * 100).toFixed(2), alive: player.alive, merAlive: mer.alive }));
   check(core.pct > 0 && core.pct <= 18.01 && core.alive, "sitting in the core: the player takes damage, at most 18%, and survives", core);
   check(core.merPct > 0 || !core.merAlive, "an enemy hull in the same spout takes the same damage", core);
   // escape: full sail, against the spin
@@ -149,7 +149,7 @@ console.log("Whirlpool: stationary, pulls hulls in, damages the core, enemies tr
   const trapped = await ev(() => ({ merD: dist(mer, vx), mx0, pct: hpPct(player), merPct: hpPct(mer) }));
   check(trapped.merD < trapped.mx0 - 50, "a passive enemy hull is dragged in toward the middle", trapped);
   await ev(() => { stage(7); window.vx = disForce("vortex", { x: player.x + 30, y: player.y }, { warn: 0.5, v2: 1 }); window.mer = addShip(100, 0, 0); stepN(30); stepN(1300); });
-  const core = await ev(() => ({ pct: hpPct(player), merPct: hpPct(mer), alive: player.alive }));
+  const core = await ev(() => ({ pct: +(vx.spent[player.id] * 100).toFixed(2), merPct: +((vx.spent[mer.id] || 0) * 100).toFixed(2), alive: player.alive }));
   check(core.pct > 0 && core.pct <= 15.01 && core.alive, "waiting in the middle: at most 15% and no sinking", core);
   await ev(() => { stage(7); window.vx = disForce("vortex", { x: player.x + 30, y: player.y }, { warn: 0.2, v2: 1 }); vx.end += 60; stepN(30); });
   const esc = await ev(() => {
@@ -260,6 +260,16 @@ console.log("Hard rules: no sinking, 10% floor, 8 s rest, not in the harbor or t
   await ev(() => { stage(7); window.vx = disForce("vortex", { x: player.x + 20, y: player.y }, { warn: 0.1, v2: 1 }); vx.end = vx.t0 + 3; stepN(60 * 4); });
   const prot = await ev(() => ({ until: +(dis.protectUntil - wx.t).toFixed(1), live: dis.live.length }));
   check(prot.live === 0 && prot.until > 6 && prot.until <= 8, "when an event ends the 8 s rest starts", prot);
+  // a wave driving the player onto a rock: the crash (#30) is capped by the same floor
+  const crash = await ev(() => {
+    stage(7, { hp: 130, rot: Math.PI / 2 });
+    const isl = islands.find(i => dist(i, PORT) > ringEdge(6) && i.r > 40);
+    player.x = isl.x - isl.r - 110; player.y = isl.y; player.low = player.hp; player.spr.setPosition(player.x, player.y);
+    disForce("tsunami", { x: player.x, y: player.y }, { a: 0, warn: 0.5 });
+    stepN(60 * 14);
+    return { crashed: !!(player.crashBook && player.crashBook.size), low: Math.min(player.low, player.hp), alive: player.alive };
+  });
+  check(crash.crashed && crash.alive && crash.low >= 100 - 1e-6, "a wave that drives the player onto a rock: the crash hurts but never takes him under 10%", crash);
   const geo = await ev(() => {
     const mk = kind => ({ kind, a: 0, a2: 0, r: 0.5, v1: 0.5, v2: 0.5, warn: 8, warnAt: 0, t0: 8, end: 40 });
     const at = (x, y) => { player.x = x; player.y = y; };
