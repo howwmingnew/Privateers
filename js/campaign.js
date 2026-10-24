@@ -71,7 +71,8 @@ const ASSIST_MS = 20000;  // a boss someone else sinks still pays if the player 
 const lairOf = b => polarPt(b.ang, b.r);
 // Hull art for a spec class (js/art.js SHIP_ART; the man-o'-war has its own, bigger than anything the yard sells).
 const artClass = cls => SHIP_ART[cls] ? cls : "brig";
-const activeBounty = () => BOUNTIES[save.campaign.bounty] || null;
+const activeBounty = () => (runActive() && runBounty()) || BOUNTIES[save.campaign.bounty] || null;   // a daily run hunts its own captain (js/run.js)
+const findBounty = id => BOUNTIES.find(b => b.id === id) || (runActive() && runBounty() && runBounty().id === id ? runBounty() : null);
 const bossName = b => t("boss_" + b.id);
 const shipFor = i => SHIP_ORDER.find(id => SHIP_GATE[id] === i + 1);   // the hull bounty i (0-based) unlocks
 const bountyReward = b => Math.round(b.reward * lootMul());
@@ -162,9 +163,10 @@ onHook("sail", () => { storyKey = null; clearBoss(); bountyHeld = !save.tutorial
 onHook("hurt", (s, dmg, src) => { if (s === bossShip && src === player) bossHitAt = S.time.now; });
 onHook("sunk", (s, killer) => {
   if (!s.boss || s !== bossShip) return;
-  const b = BOUNTIES.find(x => x.id === s.boss);
+  const b = findBounty(s.boss);
   const paid = killer === player || S.time.now - bossHitAt < ASSIST_MS;
   clearBoss();
+  if (runActive() && b === runBounty()) { runBossSunk(paid); return; }   // the daily captain pays no chest (js/run.js)
   if (paid) claimBounty(b, s); else toast(t("bossEscaped", { name: bossName(b) }));
 });
 onHook("frame", () => {
@@ -183,7 +185,7 @@ onHook("frame", () => {
   }
   if (bossSeen && bossShip && player.alive && dist(player, bossShip) < 1100) huntSeenAt = { ...huntSeenAt, [bossShip.boss]: performance.now() };
 });
-onHook("lang", () => { if (bossTag && bossShip) bossTag.txt.setText(bossName(BOUNTIES.find(b => b.id === bossShip.boss))); });
+onHook("lang", () => { if (bossTag && bossShip) bossTag.txt.setText(bossName(findBounty(bossShip.boss))); });
 
 // ---------- The Hulk Outpost: sells cargo and repairs, on the line between the L6 and L7 rings ----------
 // It docks through the normal dock() flow with kind "outpost"; within TRUCE_R no ship opens fire on the player.
@@ -262,7 +264,7 @@ onHook("lang", () => outpostLabel?.setText(t("outpostMap")));
 function startNewGamePlus() {
   flushTime();   // js/logbook.js
   const keep = { bow: save.bow, left: save.left, right: save.right, stern: save.stern, store: save.store,   // guns past the sloop's ports go to the store
-    sunk: save.sunk, stats: save.stats, ach: save.ach, ngPlus: save.ngPlus + 1, tutorialDone: true };   // a returning captain needs no first-voyage coaching
+    sunk: save.sunk, stats: save.stats, ach: save.ach, hall: save.hall, ngPlus: save.ngPlus + 1, tutorialDone: true };   // a returning captain needs no first-voyage coaching
   save = fitMounts({ ...defaultSave(), ...keep });
   for (const c of crates) { c.spr.destroy(); c.label?.destroy(); }
   crates.length = 0; cargo = 0;

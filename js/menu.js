@@ -120,6 +120,7 @@ function renderTitle() {
   delete cont.dataset.smoke; delete neu.dataset.smoke;
   (prog ? cont : neu).dataset.smoke = "start";
   $m("titleMenu").hidden = false; $m("tConfirm").hidden = true;
+  renderDailyButton();   // js/run.js
 }
 function startGame(fresh) {
   const skipped = fresh && save.tutorialDone && !hasProgress(save);   // skipped the tutorial, earned nothing: keep it skipped
@@ -189,6 +190,7 @@ function pressQuit() {
 }
 // Leave whatever is open (pause, ledger, panels) for the title. Nothing is docked: Continue docks at the harbor.
 function toTitle() {
+  runLeave();   // a daily or seeded run hands the real save back first (js/run.js)
   closeAllPanels();
   if (pauseOpen) { pauseOpen = false; $m("pause").hidden = true; document.body.classList.remove("on-pause"); freeze(false); }
   if (docked) { $m("port").hidden = true; docked = false; }
@@ -222,7 +224,7 @@ function closePanel() {
 }
 function closeAllPanels() { while (panels.length) panels.pop().el.hidden = true; }
 // Campaign modals (js/logbook.js, js/victory.js) sit over the ledger or the sea; focus and the pad stay inside them.
-const campaignModal = () => document.querySelector("#victory:not([hidden]), #logbook:not([hidden])");
+const campaignModal = () => document.querySelector("#victory:not([hidden]), #logbook:not([hidden]), #runEnd:not([hidden])");
 function activeRoot() {
   if (panels.length) return panels[panels.length - 1].el;
   const modal = campaignModal();
@@ -244,6 +246,7 @@ function goBack() {
 function menuAction(act, b) {
   switch (act) {
     case "continue": startGame(false); break;
+    case "daily": startRun("daily"); break;   // js/run.js
     case "new":
       if (!hasProgress(save)) { startGame(true); break; }
       $m("titleMenu").hidden = true; $m("tConfirm").hidden = false;

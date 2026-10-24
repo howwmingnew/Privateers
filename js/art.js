@@ -127,7 +127,7 @@ function enemyClassFor(e) {
 function bossLivery(b) { return b && b.final ? "admiral" : b && b.faction === "navy" ? "bossNavy" : "boss"; }
 function liveryFor(s) {
   if (s.isPlayer) return "player";
-  if (s.boss) return bossLivery((typeof BOUNTIES !== "undefined" && BOUNTIES.find(b => b.id === s.boss)) || { faction: s.faction });
+  if (s.boss) return bossLivery((typeof findBounty === "function" && findBounty(s.boss)) || { faction: s.faction });
   return LIVERY[s.faction] ? s.faction : "pirate";
 }
 function shipZoomK() { return 1 - 0.05 * Math.max(0, SHIP_ORDER.indexOf(save.ship)); }

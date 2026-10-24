@@ -1,0 +1,23 @@
+/* Share cards and the daily sea (js/sharecard.js, js/run.js) */
+
+/* the share chip sits above the postcard chip (css/photo.css .pcchip) */
+.sharechip { bottom: calc(env(safe-area-inset-bottom, 0px) + 118px); }
+#pShare { margin-top: 0; }
+
+/* the daily clock: top centre, red for the last half minute */
+#runClock { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 8px); transform: translateX(-50%); z-index: 7; pointer-events: none;
+  padding: 3px 14px 5px; border-radius: 3px; background: rgba(8,34,45,.82); border: 1px solid rgba(240,199,102,.45);
+  font-family: var(--f-ui); font-weight: 700; font-size: calc(18px * var(--ts, 1)); letter-spacing: .04em; color: var(--foam); text-shadow: 0 1px 2px #000;
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+#runClock.low { border-color: #d9493a; color: #ffb4a6; }
+body:has(#runClock:not([hidden])) #seaBanner { top: calc(env(safe-area-inset-top, 0px) + 52px); }
+@media (max-width: 560px) { #runClock { font-size: calc(15px * var(--ts, 1)); } }
+
+/* the daily result page: the victory sheet, over everything at sea */
+#runEnd { position: fixed; inset: 0; z-index: 12; display: grid; place-items: center; background: rgba(4,18,24,.78);
+  padding-block: calc(env(safe-area-inset-top, 0px) + 12px) calc(env(safe-area-inset-bottom, 0px) + 12px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+#runEnd[hidden] { display: none; }
+#runEnd .sheet.victory { width: min(100%, 520px); }
+#runEnd .v-choices .v-card { order: 0; }
+.sheet .hall .btn { margin-top: 4px; }

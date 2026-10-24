@@ -17,3 +17,13 @@ const REPAIR_RATE = 0.01;   // share of max hull mended per second after that (1
 const POWDER_CHANCE = 1 / 12, POWDER_R = 230;   // blast radius, px
 const POWDER_BOSS_FRAC = 0.25;     // a boss takes this share of its max hull and never dies of the crit itself
 const POWDER_SPLASH = { ai: 0.3, player: 0.15, boss: 0.08 };   // share of max hull at the centre of the blast; fades to 40% at the rim
+
+// Sharing (js/sharecard.js) and the daily sea (js/daily.js, js/run.js). [PLACEHOLDER] loadout until playtested.
+const SHARE_URL = "https://howwmingnew.github.io/Privateers/";
+const DAILY_EPOCH = Date.UTC(2026, 9, 24);   // daily #1: 2026-10-24, UTC, so every device agrees on the day
+const DAILY_SECONDS = 300;                   // a daily run lasts five minutes
+const DAILY_LEVEL = 5;                       // the daily captain's ring (the Reef Straits)
+// The same ship and guns for everyone: a brig with a long 12 on the bow and a carronade between two 6-pounders each side.
+const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,
+  bow: ["long12"], left: ["six", "carronade", "six"], right: ["six", "carronade", "six"] };
+const CHAIN_GAP = 20;                        // seconds between sinkings that still count as one kill chain (js/hall.js)
