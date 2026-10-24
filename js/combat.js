@@ -42,17 +42,17 @@ function playerFire(only) {
   let shots = 0, rx = 0, ry = 0;
   for (const mount of MOUNTS) {
     if ((only && !only.includes(mount.key)) || !mountEngaged(mount)) continue;
-    const arr = player.guns[mount.key];
-    arr.forEach((g, i) => {
-      if (g.cd > 0) return;
-      g.cd = g.interval; rx -= Math.cos(player.rot + mount.ang); ry -= Math.sin(player.rot + mount.ang);
-      S.time.delayedCall(shots++ * 70, () => {          // a rolling broadside, not one blast
-        if (!player.alive || paused) return;
+    const ready = player.guns[mount.key].filter(g => g.cd <= 0), plan = rollPlan(ready.length);   // a rolling broadside (js/gundeck.js)
+    ready.forEach((g, k) => {
+      const { delay, loud } = plan[k];
+      g.cd = g.interval; shots++; rx -= Math.cos(player.rot + mount.ang); ry -= Math.sin(player.rot + mount.ang);
+      S.time.delayedCall(delay, () => {
+        if (!player.alive || paused || !ballRoom()) return;
         const m = muzzle(player, mount, g.pi, g.pn), life = g.range / g.speed;   // each gun has its own ball speed
         balls.push({ spr: S.add.image(m.x, m.y, "ball").setDepth(7), x: m.x, y: m.y,
           vx: Math.cos(m.a) * g.speed, vy: Math.sin(m.a) * g.speed, life, life0: life, dmg: g.dmg, burn: g.burn, chain: g.chain, fromPlayer: true, owner: player });
-        vfxMuzzle(m.x, m.y, m.a);
-        Snd.play("cannon", { pan: Math.cos(m.a) * 0.35 });
+        vfxMuzzle(m.x, m.y, m.a, !loud);
+        if (loud) Snd.play("cannon", { pan: Math.cos(m.a) * 0.35 });
       });
     });
   }

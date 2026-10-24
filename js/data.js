@@ -24,9 +24,12 @@ const SHIPS = {
   sloop:    { slots: { bow: 1, left: 1, right: 1, stern: 0 }, hp: 100,  speed: 150, hold: 240,  cost: 0,     refit: 1 },
   schooner: { slots: { bow: 1, left: 2, right: 2, stern: 0 }, hp: 180,  speed: 165, hold: 440,  cost: 400,   refit: 1.7 },
   brig:     { slots: { bow: 1, left: 3, right: 3, stern: 0 }, hp: 325,  speed: 155, hold: 1250, cost: 2000,  refit: 3.2 },
-  frigate:  { slots: { bow: 2, left: 4, right: 4, stern: 1 }, hp: 585,  speed: 150, hold: 2200, cost: 6000,  refit: 6 },
-  line:     { slots: { bow: 2, left: 5, right: 5, stern: 2 }, hp: 1050, speed: 140, hold: 4100, cost: 16000, refit: 11 },
+  frigate:  { slots: { bow: 2, left: 7, right: 7, stern: 1 }, hp: 585,  speed: 150, hold: 2200, cost: 6000,  refit: 6,   gunK: 0.72 },
+  line:     { slots: { bow: 3, left: 12, right: 12, stern: 3 }, hp: 1050, speed: 140, hold: 4100, cost: 16000, refit: 11, gunK: 0.52 },
 };
+// gunK: damage per gun on that hull (default 1). A big gun deck carries 2-3x the guns of the old ladder, so each gun hits for
+// less and the whole battery lands about a tenth more than the old one did (tests/unit-gundeck.mjs).
+const shipGunK = (id = save.ship) => (SHIPS[id] && SHIPS[id].gunK) || 1;
 const SHIP_ORDER = Object.keys(SHIPS);
 // Gun mounts. ang = firing direction relative to the bow; muzzles sit `out` px that way,
 // spread over `span` px along the direction (s.rot + perp).
@@ -97,8 +100,8 @@ function playerPower() {
   for (const { key } of MOUNTS) for (const gun of save[key]) {
     if (!gun) continue;   // an empty port
     const g = GUNS[gun.g], m = gunLvMul(gun.lv), rate = g.rpm / 60 * MOUNT_UPTIME;
-    dps += g.dmg * m * rate;
-    if (g.burn) { fireRate += rate; fireDps = Math.max(fireDps, g.burn * m); }
+    dps += g.dmg * m * rate * shipGunK();
+    if (g.burn) { fireRate += rate; fireDps = Math.max(fireDps, g.burn * m * shipGunK()); }
   }
   dps += Math.min(BURN_MAX, fireRate * BURN_T) * fireDps;
   return Math.sqrt(yardVal("hull") * dps);

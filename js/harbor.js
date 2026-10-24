@@ -71,7 +71,7 @@ function renderPort() {
       : lock ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("locked")}</button>`
       : `<button class="btn" type="button" data-act="ship" data-id="${id}" ${save.gold < net ? "disabled" : ""}>${shipArmed === id ? t("shipArm") : t("buy", { n: fmt(net) })}</button>`;
     const ds = t("shipDs", { b: sh.slots.bow, s: sh.slots.left, t: sh.slots.stern,
-      hp: YARD.hull.show(yardVal("hull", 1, sh)), kn: YARD.sails.show(yardVal("sails", 1, sh)), cargo: fmt(yardVal("hold", 1, sh)) }) + (credit > 0 && !lock ? t("tradeIn", { n: fmt(credit) }) : "");
+      hp: YARD.hull.show(yardVal("hull", 1, sh)), kn: YARD.sails.show(yardVal("sails", 1, sh)), cargo: fmt(yardVal("hold", 1, sh)) }) + (sh.gunK ? t("gunK", { k: sh.gunK }) : "") + (credit > 0 && !lock ? t("tradeIn", { n: fmt(credit) }) : "");
     return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${ds}${lock ? `<span class="lock">${lock}</span>` : ""}</div></div>`;
   }).join("");
   runHook("renderPort");   // wanted poster, outpost layout (js/campaign.js)
