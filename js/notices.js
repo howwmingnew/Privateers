@@ -138,5 +138,6 @@ onHook("frame", () => {
   labelKey = key;
   if (harborLabel) { harborLabel.setScale(uiScale()); crispText(harborLabel, viewTextRes(S.cameras.main.zoom * uiScale())); }
   if (typeof outpostLabel !== "undefined" && outpostLabel) labelText(outpostLabel);
+  if (typeof stationLabels !== "undefined") for (const l of stationLabels) labelText(l);
   for (const c of crates) if (c.label) labelText(c.label);
 });
