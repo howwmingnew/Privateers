@@ -43,7 +43,7 @@ function resetEnemies(sc) {
 }
 
 let portMsg = ["welcome"];
-// Buying a ship wipes its yard upgrades, so the button needs a second tap within a few seconds.
+// Buying a ship costs its full price, so the button needs a second tap within a few seconds.
 let shipArmed = null, shipArmedAt = 0, shipArmTimer;
 function renderPort() {
   const $ = id => document.getElementById(id);
@@ -63,24 +63,32 @@ function renderPort() {
       ds = `<b>${cur}</b> <span class="up">→ ${y.show(yardVal(k, lv + 1))}</span>`; }
     return `<div class="item"><div class="nm">${t("y_" + k)}<small>Lv ${lv}</small></div>${btn}<div class="ds">${ds}</div></div>`;
   }).join("");
-  // ships: the current one and every bigger one (buying replaces the current ship)
-  $("ships").innerHTML = SHIP_ORDER.slice(SHIP_ORDER.indexOf(save.ship)).map(id => {
-    const sh = SHIPS[id], lock = shipLock(id);   // Letters of Marque gate (js/campaign.js): null, or why not yet
-    const credit = id === save.ship ? 0 : tradeInCredit(id), net = sh.cost - credit;   // trade-in (js/plunder.js)
-    const btn = id === save.ship ? `<button class="btn max" type="button" disabled>${t("yourShip")}</button>`
-      : lock ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("locked")}</button>`
-      : `<button class="btn" type="button" data-act="ship" data-id="${id}" ${save.gold < net ? "disabled" : ""}>${shipArmed === id ? t("shipArm") : t("buy", { n: fmt(net) })}</button>`;
-    const ds = t("shipDs", { b: sh.slots.bow, s: sh.slots.left, t: sh.slots.stern,
-      hp: YARD.hull.show(yardVal("hull", 1, sh)), kn: YARD.sails.show(yardVal("sails", 1, sh)), cargo: fmt(yardVal("hold", 1, sh)) }) + (credit > 0 && !lock ? t("tradeIn", { n: fmt(credit) }) : "");
-    return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${ds}${lock ? `<span class="lock">${lock}</span>` : ""}</div></div>`;
+  // ships: the ones bought (switch free), then every model the yard sells (js/shipyard.js)
+  const owned = ownedShips(), count = {};
+  for (const e of owned) count[e.ship] = (count[e.ship] || 0) + 1;
+  const shipDs = (sh, h, s, o) => t("shipDs", { b: sh.slots.bow, s: sh.slots.left, t: sh.slots.stern,
+    hp: YARD.hull.show(yardVal("hull", h, sh)), kn: YARD.sails.show(yardVal("sails", s, sh)), cargo: fmt(yardVal("hold", o, sh)) });
+  const mine = owned.map(e => {
+    const sh = SHIPS[e.ship], me = e.id === save.shipId, nm = count[e.ship] > 1 ? t("shipNo", { ship: t("s_" + e.ship), n: idNum(e.id) }) : t("s_" + e.ship);
+    const btn = me ? `<button class="btn max" type="button" disabled>${t("yourShip")}</button>` : `<button class="btn" type="button" data-act="switch" data-id="${e.id}">${t("switchTo")}</button>`;
+    return `<div class="item"><div class="nm">${nm}</div>${btn}<div class="ds">${shipDs(sh, e.hull, e.sails, e.hold)}${t("shipLvs", { h: e.hull, s: e.sails, o: e.hold })}</div></div>`;
   }).join("");
+  const full = owned.length >= FLEET_MAX;
+  const sale = SHIP_ORDER.filter(forSale).map(id => {
+    const sh = SHIPS[id], lock = shipLock(id);   // Letters of Marque gate (js/campaign.js): null, or why not yet
+    const btn = lock ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("locked")}</button>`
+      : full ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("yardFull")}</button>`
+      : `<button class="btn" type="button" data-act="ship" data-id="${id}" ${save.gold < sh.cost ? "disabled" : ""}>${shipArmed === id ? t("shipArm") : t("buy", { n: fmt(sh.cost) })}</button>`;
+    return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${shipDs(sh, 1, 1, 1)}${lock ? `<span class="lock">${lock}</span>` : ""}</div></div>`;
+  }).join("");
+  $("ships").innerHTML = `<p class="hint-s">${t("shipsOwned")}</p>${mine}<p class="hint-s">${t("shipsBuy")}</p>${sale}`;
   runHook("renderPort");   // wanted poster, outpost layout (js/campaign.js)
 }
 
 document.getElementById("port").addEventListener("click", ev => {
   const b = ev.target.closest("[data-act]"); if (!b || b.disabled) return;
   const act = b.dataset.act;
-  let snd = act === "ship" ? "buy" : act === "yard" ? "upgrade" : "uiClick";
+  let snd = act === "ship" || act === "switch" ? "buy" : act === "yard" ? "upgrade" : "uiClick";
   if (GUN_ACTS.includes(act)) {   // picking, swapping, buying and upgrading guns (js/gunbay.js)
     snd = gunAct(act, b.dataset);
     if (!snd) return;
@@ -96,25 +104,31 @@ document.getElementById("port").addEventListener("click", ev => {
       shipArmTimer = setTimeout(() => {
         shipArmed = null;   // relabel in place rather than re-render, so keyboard focus stays put
         const el = document.querySelector(`[data-act="ship"][data-id="${id}"]`);
-        if (el) el.textContent = t("buy", { n: fmt(shipNetCost(id)) });
+        if (el) el.textContent = t("buy", { n: fmt(SHIPS[id].cost) });
       }, 3000);
       renderPort(); document.querySelector(`[data-act="ship"][data-id="${id}"]`)?.focus();
       Snd.play("uiClick");
       return;
     }
     shipArmed = null;
-    const credit = tradeInCredit(id);   // 60% of the old ship's refit comes back (js/plunder.js)
-    save = fitMounts({ ...save, gold: save.gold - SHIPS[id].cost + credit, ship: id, hull: 1, sails: 1, hold: 1 });   // the new ports start empty
-    deckSel = null;
-    portMsg = credit > 0 ? ["boughtShipTrade", { ship: t("s_" + id), n: fmt(credit) }] : ["boughtShip", { ship: t("s_" + id) }];
+    const bought = buyShip(save, id);
+    if (!bought) return;
+    save = bought; deckSel = null;
+    portMsg = ["boughtShip", { ship: t("s_" + id) }];
+  } else if (act === "switch") {   // a ship from the yard, free; guns that don't fit go back to the store
+    const before = save.store.length, next = switchShip(save, b.dataset.id);
+    if (!next) return;
+    const spill = next.store.length - before;
+    save = next; deckSel = null;
+    portMsg = [spill > 0 ? "switchedSpill" : "switchedShip", { ship: t("s_" + save.ship), n: spill }];
   }
   applyPlayerStats(true); persist(); renderPort(); hud(true);
-  Snd.play(snd, { big: act === "ship" });
+  Snd.play(snd, { big: act === "ship" || act === "switch" });
   // keep focus on the same control after re-render (keyboard users); a stored gun that moved aboard leaves the store
   // shorter, so focus falls back to the stored gun before it, or the port it went to
   const sel = act === "slot" ? `[data-act="slot"][data-side="${b.dataset.side}"][data-i="${b.dataset.i}"]`
     : act === "store" ? [`#bay [data-i="${b.dataset.i}"]`, `#bay [data-i="${b.dataset.i - 1}"]`, "#deck .slot"]
-    : act === "ship" ? `#ships [data-act="ship"]:not(:disabled), #sail` : null;
+    : act === "ship" || act === "switch" ? `#ships [data-act="${act}"]:not(:disabled), #ships [data-act="ship"]:not(:disabled), #sail` : null;
   if (sel) [].concat(sel).map(q => document.querySelector(q)).find(Boolean)?.focus();
 });
 // Not enough gold: a disabled button never receives a click, so listen for the press itself.
