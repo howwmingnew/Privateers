@@ -120,6 +120,10 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 .gcard > .hint-s:only-child { margin: 0; }
 .gacts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .gacts .btn { min-width: 0; }
+.gacts .btn.on { background: var(--ink); color: var(--parch); box-shadow: 0 0 0 3px var(--brass); }
+.gcard.swapping { border-color: var(--ink); border-width: 2.5px; }
+.gcard.swapping .hint-s { color: var(--ink); font-weight: 700; }
+.swapping .slot:not(.sel) { outline: 2px dashed var(--brass); outline-offset: 2px; }   /* every place the picked gun could trade with */
 .btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); }
 .bay { margin-top: 14px; padding-top: 10px; border-top: 1px dashed rgba(42,29,16,.35); }
 .bay .lbl { margin-bottom: 6px; }

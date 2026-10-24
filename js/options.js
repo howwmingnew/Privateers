@@ -5,6 +5,7 @@ Object.assign(STR.en, {
   set_title: "Settings", set_audio: "Sound", set_sound: "All sound", set_master: "Master volume", set_music: "Music", set_sfx: "Sound effects", set_ambient: "Ambience",
   set_game: "Game", set_lang: "Language", set_shake: "Screen shake", set_auto: "Hold Space to auto-fire (red aim lines only)", set_on: "On", set_off: "Off", set_ui: "UI size", set_marks: "Chart icon size", set_scaleReset: "Reset sizes", set_scaleNote: "Drag a slider and the panel fades, so you can see the change behind it.",
   set_mini: "Chart size",
+  set_wxfx: "Weather effects", set_wxfxNote: "Rain, lightning, sky tint and weather sounds. The wind and storm still push ships when this is off, so every sea plays the same.",
   set_full: "Fullscreen", set_fullOn: "Leave fullscreen", set_fullOff: "Go fullscreen", set_fullFail: "This browser blocked fullscreen.",
   set_progress: "Progress", set_resetNote: "Wipes your gold, ships, upgrades and wrecks. Settings are kept.",
   set_resetBusy: "Wait until you are back in harbor", m_wiped: "Progress wiped. A fresh start awaits.",
@@ -13,6 +14,7 @@ Object.assign(STR.zh, {
   set_title: "設定", set_audio: "聲音", set_sound: "所有聲音", set_master: "主音量", set_music: "音樂", set_sfx: "效果音", set_ambient: "環境音",
   set_game: "遊戲", set_lang: "語言", set_shake: "畫面震動", set_auto: "按住空白鍵自動開火（只射紅色瞄準線）", set_on: "開", set_off: "關", set_ui: "介面大小", set_marks: "海圖圖示大小", set_scaleReset: "恢復預設", set_scaleNote: "拖動滑桿時面板會淡出，讓你看到背後的變化。",
   set_mini: "海圖大小",
+  set_wxfx: "天氣特效", set_wxfxNote: "雨、閃電、天色與天氣音效。關閉後風和暴風雨仍會影響船隻，所以每個人的海都一樣。",
   set_full: "全螢幕", set_fullOn: "離開全螢幕", set_fullOff: "進入全螢幕", set_fullFail: "瀏覽器擋下了全螢幕。",
   set_progress: "進度", set_resetNote: "會清除金幣、船隻、升級和殘骸，設定會保留。",
   set_resetBusy: "等回到港口再重置", m_wiped: "進度已清除，重新出發吧。",
@@ -47,7 +49,7 @@ function renderSettings() {
   });
   const seg = (name, val) => document.querySelectorAll(`[data-set="${name}"]`).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === val)));
   if (audio && typeof Snd.isMuted === "function") seg("sound", Snd.isMuted() ? "off" : "on");
-  seg("lang", lang); seg("shake", SETTINGS.shake ? "on" : "off"); seg("auto", SETTINGS.autoFire ? "on" : "off");
+  seg("lang", lang); seg("shake", SETTINGS.shake ? "on" : "off"); seg("auto", SETTINGS.autoFire ? "on" : "off"); seg("weatherfx", SETTINGS.weatherFx !== false ? "on" : "off");
   document.querySelectorAll("[data-scale]").forEach(inp => { inp.value = SETTINGS[inp.dataset.scale]; inp.nextElementSibling.textContent = inp.value + "%"; });
   if (!scaleDrag) setPreview(false);
   setEl("setFullRow").hidden = !document.fullscreenEnabled;
@@ -105,6 +107,7 @@ setEl("p-settings").addEventListener("click", e => {
       break;
     case "shake": saveSettings({ shake: v === "on" }); break;
     case "auto": saveSettings({ autoFire: v === "on" }); break;
+    case "weatherfx": saveSettings({ weatherFx: v === "on" }); break;   // js/weather.js
     case "scale-reset": saveSettings({ uiPct: SCALE_DEFAULT, miniPct: SCALE_DEFAULT, markPct: SCALE_DEFAULT }); applyUiScale(); applyMiniSize(); break;
     case "full": toggleFullscreen(); break;
     case "reset": pressReset(); return;

@@ -30,6 +30,13 @@ const SCALE_MIN = 50, SCALE_MAX = 250, SCALE_STEP = 5, SCALE_DEFAULT = 100;
 const MINI_BASE_FRAC = 0.18, MINI_BASE_MIN = 124, MINI_BASE_MAX = 420, MINI_MIN_PX = 64, MINI_MAX_VW = 0.44, MINI_MAX_VH = 0.6;
 const MINI_HUD_FIXED = 30, MINI_HUD_PER_TS = 76;   // screen px the chart's column needs besides the chart: a fixed part and one that grows with the UI size
 const MINI_CANVAS_MIN = 160, MINI_CANVAS_MAX = 1024;   // the chart's drawing size in device pixels
+// Edge markers (js/edge-marks.js): off-screen ships, harbor and outpost within EDGE_RANGE screen widths get a box on the screen edge.
+const EDGE_RANGE = 1.8;      // screen widths (of the world view) a target may be away and still be marked
+const EDGE_M_PER_PX = 0.5;   // metres per world pixel, for the distance on a box
+const EDGE_ROUND_M = 10;     // the distance is rounded to this many metres
+const EDGE_MAX = 5;          // boxes on screen at once: the bounty, then the most dangerous, then the nearest
+const MINI_NEAR_R = 1000;   // px: a ship this close that out-fights you is drawn above the harbor and the rest of the chart's marks
+const MINI_MERGE = 5;       // chart units: ordinary ships closer than this on the chart merge into one mark with a count
 const MINI_UNIT_MIN = 0.35;   // a chart unit never draws smaller than this many CSS px, so the marks stay readable at 50% icon size on a small chart
 
 // Sharing (js/sharecard.js) and the daily sea (js/daily.js, js/run.js). [PLACEHOLDER] loadout until playtested.
@@ -47,3 +54,16 @@ const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,
 const REMATCH_PCT = 0.25;                     // a rematch sinking pays this share of the bounty's Captain's Chest (js/rematch.js)
 const REMATCH_MAX = 2;                        // beaten captains that sail again at once; the farthest lairs first
 const CHAIN_GAP = 20;                        // seconds between sinkings that still count as one kill chain (js/hall.js)
+// Wind, weather and the hour of day (js/weather-core.js is the maths, js/weather.js the sea). Every number here is gameplay:
+// the same for every player whatever the weather-effects setting says, so a daily sea plays the same everywhere.
+const WIND = { tail: 0.20, head: 0.25, full: 0.6 };   // speed gained running before the wind, lost beating into it, at wind strength >= full (a calm gives less)
+const WEATHER = {
+  seg: [75, 150], blend: 12,                          // a spell of weather lasts seg[0]..seg[1] s and fades into the next over `blend` s
+  first: { clear: 0.5, rain: 0.3, storm: 0.2 },       // the opening weather of a sortie
+  next: { clear: { clear: 0.55, rain: 0.38, storm: 0.07 }, rain: { clear: 0.35, rain: 0.35, storm: 0.3 }, storm: { clear: 0.1, rain: 0.55, storm: 0.35 } },
+  hour: { day: 0.55, dusk: 0.2, night: 0.25 },        // the hour a sortie sails in
+  windMin: 0.05, windRain: 0.15, windStorm: 0.35,     // strength 0..1: the wind's own wander, plus what rain and storm add
+  knots: [4, 40],                                     // strength 0 .. 1 as the dial's number
+  yaw: 0.32, leeway: 26, calmRadius: 230,             // storm: rad/s the hull is slewed beam-on at full gale, px/s pushed downwind, px from a coast inside which neither acts
+  ballDrift: 45,                                      // storm: px/s a cannonball is blown downwind
+};

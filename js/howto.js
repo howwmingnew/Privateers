@@ -19,8 +19,22 @@ Object.assign(STR.en, {
     <li><i class="sw-badge" style="--c:#e88a3a">Lv 3</i><span>One level stronger</span></li>
     <li><i class="sw-badge dark" style="--c:#d9493a">Lv 4</i><span>Much stronger: keep your distance</span></li></ul>
     <p>Merchants never attack first and carry the most gold. Pirates attack everyone. The navy hunts pirates, and you.</p>`,
+  ht_chart: `<h3>The chart</h3><p>The chart in the corner shows the whole sea. Deeper, darker water is more dangerous, and the numbers are the ship levels you meet there. A ship's <b>shape</b> says whether you can beat it; its <b>fill and inner mark</b> say who it is, so you never need colour alone.</p>
+    <ul class="legend"><li><canvas class="sw-mark" data-mark="threat" aria-hidden="true"></canvas><span>Shape = strength: weaker, even, stronger, much stronger than you</span></li>
+    <li><canvas class="sw-mark" data-mark="pirate" aria-hidden="true"></canvas><span><b>Pirate</b>: plain shape in its strength colour</span></li>
+    <li><canvas class="sw-mark" data-mark="navy" aria-hidden="true"></canvas><span><b>Navy</b>: solid blue, a bar across</span></li>
+    <li><canvas class="sw-mark" data-mark="trade" aria-hidden="true"></canvas><span><b>Merchant</b>: gold, a dot inside</span></li>
+    <li><canvas class="sw-mark" data-mark="fire" aria-hidden="true"></canvas><span><b>Fireship</b>: flickering orange, an upright tick</span></li>
+    <li><canvas class="sw-mark" data-mark="boss" aria-hidden="true"></canvas><span><b>Bounty target</b>: a skull</span></li>
+    <li><canvas class="sw-mark" data-mark="harbor" aria-hidden="true"></canvas><span><b>Harbor</b>: an anchor</span></li>
+    <li><canvas class="sw-mark" data-mark="outpost" aria-hidden="true"></canvas><span><b>Hulk Outpost</b>: a teal cross</span></li>
+    <li><canvas class="sw-mark" data-mark="fort" aria-hidden="true"></canvas><span><b>Fort</b>: a stone keep</span></li>
+    <li><canvas class="sw-mark" data-mark="chest" aria-hidden="true"></canvas><span><b>Treasure</b>: a small chest</span></li>
+    <li><canvas class="sw-mark" data-mark="wreck" aria-hidden="true"></canvas><span><b>Your wreck</b>: a red X</span></li>
+    <li><canvas class="sw-mark" data-mark="land" aria-hidden="true"></canvas><span><b>Land</b>: an island</span></li></ul>
+    <p>Where marks pile up, the nearest stronger ships and the bounty stay on top, and ships in one spot merge into one mark with a count.</p>`,
   ht_harbor: `<h3>The harbor</h3><p>Sail into the dashed ring <i class="sw-ring"></i> around the harbor to dock. Your hold is sold and the hull is repaired for free. Then spend your gold in the ledger:</p>
-    <ul><li><b>Armory</b>: buy cannons one at a time; each lands in the gun store.</li><li><b>Gun deck</b>: tap a gun port or a stored gun, then another, to swap them. Each cannon has its own level: pick it to upgrade it.</li>
+    <ul><li><b>Armory</b>: buy cannons one at a time; each lands in the gun store.</li><li><b>Gun deck</b>: tap a gun port or a stored gun, press Swap position, then tap another to swap them. Each cannon has its own level: pick it to upgrade it.</li>
     <li><b>Shipwright</b>: upgrade the hull, sails and hold.</li><li><b>Switch ship</b>: buy more guns and a sturdier hull. Every ship you buy stays in the yard with its own upgrades, so you can switch back for free, or buy the same model again. Your cannons move aboard.</li></ul>
     <p>The farther from the harbor you sail, the richer and deadlier the ships.</p>`,
   ht_wreck: `<h3>Wrecks</h3><p>If your ship goes down, the cargo in the hold sinks with it. The wreck stays where you sank, marked with a red <i class="sw-x"></i> on the map, even if you close the game. Sail over it to scoop the cargo back up, then bring it home to sell.</p>`,
@@ -46,8 +60,22 @@ Object.assign(STR.zh, {
     <li><i class="sw-badge" style="--c:#e88a3a">Lv 3</i><span>比你強一級</span></li>
     <li><i class="sw-badge dark" style="--c:#d9493a">Lv 4</i><span>強很多，最好保持距離</span></li></ul>
     <p>商船從不主動攻擊，身上的金幣也最多。海盜見誰打誰。海軍會追捕海盜，也會追捕你。</p>`,
+  ht_chart: `<h3>海圖</h3><p>右上角的海圖顯示整片海域。水越深、越暗就越危險，數字是那一帶會遇到的船艦等級。船的<b>形狀</b>告訴你打不打得過；<b>填色和形狀裡的小記號</b>告訴你它是誰，不必只靠顏色分辨。</p>
+    <ul class="legend"><li><canvas class="sw-mark" data-mark="threat" aria-hidden="true"></canvas><span>形狀＝強弱：比你弱、差不多、較強、強很多</span></li>
+    <li><canvas class="sw-mark" data-mark="pirate" aria-hidden="true"></canvas><span><b>海盜</b>：單純的形狀，顏色表示強弱</span></li>
+    <li><canvas class="sw-mark" data-mark="navy" aria-hidden="true"></canvas><span><b>海軍</b>：實心藍色，中間一條橫線</span></li>
+    <li><canvas class="sw-mark" data-mark="trade" aria-hidden="true"></canvas><span><b>商船</b>：金色，中間一個小點</span></li>
+    <li><canvas class="sw-mark" data-mark="fire" aria-hidden="true"></canvas><span><b>火船</b>：閃爍的橘色，中間一條直線</span></li>
+    <li><canvas class="sw-mark" data-mark="boss" aria-hidden="true"></canvas><span><b>懸賞目標</b>：骷髏頭</span></li>
+    <li><canvas class="sw-mark" data-mark="harbor" aria-hidden="true"></canvas><span><b>港口</b>：船錨</span></li>
+    <li><canvas class="sw-mark" data-mark="outpost" aria-hidden="true"></canvas><span><b>廢船前哨站</b>：青綠色十字</span></li>
+    <li><canvas class="sw-mark" data-mark="fort" aria-hidden="true"></canvas><span><b>砲台</b>：石造堡壘</span></li>
+    <li><canvas class="sw-mark" data-mark="chest" aria-hidden="true"></canvas><span><b>寶藏</b>：小箱子</span></li>
+    <li><canvas class="sw-mark" data-mark="wreck" aria-hidden="true"></canvas><span><b>你的沉船</b>：紅色叉號</span></li>
+    <li><canvas class="sw-mark" data-mark="land" aria-hidden="true"></canvas><span><b>陸地</b>：島嶼</span></li></ul>
+    <p>標記擠在一起時，最近的較強船艦和懸賞目標會顯示在最上面；同一處的船會合併成一個標記並標上數量。</p>`,
   ht_harbor: `<h3>港口</h3><p>駛進港口周圍的虛線圈 <i class="sw-ring"></i> 就會靠港。貨艙裡的貨物會自動賣掉，船體也會免費修好。接著在帳簿裡花掉金幣：</p>
-    <ul><li><b>軍械庫</b>：火砲一門一門買，買下的砲會先放進火砲庫存。</li><li><b>火砲配置</b>：點一個砲位或庫存裡的砲，再點另一處就能互換。每門砲有自己的等級，選起來就能升級。</li>
+    <ul><li><b>軍械庫</b>：火砲一門一門買，買下的砲會先放進火砲庫存。</li><li><b>火砲配置</b>：點一個砲位或庫存裡的砲，按「切換砲位」，再點另一處才會互換。每門砲有自己的等級，選起來就能升級。</li>
     <li><b>造船廠</b>：升級船體、船帆和貨艙。</li><li><b>換船</b>：買火砲更多、船體更堅固的船。買過的每艘船都留在船塢，各自保留升級，可以隨時免費換回來，也能再買一艘相同型號。火砲會一起搬上船。</li></ul>
     <p>離港口越遠，敵船越富有，也越危險。</p>`,
   ht_wreck: `<h3>殘骸</h3><p>船沉的時候，貨艙裡的貨物也會跟著沉下去。殘骸會留在沉沒的地方，地圖上以紅色 <i class="sw-x"></i> 標示，關掉遊戲也不會消失。駛過殘骸就能把貨物撈回來，再帶回港口賣掉。</p>`,
