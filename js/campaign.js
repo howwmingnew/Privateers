@@ -104,19 +104,15 @@ function clearBoss() {
   if (bossTag) { bossTag.txt.destroy(); bossTag.skull.destroy(); }
   bossShip = bossTag = null; bossSeen = false; bossHitAt = -1e9;
 }
-function spawnBounty() {
-  const b = activeBounty();
-  if (!b) return;
+// A captain and his escorts at the lair (the hunted bounty, or a beaten one sailing again: js/rematch.js). The name tag
+// is the caller's, as the hunt and the rematch label it differently. Returns the boss, or null if the lair is crowded.
+function spawnCaptain(b) {
   const lair = lairOf(b), boss = spawnEnemy(S, { ...lair, faction: b.faction });
-  if (!boss) { console.warn(`Bounty "${b.id}": no room at the lair; it sails next time.`); return; }
+  if (!boss) return null;
   const hp = boss.maxHp * b.hpMul;
   Object.assign(boss, { boss: b.id, cls: b.cls, lair, maxHp: hp, hp, maxSpeed: boss.maxSpeed * (b.speed || 1) });
   if (b.guns) setGuns(boss, b.guns);
   applyShipArt(boss, artClass(b.cls), bossLivery(b));   // gold trim, big flag: the Jolly Roger or the Crown's ensign (js/art.js)
-  makeSkullTex(S);
-  bossShip = boss;
-  bossTag = { skull: S.add.image(0, 0, "skull").setDepth(9),
-    txt: S.add.text(0, 0, bossName(b), { fontFamily: UI_FONT, fontSize: "15px", fontStyle: "700", color: "#f6d27a", stroke: "#1b1410", strokeThickness: 4 }).setOrigin(0, 0.5).setDepth(9) };
   // escorts sail along the ring beside the boss, so they share its level
   const along = b.ang + Math.PI / 2;
   b.escorts.forEach((spec, i) => {
@@ -128,6 +124,19 @@ function spawnBounty() {
     if (spec.guns) setGuns(e, spec.guns);
     applyShipArt(e, artClass(spec.cls));
   });
+  return boss;
+}
+function makeBossTag(label) {
+  makeSkullTex(S);
+  return { skull: S.add.image(0, 0, "skull").setDepth(9),
+    txt: S.add.text(0, 0, label, { fontFamily: UI_FONT, fontSize: "15px", fontStyle: "700", color: "#f6d27a", stroke: "#1b1410", strokeThickness: 4 }).setOrigin(0, 0.5).setDepth(9) };
+}
+function spawnBounty() {
+  const b = activeBounty();
+  if (!b) return;
+  const boss = spawnCaptain(b);
+  if (!boss) { console.warn(`Bounty "${b.id}": no room at the lair; it sails next time.`); return; }
+  bossShip = boss; bossTag = makeBossTag(bossName(b));
   const now = performance.now(), last = huntSeenAt[b.id];
   if (last === undefined || now - last > HUNT_REMIND_MS) {
     toast(t("huntToast", { name: bossName(b), sea: t("sea_" + seaOfRing(b.L).id) }));
@@ -136,11 +145,11 @@ function spawnBounty() {
   huntSeenAt = { ...huntSeenAt, [b.id]: now };
 }
 // Above the level badge, counter-scaled like it so the name stays readable when the camera zooms out.
-function placeBossTag() {
-  if (!bossTag || !bossShip) return;
-  const lk = labelScale(); labelText(bossTag.txt); bossTag.skull.setScale(lk);
-  const w = bossTag.txt.displayWidth, x = bossShip.x - (w + 24 * lk) / 2, y = shipTop(bossShip) - 42 * lk;
-  bossTag.skull.setPosition(x + 11 * lk, y); bossTag.txt.setPosition(x + 25 * lk, y);
+function placeBossTag(tag = bossTag, ship = bossShip) {
+  if (!tag || !ship) return;
+  const lk = labelScale(); labelText(tag.txt); tag.skull.setScale(lk);
+  const w = tag.txt.displayWidth, x = ship.x - (w + 24 * lk) / 2, y = shipTop(ship) - 42 * lk;
+  tag.skull.setPosition(x + 11 * lk, y); tag.txt.setPosition(x + 25 * lk, y);
 }
 function claimBounty(b, s) {
   const c = save.campaign, n = c.bounty + 1, reward = bountyReward(b), ship = shipFor(c.bounty);

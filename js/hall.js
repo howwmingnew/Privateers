@@ -44,7 +44,7 @@ function hallApply(hall, ev) {
 const HALL_MIN_CHAIN = 3;
 
 // ---------- tracking ----------
-let gameClock = 0, lastKillAt = -1e9, chain = 0, boutAt = null, lastSortieSecs = 0;   // boutAt: when the player first hit the captain
+let gameClock = 0, lastKillAt = -1e9, chain = 0, boutAt = {}, lastSortieSecs = 0;   // boutAt: { bountyId: when the player first hit that captain }
 const recordable = () => !runActive();   // a daily or seeded run keeps its own books
 function hallBump(ev, line) {
   if (!recordable()) return;
@@ -58,18 +58,18 @@ onHook("frame", dt => { if (!paused && !docked) gameClock += dt; });
 // Capture the sortie's length before the log's own "dock" hook closes it (this file loads first): the share card wants it.
 onHook("dock", () => { lastSortieSecs = typeof sortie !== "undefined" && sortie ? sortie.t : 0; });
 const sortieSecs = () => (typeof sortie !== "undefined" && sortie ? sortie.t : lastSortieSecs);
-onHook("sail", () => { chain = 0; lastKillAt = -1e9; boutAt = null; });
-onHook("hurt", (s, dmg, src) => { if (s.boss && src === player && boutAt === null) boutAt = gameClock; });
+onHook("sail", () => { chain = 0; lastKillAt = -1e9; boutAt = {}; });
+onHook("hurt", (s, dmg, src) => { if (s.boss && src === player && boutAt[s.boss] === undefined) boutAt = { ...boutAt, [s.boss]: gameClock }; });
 onHook("sunk", (s, killer) => {
-  if (s.isPlayer) { chain = 0; boutAt = null; return; }
+  if (s.isPlayer) { chain = 0; boutAt = {}; return; }
   if (killer !== player) return;
   chain = gameClock - lastKillAt <= CHAIN_GAP ? chain + 1 : 1; lastKillAt = gameClock;
   hallBump({ type: "sunk", n: streak }, null);
   if (chain >= HALL_MIN_CHAIN) hallBump({ type: "chain", n: chain }, `${t("hallChain")} ${chain}`);
-  if (s.boss && recordable() && boutAt !== null) {
-    const sec = Math.max(1, gameClock - boutAt);
+  if (s.boss && recordable() && boutAt[s.boss] !== undefined) {
+    const sec = Math.max(1, gameClock - boutAt[s.boss]);
     hallBump({ type: "boss", id: s.boss, sec }, `${t("hallBoss", { name: bossName(findBounty(s.boss)) })} ${fmtDur(sec)}`);
-    boutAt = null;
+    boutAt = { ...boutAt, [s.boss]: undefined };
   }
 });
 onHook("victory", w => hallBump({ type: "win", sec: w }, `${t("hallWin")} ${fmtDur(w)}`));
