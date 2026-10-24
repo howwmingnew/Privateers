@@ -25,5 +25,8 @@ test("every CJK headline glyph is in the subset (the title, the victory and the 
 test("the page carries its link-preview metadata", () => {
   for (const re of [/<meta name="description"/, /og:title/, /og:url" content="https:\/\/howwmingnew\.github\.io\/Privateers\/"/, /twitter:card/, /theme-color" content="#0f3f52"/,
     /og:locale:alternate" content="zh_TW"/, /<title>Privateers: Letters of Marque/]) assert.match(html, re);
-  assert.doesNotMatch(html, /og:image/, "og:image waits for an owner decision");
+  assert.match(html, /twitter:card" content="summary_large_image"/);
+  assert.match(html, /og:image" content="https:\/\/howwmingnew\.github\.io\/Privateers\/og\.png"/, "an absolute address: crawlers do not resolve relative ones");
+  assert.match(html, /og:image:width" content="1200"/);
+  assert.match(html, /og:image:height" content="630"/);
 });

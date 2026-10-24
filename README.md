@@ -4,7 +4,7 @@
 
 A top-down pirate naval battle game. Turn your ship to lay the aim lines on an enemy, fire a rolling broadside, scoop up the plunder and sell it in port, then buy bigger ships and better guns and push into deeper, deadlier seas. Clear the five Letters of Marque and sink the Admiral's HMS *Sovereign* in the Maelstrom.
 
-用 [Phaser 3](https://phaser.io/) 製作。不需要安裝或建置，所有圖形都用程式繪製，所有音效和音樂都用 Web Audio 即時合成，沒有任何外部素材。
+用 [Phaser 3](https://phaser.io/) 製作。不需要安裝或建置，所有圖形都用程式繪製，所有音效和音樂都用 Web Audio 即時合成，沒有任何外部素材。唯一的例外是根目錄的 `og.png`（分享連結時顯示的 1200×630 預覽圖）：爬蟲不會執行 JavaScript，所以用遊戲自己的繪圖程式（`tools/og.html`）畫好、再用 Playwright 截圖存成檔案，`npm run og` 可以重新產生。
 
 **▶ 線上試玩 / Play online：<https://howwmingnew.github.io/Privateers/>**
 
@@ -53,6 +53,7 @@ npm run test:all     # 全部測試（外殼、戰役、修補、平台、音效
 
 - Phaser 3.80.1 從 cdnjs 載入；程式是 `js/` 下的一般 `<script>`（不是 ES module），所以 `file://` 也能直接開。
 - 存檔在瀏覽器的 localStorage（`privateers-save-v2`，舊版 v1 存檔會自動轉換）；設定另存在 `privateers-settings`。
+- `npm run og` 重畫 `og.png`（需要網路：Phaser 和字型從 CDN 載入）。改了船的畫法或標題文案之後記得重跑。
 - `tools/sound-test.html` 可以試聽所有音效和音樂，`tools/art-test.html` 可以檢視所有船型與塗裝。
 - 更新路線圖：`roadmap/index.html` 讀取標記為 `enhancement` 的 GitHub issue。每個要上圖的 issue 開頭有一行隱藏註解 `<!-- roadmap: phase=3; en=English title; deps=10 -->`（階段、英文標題、前置 issue）；加上 `in progress` 標籤會顯示為「進行中」。`.github/workflows/roadmap.yml` 在 issue 變動時執行 `node tools/roadmap-build.mjs`，重畫 README 的圖和離線快照。
 - 部署在 GitHub Pages，直接發布 `main` 分支根目錄；push 後約 1～2 分鐘自動更新。
