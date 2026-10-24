@@ -24,3 +24,4 @@ body:has(#runClock:not([hidden])) #seaBanner { top: calc(env(safe-area-inset-top
 #runEnd .sheet.victory { width: min(100%, 520px); }
 #runEnd .v-choices .v-card { order: 0; }
 .sheet .hall .btn { margin-top: 4px; }
+.replaychip { bottom: calc(env(safe-area-inset-bottom, 0px) + 172px); }
