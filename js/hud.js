@@ -61,6 +61,7 @@ function drawMini() {
   for (const c of crates) if (c.wreck) miniWreck(mctx, c.x * k, c.y * k, u);
   if (typeof fortSites !== "undefined") for (const s of fortSites) if (s.hp !== 0) miniFort(mctx, s.x * k, s.y * k, s.L, u);
   drawMiniShips(mctx, k, u, () => {
+    if (portsOff()) return;   // the daily sea has no harbor or stations (js/ports.js)
     miniHarbor(mctx, PORT.x * k, PORT.y * k, u);
     if (save.campaign.outpost) miniOutpost(mctx, OUTPOST.x * k, OUTPOST.y * k, u);
     for (const st of STATIONS) miniStation(mctx, st.kind, st.x * k, st.y * k, u);   // supply stations and trade ports (js/ports.js)
