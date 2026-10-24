@@ -35,8 +35,8 @@ const shot = name => page.screenshot({ path: join(out, name + ".png") });
 await ev(() => {
   window.fixT = 0;
   window.stepN = n => { const g = S.game; g.loop.sleep(); for (let i = 0; i < n; i++) { fixT += 16.667; g.step(fixT, 16.667); for (const s of enemies.concat([player])) s.low = Math.min(s.low ?? s.hp, s.hp); } };   // low: the hull's lowest point (the crew mends it between blows)
-  window.openAt = (ring, near = 700, skip = 0) => {
-    for (let a = 0, n = 0; a < 300; a++) { const p = polarPt(a * 0.37, ringMid(ring)); if (!islands.some(i => Math.hypot(i.x - p.x, i.y - p.y) < i.r + near) && n++ >= skip) return p; }
+  window.openAt = (ring, near = 560, skip = 0) => {
+    for (let a = 0, n = 0; a < 900; a++) { const p = polarPt(a * 0.11, ringMid(ring)); if (!islands.some(i => Math.hypot(i.x - p.x, i.y - p.y) < i.r + near) && !STATIONS.some(s => Math.hypot(s.x - p.x, s.y - p.y) < 900) && n++ >= skip) return p; }
     return polarPt(0, ringMid(ring));
   };
   window.clearSea = () => { for (const e of enemies) { e.alive = false; e.spr.destroy(); e.badge?.destroy(); } enemies.length = 0; fleets = []; spawnT = 1e9; };
@@ -48,7 +48,7 @@ await ev(() => {
     for (const e of dis.live) e.txt?.destroy();
     Object.assign(dis, { plan: [], i: 0, live: [], protectUntil: -1, fog: 0 });
     Object.assign(wx, { on: true, easy: false, t: 100 }); clearSky(); wxCompute();
-    const p = openAt(ring, 700, skip);
+    const p = openAt(ring, 560, skip);
     Object.assign(player, { x: p.x, y: p.y, rot, speed: 0, maxHp: 1000, hp, low: hp, alive: true, burnT: 0, hl: 30, dvx: 0, dvy: 0, dpT: 0, disSlowT: 0, disStunT: 0, disBoostT: 0, disLostT: 0, disStableT: 0 });
     player.spr.setPosition(p.x, p.y); S.cameras.main.centerOn(p.x, p.y);
     return p;
@@ -217,7 +217,7 @@ console.log("Lightning: picks the tallest mast (an enemy's, if it is taller), sn
   check(Math.abs(mine.mul - 0.8 * (mine.stun ? 0.4 : 1)) < 1e-6, "a snapped mast leaves 80% of the speed (the effect is the same physics for all)", mine);
   // dodging: the strike point locks 1.2 s before the stroke; sailing off in that time (200 px/s against an 80 px ring) escapes it
   await ev(() => { stage(7); window.lt = disForce("lightning", { x: player.x, y: player.y }, { warn: 4 }); joyVec = { x: 0, y: 1, m: 1 }; stepN(4 * 60 + 20); });
-  const dodge = await ev(() => ({ pct: hpPct(player), d: Math.hypot(player.x - lt.x, player.y - lt.y) }));
+  const dodge = await ev(() => ({ pct: hpPct(player), d: Math.hypot(player.x - lt.x, player.y - lt.y), speed: player.speed, nh: [Math.round(dist(player, nearestHarbor())), nearestHarbor().kind], truce: inTruce(player), ring: ringAt(dist(player, PORT)), pos: [Math.round(player.x), Math.round(player.y)], isl: islands.filter(i => dist(i, player) < i.r + 150).length }));
   check(dodge.pct === 0 && dodge.d > 80, "moving away during the warning dodges the stroke", dodge);
   await ev(() => { joyVec = { x: 0, y: 0, m: 0 }; });
 }
@@ -240,7 +240,7 @@ console.log("Fog: thickens, sight shortens for the player and the AI, no damage,
   check(f2.pct === 0, "fog does no damage", f2);
   check(f2.hides && !f2.target, "an enemy 600 px off (beyond sight) drops its target instead of seeing through the fog", f2);
   check(!f2.edgeShip, "the screen-edge boxes do not show a ship beyond sight", f2);
-  const near = await ev(() => { foe.x = player.x + 250; foe.y = player.y; foe.target = null; foe.retarget = 0; stepN(60); return { sees: !disFogHides(foe), target: foe.target === player }; });
+  const near = await ev(() => { foe.x = player.x + 250; foe.y = player.y; foe.target = null; foe.retarget = 0; foe.ignore.clear(); foe.ring = ringAt(dist(player, PORT)); stepN(60); return { sees: !disFogHides(foe), target: foe.target === player, hostile: isHostile(foe, player), ign: ignoring(foe, player, S.time.now / 1000), back: foe.backOffT, inSafe: inSafe(player), d: Math.round(dist(foe, player)), sight: disSight(), alive: foe.alive, st: stationAt ? !!stationAt(player) : null }; });
   check(near.sees && near.target, "an enemy inside the sight still finds the player", near);
   await ev(() => stepN(2700));
   check((await L()).n === 0 && (await ev(() => dis.fog)) === 0, "the fog lifts and clears");
@@ -276,7 +276,7 @@ console.log("Hard rules: no sinking, 10% floor, 8 s rest, not in the harbor or t
     const out = {};
     const p2 = polarPt(0.3, ringMid(2)); at(p2.x, p2.y); out.shallowsSpout = disGeom(mk("spout")); out.shallowsRogue = disGeom(mk("rogue")); out.shallowsFog = disGeom(mk("fog"));
     at(PORT.x + 300, PORT.y); out.harborVortex = disGeom(mk("vortex")); out.harborRogue = disGeom(mk("rogue"));
-    const p7 = openAt(7, 700); at(p7.x, p7.y); out.deepRogue = disGeom(mk("rogue")); out.deepFog = disGeom(mk("fog"));
+    const p7 = openAt(7, 560); at(p7.x, p7.y); out.deepRogue = disGeom(mk("rogue")); out.deepFog = disGeom(mk("fog"));
     return out;
   });
   check(geo.shallowsSpout === false && geo.shallowsRogue === false && geo.harborVortex === false && geo.harborRogue === false, "no spout, vortex or rogue wave is placed in the Shallows or by the harbor", geo);

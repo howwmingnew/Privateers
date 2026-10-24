@@ -54,7 +54,7 @@ function disFogLose(e) {
 // ---------- placing one fairly ----------
 const disFar = (p, q, r) => Math.hypot(p.x - q.x, p.y - q.y) > r;
 function disFair(p, R, c) {   // a spot for a deadly event: ring, harbor, outpost, rocks and a way out
-  const out = disRing(dist(p, PORT)) >= c.ring && disFar(p, PORT, SAFE_R + R + 120) && (!save.campaign.outpost || disFar(p, OUTPOST, TRUCE_R + R + 100));
+  const out = disRing(dist(p, PORT)) >= c.ring && disFar(p, PORT, SAFE_R + R + 120) && (!save.campaign.outpost || disFar(p, OUTPOST, TRUCE_R + R + 100)) && STATIONS.every(st => disFar(p, st, STATION_TRUCE_R + R + 100)) && STATIONS.every(st => disFar(p, st, STATION_TRUCE_R + R + 100));
   return out && !islands.some(i => Math.hypot(i.x - p.x, i.y - p.y) < i.r + 70) && disEscapeOK(p, R, islands);
 }
 // Fills in the event's geometry: where it is, which way it runs. false = no fair place just now.

@@ -23,6 +23,7 @@ function edgeIcon(ic, it) {
     c.fillStyle = "#1b1410"; c.beginPath(); c.arc(22, 22, 17, 0, TAU); c.fill(); c.strokeStyle = MINI_GOLD; c.lineWidth = 2.4; c.stroke(); drawSkull(c, 22, 23, 12);
   } else if (it.place === "harbor") miniHarbor(c, 22, 22, u);
   else if (it.place === "outpost") miniOutpost(c, 22, 22, u * 1.2);
+  else if (it.place === "supply" || it.place === "trade") miniStation(c, it.place, 22, 22, u * 1.2);
   else miniShip(c, it.e, 22, 22, u * 1.2);
 }
 function edgeBox(it) {
@@ -44,6 +45,7 @@ function edgeCandidates(v, kx, ky) {
   if (typeof disMarks === "function") for (const h of disMarks()) add(h, { kind: "hazard", hz: h, d: 2 });   // warning or running disasters (js/disasters.js)
   add(PORT, { kind: "place", place: "harbor", d: 0 });
   if (save.campaign.outpost) add(OUTPOST, { kind: "place", place: "outpost", d: 0 });
+  for (const st of STATIONS) add(st, { kind: "place", place: st.kind, d: 0 });   // supply stations and trade ports (js/ports.js)
   return out;
 }
 function edgeHidden() { return !player || !player.alive || paused || docked || titleOpen || (typeof photoOn === "function" && photoOn()) || (typeof chartLite === "function" && chartLite()); }
