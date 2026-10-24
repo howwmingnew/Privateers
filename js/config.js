@@ -108,6 +108,11 @@ const WEATHER = {
   yaw: 0.32, leeway: 26, calmRadius: 230,             // storm: rad/s the hull is slewed beam-on at full gale, px/s pushed downwind, px from a coast inside which neither acts
   ballDrift: 45,                                      // storm: px/s a cannonball is blown downwind
 };
+
+// Supply stations and trade ports (js/ports.js): a ring-docked service point on the open sea.
+const STATION_TRUCE_R = 280;     // no ship opens fire on the player this close to a station, and idle ships sail out of it
+const SUPPLY_FEE_PER_RING = 25;  // gold for a hull from empty to full at a supply station, per level ring it lies in
+const SUPPLY_HEAL = 0.4;         // share of max hull a supply station mends per second inside its ring (while gold lasts)
 // Ship name and flag (js/flags.js). Name width counts a CJK character as 2, so 10 Chinese or 20 Latin characters fit.
 const FLAG_NAME_UNITS = 20;
 const FLAG_COLORS = ["red", "blue", "green", "black", "gold", "purple", "teal", "orange", "white", "grey"];   // main and second colour ids
