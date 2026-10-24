@@ -82,10 +82,12 @@ function vfxFrame(dt) {
   if (halo && !(player && player.alive && !docked)) halo.setVisible(false);
   const low = !!(player && player.alive && !docked && !paused && player.hp < player.maxHp * 0.3);
   if (vigEl && low !== vigOn) { vigOn = low; vigEl.classList.toggle("on", low); }
+  if (paused) return 1;   // hit-stop and slow motion are sea time: a pause (or the ledger) must not use them up
   if (hitStopT > 0) { hitStopT -= dt; return 0.05; }
   if (slowT > 0) { slowT -= dt; return slowK; }
   return 1;
 }
+const vfxSlowLeft = () => Math.max(0, slowT);
 function vfxShip(s, dt) {
   const a = s.art || SHIP_ART.sloop, c = Math.cos(s.rot), sn = Math.sin(s.rot), vis = onScreen(s.x, s.y, 100);
   s.wakeT -= dt;
@@ -152,12 +154,20 @@ function vfxSplash(x, y, rock) {
   if (rock) { FX.dust.explode(5, x, y); S.fx.splash.explode(3, x, y); return; }
   FX.ring.emitParticleAt(x, y, 1); FX.column.explode(3, x, y); S.fx.splash.explode(7, x, y);
 }
-function vfxPunch(amt) {   // a quick zoom kick that hands the zoom back untouched unless something else changed it meanwhile
+// A quick zoom kick that hands the zoom back untouched unless something else changed it meanwhile. One punch at a
+// time: a bigger one takes over from a running one at its base zoom (a boss kill's +9% comes in the same frame as the
+// ordinary kill's +3.5%, which used to stop it), and a smaller one during a bigger one is dropped.
+let punchNow = null;   // { tw, z0, amt, last }
+function vfxPunch(amt) {
   if (!SETTINGS.shake) return;
-  const cam = S.cameras.main, z0 = cam.zoom; let last = z0;
-  S.tweens.addCounter({ from: 1, to: 0, duration: 180, ease: "Quad.easeOut",
-    onUpdate: tw => { if (Math.abs(cam.zoom - last) > 1e-9) return tw.stop(); last = z0 * (1 + amt * tw.getValue()); cam.setZoom(last); },
-    onComplete: () => { if (Math.abs(cam.zoom - last) < 1e-9) cam.setZoom(z0); } });
+  const cam = S.cameras.main, run = punchNow && punchNow.tw.isPlaying() && Math.abs(cam.zoom - punchNow.last) < 1e-9 ? punchNow : null;
+  if (run && run.amt >= amt) return;
+  if (run) { run.tw.stop(); cam.setZoom(run.z0); }
+  const p = { z0: cam.zoom, amt, last: cam.zoom };
+  p.tw = S.tweens.addCounter({ from: 1, to: 0, duration: 180, ease: "Quad.easeOut",
+    onUpdate: tw => { if (Math.abs(cam.zoom - p.last) > 1e-9) return tw.stop(); p.last = p.z0 * (1 + amt * tw.getValue()); cam.setZoom(p.last); },
+    onComplete: () => { if (Math.abs(cam.zoom - p.last) < 1e-9) cam.setZoom(p.z0); } });
+  punchNow = p;
 }
 function vfxSink(s, killer) {
   const spr = s.spr, a = s.art || SHIP_ART.sloop, base = s.artScale || 1, vis = onScreen(s.x, s.y, 120);

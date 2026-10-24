@@ -143,9 +143,11 @@ console.log("Fresh campaign (desktop, en)");
     }
     if (i === 2) {   // the outpost: sail in with cargo, sell, see the trimmed ledger, sail out under truce
       check(r.outpost, "bounty 3 opens the Hulk Outpost");
-      const o1 = await page.evaluate(() => { sendHome(), dock("return"); setSail(); player.x = OUTPOST.x + 420; player.y = OUTPOST.y; player.hp = player.maxHp; cargo = 120; return save.gold; });
+      // loose crates (struck merchants drop theirs afloat) would be magnetted in on the approach and sold too: clear them
+      const o1 = await page.evaluate(() => { sendHome(), dock("return"); setSail(); for (const c of crates) if (!c.wreck) c.value = 0;
+        player.x = OUTPOST.x + 420; player.y = OUTPOST.y; player.hp = player.maxHp; cargo = 120; return save.gold; });
       await page.waitForTimeout(300);
-      await page.evaluate(() => { player.x = OUTPOST.x + 70; player.y = OUTPOST.y + 30; player.hp = player.maxHp; });
+      await page.evaluate(() => { for (const c of crates) if (!c.wreck) c.value = 0; cargo = 120; player.x = OUTPOST.x + 70; player.y = OUTPOST.y + 30; player.hp = player.maxHp; });
       await page.waitForFunction(() => docked, null, { timeout: 7000 }).catch(() => {});   // sold on the way in, ledger after 3 s stopped (js/mooring.js)
       const op = await page.evaluate(() => ({ docked, atOutpost, gold: save.gold, title: document.getElementById("portTitle").textContent,
         armory: document.getElementById("armory").closest("section").hidden, ships: document.getElementById("ships").closest("section").hidden }));

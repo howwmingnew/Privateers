@@ -12,8 +12,9 @@ Object.assign(STR.zh, {
 const KICK_MS = 120;          // knockback and recoil ease back over this long
 const HIT_STOP = 0.025, MULTI_STOP = 0.1;
 const MULTI_MS = 4000;        // player sinks this close together make a Double / Massacre
-const BOSS_SLOW = 0.3;        // a boss goes down at this time scale for 0.6 s (the finale's flagship 1.2 s)
-let killTimes = [], slowUntil = 0;
+const BOSS_SLOW = 0.3;        // a boss goes down at this time scale for BOSS_SLOW_S (the finale's flagship BOSS_SLOW_FINAL_S)
+const BOSS_SLOW_S = 1.0, BOSS_SLOW_FINAL_S = 1.5;   // 0.6 s was ~180 ms of game time: too short to read, or to clip
+let killTimes = [], slowOn = false;
 const J = {};
 
 onHook("ready", () => {
@@ -114,7 +115,7 @@ onHook("sunk", (s, killer) => {
   if (!s.boss) return;
   const paid = killer === player || (typeof bossHitAt === "number" && typeof ASSIST_MS === "number" && S.time.now - bossHitAt < ASSIST_MS);
   if (!paid) return;
-  const b = typeof BOUNTIES !== "undefined" ? BOUNTIES.find(x => x.id === s.boss) : null, sec = b && b.final ? 1.2 : 0.6;
+  const b = typeof BOUNTIES !== "undefined" ? BOUNTIES.find(x => x.id === s.boss) : null, sec = b && b.final ? BOSS_SLOW_FINAL_S : BOSS_SLOW_S;
   slowMo(sec, BOSS_SLOW);
   if (SETTINGS.shake) { vfxPunch(0.09); leanToward(s, sec); }
   bossCard(b ? bossName(b) : "");   // js/juice-ui.js
@@ -123,11 +124,13 @@ function slowMo(sec, k) {
   vfxSlowMo(sec, k);
   S.tweens.timeScale = k;
   for (const o of S.children.list) if (o instanceof Phaser.GameObjects.Particles.ParticleEmitter) o.timeScale = k;
-  slowUntil = performance.now() + sec * 1000;
+  slowOn = true;
 }
+// The slow ends with the simulation's own count (js/vfx.js), which stands still while paused, so a pause neither ends
+// it early nor stretches it; docking (or the title) ends it at once, as the ledger has no use for slow tweens.
 onHook("frame", () => {
-  if (!slowUntil || performance.now() < slowUntil) return;
-  slowUntil = 0; S.tweens.timeScale = 1;
+  if (!slowOn || (vfxSlowLeft() > 0 && !docked)) return;
+  slowOn = false; S.tweens.timeScale = 1;
   for (const o of S.children.list) if (o instanceof Phaser.GameObjects.Particles.ParticleEmitter) o.timeScale = 1;
 });
 // The camera's follow point slides toward the wreck, then back to the player.
