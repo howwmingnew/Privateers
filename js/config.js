@@ -48,10 +48,23 @@ const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,
   bow: ["long12"], left: ["six", "carronade", "six"], right: ["six", "carronade", "six"] };
 const REMATCH_PCT = 0.25;                     // a rematch sinking pays this share of the bounty's Captain's Chest (js/rematch.js)
 const REMATCH_MAX = 2;                        // beaten captains that sail again at once; the farthest lairs first
+const CHAIN_GAP = 20;                        // seconds between sinkings that still count as one kill chain (js/hall.js)
+// Wind, weather and the hour of day (js/weather-core.js is the maths, js/weather.js the sea). Every number here is gameplay:
+// the same for every player whatever the weather-effects setting says, so a daily sea plays the same everywhere.
+const WIND = { tail: 0.20, head: 0.25, full: 0.6 };   // speed gained running before the wind, lost beating into it, at wind strength >= full (a calm gives less)
+const WEATHER = {
+  seg: [75, 150], blend: 12,                          // a spell of weather lasts seg[0]..seg[1] s and fades into the next over `blend` s
+  first: { clear: 0.5, rain: 0.3, storm: 0.2 },       // the opening weather of a sortie
+  next: { clear: { clear: 0.55, rain: 0.38, storm: 0.07 }, rain: { clear: 0.35, rain: 0.35, storm: 0.3 }, storm: { clear: 0.1, rain: 0.55, storm: 0.35 } },
+  hour: { day: 0.55, dusk: 0.2, night: 0.25 },        // the hour a sortie sails in
+  windMin: 0.05, windRain: 0.15, windStorm: 0.35,     // strength 0..1: the wind's own wander, plus what rain and storm add
+  knots: [4, 40],                                     // strength 0 .. 1 as the dial's number
+  yaw: 0.32, leeway: 26, calmRadius: 230,             // storm: rad/s the hull is slewed beam-on at full gale, px/s pushed downwind, px from a coast inside which neither acts
+  ballDrift: 45,                                      // storm: px/s a cannonball is blown downwind
+};
 // Ship name and flag (js/flags.js). Name width counts a CJK character as 2, so 10 Chinese or 20 Latin characters fit.
 const FLAG_NAME_UNITS = 20;
 const FLAG_COLORS = ["red", "blue", "green", "black", "gold", "purple", "teal", "orange", "white", "grey"];   // main and second colour ids
 const FLAG_HEX = { red: "#b02626", blue: "#2f8ad6", green: "#3d8b4a", black: "#1a1618", gold: "#e0b44a", purple: "#7a3f98", teal: "#1f9aa0", orange: "#e07b2c", white: "#f4efe2", grey: "#6b6f78" };
 const FLAG_EMBLEMS = ["diag", "skull", "anchor", "swords", "star", "cross"];
 const DEFAULT_FLAG = { main: "blue", alt: "white", emblem: "diag" };   // what the player's ensign always looked like
-const CHAIN_GAP = 20;                       // seconds between sinkings that still count as one kill chain (js/hall.js)

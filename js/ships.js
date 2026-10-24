@@ -91,6 +91,7 @@ function steer(s, desired, thr, dt) {
   const torn = s.chainT > 0;
   const turn = s.turnRate * (torn ? CHAIN_TURN : 1) * dt * (0.45 + 0.55 * Math.min(1, s.speed / Math.max(1, s.maxSpeed) + 0.2));
   if (desired != null) s.rot += clamp(angDiff(desired, s.rot), -turn, turn);
+  else if (typeof wxYaw === "function") s.rot += wxYaw(s) * dt;   // a storm slews a hull whose helm is let go (js/weather.js)
   const target = thr * s.maxSpeed * (torn ? CHAIN_SPEED : 1);
   s.speed += clamp(target - s.speed, -s.maxSpeed * 1.1 * dt, s.maxSpeed * 0.7 * dt);
 }
@@ -200,8 +201,9 @@ function think(e, dt) {
 
 function move(s, dt) {
   if (s.fixed) { s.vx = s.vy = s.speed = 0; return; }   // shore batteries stand on their island
-  s.vx = Math.cos(s.rot) * s.speed; s.vy = Math.sin(s.rot) * s.speed;
-  s.x = clamp(s.x + s.vx * dt, 60, W - 60); s.y = clamp(s.y + s.vy * dt, 60, H - 60);
+  const wm = typeof wxMul === "function" ? wxMul(s) : 1, lee = typeof wxLee === "function" ? wxLee(s) : { x: 0, y: 0 };   // wind and storm (js/weather.js)
+  s.vx = Math.cos(s.rot) * s.speed * wm; s.vy = Math.sin(s.rot) * s.speed * wm;
+  s.x = clamp(s.x + (s.vx + lee.x) * dt, 60, W - 60); s.y = clamp(s.y + (s.vy + lee.y) * dt, 60, H - 60);
   // islands are solid to the whole hull: the hit capsule (s.hl / s.hw, cutter to man-o'-war) is kept off the rock
   const solid = islands.concat([{ x: PORT.x, y: PORT.y, r: PORT_ISLAND_R / 0.9 }]);
   const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28, hw = s.hw ?? 13;
