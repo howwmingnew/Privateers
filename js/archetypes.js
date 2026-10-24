@@ -22,6 +22,7 @@ const ARCH = {
 };
 // Boss gun loadouts (multiplier `gun`): carronades hit hard up close, long guns reach out.
 const EGUN = { std: { dmg: 1, range: 1 }, carronade: { dmg: 1.6, range: 0.75, speed: 400 }, long: { dmg: 0.85, range: 1.35, speed: 600 } };
+const EGUN_ART = { carronade: "carronade", long: "long12" };   // the gun a boss loadout looks like; every other battery is 6-pounders, a cutter's bow chaser a long 12
 // Which classes sail in each faction's waters: [from level, { class: weight }]; the last row at or below L applies.
 const ARCH_MIX = {
   pirate: [[1, { cutter: 1 }], [2, { cutter: 0.6, brig: 0.4 }], [3, { cutter: 0.45, brig: 0.55 }], [4, { cutter: 0.3, brig: 0.55, frigate: 0.15 }],
@@ -59,9 +60,9 @@ function outfitEnemy(e, key, b = {}) {
   const main = { dmg: st.dmg * A.dmg * eg.dmg * (b.dmgMul || 1), range: (A.rangeAbs || st.range * A.range) * eg.range,
     interval: st.interval * A.reload, speed: eg.speed || A.gunSpeed || BALL_SPEED };
   const bow = A.bowGun ? { ...main, dmg: main.dmg * A.bowGun.dmg, range: main.range * A.bowGun.range, speed: A.bowGun.speed } : main;
-  const mk = (n, g) => Array.from({ length: n }, () => ({ ...g, burn: 0, cd: 0 }));
+  const gt = EGUN_ART[b.gun] || "six", mk = (n, g, id = gt) => Array.from({ length: n }, () => ({ ...g, gt: id, burn: 0, cd: 0 }));   // gt: the gun type js/gun-art.js draws
   const n = A.sides(st.per);
-  e.guns = { bow: mk(A.bow, bow), left: mk(n, main), right: mk(n, main), stern: mk(A.stern, main), turret: mk(A.turret || 0, main) };
+  e.guns = { bow: mk(A.bow, bow, A.bowGun ? "long12" : gt), left: mk(n, main), right: mk(n, main), stern: mk(A.stern, main), turret: mk(A.turret || 0, main) };
   e.vol = {};
   for (const m in e.guns) if (e.guns[m].length) e.vol[m] = { cd: rand(0.4, 1.8), warn: 0, aims: null };
   e.range = A.bow && !n ? bow.range : A.plan === "kite" ? bow.range : main.range;

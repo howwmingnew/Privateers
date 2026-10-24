@@ -82,6 +82,7 @@ function releaseVolley(s, key, v, guns) {
     balls.push({ spr: S.add.image(p.x, p.y, "ball").setDepth(7), x: p.x, y: p.y, vx: Math.cos(ang) * g.speed, vy: Math.sin(ang) * g.speed,
       life, life0: life, dmg: g.dmg, burn: 0, fromPlayer: false, owner: s });
     vfxMuzzle(p.x, p.y, ang, !plan[i].loud);
+    if (!s.fixed) gunFired(s, key, i, n);
   });
   Snd.play("cannonFar", { x: s.x, y: s.y });
   v.aims = null; v.cd = guns[0].interval * rand(0.9, 1.1);

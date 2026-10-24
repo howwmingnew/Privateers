@@ -53,6 +53,7 @@ function playerFire(only, pick) {
         balls.push({ spr: S.add.image(m.x, m.y, "ball").setDepth(7), x: m.x, y: m.y,
           vx: Math.cos(m.a) * g.speed, vy: Math.sin(m.a) * g.speed, life, life0: life, dmg: g.dmg, burn: g.burn, chain: g.chain, fromPlayer: true, owner: player });
         vfxMuzzle(m.x, m.y, m.a, !loud);
+        gunFired(player, mount.key, g.pi, g.pn);   // the mount recoils, a flash at the gun (js/gun-art.js)
         if (loud) Snd.play("cannon", { pan: Math.cos(m.a) * 0.35 });
       });
     });
