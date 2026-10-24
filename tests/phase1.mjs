@@ -55,22 +55,21 @@ const forcedRoll = (page, fn, arg) => ev(page, ([src, arg]) => {
 // ---------- repair at sea ----------
 {
   const { ctx, page } = await openSea({ width: 1280, height: 720 });
-  await ev(page, () => { player.hp = player.maxHp * 0.5; repairIdle = 0; });
-  await page.waitForTimeout(2200);
-  const early = await ev(page, () => player.hp / player.maxHp);
-  ok("repair: nothing mends in the first 3 s", Math.abs(early - 0.5) < 1e-9, early);
-  await page.waitForTimeout(3000);
-  const later = await ev(page, () => ({ f: player.hp / player.maxHp, mend: document.querySelector(".bar.hp").classList.contains("mend") }));
-  ok("repair: then the hull mends about 1% a second, and the bar glows", later.f > 0.5 && later.f < 0.53 && later.mend, later);
-  await ev(page, () => { player.burnT = 20; repairIdle = 10; });
+  await ev(page, () => { player.hp = player.maxHp * 0.5; });
+  await page.waitForTimeout(700);
+  const early = await ev(page, () => ({ f: player.hp / player.maxHp, mend: document.querySelector(".bar.hp").classList.contains("mend") }));
+  ok("repair: the hull starts mending at once, and the bar glows", early.f > 0.5 && early.mend, early);
+  // 1% a second under way, 3% stopped: the rate seen over 2 s must match the ship's state at both ends
+  const r0 = await ev(page, () => ({ hp: player.hp, still: player.speed < player.maxSpeed * REPAIR_STILL, t: performance.now() }));
+  await page.waitForTimeout(2000);
+  const r1 = await ev(page, () => ({ hp: player.hp, still: player.speed < player.maxSpeed * REPAIR_STILL, t: performance.now(), max: player.maxHp }));
+  const rate = (r1.hp - r0.hp) / r1.max / ((r1.t - r0.t) / 1000);
+  if (r0.still === r1.still) ok(`repair: ${r0.still ? "stopped ~3%" : "under way ~1%"} a second (saw ${(rate * 100).toFixed(2)}%)`,
+    r0.still ? rate > 0.02 && rate <= 0.031 : rate > 0.006 && rate <= 0.0105, { r0, r1, rate });
+  await ev(page, () => { player.burnT = 20; });
   const a = await ev(page, () => player.hp); await page.waitForTimeout(700);
-  ok("repair: a burning ship does not mend", await ev(page, a0 => Math.abs(player.hp - a0) < 1e-9, a));
-  await ev(page, () => { player.burnT = 0; repairIdle = 10; const e = enemies.find(x => x.alive); e.mine = true; window.__w = e; e.vol = { left: { cd: 5, warn: 1, tgt: player } }; });
-  const b = await ev(page, () => player.hp); await page.waitForTimeout(500);
-  ok("repair: nor under a gun-port warning aimed at the player", await ev(page, b0 => Math.abs(player.hp - b0) < 1e-9, b));
-  await ev(page, () => { __w.vol = {}; });
-  await page.waitForTimeout(300);
-  ok("repair: a hit restarts the 3 s clock", await ev(page, () => { hurt(player, 1, 0, __w); return repairIdle === 0; }));
+  ok("repair: a burning ship still mends", await ev(page, a0 => player.hp > a0 || player.hp >= player.maxHp, a));
+  await ev(page, () => { player.burnT = 0; });
   await ctx.close();
 }
 
