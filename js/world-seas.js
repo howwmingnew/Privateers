@@ -137,7 +137,7 @@ function managePopulation(dt) {
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
     if (e.dead) { enemies.splice(i, 1); continue; }
-    if (!e.alive || !isOrdinary(e) || e.angry > 0) continue;
+    if (!e.alive || !isOrdinary(e) || e.angry > 0 || e.holdSea) continue;   // holdSea: the Admiral's fleet stays until sunk or left far behind (js/heat.js)
     const d = dist(e, player);
     const drop = pop.near.includes(e.ring) ? d > NEAR_LOST
       : pop.count[e.ring] > pop.quota[e.ring] && d > SPARE_GONE && !onScreen(e.x, e.y, 200);

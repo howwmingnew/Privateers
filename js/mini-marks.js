@@ -49,7 +49,7 @@ const isNearThreat = (e, tier) => tier.d >= 1 && dist(e, player) < MINI_NEAR_R; 
 // Every ship, in priority order: ordinary ones first (merged where they pile up), then the near threats on top.
 // `between` runs after the ordinary ships, so places (harbor, outpost) land above them and below the threats.
 function drawMiniShips(c, k, u, between) {
-  const ships = enemies.filter(e => e.alive && !e.boss && !e.fixed).map(e => ({ e, tier: threatTier(e.threatL ?? e.L) }));
+  const ships = enemies.filter(e => e.alive && !e.boss && !e.fixed && !(typeof disFogHides === "function" && disFogHides(e))).map(e => ({ e, tier: threatTier(e.threatL ?? e.L) }));
   const rows = ships.filter(s => !isNearThreat(s.e, s.tier)).map(s => ({ ...s, x: s.e.x * k, y: s.e.y * k, rank: s.tier.d }));
   for (const m of clusterMarks(rows, MINI_MERGE * u)) {
     miniShip(c, m.e, m.x, m.y, u);
