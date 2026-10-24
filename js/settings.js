@@ -17,10 +17,11 @@ function scalePct(v) {
 // Before the sliders, text size was 1 / 1.15 / 1.3 and chart size 0.8 / 1 / 1.25 (multipliers); old settings still load.
 const legacyPct = (v, allowed) => (allowed.includes(v) ? Math.round(v * 100) : null);
 // The chart's size in CSS pixels: the base (a share of the shorter side, clamped) times the slider, then held under the
-// width and height caps so it never crowds the HUD bars on a phone or a short landscape screen.
-function miniSizePx(vw, vh, pct) {
+// width and height caps so it never crowds the HUD bars on a phone or a short landscape screen. ts (the UI size as a
+// multiplier) makes room in the chart's column for the gold and level labels and the hint line, which grow with it.
+function miniSizePx(vw, vh, pct, ts = 0) {
   const base = Math.min(MINI_BASE_MAX, Math.max(MINI_BASE_MIN, MINI_BASE_FRAC * Math.min(vw, vh)));
-  const cap = Math.min(MINI_MAX_VW * vw, MINI_MAX_VH * vh);
+  const cap = Math.min(MINI_MAX_VW * vw, MINI_MAX_VH * vh, vh - (MINI_HUD_FIXED + MINI_HUD_PER_TS * ts));
   return Math.round(Math.max(MINI_MIN_PX, Math.min(base * pct / 100, cap)));
 }
 // Backing-store size of the chart canvas for a CSS size: sharp on HiDPI screens, bounded for memory.

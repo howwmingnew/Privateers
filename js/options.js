@@ -26,7 +26,7 @@ applyUiScale();
 // the property is the target on screen divided by that zoom. fitMini (js/hud.js, loaded later and calling this once)
 // redraws the canvas at the target size. The icon slider only changes how the marks are drawn, so it takes the same path.
 function applyMiniSize() {
-  const w = miniSizePx(innerWidth, innerHeight, SETTINGS.miniPct), hud = document.getElementById("hud");
+  const w = miniSizePx(innerWidth, innerHeight, SETTINGS.miniPct, uiScale()), hud = document.getElementById("hud");
   const zoom = (hud && parseFloat(getComputedStyle(hud).zoom)) || 1;
   document.documentElement.style.setProperty("--mini-w", w / zoom + "px");
   if (typeof fitMini === "function") fitMini(w);

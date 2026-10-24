@@ -31,11 +31,11 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
   display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
 }
 .bars { display: grid; gap: 6px; width: min(46vw, calc(220px * var(--ts))); }
-.bar { position: relative; height: calc(18px * var(--ts)); border-radius: 3px; background: rgba(8,34,45,.75); border: 1px solid rgba(246,241,227,.25); overflow: hidden; }
+.bar { container-type: inline-size; position: relative; height: calc(18px * var(--ts)); border-radius: 3px; background: rgba(8,34,45,.75); border: 1px solid rgba(246,241,227,.25); overflow: hidden; }
 .bar i { position: absolute; inset: 0 auto 0 0; width: 100%; transition: width .2s; }
 .bar.hp i { background: linear-gradient(#d45a43, var(--blood)); }
 .bar.cargo i { background: linear-gradient(#ddb04e, var(--brass)); }
-.bar span { position: relative; display: flex; justify-content: space-between; padding: 0 6px; font-size: calc(12px * var(--ts)); line-height: calc(18px * var(--ts)); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; text-shadow: 0 1px 2px #000; font-variant-numeric: tabular-nums; }
+.bar span { position: relative; display: flex; justify-content: space-between; padding: 0 6px; font-size: min(calc(12px * var(--ts)), 8cqw);   /* a phone's bar is narrow: the text follows its width */ line-height: calc(18px * var(--ts)); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; text-shadow: 0 1px 2px #000; font-variant-numeric: tabular-nums; }
 .bar.full { border-color: var(--brass); box-shadow: 0 0 0 2px rgba(192,143,46,.45); }
 .side { display: grid; justify-items: end; gap: 6px; }
 .purse { display: flex; gap: 8px; align-items: baseline; background: rgba(8,34,45,.75); border: 1px solid rgba(246,241,227,.25); border-radius: 3px; padding: 2px 8px; }
@@ -48,15 +48,17 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 #mini { width: 112px; height: 112px; border-radius: 50%; border: 2px solid rgba(192,143,46,.7); background: var(--sea-deep); box-shadow: 0 2px 10px rgba(0,0,0,.4); }
 
 #hint { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); z-index: 5; pointer-events: none;
-  font-size: calc(14px * var(--ts)); letter-spacing: .04em; background: rgba(8,34,45,.7); padding: 6px 12px; border-radius: 3px; transition: opacity .6s; width: max-content; max-width: calc(100vw - 32px); text-align: center; }
+  font-size: min(calc(14px * var(--ts)), 6.5vw); letter-spacing: .04em; background: rgba(8,34,45,.7);   /* on a phone a big size would wrap into the coach card above */ padding: 6px 12px; border-radius: 3px; transition: opacity .6s; width: max-content; max-width: calc(100vw - 32px); text-align: center; }
 /* the dock ring's prompt, under the ship (the camera follows it): js/mooring.js */
 #moor { position: fixed; left: 50%; top: calc(50% + 64px); transform: translateX(-50%); z-index: 6; pointer-events: none; width: max-content; max-width: calc(100vw - 32px);
   font-size: calc(15px * var(--ts)); text-align: center; color: #f6f1e3; background: rgba(8,34,45,.78); border: 1px solid rgba(240,199,102,.45); border-radius: 3px; padding: 5px 12px; }
 #moor[hidden] { display: none; }
-#toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 92px); transform: translateX(-50%); z-index: 11; pointer-events: none;
-  font-family: var(--f-display); font-size: calc(22px * var(--ts)); color: var(--foam); text-shadow: 0 2px 6px #000; opacity: 0; transition: opacity .3s; text-align: center; width: max-content; max-width: calc(100vw - 32px); }
+#toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + max(92px, 28px + 64px * var(--ts)));   /* the bars above it grow with the UI size */ transform: translateX(-50%); z-index: 11; pointer-events: none;
+  font-family: var(--f-display); font-size: min(calc(22px * var(--ts)), 9vh); color: var(--foam); text-shadow: 0 2px 6px #000; opacity: 0; transition: opacity .3s; text-align: center; width: max-content; max-width: calc(100vw - 32px); }
 #toast.on { opacity: 1; }
-/* On narrow screens the chart fills the top-right corner, so toasts drop below it instead of running under it. */
+/* On narrow screens the chart fills the top-right corner, so toasts drop below it instead of running under it. Wider
+   than that the toast stays clear of the chart on its right (the 44px is its padding and border plus a gap). */
+@media (min-width: 561px) { #toast { max-width: min(calc(100vw - 32px), calc(100vw - 2 * (var(--mini-w, 124px) + 44px))); } }
 @media (max-width: 560px) { #toast { top: calc(env(safe-area-inset-top, 0px) + 32px + 50px * var(--ts) + var(--mini-w, 124px)); font-size: calc(19px * var(--ts)); } }
 
 /* Floating joystick */
@@ -64,12 +66,12 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 #joy i { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgba(246,241,227,.5); }
 
 /* Harbor ledger */
-#port { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(4,18,24,.55);
+#port { position: fixed; inset: 0; z-index: 10; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; background: rgba(4,18,24,.55);
   padding-block: calc(env(safe-area-inset-top, 0px) + 12px) calc(env(safe-area-inset-bottom, 0px) + 12px);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-.sheet { width: min(100%, calc(560px * var(--ts))); max-height: 100%; overflow-y: auto; background: var(--parch); color: var(--ink); border-radius: 4px;
-  box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 0 60px rgba(150,110,50,.25); display: grid; gap: 18px; padding: 20px 20px 0; }
-.sheet header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
+.sheet { box-sizing: border-box; width: min(100%, max(calc(560px * var(--ts) + 40px), 440px));   /* the floor keeps the fixed-size poster and rows inside a small-UI sheet */ max-height: 100%; overflow-y: auto; background: var(--parch); color: var(--ink); border-radius: 4px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 0 60px rgba(150,110,50,.25); display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 20px 20px 0; }
+.sheet header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
 .eyebrow { font-size: calc(12px * var(--ts)); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; }
 .sheet h1 { font-family: var(--f-display); font-weight: 400; font-size: calc(34px * var(--ts)); line-height: 1; margin: 2px 0 0; text-wrap: balance; }
 .sheet h2 { font-family: var(--f-display); font-weight: 400; font-size: calc(22px * var(--ts)); margin: 0 0 8px; }
@@ -83,7 +85,7 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 
 /* Gun deck (js/deck-art.js): the ship bow-up in the middle column on a canvas, larboard guns left of it, starboard right,
    bow guns above, stern guns below; an SVG leader line runs from each button to its muzzle on the hull. */
-.deck { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) var(--shipw, 30%) minmax(0, 1fr);
+.deck { position: relative; container-type: inline-size; display: grid; grid-template-columns: minmax(0, 1fr) var(--shipw, 30%) minmax(0, 1fr);
   grid-template-areas: "bow bow bow" "left ship right" "stern stern stern"; gap: 10px 12px; }
 .dk-art, .dk-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .dk-lines line { stroke: var(--ink); stroke-width: 1.2; stroke-linecap: round; }
@@ -99,7 +101,7 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 .dk-grp .slots { display: flex; gap: 8px; }
 .dk-left .slots, .dk-right .slots { flex-direction: column; gap: 6px; width: min(100%, calc(104px * var(--ts))); }
 .dk-left .lbl, .dk-right .lbl { width: min(100%, calc(104px * var(--ts))); text-align: center; }
-.dk-bow .slot, .dk-stern .slot { width: calc(84px * var(--ts)); }
+.dk-bow .slot, .dk-stern .slot { flex: 0 1 calc(84px * var(--ts)); }   /* shrinks when two guns would not fit a phone's width */
 .deck .lbl, .bay .lbl { font-size: calc(12px * var(--ts)); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--ink-soft); }
 .slot { font: inherit; font-size: calc(13px * var(--ts)); font-weight: 700; padding: 8px 4px; border-radius: 3px; border: 1.5px solid var(--ink); background: var(--parch-2); color: var(--ink); cursor: pointer; line-height: 1.15; min-width: 0; }
 .slot:hover { background: #ead8aa; }
@@ -124,6 +126,10 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 .bay .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(84px * var(--ts)), 1fr)); gap: 6px; }
 .bay .hint-s { margin: 0; }
 .slot small { display: block; font-weight: 500; font-size: calc(11px * var(--ts)); color: var(--ink-soft); }
+/* in the deck the text follows the deck's own width (a container), so the large UI sizes still fit a phone's narrow gun columns */
+.dk-left .lbl, .dk-right .lbl { font-size: min(calc(12px * var(--ts)), 5cqw); }
+.deck .slot { font-size: min(calc(13px * var(--ts)), 5.2cqw); overflow-wrap: anywhere; }
+.deck .slot small { font-size: min(calc(11px * var(--ts)), 4.4cqw); }
 
 .list { display: grid; gap: 8px; }
 .item { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(42,29,16,.25); }

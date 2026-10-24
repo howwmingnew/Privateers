@@ -84,6 +84,14 @@ test("the chart never passes 44% of the width or 60% of the height, nor shrinks 
   assert.equal(px(300, 800, 50), 64);
 });
 
+test("a big UI size leaves room under the chart for the labels on a short screen", () => {
+  const g = boot();
+  const px = (w, h, p, ts) => g.run(`miniSizePx(${w}, ${h}, ${p}, ${ts})`);
+  assert.equal(px(844, 390, 250, 1), Math.round(0.6 * 390));   // at 100% the height cap still rules
+  assert.equal(px(844, 390, 250, 2.5), 390 - (30 + 76 * 2.5));
+  assert.equal(px(1280, 720, 250, 2.5), px(1280, 720, 250, 0));   // a normal screen is untouched
+});
+
 test("chart canvas is css size times the pixel ratio, bounded", () => {
   const g = boot();
   const cv = (c, d) => g.run(`miniCanvasPx(${c}, ${d})`);

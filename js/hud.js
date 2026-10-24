@@ -17,8 +17,9 @@ function hud(force) {
 }
 const mini = document.getElementById("mini"), mctx = mini.getContext("2d");
 let miniBase, miniKey = "", miniFitQueued = false, miniWantPx = 0;
-// One chart unit u = a pixel of the original 224-px chart: marks scale with the chart, times the icon-size setting.
-const miniUnit = M => M / 224 * SETTINGS.markPct / 100;
+// One chart unit u = a pixel of the original 224-px chart: marks scale with the chart, times the icon-size setting, but
+// never below MINI_UNIT_MIN CSS px (M / miniWantPx turns CSS px into canvas px), so 50% on a small chart is still visible.
+const miniUnit = M => Math.max(M / 224 * SETTINGS.markPct / 100, miniWantPx > 0 ? MINI_UNIT_MIN * M / miniWantPx : 0);
 // Give the chart canvas a drawing size to match its width on screen (device pixels, so it stays sharp on HiDPI) and redraw it.
 // Called by js/options.js whenever the screen or a size slider changes; many calls in a frame make one redraw.
 function fitMini(screenPx) {

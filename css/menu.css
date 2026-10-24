@@ -9,7 +9,7 @@ body.on-pause #hint, body.on-pause #joy { display: none !important; }
 #port .sheet { scroll-padding: 16px 0 96px; }   /* focus moves never land behind the sticky footer */
 #port .sheet:focus { outline: none; }            /* the sheet only holds focus so stray fire keys press nothing */
 
-.shell { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow: hidden;
+.shell { position: fixed; inset: 0; z-index: 20; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; overflow: hidden;   /* the track never grows past the screen, so a wide child cannot push a panel off it */
   padding-block: calc(env(safe-area-inset-top, 0px) + 12px) calc(env(safe-area-inset-bottom, 0px) + 12px);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .shell.dim { background: rgba(4,18,24,.6); }
@@ -42,10 +42,10 @@ body.on-pause #hint, body.on-pause #joy { display: none !important; }
 .confirm .menu { width: 100%; margin: 0; }
 
 /* ---- parchment panels (pause, settings, how to play, credits) ---- */
-.panel { width: min(100%, calc(480px * var(--ts))); max-height: 100%; background: var(--parch); color: var(--ink); border-radius: 4px;
+.panel { box-sizing: border-box; width: min(100%, calc(480px * var(--ts) + 40px)); max-height: 100%;   /* border-box: padding counts inside the 100%, so a phone panel never pokes past the screen */ background: var(--parch); color: var(--ink); border-radius: 4px;
   box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 0 60px rgba(150,110,50,.25); padding: 20px 20px 0; display: grid; gap: 14px; align-content: start; }
-.panel.small { width: min(100%, calc(360px * var(--ts))); padding-bottom: 18px; }
-.panel.wide { width: min(100%, calc(600px * var(--ts))); }
+.panel.small { width: min(100%, calc(360px * var(--ts) + 40px)); padding-bottom: 18px; }
+.panel.wide { width: min(100%, calc(600px * var(--ts) + 40px)); }
 .panel.scroll { overflow-y: auto; overscroll-behavior: contain; scroll-padding: 16px 0 90px; }
 .panel.small.scroll { padding-bottom: 0; }
 .panel h2 { font-family: var(--f-display); font-weight: 400; font-size: calc(30px * var(--ts)); line-height: 1; margin: 0; padding-bottom: 10px; border-bottom: 2px solid var(--ink); }
@@ -111,13 +111,13 @@ body.scale-preview #title, body.scale-preview #pause { opacity: 0; pointer-event
 .sw-x::after { transform: rotate(-45deg); }
 
 /* ---- first-voyage coach card: floats over the sea, sits in the ledger while docked ---- */
-#coach { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); z-index: 7;
+#coach { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + max(64px, 28px + 36px * var(--ts)));   /* above the hint line, which grows with the UI size */ z-index: 7;
   width: max-content; max-width: min(calc(100vw - 32px), calc(440px * var(--ts))); pointer-events: none;
   background: rgba(8,34,45,.9); color: var(--foam); border: 1px solid rgba(240,199,102,.5); border-left: 4px solid #f0c766; border-radius: 3px;
   padding: 8px 14px 10px; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
-#coach .coach-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-#coach .eyebrow { color: #f0c766; }
-#coach p { margin: 2px 0 0; font-size: calc(15px * var(--ts)); line-height: 1.4; }
+#coach .coach-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
+#coach .eyebrow { color: #f0c766; font-size: min(calc(12px * var(--ts)), 4.6vh); }
+#coach p { margin: 2px 0 0; font-size: min(calc(15px * var(--ts)), 6vh); line-height: 1.4; }   /* short screens: the card must not climb into the bars */
 #coach .textbtn { pointer-events: auto; color: rgba(246,241,227,.75); min-height: 32px; }
 #coach.in-sheet { position: static; transform: none; width: auto; max-width: none; background: rgba(240,199,102,.22); color: var(--ink);
   border-color: rgba(138,93,12,.45); border-left-color: #8a5d0c; box-shadow: none; }
@@ -150,5 +150,5 @@ body.pad-nav button:focus, body.pad-nav input:focus { outline: 3px solid var(--b
 @media (prefers-reduced-motion: reduce) { .mbtn { transition: none; } }
 
 /* ---- roadmap panel (js/roadmap-panel.js): the roadmap page framed in a tall parchment panel ---- */
-.panel.roadmap { width: min(100%, 1280px); height: 100%; padding-bottom: 0; grid-template-rows: auto minmax(0, 1fr) auto; }
+.panel.roadmap { width: min(100%, 1320px); height: 100%; padding-bottom: 0; grid-template-rows: auto minmax(0, 1fr) auto; }
 #rmFrame { display: block; width: 100%; height: 100%; min-height: 0; border: 0; border-radius: 3px; background: #08222d; }
