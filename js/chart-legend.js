@@ -18,6 +18,7 @@ function paintLegendMark(cv) {
   else if (kind === "pirate") ship("pirate", "brig", 1);
   else if (kind === "harbor") miniHarbor(c, mx, my, u * 0.8);
   else if (kind === "outpost") miniOutpost(c, mx, my, u * 1.1);
+  else if (kind === "supply" || kind === "tradeport") miniStation(c, kind === "tradeport" ? "trade" : kind, mx, my, u * 1.1);
   else if (kind === "fort") miniFort(c, mx, my, me + 1, u * 1.1);
   else if (kind === "chest") miniChest(c, mx, my, u * 1.2, false);
   else if (kind === "wreck") miniWreck(c, mx, my, u * 0.8);

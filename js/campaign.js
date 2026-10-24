@@ -201,8 +201,14 @@ onHook("lang", () => { if (bossTag && bossShip) bossTag.txt.setText(bossName(fin
 const OUTPOST = polarPt(Math.PI / 8, ringEdge(7));
 const TRUCE_R = 300;
 const PORT_DOCK = { x: PORT.x, y: PORT.y, outpost: false }, OUTPOST_DOCK = { x: OUTPOST.x, y: OUTPOST.y, outpost: true };
-const inTruce = s => save.campaign.outpost && Math.hypot(s.x - OUTPOST.x, s.y - OUTPOST.y) < TRUCE_R;
-const nearestHarbor = () => save.campaign.outpost && dist(player, OUTPOST) < dist(player, PORT) ? OUTPOST_DOCK : PORT_DOCK;
+// The centre of the truce circle that holds s: the outpost's (once open) or a supply station's / trade port's (js/ports.js); else null.
+const truceCentre = s => save.campaign.outpost && Math.hypot(s.x - OUTPOST.x, s.y - OUTPOST.y) < TRUCE_R ? OUTPOST : stationAt(s);
+const inTruce = s => !!truceCentre(s);
+// An idle ship's wander point is never rolled inside any truce circle (js/ai-nav.js).
+const clearOfTruces = pt => STATIONS.reduce((p, st) => clearOfCircle(p, st, STATION_TRUCE_R), save.campaign.outpost ? clearOfCircle(pt, OUTPOST, TRUCE_R) : pt);
+// The dock the player is nearest to: Safe Harbor, the outpost (once open) or any station.
+const nearestHarbor = () => [PORT_DOCK, ...(save.campaign.outpost ? [OUTPOST_DOCK] : []), ...STATION_DOCKS]
+  .reduce((best, d) => dist(player, d) < dist(player, best) ? d : best);
 let atOutpost = false, outpostObjs = [], outpostLabel = null;
 // Painted like Safe Harbor (js/harbor-art.js): a buoyed dock ring in the traders' green, planked floating jetties with
 // cargo and lanterns. The hulk itself and a tender are moored ships from the ship art, rocking on slow tweens.
@@ -260,7 +266,7 @@ function sendHome() {
 }
 onHook("ready", syncOutpost);
 onHook("dock", (kind, hold) => {
-  atOutpost = kind === "outpost";
+  atOutpost = kind === "outpost" || isStationKind(kind);   // the slim ledger: no shipyard, armory or gun deck
   if (kind === "welcome") { storyKey = null; sendHome(); }   // a new or reset game always starts at home
   syncWorld(); syncOutpost();
   if (atOutpost) { sfx("bell", { pitch: 1.25 }); if (hold > 0) sfx("coin", { amount: hold, delay: 0.45 }); }

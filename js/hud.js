@@ -63,6 +63,7 @@ function drawMini() {
   drawMiniShips(mctx, k, u, () => {
     miniHarbor(mctx, PORT.x * k, PORT.y * k, u);
     if (save.campaign.outpost) miniOutpost(mctx, OUTPOST.x * k, OUTPOST.y * k, u);
+    for (const st of STATIONS) miniStation(mctx, st.kind, st.x * k, st.y * k, u);   // supply stations and trade ports (js/ports.js)
   });
   runHook("mini", mctx, k, u);   // the bounty's skull (js/campaign-ui.js)
   miniPlayer(mctx, player.x * k, player.y * k, player.rot, u);
