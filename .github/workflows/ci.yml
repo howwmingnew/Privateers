@@ -1,7 +1,6 @@
 # Checks on every pull request and on pushes to main.
-# "test" (unit + smoke) is the gate. "browser-suites" runs the longer Playwright suites for information only:
-# GitHub's runners render without a GPU (~6-9 fps), so the suites' real-time waits time out there now and then.
-# Run `npm run test:all` locally before opening a PR; that stays the full check.
+# Gate: unit + smoke tests. The longer Playwright suites in `npm run test:all` stay local: GitHub's runners
+# render without a GPU (~6-9 fps) and those suites' real-time waits time out there. Run test:all before a PR.
 name: ci
 
 on:
@@ -36,23 +35,3 @@ jobs:
       - name: Unit and smoke tests
         run: npm test
 
-  browser-suites:
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - name: Start static server
-        run: |
-          python3 -m http.server 8765 --bind 127.0.0.1 &
-          for i in $(seq 1 20); do curl -sf http://127.0.0.1:8765/index.html >/dev/null && exit 0; sleep 0.5; done
-          echo "server did not start"; exit 1
-      - name: Full suite (informational)
-        run: npm run test:all
-        env:
-          TEST_SLOW: 4
