@@ -40,12 +40,14 @@ function postcardBlob() {
   });
 }
 // Resolves "shared" | "saved" | "cancelled", rejects when the picture could not be made.
-async function postcardSave() {
-  const blob = await postcardBlob(), name = postcardName(new Date());
+async function postcardSave() { return deliverImage(await postcardBlob(), postcardName(new Date())); }
+// A PNG to the player: the share sheet on a phone that has one (meta adds text / url to it, for the share card,
+// js/sharecard.js), a download everywhere else. Resolves "shared" | "saved" | "cancelled".
+async function deliverImage(blob, name, meta = {}) {
   if (device === "touch" && typeof File === "function" && navigator.canShare && navigator.share) {   // a phone: the share sheet has "Save image"
     const file = new File([blob], name, { type: "image/png" });
     if (navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: "Privateers" }); return "shared"; }
+      try { await navigator.share({ files: [file], title: "Privateers", ...meta }); return "shared"; }
       catch (e) { if (e && e.name === "AbortError") return "cancelled"; }   // anything else: fall back to a download
     }
   }

@@ -84,6 +84,7 @@ function renderLog() {
       <div class="fbars">${factions}</div><h3>${t("byLevel")}</h3><div class="lvbars">${levels}</div></section>
     <section><h2>${t("logAch", { n: got, m: ACH.length })}</h2><ul class="achs">${achs}</ul></section>
     ${typeof wordmarkHtml === "function" ? wordmarkHtml() : ""}`;
+  hallMount(logEl.firstElementChild);   // the hall of fame and its share button (js/hall.js)
 }
 function openLog() {
   flushTime(); renderLog();
