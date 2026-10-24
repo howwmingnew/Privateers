@@ -26,6 +26,12 @@ function buildMiniBase() {
 function drawMini() {
   const M = mini.width, k = M / W, u = M / 224;
   mctx.save();
+  if (typeof chartLite === "function" && chartLite()) {   // first voyage: harbor, player, the gold-ringed mark, wrecks (js/onboard.js)
+    mctx.drawImage(miniLiteBase(), 0, 0);
+    for (const c of crates) if (c.wreck) miniWreck(mctx, c.x * k, c.y * k, u);
+    miniLiteMark(mctx, k, u); miniPlayer(mctx, player.x * k, player.y * k, player.rot, u);
+    return mctx.restore();
+  }
   mctx.drawImage(miniBase, 0, 0);
   const treasure = new Set(typeof fortSites !== "undefined" ? fortSites.map(s => s.crate).filter(Boolean) : []);
   for (const c of crates) if (!c.wreck) miniChest(mctx, c.x * k, c.y * k, u, treasure.has(c));

@@ -55,7 +55,7 @@ function fireTipKey() {
   if (device === "pad") return "tip_pad";
   if (device === "desk") return "tip_desk";
   if (device === "mouse") return mouseHold ? "releaseTip" : "tip_click";
-  return joyVec.m > 0 ? "releaseTip" : null;
+  return joyVec.m > 0 && !(typeof sinkingNear === "function" && sinkingNear(200)) ? "releaseTip" : null;   // not over a sinking hull
 }
 function setSailLevel(l) {
   l = clamp(l, 0, SAIL_THR.length - 1);

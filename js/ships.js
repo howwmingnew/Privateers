@@ -125,9 +125,11 @@ function isHostile(e, o) {
 const ignoring = (e, o, now) => (e.ignore.get(o) || 0) > now;
 function pickTarget(e, now) {
   const aggro = 520 + e.L * 15;
+  // the first voyage's opening: only the tutorial's mark, or a ship the player hit, goes for the player (js/tutorial.js)
+  const calm = typeof tutorialCalm === "function" && tutorialCalm() && e !== tut.target && !(e.attacker === player && e.angry > 0);
   let best = null, bd = 1e9;
   for (const o of enemies.concat([player])) {
-    if (!isHostile(e, o) || ignoring(e, o, now)) continue;
+    if (!isHostile(e, o) || ignoring(e, o, now) || (calm && o === player)) continue;
     const d = dist(e, o), lim = e.attacker === o && e.angry > 0 ? 1100 : aggro;
     if (d < lim && d < bd) { best = o; bd = d; }
   }

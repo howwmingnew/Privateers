@@ -2,7 +2,7 @@
 // ---------- Victory: sinking Admiral Thorne ends the war. Epilogue, the captain's account, credits, then a choice ----------
 Object.assign(STR.en, {
   vEyebrow: "The last Letter of Marque is fulfilled", vTitle: "The Free Port Stands",
-  vEpilogue: "HMS Sovereign settles into the Maelstrom, and the Navy's last flag goes down with her. Back at Safe Harbor they ring every bell on the waterfront. The Harbourmaster tears down the final poster and nails your name above the tavern door in its place. Past the edge of the chart lie richer waters, and worse captains. Where you sail now is up to you.",
+  vEpilogue: "HMS Sovereign settles into the Maelstrom, and the Navy's last flag goes down with her. Back at Safe Harbor they ring every bell on the waterfront. The Harbormaster tears down the final poster and nails your name above the tavern door in its place. Past the edge of the chart lie richer waters, and worse captains. Where you sail now is up to you.",
   vAccount: "The captain's account", vSunkOf: "{n} ({p} pirates · {v} navy · {m} merchants)", vRank: "Rank",
   vCredits: "Credits",
   vCreditsTxt: "<b>Privateers</b> · design, code, art and music, all made in code · built with Phaser 3 · type: IM Fell English SC by Igino Marini, Barlow Semi Condensed by Jeremy Tribby, Noto Serif TC and Noto Sans TC by Google. Thank you for sailing.",

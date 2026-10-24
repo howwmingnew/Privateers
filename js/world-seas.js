@@ -181,7 +181,7 @@ onHook("frame", dt => {
   runHook("sea", here);
   const fresh = !seaSortie.has(here) && !(now - (seaLastIn[here] ?? -Infinity) < SEA_AGAIN_MS);
   seaSortie = new Set([...seaSortie, here]);
-  if (fresh) showSeaBanner(here);
+  if (fresh && !(typeof firstVoyage === "function" && firstVoyage())) showSeaBanner(here);   // the coach has the floor
 });
 onHook("sail", () => { seaNow = seaHere(); seaPend = null; seaSortie = new Set(); hideSeaBanner(); });
 onHook("dock", hideSeaBanner);

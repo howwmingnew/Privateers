@@ -12,7 +12,8 @@ const TOAST_MS = 2400, TOAST_GAP_MS = 350, TOAST_QUEUE_MAX = 3;
 const toastEl = document.getElementById("toast");
 let toastTimer, toastOn = false, toastQueue = [];
 function toast(msg) {
-  if (typeof docked !== "undefined" && docked) {   // the sheet is up: hold it (newest kept, no repeats)
+  // the sheet is up, or the sea banner is (js/onboard.js): hold it (newest kept, no repeats)
+  if ((typeof docked !== "undefined" && docked) || (typeof toastHeld === "function" && toastHeld())) {
     toastQueue = [...toastQueue.filter(m => m !== msg), msg].slice(-TOAST_QUEUE_MAX);
     return;
   }
@@ -27,7 +28,7 @@ function endToast() {
   clearTimeout(toastTimer); toastTimer = setTimeout(nextToast, TOAST_GAP_MS);
 }
 function nextToast() {
-  if (toastOn || !toastQueue.length || docked) return;
+  if (toastOn || !toastQueue.length || docked || (typeof toastHeld === "function" && toastHeld())) return;
   const [msg, ...rest] = toastQueue; toastQueue = rest;
   showToast(msg);
 }

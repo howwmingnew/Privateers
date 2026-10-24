@@ -19,10 +19,10 @@ Object.assign(STR.en, {
   ach_own_brig: "Square-Rigged", achd_own_brig: "Buy a brig.",
   ach_own_frigate: "Ship of War", achd_own_frigate: "Buy a frigate.",
   ach_own_line: "First Rate", achd_own_line: "Buy a Ship of the Line.",
-  ach_bounty_1: "Red Ned's Colours", achd_bounty_1: "Claim the bounty on Red Ned.",
+  ach_bounty_1: "Red Ned's Colors", achd_bounty_1: "Claim the bounty on Red Ned.",
   ach_bounty_2: "No More Boarders", achd_bounty_2: "Claim the bounty on Mother Carey.",
   ach_bounty_3: "Ashes to Ashes", achd_bounty_3: "Claim the bounty on the Ashen Saint.",
-  ach_bounty_4: "Colours Struck", achd_bounty_4: "Claim the bounty on Commodore Hale.",
+  ach_bounty_4: "Colors Struck", achd_bounty_4: "Claim the bounty on Commodore Hale.",
   ach_bounty_5: "Sovereign of the Seas", achd_bounty_5: "Sink HMS Sovereign and end the war.",
   ach_sea_reef: "Into the Reefs", achd_sea_reef: "Sail into the Reef Straits.",
   ach_sea_lanes: "Crown Waters", achd_sea_lanes: "Sail into the Navy Lanes.",
@@ -72,6 +72,7 @@ function unlockAch(id) {
 }
 function renderAchToast(id) { achToastEl.innerHTML = `<small>${t("achUnlocked")}</small><b>${t("ach_" + id)}</b><span>${t("achd_" + id)}</span>`; }
 function nextAchToast() {
+  if (achQueue.length && typeof achHeld === "function" && achHeld()) { achShowing = false; return; }   // after the coach card (js/onboard.js)
   const id = achQueue.shift();
   if (!id) { achShowing = false; achToastEl.classList.remove("on"); return; }
   achShowing = true; achToastEl.dataset.id = id; renderAchToast(id);

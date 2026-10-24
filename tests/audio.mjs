@@ -39,7 +39,7 @@ try {
   await page.waitForFunction(() => typeof player !== "undefined" && player && typeof Snd !== "undefined", null, { timeout: 15000 });
   check(await page.evaluate(() => Snd.state()) === "locked", "no AudioContext before the first gesture");
   await page.click("[data-smoke=start]");                            // a real user gesture (title screen, js/menu.js)
-  await page.click("#sail");
+  if (await page.evaluate(() => docked)) await page.click("#sail");  // a fresh save sails straight out
   await page.waitForFunction(() => Snd.state() === "running", null, { timeout: 4000 }).catch(() => {});
   check(await page.evaluate(() => Snd.state()) === "running", "AudioContext is running after a click");
   await page.waitForTimeout(400);

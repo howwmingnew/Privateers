@@ -29,6 +29,7 @@ async function open(viewport, { lang = "en", saveJson = null, mobile = false } =
 const ready = async page => {
   await page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S && typeof titleOpen !== "undefined", null, { timeout: 15000 });
   if (await page.evaluate(() => titleOpen)) await page.click("[data-smoke=start]");
+  await page.evaluate(() => { if (!docked) dock("welcome"); });   // a fresh save sails straight out (js/menu.js)
   await page.waitForFunction(() => docked, null, { timeout: 15000 });
 };
 const done = async (tag, o) => { check(o.errors.length === 0, `${tag}: no page errors${o.errors.length ? " -> " + o.errors.join(" | ") : ""}`); await o.ctx.close(); };
@@ -94,7 +95,8 @@ console.log("Fresh campaign (desktop, en)");
   // banner: sail from the Shallows into the Reef Straits
   await page.evaluate(() => { setSail(); player.x = PORT.x - 1000; player.y = PORT.y + 60; });
   await page.waitForTimeout(900);
-  await page.evaluate(() => { player.x = PORT.x - 1460; player.y = PORT.y + 60; player.hp = player.maxHp; });
+  // the first voyage's coach keeps sea banners back (js/world-seas.js): put it away for this check
+  await page.evaluate(() => { tutorialReset(); player.x = PORT.x - 1460; player.y = PORT.y + 60; player.hp = player.maxHp; });
   await page.waitForTimeout(1000);
   const ban = await page.evaluate(() => ({ on: seaBanner.classList.contains("on"), sea: seaBanner.dataset.sea, txt: seaBanner.textContent, ach: !!save.ach.sea_reef }));
   check(ban.on && ban.sea === "reef" && /Reef Straits/.test(ban.txt) && /Lv 3–5/.test(ban.txt), `banner on crossing into the Reef Straits: "${ban.txt}"`);
@@ -196,7 +198,7 @@ console.log("Fresh campaign (desktop, en)");
   check(ng.seed !== before.seed && ng.islandSeed === ng.seed, "New Game+ rolls a new map");
   check(JSON.stringify(ng.gunLv) === JSON.stringify(before.gunLv) && JSON.stringify(ng.unlocked) === JSON.stringify(before.unlocked), "New Game+ keeps guns and their levels");
   check(ng.ach === before.ach && ng.stats === before.stats, "New Game+ keeps achievements and lifetime stats");
-  // the poster's one level is its Recommended line (boss + escorts), and New Game+ must raise it
+  // the poster's one level is its Goal line (Ready at Ship Lv N) (boss + escorts), and New Game+ must raise it
   check(ng.rec > ng.recBase && (ng.poster || "").includes(`Ship Lv ${ng.rec} `), `New Game+ poster recommends a higher Ship Lv for Red Ned (${ng.recBase} -> ${ng.rec}): "${ng.poster}"`);
   await o.shot("desktop-en-8-ngplus");
   const lv = await page.evaluate(() => { setSail(); const s = enemies.filter(e => e.alive && isOrdinary(e));
