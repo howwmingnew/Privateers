@@ -74,7 +74,7 @@ const artClass = cls => SHIP_ART[cls] ? cls : "brig";
 const activeBounty = () => (runActive() && runBounty()) || BOUNTIES[save.campaign.bounty] || null;   // a daily run hunts its own captain (js/run.js)
 const findBounty = id => BOUNTIES.find(b => b.id === id) || (runActive() && runBounty() && runBounty().id === id ? runBounty() : null);
 const bossName = b => t("boss_" + b.id);
-const shipFor = i => SHIP_ORDER.find(id => SHIP_GATE[id] === i + 1);   // the hull bounty i (0-based) unlocks
+const shipsFor = i => SHIP_ORDER.filter(id => SHIP_GATE[id] === i + 1);   // the hulls bounty i (0-based) unlocks: one per line
 const bountyReward = b => Math.round(b.reward * lootMul());
 function shipLock(id) {
   if (save.campaign.ships.includes(id)) return null;
@@ -152,10 +152,10 @@ function placeBossTag(tag = bossTag, ship = bossShip) {
   tag.skull.setPosition(x + 11 * lk, y); tag.txt.setPosition(x + 25 * lk, y);
 }
 function claimBounty(b, s) {
-  const c = save.campaign, n = c.bounty + 1, reward = bountyReward(b), ship = shipFor(c.bounty);
+  const c = save.campaign, n = c.bounty + 1, reward = bountyReward(b), opened = shipsFor(c.bounty);
   save.gold += reward;
   save.campaign = { ...c, bounty: n, rank: Math.min(n, RANK_MAX), outpost: n >= OUTPOST_BOUNTY,
-    ships: SHIP_ORDER.filter(id => c.ships.includes(id) || id === ship) };
+    ships: SHIP_ORDER.filter(id => c.ships.includes(id) || opened.includes(id)) };
   save.stats = { ...save.stats, gold: save.stats.gold + reward, bounties: save.stats.bounties + 1 };
   persist();
   storyKey = "done_" + b.id;

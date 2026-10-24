@@ -25,12 +25,14 @@ const oldSave = o => JSON.stringify({ v: 2, gold: 0, ship: "sloop", hull: 1, sai
   stern: [], store: [], sunk: 0, wrecks: [], salvage: [], ...o });
 
 test("ship slots: each side within MAX_PORTS, the ladder only grows, the ship of the line carries 30 guns", () => {
-  const g = boot(), ships = g.json("SHIP_ORDER"), max = g.run("MAX_PORTS");
-  let prev = null;
-  for (const id of ships) {
-    const s = g.json(`SHIPS.${id}.slots`);
-    for (const k of Object.keys(s)) { assert.ok(s[k] <= max, `${id} ${k}`); if (prev) assert.ok(s[k] >= prev[k], `${id} ${k} shrank`); }
-    prev = s;
+  const g = boot(), max = g.run("MAX_PORTS");
+  for (const ladder of [["sloop", "schooner", "brigantine", "cruiser", "corsair"], ["sloop", "gunboat", "brig", "frigate", "line"]]) {   // the fast and the heavy line
+    let prev = null;
+    for (const id of ladder) {
+      const s = g.json(`SHIPS.${id}.slots`);
+      for (const k of Object.keys(s)) { assert.ok(s[k] <= max, `${id} ${k}`); if (prev) assert.ok(s[k] >= prev[k], `${id} ${k} shrank`); }
+      prev = s;
+    }
   }
   const line = g.json("SHIPS.line.slots");
   assert.ok(line.left >= 10 && line.left === line.right, "10-15 guns a side");

@@ -67,21 +67,26 @@ function renderPort() {
   const owned = ownedShips(), count = {};
   for (const e of owned) count[e.ship] = (count[e.ship] || 0) + 1;
   const shipDs = (sh, h, s, o) => t("shipDs", { b: sh.slots.bow, s: sh.slots.left, t: sh.slots.stern,
-    hp: YARD.hull.show(yardVal("hull", h, sh)), kn: YARD.sails.show(yardVal("sails", s, sh)), cargo: fmt(yardVal("hold", o, sh)) }) + (sh.gunK ? t("gunK", { k: sh.gunK }) : "");
+    hp: YARD.hull.show(yardVal("hull", h, sh)), kn: YARD.sails.show(yardVal("sails", s, sh)), cargo: fmt(yardVal("hold", o, sh)) }) + (sh.gunK ? t("gunK", { k: sh.gunK }) : "") +
+    t("shipGuns", { n: shipGuns(sh) }) + (sh.turn && sh.turn !== 1 ? t("shipTurn", { k: sh.turn }) : "");   // js/ship-lines.js
   const mine = owned.map(e => {
     const sh = SHIPS[e.ship], me = e.id === save.shipId, nm = count[e.ship] > 1 ? t("shipNo", { ship: t("s_" + e.ship), n: idNum(e.id) }) : t("s_" + e.ship);
-    const label = e.name ? `${esc(e.name)}<small>${nm}</small>` : nm;   // the ship's own name (js/flags.js)
+    const tag = sh.line ? `<small>${t("lineTag_" + sh.line)}</small>` : "";   // fast or heavy line (js/ship-lines.js)
+    const label = e.name ? `${esc(e.name)}<small>${nm}</small>${tag}` : nm + tag;   // the ship's own name (js/flags.js)
     const btn = me ? `<button class="btn max" type="button" disabled>${t("yourShip")}</button>` : `<button class="btn" type="button" data-act="switch" data-id="${e.id}">${t("switchTo")}</button>`;
     return `<div class="item"><div class="nm">${label}</div>${btn}<div class="ds">${shipDs(sh, e.hull, e.sails, e.hold)}${t("shipLvs", { h: e.hull, s: e.sails, o: e.hold })}</div></div>`;
   }).join("");
   const full = owned.length >= FLEET_MAX;
-  const sale = SHIP_ORDER.filter(forSale).map(id => {
+  const saleRow = id => {
     const sh = SHIPS[id], lock = shipLock(id);   // Letters of Marque gate (js/campaign.js): null, or why not yet
     const btn = lock ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("locked")}</button>`
       : full ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("yardFull")}</button>`
       : `<button class="btn" type="button" data-act="ship" data-id="${id}" ${save.gold < sh.cost ? "disabled" : ""}>${shipArmed === id ? t("shipArm") : t("buy", { n: fmt(sh.cost) })}</button>`;
-    return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${shipDs(sh, 1, 1, 1)}${lock ? `<span class="lock">${lock}</span>` : ""}</div></div>`;
-  }).join("");
+    return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${shipDs(sh, 1, 1, 1)}${lock ? `<span class="lock">${lock}</span>` : ""}</div>${shipCmpHtml(sh, SHIPS[save.ship], save.ship)}</div>`;
+  };
+  // two lines side by side in tiers: fast, then heavy (js/ship-lines.js)
+  const sale = SHIP_LINE_KEYS.map(line => `<p class="hint-s line-${line}">${t("line_" + line)}</p>` +
+    SHIP_ORDER.filter(id => forSale(id) && SHIPS[id].line === line).map(saleRow).join("")).join("");
   $("ships").innerHTML = `<p class="hint-s">${t("shipsOwned")}</p>${mine}<p class="hint-s">${t("shipsBuy")}</p>${sale}`;
   runHook("renderPort");   // wanted poster, outpost layout (js/campaign.js)
 }
