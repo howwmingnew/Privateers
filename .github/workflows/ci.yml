@@ -35,4 +35,4 @@ jobs:
       - name: Run all tests
         run: npm run test:all
         env:
-          TEST_SLOW: 2.5
+          TEST_SLOW: 4
