@@ -85,6 +85,78 @@ async function openSea(viewport, { mobile = false, seed = {} } = {}) {
   await ctx.close();
 }
 
+// A fresh game left in the harbor ledger (English), with gold to spend.
+async function openHarbor(viewport, { mobile = false } = {}) {
+  const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: mobile, hasTouch: mobile });
+  const page = await ctx.newPage();
+  page.on("pageerror", e => errors.push(`pageerror: ${e.message}`));
+  page.on("console", m => { if (m.type() === "error" && !/favicon/i.test(m.text())) errors.push(`console: ${m.text()}`); });
+  await ctx.addInitScript(() => {
+    if (sessionStorage.getItem("__seeded")) return;
+    sessionStorage.setItem("__seeded", "1");
+    localStorage.clear(); localStorage.setItem("privateers-lang", "en");
+  });
+  await page.goto(url, { waitUntil: "load" });
+  await page.waitForFunction(() => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 * SLOW });
+  await page.click("[data-smoke=start]");
+  await page.evaluate(() => { if (!docked) { tutorialReset(); dock("welcome"); } });
+  await page.waitForFunction(() => docked && document.querySelector("#deck [data-act=slot]"), null, { timeout: 8000 * SLOW });
+  await page.waitForTimeout(450 * SLOW);   // the ledger's fade-in
+  return { ctx, page };
+}
+
+// ---------- #34: gun bay, Swap position ----------
+for (const [tag, viewport, mobile] of [["desktop", { width: 1280, height: 720 }, false], ["phone", { width: 390, height: 844 }, true]]) {
+  const { ctx, page } = await openHarbor(viewport, { mobile });
+  await ev(page, () => { save.gold = 20000; save.bow = [gunItem("six", 1), gunItem("long12", 3)]; save.store = [gunItem("chain", 1)]; deckSel = null; swapping = false; renderPort(); });
+  const bow = () => ev(page, () => save.bow.map(x => x && x.g + x.lv).join(","));
+  const slot = i => `#deck [data-act="slot"][data-side="bow"][data-i="${i}"]`;
+  await page.locator(slot(0)).scrollIntoViewIfNeeded();
+  await page.click(slot(0));
+  ok(`#34 ${tag}: picking a gun shows a Swap position button and the next-level upgrade label`, await ev(page, () =>
+    !!document.querySelector('#gunSel [data-act="swap"]') && /^Upgrade to Lv 2 \(\d/.test(document.querySelector('#gunSel [data-act="gup"]').textContent)));
+  await page.click(slot(1));
+  ok(`#34 ${tag}: tapping a second port without Swap position moves the pick and swaps nothing`, (await bow()) === "six1,long123" && await ev(page, () => deckSel.i === 1));
+  await page.click(slot(1));   // picked again: drops the pick
+  await page.click(slot(0));
+  await page.click('#gunSel [data-act="swap"]');
+  const mid = await ev(page, () => ({ on: swapping, cls: document.getElementById("port").classList.contains("swapping"),
+    pressed: document.querySelector('#gunSel [data-act="swap"]').getAttribute("aria-pressed"), focus: document.activeElement.dataset.act,
+    hint: document.querySelector("#gunSel .hint-s").textContent }));
+  ok(`#34 ${tag}: Swap position lights the other places, shows a hint and keeps focus on the button`, mid.on && mid.cls && mid.pressed === "true" && mid.focus === "swap" && /Esc cancels/.test(mid.hint), mid);
+  await page.screenshot({ path: join(out, `gunbay-swapping-${tag}.png`) });
+  await page.keyboard.press("Escape");
+  const esc = await ev(page, () => ({ on: swapping, sel: !!deckSel, focus: document.activeElement.dataset.act }));
+  ok(`#34 ${tag}: Esc calls the swap off, the gun stays picked and nothing moves`, !esc.on && esc.sel && esc.focus === "swap" && (await bow()) === "six1,long123", esc);
+  await page.click('#gunSel [data-act="swap"]'); await page.click('#gunSel [data-act="swap"]');
+  ok(`#34 ${tag}: pressing Swap position twice also cancels`, !(await ev(page, () => swapping)));
+  await page.click('#gunSel [data-act="swap"]');
+  await page.click(slot(1));
+  ok(`#34 ${tag}: Swap position then another port swaps the two guns, and the swap ends`, (await bow()) === "long123,six1" && !(await ev(page, () => swapping || !!deckSel)));
+  // keyboard only: focus the stored gun, Enter, Tab to Swap position, Enter, then Enter on a port
+  await page.focus('#bay [data-act="store"]'); await page.keyboard.press("Enter");
+  await page.focus('#gunSel [data-act="swap"]'); await page.keyboard.press("Enter");
+  await page.focus(slot(0)); await page.keyboard.press("Enter");
+  ok(`#34 ${tag}: keyboard (Enter) can pick, press Swap position and swap with the store`, (await bow()) === "chain1,six1" && await ev(page, () => save.store[0].g === "long12" && save.store[0].lv === 3), await bow());
+  // upgrade label: money short, enough, maxed
+  const lbl = await ev(page, () => {
+    const out = {};
+    deckSel = { side: "bow", i: 1 }; save.gold = 5; renderPort();
+    const b = document.querySelector('#gunSel [data-act="gup"]'); out.short = [b.textContent, b.disabled];
+    save.gold = 99999; renderPort(); const c = document.querySelector('#gunSel [data-act="gup"]'); out.enough = [c.textContent, c.disabled];
+    save.bow[1] = gunItem("six", GUN_MAX); renderPort(); const d = document.querySelector('#gunSel .btn.max'); out.max = [d?.textContent, d?.disabled];
+    return out;
+  });
+  ok(`#34 ${tag}: the upgrade button shows the price, the shortfall when poor, and "Max level" (disabled) at Lv ${10}`,
+    /^Upgrade to Lv 2 \(\d[\d,]* gold, \d[\d,]* short\)$/.test(lbl.short[0]) && lbl.short[1] && /^Upgrade to Lv 2 \(\d[\d,]* gold\)$/.test(lbl.enough[0]) && !lbl.enough[1] && lbl.max[0] === "Max level" && lbl.max[1], lbl);
+  // Chinese strings
+  await ev(page, () => { lang = "zh"; applyLang(); deckSel = { side: "bow", i: 0 }; swapping = false; renderPort(); });
+  const zh = await ev(page, () => ({ swap: document.querySelector('#gunSel [data-act="swap"]').textContent, up: document.querySelector('#gunSel [data-act="gup"]').textContent }));
+  ok(`#34 ${tag}: Chinese labels`, zh.swap === "切換砲位" && /^升級到 Lv \d（[\d,]+ 金幣/.test(zh.up), zh);
+  await page.screenshot({ path: join(out, `gunbay-card-${tag}-zh.png`) });
+  await ctx.close();
+}
+
 ok("no page errors", errors.length === 0, errors.slice(0, 5));
 await browser.close();
 if (failed) { console.log(`\n${failed} check(s) failed`); process.exit(1); }

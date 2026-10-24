@@ -114,6 +114,7 @@ document.getElementById("port").addEventListener("click", ev => {
   // shorter, so focus falls back to the stored gun before it, or the port it went to
   const sel = act === "slot" ? `[data-act="slot"][data-side="${b.dataset.side}"][data-i="${b.dataset.i}"]`
     : act === "store" ? [`#bay [data-i="${b.dataset.i}"]`, `#bay [data-i="${b.dataset.i - 1}"]`, "#deck .slot"]
+    : act === "swap" ? '#gunSel [data-act="swap"]'
     : act === "ship" ? `#ships [data-act="ship"]:not(:disabled), #sail` : null;
   if (sel) [].concat(sel).map(q => document.querySelector(q)).find(Boolean)?.focus();
 });

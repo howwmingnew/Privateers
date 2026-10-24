@@ -4,7 +4,7 @@ const UI_FONT = '"Barlow Semi Condensed", "Noto Sans TC", "Microsoft JhengHei", 
 const STR = {
   en: {
     hull: "Hull", cargo: "Cargo", gold: "Gold", shipLv: "Ship Lv {n}", ledger: "Harbor ledger", harbor: "Safe Harbor", harborMap: "SAFE HARBOR",
-    broadside: "Gun deck", slotHint: "Tap a gun port or a stored gun to pick it, then tap another to swap them.", armory: "Armory", shipwright: "Shipwright",
+    broadside: "Gun deck", slotHint: "Tap a gun port or a stored gun to pick it, press Swap position, then tap another to swap them.", armory: "Armory", shipwright: "Shipwright",
     ships: "New ships", shipsHint: "A new ship starts with hull, sails and hold back at Lv 1. Your cannons move aboard; extra gun ports start empty.",
     yourShip: "Your ship", shipArm: "Tap again to buy", boughtShip: "The <em>{ship}</em> is yours. Hull, sails and hold start again at Lv 1, and your cannons are aboard. The new gun ports are empty.",
     shipDs: "Bow <b>{b}</b> · <b>{s}</b> per side · stern <b>{t}</b> · starts at <b>{hp}</b>, <b>{kn}</b>, hold <b>{cargo}</b>",
@@ -34,7 +34,7 @@ const STR = {
   },
   zh: {
     hull: "船體", cargo: "貨艙", gold: "金幣", shipLv: "船艦 Lv {n}", ledger: "港口帳簿", harbor: "安全港", harborMap: "安全港",
-    broadside: "火砲配置", slotHint: "點一下砲位或庫存裡的砲選起來，再點另一處就能互換。", armory: "軍械庫", shipwright: "造船廠",
+    broadside: "火砲配置", slotHint: "點一下砲位或庫存裡的砲選起來，按「切換砲位」，再點另一處才會互換。", armory: "軍械庫", shipwright: "造船廠",
     ships: "新船", shipsHint: "換新船後，船體、船帆、貨艙的升級會從 Lv 1 重新開始。火砲會一起搬上新船，多出來的砲位是空的。",
     yourShip: "目前的船", shipArm: "再點一次購買", boughtShip: "<em>{ship}</em>是你的了。船體、船帆、貨艙從 Lv 1 重新開始，火砲已經搬上船，新的砲位是空的。",
     shipDs: "船首 <b>{b}</b> 門 · 每舷 <b>{s}</b> 門 · 船尾 <b>{t}</b> 門 · 起始 <b>{hp}</b>、<b>{kn}</b>、貨艙 <b>{cargo}</b>",
