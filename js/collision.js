@@ -43,6 +43,7 @@ function crashDue(book, key, now, cd = CRASH_COOLDOWN) {
 const crashSafe = (s, isl) => isl.harbor || isl.outpost || (typeof inSafe === "function" && inSafe(s)) || (s.isPlayer && docked);
 
 function crashLand(s, dmg, src, x, y, nx, ny) {
+  if (typeof disCrashCap === "function") dmg = disCrashCap(s, dmg);   // a crash a disaster drove: the same 10% floor and 8 s rest (js/disasters.js)
   const frac = dmg / s.maxHp;
   s.hp -= dmg;
   vfxFlash(s);

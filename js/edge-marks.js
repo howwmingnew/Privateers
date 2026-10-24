@@ -18,7 +18,8 @@ const edgeScale = () => uiScale() * (matchMedia("(min-width: 2400px) and (min-he
 function edgeIcon(ic, it) {
   const c = ic.getContext("2d"), u = 2.3;
   c.clearRect(0, 0, ic.width, ic.height);
-  if (it.boss) {
+  if (it.kind === "hazard") disGlyph(c, it.hz.kind, 22, 22, u * 1.25);   // a disaster (js/disasters-art.js)
+  else if (it.boss) {
     c.fillStyle = "#1b1410"; c.beginPath(); c.arc(22, 22, 17, 0, TAU); c.fill(); c.strokeStyle = MINI_GOLD; c.lineWidth = 2.4; c.stroke(); drawSkull(c, 22, 23, 12);
   } else if (it.place === "harbor") miniHarbor(c, 22, 22, u);
   else if (it.place === "outpost") miniOutpost(c, 22, 22, u * 1.2);
@@ -27,7 +28,7 @@ function edgeIcon(ic, it) {
 }
 function edgeBox(it) {
   const el = document.createElement("div");
-  el.className = "em" + (it.boss ? " boss" : it.ally ? " ally" : ""); el.dataset.kind = it.boss ? "boss" : it.ally ? "ally" : it.place || "ship";
+  el.className = "em" + (it.boss ? " boss" : it.ally ? " ally" : ""); el.dataset.kind = it.boss ? "boss" : it.ally ? "ally" : it.place || (it.hz ? "hazard" : "ship");
   el.innerHTML = `<canvas width="44" height="44"></canvas><span></span><i class="ptr"></i>`;
   edgeLayer.append(el);
   return { el, ic: el.firstElementChild, txt: el.children[1], ptr: el.lastElementChild, key: "", label: "", w: 0, h: 0 };
@@ -40,7 +41,8 @@ function edgeCandidates(v, kx, ky) {
     if (px > reach || px < 1) return;
     out.push({ ...it, o, px, sx: (o.x - v.x) * kx, sy: (o.y - v.y) * ky });
   };
-  for (const e of enemies) if (e.alive && !e.fixed) add(e, { kind: "ship", e, boss: !!e.boss, ally: !!e.ally, d: e.ally ? 0 : threatTier(e.threatL ?? e.L).d });   // an escort that has dropped out of sight keeps a mint box
+  for (const e of enemies) if (e.alive && !e.fixed && (e.ally || !(typeof disFogHides === "function" && disFogHides(e)))) add(e, { kind: "ship", e, boss: !!e.boss, ally: !!e.ally, d: e.ally ? 0 : threatTier(e.threatL ?? e.L).d });   // an escort that has dropped out of sight keeps a mint box, fog or not
+  if (typeof disMarks === "function") for (const h of disMarks()) add(h, { kind: "hazard", hz: h, d: 2 });   // warning or running disasters (js/disasters.js)
   add(PORT, { kind: "place", place: "harbor", d: 0 });
   if (save.campaign.outpost) add(OUTPOST, { kind: "place", place: "outpost", d: 0 });
   for (const st of STATIONS) add(st, { kind: "place", place: st.kind, d: 0 });   // supply stations and trade ports (js/ports.js)
@@ -71,7 +73,7 @@ function updateEdgeMarks(dt) {
     let m = edgeEls.get(it.o);
     if (!m) { m = edgeBox(it); edgeEls.set(it.o, m); requestAnimationFrame(() => m.el.classList.add("on")); }
     m.el.classList.remove("gone"); m.it = it;
-    const key = (it.boss ? "b" : it.place || "s") + (it.e ? it.d + (it.e.faction || "") + (it.e.arch || "") : "");
+    const key = (it.boss ? "b" : it.place || (it.hz ? "h" + it.hz.kind : "s")) + (it.e ? it.d + (it.e.faction || "") + (it.e.arch || "") : "");
     if (key !== m.key || it.e?.arch === "fireship") { m.key = key; edgeIcon(m.ic, it); }   // a fireship's flicker needs a fresh paint
     const text = edgeLabel(it.px);
     if (text !== m.label) { m.label = text; m.txt.textContent = text; m.w = m.el.offsetWidth; m.h = m.el.offsetHeight; }
