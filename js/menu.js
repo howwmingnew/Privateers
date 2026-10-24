@@ -250,7 +250,7 @@ function menuAction(act, b) {
     case "new-yes": startGame(true); break;
     case "new-no": $m("tConfirm").hidden = true; $m("titleMenu").hidden = false; $m("tNew").focus({ preventScroll: true }); break;
     case "howto": case "settings": case "credits": openPanel(act, b); break;
-    case "roadmap": window.open("roadmap/index.html", "_blank", "noopener"); break;   // its own page, so the game keeps running behind it
+    case "roadmap": openRoadmap(b); break;   // js/roadmap-panel.js
     case "back": closePanel(); break;
     case "pause": pauseGame(); break;
     case "resume": resumeGame(); break;
