@@ -140,6 +140,7 @@ document.body.append(bossArrow, bossBar);
   c.strokeStyle = "#f0c766"; c.lineWidth = 3; c.stroke(); drawSkull(c, 32, 33, 17); }
 const EDGE = { side: 34, top: 76 };   // keep the arrow clear of the HUD strip
 function placeBossArrow() {
+  if (edgeShowsBoss) { bossArrow.hidden = true; return; }   // the bounty already has a bigger box on the edge, with its distance (js/edge-marks.js)
   const v = S.cameras.main.worldView, fx = (bossShip.x - v.x) / v.width, fy = (bossShip.y - v.y) / v.height;
   if (fx > 0.03 && fx < 0.97 && fy > 0.03 && fy < 0.97) { bossArrow.hidden = true; return; }
   const vw = VIEW.cssW, vh = VIEW.cssH, cx = vw / 2, cy = (vh + EDGE.top - EDGE.side) / 2;

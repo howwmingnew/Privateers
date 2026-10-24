@@ -40,8 +40,9 @@ async function openSea(viewport, { mobile = false, seed = {} } = {}) {
   await ev(page, () => {
     save.tutorialDone = true; tutorialReset();
     player.x = PORT.x + 1500; player.y = PORT.y; player.speed = 0; moved = true;
-    for (const e of enemies) { e.x = 200; e.y = 200; }
-    window.__calm = setInterval(() => { for (const e of enemies) if (!e.mine && !(e.angry > 5)) { e.x = 200; e.y = 200; } }, 40);
+    for (const e of enemies) { e.x = W - 200; e.y = H - 200; }
+    window.managePopulation = () => {};   // the sea spawns nothing new: a stray ship would add boxes of its own
+    window.__calm = setInterval(() => { for (const e of enemies) if (!e.mine && !(e.angry > 5)) { e.x = W - 200; e.y = H - 200; } }, 40);
   });
   await page.waitForFunction(() => !bannerBusy(), null, { timeout: 15000 * SLOW });
   return { ctx, page };
@@ -314,6 +315,113 @@ for (const [tag, viewport, mobile] of [["1280", { width: 1280, height: 720 }, fa
     if (lg === "en") { await ev(page, () => document.querySelector("#p-howto canvas.sw-mark").scrollIntoView({ block: "start" })); await page.screenshot({ path: join(out, "howto-chart-legend-en.png") }); }
     await ev(page, () => { goBack(); });
   }
+  await ctx.close();
+}
+
+// ---------- #40: edge markers for off-screen ships, harbor and outpost ----------
+// Ships are held at an offset from the stationary player (screen widths of the world view) by a 30 ms timer.
+const holdShip = (page, f, dx, dy, L = 3, faction = "pirate", cls = "brig") => ev(page, ([f, dx, dy, L, faction, cls]) => {
+  const v = S.cameras.main.worldView, e = makeEnemy(S, player.x, player.y, L, faction, cls);
+  e.mine = true; e.angry = 99; e.speed = 0; e.spr.setVisible(false); e.badge?.setVisible(false);
+  const spot = { f, dx, dy }; e.hold = spot;
+  (window.__holds = window.__holds || []).push(e);
+  if (!window.__holdT) window.__holdT = setInterval(() => { const w = S.cameras.main.worldView; for (const h of window.__holds) if (h.alive) { h.x = player.x + h.hold.dx * w.width; h.y = player.y + h.hold.dy * w.width; h.speed = 0; h.vx = h.vy = 0; } }, 30);
+  return window.__holds.length - 1;
+}, [f, dx, dy, L, faction, cls]);
+const setHold = (page, i, dx, dy) => ev(page, ([i, dx, dy]) => { window.__holds[i].hold = { dx, dy }; }, [i, dx, dy]);
+// (on a big screen the harbor can be in range too: the ship checks look at ship boxes only)
+const marks = (page, kind) => ev(page, kind => [...document.querySelectorAll("#edgeMarks .em")].filter(el => !kind || el.dataset.kind === kind).map(el => { const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+  return { kind: el.dataset.kind, edge: el.dataset.edge, text: el.querySelector("span").textContent, l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height, gone: el.classList.contains("gone"), op: +cs.opacity }; }), kind);
+const hudRects = page => ev(page, () => [...document.querySelectorAll("#hud .side, #hud .bars")].map(el => { const r = el.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; }).filter(r => r.r > r.l));
+const overlap = (a, b) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
+
+for (const [tag, viewport, mobile] of [["desktop", { width: 1280, height: 720 }, false], ["phone", { width: 390, height: 844 }, true], ["4k", { width: 3840, height: 2160 }, false]]) {
+  const { ctx, page } = await openSea(viewport, { mobile });
+  await ev(page, () => { player.x = 1500; player.y = PORT.y - 1000; player.speed = 0; });
+  await page.waitForTimeout(300 * SLOW);
+  // one ship off the right edge, about 1.0 screens away
+  const a = await holdShip(page, 0, 1.0, 0.1);
+  await page.waitForTimeout(500 * SLOW);
+  let ms = (await marks(page, "ship")).filter(m => !m.gone);   // (a stray sea ship can flash in and out before the calm timer parks it)
+  const shown = ms.length === 1 && ms[0].kind === "ship";
+  const px = await ev(page, i => Math.hypot(window.__holds[i].x - player.x, window.__holds[i].y - player.y), a);
+  const wantM = await ev(page, px => edgeMeters(px), px);
+  ok(`#40 ${tag}: an off-screen ship gets one box on the edge with its distance rounded to 10 m (${wantM} m)`,
+    shown && /^~\d+0 m$/.test(ms[0].text) && Math.abs(parseInt(ms[0].text.slice(1)) - wantM) <= 30 && ms[0].op > 0.5, { ms, px, wantM });
+  const vw = viewport.width, vh = viewport.height;
+  ok(`#40 ${tag}: the box sits fully inside the screen and on the side the ship is on (right)`, ms.length && ms[0].l >= 0 && ms[0].r <= vw && ms[0].t >= 0 && ms[0].b <= vh && ms[0].edge === "right", ms[0]);
+  const hud = await hudRects(page);
+  ok(`#40 ${tag}: the box stays off the HUD and the chart`, ms.length && !hud.some(r => overlap(ms[0], r)), { box: ms[0], hud });
+  await page.screenshot({ path: join(out, `edge-one-${tag}.png`) });
+  // out of range
+  await setHold(page, a, 2.4, 0);
+  await page.waitForTimeout(600 * SLOW);
+  ok(`#40 ${tag}: a ship beyond the range (1.8 screen widths; tried at 2.4) gets no box`, (await marks(page, "ship")).filter(m => !m.gone).length === 0, await marks(page, "ship"));
+  // into view: the box fades out and goes
+  await setHold(page, a, 1.0, 0.1); await page.waitForTimeout(400 * SLOW);
+  await setHold(page, a, 0.05, 0.05);
+  await page.waitForTimeout(150 * SLOW);
+  const fading = await marks(page, "ship");
+  await page.waitForTimeout(700 * SLOW);
+  const after = await marks(page, "ship");
+  ok(`#40 ${tag}: when the ship sails into view its box fades out and is removed`, (fading.length === 0 || fading.every(m => m.gone || m.op < 0.95)) && after.every(m => m.gone), { fading, after });
+  // several at once: capped at 5, none overlapping each other, all on screen, none on the HUD
+  await ev(page, () => { for (const e of window.__holds) { e.alive = false; e.spr.destroy(); e.badge?.destroy(); enemies.splice(enemies.indexOf(e), 1); } window.__holds = []; });
+  for (let i = 0; i < 9; i++) await holdShip(page, 0, 0.75 + (i % 3) * 0.12, -0.55 + i * 0.03, 1 + (i % 6), i % 3 === 0 ? "navy" : i % 3 === 1 ? "pirate" : "merchant", i % 3 === 2 ? "fluyt" : "brig");
+  await page.waitForTimeout(700 * SLOW);
+  ms = await marks(page); const live = ms.filter(m => !m.gone);
+  let clash = 0; for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) if (overlap(live[i], live[j])) clash++;
+  ok(`#40 ${tag}: nine ships on one side show at most 5 boxes, none overlapping, all inside the screen and off the HUD`,
+    live.length >= 3 && live.length <= 5 && clash === 0 && live.every(m => m.l >= 0 && m.r <= vw && m.t >= 0 && m.b <= vh && !hud.some(r => overlap(m, r))), { n: live.length, clash, ms: live.map(m => [m.edge, Math.round(m.l), Math.round(m.t)]) });
+  await page.screenshot({ path: join(out, `edge-many-${tag}.png`) });
+  // the harbor and the outpost
+  await ev(page, () => { for (const e of window.__holds) { e.alive = false; e.spr.destroy(); e.badge?.destroy(); enemies.splice(enemies.indexOf(e), 1); } window.__holds = []; save.campaign.outpost = true; syncOutpost(); const w = S.cameras.main.worldView.width; player.x = PORT.x + 1.2 * w; player.y = PORT.y + 0.1 * w; });
+  await page.waitForTimeout(500 * SLOW);
+  ms = (await marks(page)).filter(m => !m.gone);
+  ok(`#40 ${tag}: the harbor shows as a box with its anchor and a distance when it is off-screen and near`, ms.some(m => m.kind === "harbor" && /^~\d+0 m$/.test(m.text)), ms);
+  await ev(page, () => { const w = S.cameras.main.worldView.width; player.x = OUTPOST.x - 1.2 * w; player.y = OUTPOST.y + 0.15 * w; });
+  await page.waitForTimeout(500 * SLOW);
+  ms = (await marks(page)).filter(m => !m.gone);
+  ok(`#40 ${tag}: the outpost shows as a box too`, ms.some(m => m.kind === "outpost"), ms);
+  await page.screenshot({ path: join(out, `edge-outpost-${tag}.png`) });
+  // Chinese
+  await ev(page, () => { lang = "zh"; applyLang(); });
+  await page.waitForTimeout(400 * SLOW);
+  ms = (await marks(page)).filter(m => !m.gone);
+  ok(`#40 ${tag}: Chinese distance reads 約 N 公尺`, ms.length > 0 && ms.every(m => /^約 \d+0 公尺$/.test(m.text)), ms.map(m => m.text));
+  await ev(page, () => { lang = "en"; applyLang(); });
+  // UI size slider scales the box
+  const h100 = (await marks(page)).find(m => !m.gone)?.h;
+  await ev(page, () => { saveSettings({ uiPct: 200 }); applyUiScale(); });
+  await page.waitForTimeout(500 * SLOW);
+  const h200 = (await marks(page)).find(m => !m.gone)?.h;
+  ok(`#40 ${tag}: the UI size slider scales the box (200% is about twice 100%)`, h100 > 0 && h200 / h100 > 1.7 && h200 / h100 < 2.3, { h100, h200 });
+  await ev(page, () => { saveSettings({ uiPct: 100 }); applyUiScale(); });
+  // photo mode hides it; pausing hides it; leaving brings it back
+  await ev(page, () => photoEnter("sea"));
+  await page.waitForTimeout(300 * SLOW);
+  const inPhoto = await ev(page, () => getComputedStyle(document.getElementById("edgeMarks")).display);
+  await ev(page, () => photoExit());
+  await page.waitForTimeout(500 * SLOW);
+  const back = (await marks(page)).filter(m => !m.gone).length;
+  ok(`#40 ${tag}: photo mode hides the boxes, leaving it brings them back`, inPhoto === "none" && back > 0, { inPhoto, back });
+  await ctx.close();
+}
+// the bounty: a bigger skull box, and the old arrow steps aside while the box is up
+{
+  const { ctx, page } = await openSea({ width: 1280, height: 720 });
+  const info = await ev(page, () => {
+    save.tutorialDone = true; tutorialReset(); bountyHeld = false; spawnBounty();
+    const v = S.cameras.main.worldView;
+    player.x = 1500; player.y = PORT.y - 1000; player.speed = 0;
+    window.__bossT = setInterval(() => { if (bossShip) { bossShip.x = player.x + S.cameras.main.worldView.width * 0.8; bossShip.y = player.y - 150; bossShip.speed = 0; } }, 30);
+    return !!bossShip;
+  });
+  await page.waitForFunction(() => document.querySelector("#edgeMarks .em.boss.on") && document.getElementById("bossArrow").hidden, null, { timeout: 4000 * SLOW }).catch(() => {});
+  const st = await ev(page, () => ({ boss: [...document.querySelectorAll("#edgeMarks .em")].map(el => el.dataset.kind), arrowHidden: document.getElementById("bossArrow").hidden,
+    h: document.querySelector("#edgeMarks .em.boss")?.getBoundingClientRect().height, hs: document.querySelector("#edgeMarks .em[data-kind=ship]")?.getBoundingClientRect().height }));
+  ok("#40 the bounty gets a box (skull, larger) and the old edge arrow is hidden while it shows", info && st.boss.includes("boss") && st.arrowHidden, st);
+  await page.screenshot({ path: join(out, "edge-boss-1280.png") });
   await ctx.close();
 }
 

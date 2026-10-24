@@ -230,3 +230,91 @@ test("chart marks: a speck of island becomes a 4-5 sided chip, the same every ti
   }
   assert.equal(seen.size, 2, "both 4 and 5 sides occur");
 });
+
+// ---------- #40: edge markers (js/edge-math.js) ----------
+function edge(lang = "en") {
+  const store = new Map([["privateers-lang", lang]]);
+  const ctx = vm.createContext({
+    localStorage: { getItem: k => (store.has(k) ? store.get(k) : null), setItem() {}, removeItem() {} }, navigator: { language: "en-US" },
+    document: dom, window: dom, matchMedia: () => ({ matches: false, addEventListener() {} }), console,
+  });
+  for (const f of ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/edge-math.js"]) vm.runInContext(readFileSync(new URL("../" + f, import.meta.url), "utf8"), ctx, { filename: f });
+  return { run: code => vm.runInContext(code, ctx), json: code => JSON.parse(vm.runInContext(`JSON.stringify(${code})`, ctx)) };
+}
+
+test("edge markers: world pixels become metres rounded to 10, never 0", () => {
+  const g = edge();
+  const m = px => g.run(`edgeMeters(${px})`);
+  assert.equal(m(640), 320);               // 0.5 m per px
+  assert.equal(m(643), 320);               // 321.5 -> 320
+  assert.equal(m(647), 320);               // 323.5 -> 320
+  assert.equal(m(650), 330);               // 325 -> 330
+  assert.equal(m(1), 10);
+  assert.equal(m(0), 10);
+  assert.equal(m(2300), 1150);
+});
+
+test("edge markers: the distance reads '~320 m' / '約 320 公尺'", () => {
+  assert.equal(edge("en").run("edgeLabel(640)"), "~320 m");
+  assert.equal(edge("zh").run("edgeLabel(640)"), "約 320 公尺");
+});
+
+test("edge markers: the ray from the middle meets the rectangle on the side it points to", () => {
+  const g = edge(), R = "{ l: 10, t: 50, r: 410, b: 250 }";   // centre (210, 150), half 200 x 100
+  const at = (dx, dy) => g.json(`edgePoint(${R}, ${dx}, ${dy})`);
+  assert.deepEqual(at(1000, 0), { x: 410, y: 150, side: "right" });
+  assert.deepEqual(at(-1000, 0), { x: 10, y: 150, side: "left" });
+  assert.deepEqual(at(0, -500), { x: 210, y: 50, side: "top" });
+  assert.deepEqual(at(0, 500), { x: 210, y: 250, side: "bottom" });
+  const diag = at(400, 100);   // shallow angle: leaves through the right side, a quarter of the way down
+  assert.equal(diag.side, "right"); assert.ok(Math.abs(diag.x - 410) < 1e-6 && Math.abs(diag.y - 200) < 1e-6);
+  const steep = at(100, -400);
+  assert.equal(steep.side, "top"); assert.ok(Math.abs(steep.y - 50) < 1e-6 && Math.abs(steep.x - 235) < 1e-6);
+  const same = at(0, 0); assert.ok(Number.isFinite(same.x) && Number.isFinite(same.y), "a target right at the centre does not blow up");
+});
+
+test("edge markers: boxes on one edge keep their order and a gap, inside the edge", () => {
+  const g = edge();
+  const s = (pos, gap, lo, hi) => g.json(`spreadAlong(${JSON.stringify(pos)}, ${gap}, ${lo}, ${hi})`);
+  assert.deepEqual(s([100], 30, 0, 500), [100]);
+  assert.deepEqual(s([100, 400], 30, 0, 500), [100, 400], "already apart: untouched");
+  const t = s([100, 105, 110], 30, 0, 500);
+  assert.ok(t[1] - t[0] >= 30 - 1e-9 && t[2] - t[1] >= 30 - 1e-9, JSON.stringify(t));
+  const edgeCase = s([490, 495, 500], 30, 0, 500);   // piled at the far end: pushed back in
+  assert.ok(edgeCase[2] <= 500 && edgeCase[1] <= edgeCase[2] - 30 + 1e-9 && edgeCase[0] <= edgeCase[1] - 30 + 1e-9, JSON.stringify(edgeCase));
+  const order = s([300, 100, 200], 30, 0, 500);   // the input order is kept in the output
+  assert.ok(order[1] < order[2] && order[2] < order[0]);
+  const crowd = s([10, 11, 12, 13, 14], 100, 0, 200);   // cannot fit: spread evenly
+  assert.deepEqual(crowd, [0, 50, 100, 150, 200]);
+  assert.ok(s([-50, 700], 30, 0, 500).every(v => v >= 0 && v <= 500), "clamped into the edge");
+});
+
+test("edge markers: a box slides along its edge clear of blocked spans, and stays inside the edge", () => {
+  const g = edge();
+  const d = (pos, half, spans, lo, hi) => g.run(`dodgeAlong(${pos}, ${half}, ${JSON.stringify(spans)}, ${lo}, ${hi})`);
+  assert.equal(d(100, 20, [], 0, 500), 100);
+  assert.equal(d(100, 20, [[300, 400]], 0, 500), 100, "span elsewhere: untouched");
+  assert.equal(d(340, 20, [[300, 400]], 0, 500), 280, "nearer the low end of the span: slides down");
+  assert.equal(d(370, 20, [[300, 400]], 0, 500), 420, "nearer the high end: slides up");
+  assert.equal(d(340, 20, [[300, 400]], 290, 500), 420, "no room below: slides up");
+  assert.equal(d(340, 20, [[300, 400]], 0, 410), 280, "no room above: slides down");
+  const two = d(310, 20, [[300, 340], [350, 400]], 0, 500);   // pushing past one span lands in the next: ends clear of both
+  assert.ok(two + 20 <= 300 || two - 20 >= 400, String(two));
+});
+
+test("edge markers: the bounty comes first, then stronger ships, then places, nearer before farther; at most five", () => {
+  const g = edge();
+  const items = [
+    { id: "near-weak", kind: "ship", boss: false, d: -1, px: 300 }, { id: "far-boss", kind: "ship", boss: true, d: 0, px: 2300 },
+    { id: "far-scary", kind: "ship", boss: false, d: 2, px: 2000 }, { id: "harbor", kind: "place", boss: false, d: 0, px: 800 },
+    { id: "near-even", kind: "ship", boss: false, d: 0, px: 400 }, { id: "mid-strong", kind: "ship", boss: false, d: 1, px: 1200 },
+    { id: "far-weak", kind: "ship", boss: false, d: -1, px: 2200 },
+  ];
+  const ids = g.json(`edgePick(${JSON.stringify(items)}).map(i => i.id)`);
+  assert.equal(ids.length, 5);
+  assert.deepEqual(ids.slice(0, 3), ["far-boss", "far-scary", "mid-strong"]);
+  assert.ok(ids.includes("harbor") && !ids.includes("far-weak"), ids.join());
+  const pair = g.json(`edgePick([{ id: "a", kind: "ship", d: 0, px: 900 }, { id: "b", kind: "ship", d: 0, px: 300 }]).map(i => i.id)`);
+  assert.deepEqual(pair, ["b", "a"], "same danger: the nearer first");
+  assert.deepEqual(g.json("edgePick([])"), []);
+});
