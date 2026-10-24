@@ -13,8 +13,8 @@ const fails = [];
 const check = (ok, what, detail) => { console.log(`${ok ? "PASS" : "FAIL"}  ${what}${ok || detail === undefined ? "" : "  " + JSON.stringify(detail)}`); if (!ok) fails.push(`${what}: ${JSON.stringify(detail)}`); return ok; };
 const sleep = ms => new Promise(r => setTimeout(r, ms * SLOW));
 
-async function open(browser, { viewport = { width: 1280, height: 720 }, dpr = 1, mobile = false, seed = {} } = {}) {
-  const ctx = await browser.newContext({ viewport, deviceScaleFactor: dpr, isMobile: mobile, hasTouch: mobile });
+async function open(browser, { viewport = { width: 1280, height: 720 }, dpr = 1, mobile = false, seed = {}, reduced = false } = {}) {
+  const ctx = await browser.newContext({ viewport, deviceScaleFactor: dpr, isMobile: mobile, hasTouch: mobile, reducedMotion: reduced ? "reduce" : "no-preference" });
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
@@ -22,10 +22,12 @@ async function open(browser, { viewport = { width: 1280, height: 720 }, dpr = 1,
     if (sessionStorage.getItem("__seeded")) return;
     sessionStorage.setItem("__seeded", "1");
     localStorage.clear(); localStorage.setItem("privateers-lang", "en");
+    localStorage.setItem("privateers-settings", JSON.stringify({ muted: true }));   // test pages are silent
     for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v);
   }, seed);
   await page.goto(url, { waitUntil: "load" });
   await page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S && S.sys.isActive(), null, { timeout: 15000 * SLOW });
+  await page.evaluate(() => Snd.setMuted(true));
   return { ctx, page, errors };
 }
 async function sail(page, tutorialDone = true) {
@@ -249,6 +251,70 @@ console.log("Sky and the weather-effects switch");
   check(d.dial && !d.tint && d.drops === 0 && !d.on, "in harbor: no wind, no sky", d);
   check(errors.length === 0, "0 page errors (sky)", errors);
   await ctx.close();
+}
+
+
+// ---------- 3b. swell and roll ----------
+console.log("Swell and roll");
+{
+  const probe = (page, frames = 90) => page.evaluate(async frames => {   // the largest roll and heave of the player and the first enemy over some frames
+    const e = enemies.find(e => e.alive && !e.fixed), out = { rollP: 0, rollE: 0, heaveP: 0, heaveE: 0 };
+    for (let i = 0; i < frames; i++) {
+      await new Promise(r => requestAnimationFrame(r));
+      out.rollP = Math.max(out.rollP, Math.abs(angDiff(player.spr.rotation, player.rot))); out.rollE = Math.max(out.rollE, Math.abs(angDiff(e.spr.rotation, e.rot)));
+      out.heaveP = Math.max(out.heaveP, Math.abs(player.spr.scaleX / player.artScale - 1)); out.heaveE = Math.max(out.heaveE, Math.abs(e.spr.scaleX / e.artScale - 1));
+    }
+    return out;
+  }, frames);
+  const waves = page => page.evaluate(() => ({ n: wxWaves.filter(w => w.img.visible).length, max: Math.max(0, ...wxWaves.filter(w => w.img.visible).map(w => w.img.alpha)), depth: wxWaves[0].img.depth, ship: player.spr.depth, aim: S.arcG.depth }));
+  const { ctx, page, errors } = await open(browser);
+  await sail(page); await openWater(page);
+  await page.evaluate(() => { for (const e of enemies) if (e.alive && !e.fixed) { e.x = player.x + 400; e.y = player.y - 100; break; } });
+  await sky(page, "clear", "day"); await sleep(600);
+  const clearR = await probe(page), clearW = await waves(page);
+  check(clearR.rollP < 0.002 && clearR.rollE < 0.002 && clearR.heaveP < 0.002, "clear: ships do not roll", clearR);
+  check(clearW.n === 0, "clear: no swell bands", clearW);
+  await sky(page, "rain", "day"); await sleep(900);
+  const rainW = await waves(page), rainR = await probe(page);
+  check(rainW.n >= 1 && rainW.n <= 4 && rainR.rollP > 0 && rainR.rollP < 0.03, "rain: a light swell and a slight roll", { rainW, rainR });
+  await sky(page, "storm", "day"); await page.evaluate(() => { wx.t = 3; }); await sleep(2500);
+  const stormR = await probe(page, 360), stormW = await waves(page);
+  check(stormR.rollP > 0.03 && stormR.rollE > 0.03 && stormR.heaveP > 0.01 && stormR.heaveE > 0.01, "storm: the player and an AI ship both roll and heave", stormR);
+  check(stormR.rollP < 0.12 && stormR.heaveP < 0.06, "storm: the roll stays modest (under 7 degrees, 6% heave)", stormR);
+  check(stormW.n >= 10 && stormW.max > 0.5, "storm: a crowd of swell bands, clearly visible", stormW);
+  check(stormW.depth < stormW.ship && stormW.depth < stormW.aim, "swell is drawn under ships, balls and aim lines", stormW);
+  await page.screenshot({ path: `${out}/wave-storm-day.png` });
+  // hits and muzzles belong to the hull, not the picture: identical with the roll on or off
+  const hit = () => page.evaluate(() => {
+    paused = true; const e = enemies.find(e => e.alive && !e.fixed), c = Math.cos(e.rot), sn = Math.sin(e.rot);
+    const pts = [[0, 0], [e.hl * 0.9, 0], [e.hl + 25, 0], [0, e.hw + 14], [0, 0.6 * e.hw]].map(([a, b]) => hitShip(e, e.x + c * a - sn * b, e.y + sn * a + c * b));
+    const m = MOUNTS.map(mt => { const g = player.guns[mt.key][0]; return g ? Object.values(muzzle(player, mt, g.pi, g.pn)).map(v => +v.toFixed(6)) : null; });
+    return { pts, m, body: [player.x, player.y, player.rot, player.hl, player.hw].join(), eBody: [e.x, e.y, e.rot, e.hl, e.hw].join() };
+  });
+  await page.evaluate(() => { paused = true; }); await sleep(200);
+  const hitOn = await hit();
+  await page.evaluate(() => document.querySelector('[data-set="weatherfx"][data-v="off"]').click()); await sleep(300);
+  const hitOff = await hit(), offR = await page.evaluate(() => { const e = enemies.find(e => e.alive && !e.fixed); return { p: Math.abs(angDiff(player.spr.rotation, player.rot)), k: player.spr.scaleX / player.artScale, e: Math.abs(angDiff(e.spr.rotation, e.rot)) }; });
+  check(JSON.stringify(hitOn) === JSON.stringify(hitOff) && hitOn.pts[0] && hitOn.pts[4] && !hitOn.pts[2] && !hitOn.pts[3], "hit tests, muzzles and hit capsules are the same with the roll on and off", { hitOn, hitOff });
+  check(offR.p < 1e-9 && Math.abs(offR.k - 1) < 1e-9 && offR.e < 1e-9, "effects off: hulls sit level again", offR);
+  await page.evaluate(() => { paused = false; }); await sleep(800);
+  const offProbe = await probe(page, 60), offW = await waves(page);
+  check(offProbe.rollP < 1e-6 && offProbe.rollE < 1e-6 && offProbe.heaveP < 1e-6, "effects off: no roll while sailing in a storm", offProbe);
+  check(offW.n === 0, "effects off: no swell bands", offW);
+  await page.evaluate(() => document.querySelector('[data-set="weatherfx"][data-v="on"]').click());
+  await sky(page, "storm", "night"); await page.evaluate(() => { wx.t = 3; }); await sleep(2500);
+  await page.screenshot({ path: `${out}/wave-storm-night.png` });
+  check(errors.length === 0, "0 page errors (swell and roll)", errors);
+  await ctx.close();
+
+  const q = await open(browser, { reduced: true });
+  await sail(q.page); await openWater(q.page);
+  await q.page.evaluate(() => { for (const e of enemies) if (e.alive && !e.fixed) { e.x = player.x + 400; e.y = player.y - 100; break; } });
+  await sky(q.page, "storm", "day"); await q.page.evaluate(() => { wx.t = 3; }); await sleep(2500);
+  const quiet = await probe(q.page, 360);
+  check(quiet.rollP > 0.003 && quiet.rollP < stormR.rollP * 0.5 && quiet.heaveP < stormR.heaveP * 0.5, "reduced motion: the roll is much smaller", { quiet, stormR });
+  check(q.errors.length === 0, "0 page errors (reduced motion)", q.errors);
+  await q.ctx.close();
 }
 
 // ---------- 4. the first voyage, the daily sea, ordinary sorties ----------
