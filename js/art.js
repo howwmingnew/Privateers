@@ -27,12 +27,12 @@ const SHIP_ART = {
   sloop:    { len: 64,  beam: 21, masts: [0.6], rig: "fore", boom: 0.58, sprit: 0.3, guns: 1 },
   schooner: { len: 76,  beam: 23, masts: [0.68, 0.4], rig: "fore", boom: 0.3, sprit: 0.3, guns: 2 },
   brig:     { len: 88,  beam: 28, masts: [0.67, 0.37], rig: "square", sail: 0.98, spanker: true, sprit: 0.26, guns: 3, boat: true },
-  frigate:  { len: 104, beam: 33, masts: [0.74, 0.5, 0.25], rig: "square", sail: 0.94, spanker: true, sprit: 0.24, guns: 4, rows: 1, ports: 8, boat: true },
-  line:     { len: 120, beam: 39, masts: [0.75, 0.51, 0.27], rig: "square", sail: 0.92, spanker: true, sprit: 0.22, guns: 5, rows: 2, ports: 9, boat: true },
+  frigate:  { len: 104, beam: 33, masts: [0.74, 0.5, 0.25], rig: "square", sail: 0.94, spanker: true, sprit: 0.24, guns: 7, rows: 1, ports: 9, boat: true },
+  line:     { len: 120, beam: 39, masts: [0.75, 0.51, 0.27], rig: "square", sail: 0.92, spanker: true, sprit: 0.22, guns: 12, rows: 2, ports: 13, boat: true },
   cutter:   { len: 60,  beam: 18, masts: [0.5], rig: "fore", boom: 0.66, sprit: 0.44, bow: 1.25, stern: 0.5, guns: 1, jibs: 2 },
   fireship: { len: 64,  beam: 22, masts: [0.56], rig: "square", sail: 0.82, sprit: 0.22, guns: 0, barrels: true, tattered: true, smoulder: true },
   fluyt:    { len: 86,  beam: 34, masts: [0.7, 0.46, 0.2], rig: "square", sail: 0.8, lateen: true, sprit: 0.2, bow: 0.55, stern: 0.4, wide0: 0.26, wide1: 0.64, guns: 1, hatches: 3 },
-  manowar:  { len: 150, beam: 46, masts: [0.76, 0.52, 0.28], rig: "square", sail: 0.92, spanker: true, sprit: 0.2, guns: 5, rows: 3, ports: 11, boat: true, gallery: true },
+  manowar:  { len: 150, beam: 46, masts: [0.76, 0.52, 0.28], rig: "square", sail: 0.92, spanker: true, sprit: 0.2, guns: 10, rows: 3, ports: 14, boat: true, gallery: true },
 };
 const LIVERY = {
   player:   { hull: "#6e3d1f", deck: "#cfa165", sail: "#fff7e2", trim: "#2f8ad6", flag: "#2f8ad6", flag2: "#fff7e2", pennant: "#3fa9ff", lamp: "#ffe7a8" },
@@ -100,7 +100,7 @@ function shipArt(cls, livery, opt = {}, sc = S) {
   const a = SHIP_ART[cls] || SHIP_ART.sloop, L = LIVERY[livery] || LIVERY.pirate;
   const key = opt.key || `ship:${cls}:${livery}${opt.furled ? ":f" : ""}`;
   if (sc.textures.exists(key)) return key;
-  const { w, h } = texSize({ ...a, bigFlag: L.bigFlag });
+  const { w, h } = texSize({ ...a, bigFlag: L.bigFlag || !!L.emblem });
   return bakeCanvas(sc, key, w, h, opt.res || artRes(), c => drawShip(c, a, L, w / 2, h / 2, !!opt.furled, mulberry32(artSeed(key))));
 }
 // per-texture rng seed, so a redraw of the same key (the harbor gun deck, js/deck-art.js) matches the sprite exactly
@@ -126,7 +126,7 @@ function enemyClassFor(e) {
 }
 function bossLivery(b) { return b && b.final ? "admiral" : b && b.faction === "navy" ? "bossNavy" : "boss"; }
 function liveryFor(s) {
-  if (s.isPlayer) return "player";
+  if (s.isPlayer) return typeof playerLivery === "function" ? playerLivery() : "player";   // the captain's flag (js/flags.js)
   if (s.boss) return bossLivery((typeof findBounty === "function" && findBounty(s.boss)) || { faction: s.faction });
   return LIVERY[s.faction] ? s.faction : "pirate";
 }
@@ -163,7 +163,7 @@ function labelText(txt) {
 }
 // Common combos are drawn at boot so no frame hitches when they first sail into view.
 function warmShipArt(sc) {
-  for (const id of SHIP_ORDER) shipArt(id, "player", {}, sc);
+  for (const id of SHIP_ORDER) shipArt(id, typeof playerLivery === "function" ? playerLivery() : "player", {}, sc);
   for (const [c, l] of [["cutter", "pirate"], ["sloop", "navy"], ["brig", "pirate"], ["brig", "navy"], ["frigate", "pirate"], ["frigate", "navy"],
     ["line", "pirate"], ["line", "navy"], ["fluyt", "merchant"]]) shipArt(c, l, {}, sc);
 }

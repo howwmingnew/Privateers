@@ -4,7 +4,7 @@
 // into what is stored now instead of overwriting it with a stale copy.
 const SETTINGS_KEY = "privateers-settings";
 // Screen shake starts off for players whose system asks for reduced motion; their own choice wins once made.
-const SETTINGS_DEFAULTS = { shake: !(typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches), zoom: 1, uiPct: SCALE_DEFAULT, miniPct: SCALE_DEFAULT, markPct: SCALE_DEFAULT };
+const SETTINGS_DEFAULTS = { shake: !(typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches), zoom: 1, autoFire: true, uiPct: SCALE_DEFAULT, miniPct: SCALE_DEFAULT, markPct: SCALE_DEFAULT };
 function readSettings() {
   try { const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); return s && typeof s === "object" && !Array.isArray(s) ? s : {}; }
   catch (e) { return {}; }
@@ -31,6 +31,7 @@ function miniCanvasPx(cssPx, dpr) {
 const SETTINGS = (() => {
   const stored = readSettings(), s = { ...SETTINGS_DEFAULTS, ...stored };
   if (typeof s.shake !== "boolean") s.shake = SETTINGS_DEFAULTS.shake;
+  if (typeof s.autoFire !== "boolean") s.autoFire = SETTINGS_DEFAULTS.autoFire;
   s.uiPct = scalePct(stored.uiPct) ?? legacyPct(stored.textScale, [1, 1.15, 1.3]) ?? SCALE_DEFAULT;
   s.miniPct = scalePct(stored.miniPct) ?? legacyPct(stored.miniScale, [0.8, 1, 1.25]) ?? SCALE_DEFAULT;
   s.markPct = scalePct(stored.markPct) ?? SCALE_DEFAULT;

@@ -48,6 +48,14 @@ const SND_SFX = (() => {
         const lp = F("lowpass", 700, 0.7); lp.connect(v.out);
         tone(v, t, "sine", 96 * p, 44 * p, 0.25, 0.35, 0.003, 0.4, lp); creak(v, t + 0.04, rand(68, 86) * p, 0.6, 0.5, lp);
       } } },
+    // a hull driven into rock or another hull: a wooden crack and a long groan, heavier with v.amount (1 = a solid blow)
+    crash: { max: 3, gap: 0.12, pv: 0.1, gv: 0.12, gain: 1.15, wet: 0.25, far: 1400, duck: 5, hold: 0.3, fn(v) { const { t, p } = v, a = Math.min(1.5, v.amount ?? 1), k = (v.big ? 1.2 : 1) * (0.7 + 0.4 * a);
+      tone(v, t, "sine", 120 * p, 42 * p, 0.3, 0.7 * k, 0.003, 0.35);                                     // the impact's thump
+      body(v, t, 260 * p, 120 * p, 0.12, 0.4 * k, 0.16, 2.5);                                              // its body, for small speakers
+      hiss(v, t, "bandpass", 900 * p, 1.1, 1.0 * k, 0.001, 0.2);                                           // timbers cracking
+      let tc = t + 0.01; for (let i = 0; i < 5 + Math.round(a * 3); i++) { const d = rand(0.015, 0.045), f = rand(500, 1800) * p;
+        tone(v, tc, "triangle", f, f * 0.55, 0.12 * k, 0.4, 0.001, d + 0.03); hiss(v, tc, "bandpass", f * 1.6, 2.5, 0.35 * k, 0.001, d); tc += d + rand(0.01, 0.05); }   // planks splintering one by one
+      if (!v.crowd) creak(v, t + 0.06, rand(80, 120) * p, 0.7, 0.45 * k); } },
     // thunder: a sharp crack, then a rumble that rolls away and dies; the mids are there for small speakers
     thunder: { max: 2, gap: 1.2, pv: 0.12, gv: 0.1, gain: 1, wet: 0.6, fn(v) { const { t, p } = v;
       hiss(v, t, "highpass", 2200 * p, 0.7, 0.5, 0.002, 0.14);

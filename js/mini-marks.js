@@ -155,6 +155,7 @@ function miniPlayer(c, x, y, rot, u) {
   c.beginPath(); c.moveTo(10, 0); c.lineTo(17, 0); c.stroke();
   c.beginPath(); c.moveTo(9, 0); c.quadraticCurveTo(3, -4.8, -6, -4); c.lineTo(-6, 4); c.quadraticCurveTo(3, 4.8, 9, 0); c.closePath();
   c.fillStyle = "#fff"; c.fill(); c.lineWidth = 1.6; c.strokeStyle = MINI_INK; c.stroke();
-  c.fillStyle = "#c08f2e"; c.beginPath(); c.arc(0.5, 0, 1.6, 0, TAU); c.fill();   // the mast
+  if (typeof flagMiniMark === "function") flagMiniMark(c);   // the captain's pennant (js/flags.js)
+  else { c.fillStyle = "#c08f2e"; c.beginPath(); c.arc(0.5, 0, 1.6, 0, TAU); c.fill(); }   // the mast
   c.restore();
 }

@@ -72,15 +72,16 @@ function layGuns(s, tg, guns) {
 function releaseVolley(s, key, v, guns) {
   const tg = v.tgt; v.tgt = null;
   if (!tg || !tg.alive || !bears(s, key, tg, ARC_FIRE) || (tg.isPlayer && (docked || inSafe(tg)))) { v.cd = 0.5; v.aims = null; return; }   // lost the bearing
-  const n = guns.length;
+  const n = guns.length, plan = rollPlan(n);   // all at once (the warning is the dodge window), but plumes thin out (js/gundeck.js)
   guns.forEach((g, i) => {
+    if (!ballRoom()) return;
     const m = enemyMuzzle(s, key, i, n), aim = v.aims[i];
     let ang = Math.atan2(aim.y - m.y, aim.x - m.x) + aim.err;
     if (m.a != null) ang = m.a + clamp(angDiff(ang, m.a), -ARC_FIRE, ARC_FIRE);   // a gun only trains so far
     const p = s.fixed ? fortMuzzle(s, ang) : m, life = g.range * 1.08 / g.speed;
     balls.push({ spr: S.add.image(p.x, p.y, "ball").setDepth(7), x: p.x, y: p.y, vx: Math.cos(ang) * g.speed, vy: Math.sin(ang) * g.speed,
       life, life0: life, dmg: g.dmg, burn: 0, fromPlayer: false, owner: s });
-    vfxMuzzle(p.x, p.y, ang);
+    vfxMuzzle(p.x, p.y, ang, !plan[i].loud);
   });
   Snd.play("cannonFar", { x: s.x, y: s.y });
   v.aims = null; v.cd = guns[0].interval * rand(0.9, 1.1);
