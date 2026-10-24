@@ -5,6 +5,8 @@
 //   baseUrl  defaults to http://127.0.0.1:8765/ (serve the repo root, e.g. `npm run serve`)
 //   --levels also prints the peak / RMS of every effect, theme and ambience on its own, for mixing
 import { chromium } from "playwright";
+// CI runners render without a GPU (~10 fps, game time runs at half speed): TEST_SLOW stretches every wait.
+const SLOW = +process.env.TEST_SLOW || 1;
 
 const args = process.argv.slice(2);
 const base = (args.find(a => !a.startsWith("--")) || "http://127.0.0.1:8765/").replace(/index\.html$/, "").replace(/\/?$/, "/");
@@ -36,13 +38,13 @@ const quiet = page => page.evaluate(() => { Snd.music(null); Snd.ambience(null);
 try {
   // ---------- the game ----------
   const { ctx, page } = await open("index.html");
-  await page.waitForFunction(() => typeof player !== "undefined" && player && typeof Snd !== "undefined", null, { timeout: 15000 });
+  await page.waitForFunction(() => typeof player !== "undefined" && player && typeof Snd !== "undefined", null, { timeout: 15000 * SLOW });
   check(await page.evaluate(() => Snd.state()) === "locked", "no AudioContext before the first gesture");
   await page.click("[data-smoke=start]");                            // a real user gesture (title screen, js/menu.js)
   if (await page.evaluate(() => docked)) await page.click("#sail");  // a fresh save sails straight out
-  await page.waitForFunction(() => Snd.state() === "running", null, { timeout: 4000 }).catch(() => {});
+  await page.waitForFunction(() => Snd.state() === "running", null, { timeout: 4000 * SLOW }).catch(() => {});
   check(await page.evaluate(() => Snd.state()) === "running", "AudioContext is running after a click");
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(400 * SLOW);
   const d0 = await page.evaluate(() => Snd.debug());
   check(d0.theme === "sea" && d0.ambience === "sea", `setting sail starts the sea music and ambience (${d0.theme} / ${d0.ambience})`);
 
@@ -61,7 +63,7 @@ try {
   check(names >= 18, `${names} effects registered`);
 
   // stacked fire must not clip: the limiter + soft clip keep the final output at or under full scale
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(1500 * SLOW);
   const stack = page.evaluate(() => { for (let i = 0; i < 24; i++) setTimeout(() => { Snd.play("cannon"); Snd.play("hit", { big: true }); Snd.play("cannonFar", { x: player.x + 200, y: player.y }); }, i * 35); });
   const [, loud] = await Promise.all([stack, measure(page, 1600)]);
   check(loud.peak > 0.05, `stacked cannon fire is audible (peak ${db(loud.peak)})`);
@@ -74,20 +76,20 @@ try {
 
   // pause and resume (also what a hidden tab does)
   await page.evaluate(() => Snd.pauseAll("test"));
-  await page.waitForFunction(() => Snd.state() === "suspended", null, { timeout: 2000 }).catch(() => {});
+  await page.waitForFunction(() => Snd.state() === "suspended", null, { timeout: 2000 * SLOW }).catch(() => {});
   check(await page.evaluate(() => Snd.state()) === "suspended", "pauseAll suspends the context");
   await page.evaluate(() => Snd.resumeAll("test"));
-  await page.waitForFunction(() => Snd.state() === "running", null, { timeout: 2000 }).catch(() => {});
+  await page.waitForFunction(() => Snd.state() === "running", null, { timeout: 2000 * SLOW }).catch(() => {});
   check(await page.evaluate(() => Snd.state()) === "running", "resumeAll resumes it");
   await page.evaluate(() => { Object.defineProperty(document, "hidden", { configurable: true, get: () => true }); document.dispatchEvent(new Event("visibilitychange")); });
-  await page.waitForFunction(() => Snd.state() === "suspended", null, { timeout: 2000 }).catch(() => {});
+  await page.waitForFunction(() => Snd.state() === "suspended", null, { timeout: 2000 * SLOW }).catch(() => {});
   check(await page.evaluate(() => Snd.state()) === "suspended", "a hidden tab suspends audio");
   await page.evaluate(() => { Object.defineProperty(document, "hidden", { configurable: true, get: () => false }); document.dispatchEvent(new Event("visibilitychange")); });
   // hiding the tab at sea also opened the pause menu (js/menu.js), which keeps the game and its sound paused until Resume
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(300 * SLOW);
   check(await page.evaluate(() => pauseOpen && Snd.state() === "suspended"), "back on the tab, the pause menu keeps audio paused");
   await page.keyboard.press("Escape");
-  await page.waitForFunction(() => Snd.state() === "running", null, { timeout: 2000 }).catch(() => {});
+  await page.waitForFunction(() => Snd.state() === "running", null, { timeout: 2000 * SLOW }).catch(() => {});
   check(await page.evaluate(() => !pauseOpen && Snd.state()) === "running", "Resume from the pause menu resumes audio");
 
   // M toggles mute, with a toast in the current language, and it persists
@@ -108,11 +110,11 @@ try {
 
   // docking: harbour music + ambience; combat intensity follows a nearby hostile
   await page.evaluate(() => { player.x = PORT.x + 1200; player.y = PORT.y; const e = enemies.find(x => x.alive && !x.merchant) || enemies[0]; e.x = player.x + 300; e.y = player.y; e.target = player; e.chaseFrom = { x: e.x, y: e.y }; });
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(1500 * SLOW);
   const iv = await page.evaluate(() => Snd.debug().intensity);
   check(iv > 0.4, `combat layer rises with a hostile ship close (intensity ${iv})`);
   await page.evaluate(() => dock("return"));
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(300 * SLOW);
   const d1 = await page.evaluate(() => Snd.debug());
   check(d1.theme === "harbor" && d1.ambience === "harbor", `docking switches to the harbour theme and ambience (${d1.theme} / ${d1.ambience})`);
   // the ledger: "denied" rides on pointerdown, because a disabled (too expensive) button never gets a click
@@ -126,13 +128,13 @@ try {
 
   if (levels) {
     console.log("\n-- levels at default volumes (each alone, 1.6 s window) --");
-    await quiet(page); await page.waitForTimeout(3500);
+    await quiet(page); await page.waitForTimeout(3500 * SLOW);
     for (const n of await page.evaluate(() => Snd.names)) {
       for (const o of n === "cannonFar" || n === "hit" || n === "splash" || n === "sink" || n === "burn" ? [{}, { dx: 600 }, { dx: 1200 }] : [{}]) {
         const p = page.evaluate(([n, o]) => { setTimeout(() => Snd.play(n, o.dx ? { x: player.x + o.dx, y: player.y, amount: 500 } : { amount: 500 }), 30); }, [n, o]);
         const [, r] = await Promise.all([p, measure(page, n === "sink" || n === "defeat" || n === "bell" ? 3500 : 1600)]);
         console.log(`${(n + (o.dx ? " @" + o.dx : "")).padEnd(16)} peak ${db(r.peak)}`);
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(300 * SLOW);
       }
     }
     for (const [th, k] of [["sea", 0], ["sea", 1], ["harbor", 0]]) {
@@ -141,9 +143,9 @@ try {
       const r = await measure(page, 8000);
       console.log(`music ${th} i=${k}`.padEnd(22) + `peak ${db(r.peak)}  rms ${db(r.rms)}`);
     }
-    await page.evaluate(() => { Snd.music(null); Snd.setIntensity(0); }); await page.waitForTimeout(4000);
+    await page.evaluate(() => { Snd.music(null); Snd.setIntensity(0); }); await page.waitForTimeout(4000 * SLOW);
     for (const a of ["sea", "harbor"]) {
-      await page.evaluate(a => Snd.ambience(a), a); await page.waitForTimeout(5000);
+      await page.evaluate(a => Snd.ambience(a), a); await page.waitForTimeout(5000 * SLOW);
       const r = await measure(page, 10000);
       console.log(`ambience ${a}`.padEnd(22) + `peak ${db(r.peak)}  rms ${db(r.rms)}`);
     }
@@ -154,12 +156,12 @@ try {
   // ---------- the sound test page: press every button ----------
   const t = await open("tools/sound-test.html");
   await t.page.click("body", { position: { x: 5, y: 5 } });
-  await t.page.waitForFunction(() => Snd.state() === "running", null, { timeout: 4000 }).catch(() => {});
+  await t.page.waitForFunction(() => Snd.state() === "running", null, { timeout: 4000 * SLOW }).catch(() => {});
   check(await t.page.evaluate(() => Snd.state()) === "running", "sound test page unlocks audio on click");
   const buttons = await t.page.$$("button");
-  for (const b of buttons) { await b.click(); await t.page.waitForTimeout(60); }
+  for (const b of buttons) { await b.click(); await t.page.waitForTimeout(60 * SLOW); }
   await t.page.fill("#int", "0.8").catch(() => {});
-  await t.page.waitForTimeout(500);
+  await t.page.waitForTimeout(500 * SLOW);
   check(buttons.length >= 18 + 5, `sound test page: clicked all ${buttons.length} buttons`);
   await t.ctx.close();
 } catch (e) {

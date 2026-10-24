@@ -4,6 +4,8 @@
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+// CI runners render without a GPU (~10 fps, game time runs at half speed): TEST_SLOW stretches every wait.
+const SLOW = +process.env.TEST_SLOW || 1;
 
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const out = process.argv[3] || ".review/harbor";
@@ -23,12 +25,12 @@ async function open(viewport, { mobile = false, tag = "" } = {}) {
   page.on("console", m => { if (m.type() === "error" && !/favicon/i.test(m.text())) errors.push(`[${tag}] console: ${m.text()}`); });
   await page.goto(url, { waitUntil: "load" });
   await page.evaluate(() => localStorage.clear()); await page.reload({ waitUntil: "load" });
-  await until(page, () => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 });
-  await page.waitForTimeout(300);
+  await until(page, () => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 * SLOW });
+  await page.waitForTimeout(300 * SLOW);
   return { ctx, page };
 }
 const ev = (page, fn, arg) => page.evaluate(fn, arg);
-async function until(page, fn, arg = null, { timeout = 8000 } = {}) {
+async function until(page, fn, arg = null, { timeout = 8000 * SLOW } = {}) {
   try { await page.waitForFunction(fn, arg, { polling: 50, timeout }); }
   catch (e) {
     const s = await page.evaluate(() => typeof player === "undefined" || !player ? "not booted" : JSON.stringify({ paused, docked, canDock,
@@ -42,7 +44,7 @@ async function toSea(page, { tutorial = false } = {}) {
   await ev(page, () => { if (!docked) dock("welcome"); });
   await until(page, () => docked);
   if (!tutorial) await ev(page, () => { save.tutorialDone = true; tutorialReset(); });
-  await page.waitForTimeout(450);
+  await page.waitForTimeout(450 * SLOW);
   await page.click("#sail");
   await until(page, () => !docked && !paused);
 }
@@ -67,7 +69,7 @@ const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold
   const { ctx, page } = await open(D, { tag: "desk" });
   await toSea(page);
   // just set sail, still inside the ring and stopped: the ledger must not reopen by itself
-  await page.waitForTimeout(3600);
+  await page.waitForTimeout(3600 * SLOW);
   const s0 = await state(page);
   ok("after Set sail the ship sits in the ring without the ledger reopening; the only prompt says to sail out first",
     !s0.docked && !s0.canDock && /Sail out of the ring/.test(s0.prompt), s0);
@@ -77,25 +79,25 @@ const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold
   await atRingEdge(page, { cargo: 80, hp: 0.3 });
   await page.keyboard.press("KeyW"); await page.keyboard.press("KeyW"); await page.keyboard.press("KeyW");
   await until(page, () => cargo === 0);
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(250 * SLOW);
   const s1 = await state(page);
   const resets = await ev(page, () => window.__resets);
   ok("sailing into the ring sells the hold at once, reported by the tally alone (no toast), and no ledger",
     !s1.docked && !s1.paused && s1.gold - before.gold === 80 && /cargo/.test(s1.tally) && !/Sold the hold/.test(s1.toast), s1);
   ok("quick resupply keeps the sortie: no sea reset, no new sortie, gold counted in the log", resets === 0 && s1.sorties === before.sorties && s1.statGold - before.statGold === 80, { resets, s1 });
   ok("while the tally is up the stop prompt waits (one report of the sale)", s1.prompt === "" && s1.t === 0, s1.prompt);
-  await until(page, () => /\+80/.test(document.getElementById("tally").textContent), null, { timeout: 3000 });
+  await until(page, () => /\+80/.test(document.getElementById("tally").textContent), null, { timeout: 3000 * SLOW });
   ok("the tally counts up to the 80 gold paid", true);
   await ev(page, () => { tallyUntil = 0; });   // the tally's 3.2 s would outlast the pass: end it here
-  await until(page, () => !document.getElementById("moor").hidden || !moor.inside, null, { timeout: 2000 });
+  await until(page, () => !document.getElementById("moor").hidden || !moor.inside, null, { timeout: 2000 * SLOW });
   const s1b = await state(page);
   ok("moving in the ring after the tally: the prompt says how to stop for the ledger", /Drop sail/.test(s1b.prompt), s1b.prompt);
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(500 * SLOW);
   const s2 = await state(page);
   ok("the hull mends quickly while inside the ring", s2.hp > s1.hp && s2.hp >= 0.5, { from: s1.hp, to: s2.hp });
   await page.screenshot({ path: join(out, "desk-pass.png") });
   // keep sailing straight through and out the far side: still no ledger
-  await until(page, () => !moor.inside, null, { timeout: 8000 });
+  await until(page, () => !moor.inside, null, { timeout: 8000 * SLOW });
   const s3 = await state(page);
   ok("sailing straight through and out never opens the ledger; the prompt goes away", !s3.docked && !s3.prompt && s3.hp === 1, s3);
 
@@ -108,18 +110,18 @@ const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold
   ok("stopped in the ring: the timer runs and the prompt says to hold still", !s4.docked && s4.t > 1 && /Hold still|Opening/.test(s4.prompt) && s4.cargo === 0, s4);
   // moving again resets it
   await page.keyboard.press("KeyW");
-  await until(page, () => moor.t === 0, null, { timeout: 3000 });
+  await until(page, () => moor.t === 0, null, { timeout: 3000 * SLOW });
   await page.keyboard.press("KeyS");
   const t0 = Date.now();
-  await until(page, () => docked, null, { timeout: 9000 });
+  await until(page, () => docked, null, { timeout: 9000 * SLOW });
   const held = (Date.now() - t0) / 1000;
   const s5 = await ev(page, () => ({ msg: document.getElementById("pMsg").textContent, port: !document.getElementById("port").hidden, prompt: !document.getElementById("moor").hidden }));
   ok("moving resets the timer; stopped again, the ledger opens after about 3 s", held > 2.6 && held < 6, { held });
   ok("the ledger's message names what the pass already sold, and the prompt is gone", s5.port && /45/.test(s5.msg) && !s5.prompt, s5);
-  await page.waitForTimeout(450);
+  await page.waitForTimeout(450 * SLOW);
   await page.click("#sail");
   await until(page, () => !docked && !paused);
-  await page.waitForTimeout(3600);
+  await page.waitForTimeout(3600 * SLOW);
   ok("setting sail from that ledger does not reopen it while the ship stays put", !(await ev(page, () => docked)));
   await ctx.close();
 }
@@ -138,13 +140,13 @@ const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold
   await page.screenshot({ path: join(out, "touch-pass.png") });
   ok("touch: steering into the ring sells the hold with no menu", !m1.docked && m1.gold - g0 === 30, m1);
   await ev(page, () => { tallyUntil = 0; });
-  await until(page, () => !document.getElementById("moor").hidden || !moor.inside, null, { timeout: 2000 });
+  await until(page, () => !document.getElementById("moor").hidden || !moor.inside, null, { timeout: 2000 * SLOW });
   const m1b = await state(page);
   ok("touch: the prompt tells a phone player to let go of the stick", /Let go of the stick/.test(m1b.prompt), m1b.prompt);
   await tp("touchEnd");
   await until(page, () => moor.t > 1);
   await page.screenshot({ path: join(out, "touch-holding.png") });
-  await until(page, () => docked, null, { timeout: 6000 });
+  await until(page, () => docked, null, { timeout: 6000 * SLOW });
   ok("touch: let go and wait 3 s, the ledger opens", await ev(page, () => docked && !document.getElementById("port").hidden));
   await ctx.close();
 }

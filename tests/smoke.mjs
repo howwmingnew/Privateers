@@ -5,6 +5,8 @@
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+// CI runners render without a GPU (~10 fps, game time runs at half speed): TEST_SLOW stretches every wait.
+const SLOW = +process.env.TEST_SLOW || 1;
 
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const out = process.argv[3] || ".review/smoke";
@@ -21,8 +23,8 @@ async function run(name, viewport, isMobile) {
   await page.goto(url, { waitUntil: "load" });
   await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
   await page.reload({ waitUntil: "load" });
-  await page.waitForFunction(() => typeof player !== "undefined" && player && typeof save !== "undefined", null, { timeout: 15000 });
-  await page.waitForTimeout(800);
+  await page.waitForFunction(() => typeof player !== "undefined" && player && typeof save !== "undefined", null, { timeout: 15000 * SLOW });
+  await page.waitForTimeout(800 * SLOW);
   await page.screenshot({ path: join(out, `${name}-1-boot.png`) });
 
   // Walk through any front-end screens until the sea is live (title, harbor, tutorial dialogs).
@@ -36,16 +38,16 @@ async function run(name, viewport, isMobile) {
     });
     if (!sel) break;
     await page.click(sel);
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(500 * SLOW);
   }
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(500 * SLOW);
   await page.screenshot({ path: join(out, `${name}-2-sea.png`) });
 
   // Play: steer in circles, fire often, for ~12 s.
   const keys = ["KeyW", "KeyD", "KeyW", "KeyA"];
   for (let i = 0; i < 24; i++) {
     const k = keys[i % keys.length];
-    await page.keyboard.down(k); await page.waitForTimeout(450); await page.keyboard.up(k);
+    await page.keyboard.down(k); await page.waitForTimeout(450 * SLOW); await page.keyboard.up(k);
     await page.keyboard.press("Space");
   }
   // Force an engagement so combat code paths run: put the nearest enemy beside the player.
@@ -53,7 +55,7 @@ async function run(name, viewport, isMobile) {
     const e = enemies.find(x => x.alive && !x.merchant) || enemies.find(x => x.alive);
     if (e) { e.x = player.x + Math.cos(player.rot + Math.PI / 2) * 180; e.y = player.y + Math.sin(player.rot + Math.PI / 2) * 180; }
   });
-  for (let i = 0; i < 10; i++) { await page.keyboard.press("Space"); await page.waitForTimeout(400); }
+  for (let i = 0; i < 10; i++) { await page.keyboard.press("Space"); await page.waitForTimeout(400 * SLOW); }
   await page.screenshot({ path: join(out, `${name}-3-combat.png`) });
   const state = await page.evaluate(() => ({ alive: player.alive, hp: Math.round(player.hp), enemies: enemies.length, gold: save.gold }));
   console.log(`[${name}] ok`, JSON.stringify(state));

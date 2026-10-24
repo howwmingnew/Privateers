@@ -1,0 +1,37 @@
+# Checks on every pull request and on pushes to main.
+# Gate: unit + smoke tests. The longer Playwright suites in `npm run test:all` stay local: GitHub's runners
+# render without a GPU (~6-9 fps) and those suites' real-time waits time out there. Run test:all before a PR.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Start static server
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 &
+          for i in $(seq 1 20); do curl -sf http://127.0.0.1:8765/index.html >/dev/null && exit 0; sleep 0.5; done
+          echo "server did not start"; exit 1
+      - name: Unit and smoke tests
+        run: npm test
+

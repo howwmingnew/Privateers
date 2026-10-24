@@ -4,6 +4,8 @@
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+// CI runners render without a GPU (~10 fps, game time runs at half speed): TEST_SLOW stretches every wait.
+const SLOW = +process.env.TEST_SLOW || 1;
 
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const out = process.argv[3] || ".review/campaign";
@@ -27,10 +29,10 @@ async function open(viewport, { lang = "en", saveJson = null, mobile = false } =
 }
 // Boot shows the title screen (js/menu.js); its start button docks at the harbor as boot used to.
 const ready = async page => {
-  await page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S && typeof titleOpen !== "undefined", null, { timeout: 15000 });
+  await page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S && typeof titleOpen !== "undefined", null, { timeout: 15000 * SLOW });
   if (await page.evaluate(() => titleOpen)) await page.click("[data-smoke=start]");
   await page.evaluate(() => { if (!docked) dock("welcome"); });   // a fresh save sails straight out (js/menu.js)
-  await page.waitForFunction(() => docked, null, { timeout: 15000 });
+  await page.waitForFunction(() => docked, null, { timeout: 15000 * SLOW });
 };
 const done = async (tag, o) => { check(o.errors.length === 0, `${tag}: no page errors${o.errors.length ? " -> " + o.errors.join(" | ") : ""}`); await o.ctx.close(); };
 // Sink the active bounty's ship by hand: sail if needed, park beside it, one big hit from the player.
@@ -94,10 +96,10 @@ console.log("Fresh campaign (desktop, en)");
 
   // banner: sail from the Shallows into the Reef Straits
   await page.evaluate(() => { setSail(); player.x = PORT.x - 1000; player.y = PORT.y + 60; });
-  await page.waitForTimeout(900);
+  await page.waitForTimeout(900 * SLOW);
   // the first voyage's coach keeps sea banners back (js/world-seas.js): put it away for this check
   await page.evaluate(() => { tutorialReset(); player.x = PORT.x - 1460; player.y = PORT.y + 60; player.hp = player.maxHp; });
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(1000 * SLOW);
   const ban = await page.evaluate(() => ({ on: seaBanner.classList.contains("on"), sea: seaBanner.dataset.sea, txt: seaBanner.textContent, ach: !!save.ach.sea_reef }));
   check(ban.on && ban.sea === "reef" && /Reef Straits/.test(ban.txt) && /Lv 3–5/.test(ban.txt), `banner on crossing into the Reef Straits: "${ban.txt}"`);
   check(ban.ach, "reaching the Reef Straits unlocks its achievement");
@@ -107,12 +109,12 @@ console.log("Fresh campaign (desktop, en)");
   // the previous step left the camera out west, where Red Ned's lair is; snap it home so the boss is truly off screen.
   // A fresh save is still on its first voyage, which holds the bounty back (js/campaign.js): call the tutorial done.
   await page.evaluate(() => { save.tutorialDone = true; sendHome(), dock("return"); setSail(); S.cameras.main.centerOn(player.x, player.y); });
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(400 * SLOW);
   const arrow =await page.evaluate(() => ({ arrow: !bossArrow.hidden, mini: !!activeBounty() }));
   check(arrow.arrow, "edge arrow points at the bounty while it is off screen");
   await o.shot("desktop-en-3-arrow");
   await page.evaluate(() => { const b = enemies.find(e => e.boss); player.x = b.x - 280; player.y = b.y + 40; player.rot = 0; b.target = null; });
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(700 * SLOW);
   const near = await page.evaluate(() => ({ bar: !bossBar.hidden, arrow: !bossArrow.hidden, name: bossBar.textContent }));
   check(near.bar && !near.arrow && /Red Ned/.test(near.name), `boss bar shows when close, arrow hides (${near.name})`);
   await o.shot("desktop-en-4-boss");
@@ -131,12 +133,12 @@ console.log("Fresh campaign (desktop, en)");
     check(r.tagGone, `bounty ${i + 1}: name tag removed with the ship`);
     if (i === 0) {   // buy the schooner now that it is unlocked: the gate opened and the yard sells it
       await page.evaluate(() => { sendHome(); dock("return"); });
-      await page.waitForTimeout(400);   // shop buttons ignore clicks for a moment after the ledger opens (js/menu.js)
+      await page.waitForTimeout(400 * SLOW);   // shop buttons ignore clicks for a moment after the ledger opens (js/menu.js)
       const story =await page.evaluate(() => document.querySelector("#wanted .story")?.textContent || "");
       check(/Privateer/.test(story), "harbor tells the story of the bounty just claimed");
       await o.shot("desktop-en-5-after-ned");
-      await page.click('#ships [data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(500);
-      await page.click('#ships [data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(200);
+      await page.click('#ships [data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(500 * SLOW);
+      await page.click('#ships [data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(200 * SLOW);
       const own = await page.evaluate(() => ({ ship: save.ship, ach: !!save.ach.own_schooner, brigLock: document.querySelector('#ships [data-id="brig"]')?.closest(".item").querySelector(".lock")?.textContent }));
       check(own.ship === "schooner" && own.ach, "schooner bought after bounty 1; its achievement unlocks");
       check(/Mother Carey/.test(own.brigLock || ""), `brig still locked: "${own.brigLock}"`);
@@ -146,9 +148,9 @@ console.log("Fresh campaign (desktop, en)");
       // loose crates (struck merchants drop theirs afloat) would be magnetted in on the approach and sold too: clear them
       const o1 = await page.evaluate(() => { sendHome(), dock("return"); setSail(); for (const c of crates) if (!c.wreck) c.value = 0;
         player.x = OUTPOST.x + 420; player.y = OUTPOST.y; player.hp = player.maxHp; cargo = 120; return save.gold; });
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(300 * SLOW);
       await page.evaluate(() => { for (const c of crates) if (!c.wreck) c.value = 0; cargo = 120; player.x = OUTPOST.x + 70; player.y = OUTPOST.y + 30; player.hp = player.maxHp; });
-      await page.waitForFunction(() => docked, null, { timeout: 7000 }).catch(() => {});   // sold on the way in, ledger after 3 s stopped (js/mooring.js)
+      await page.waitForFunction(() => docked, null, { timeout: 7000 * SLOW }).catch(() => {});   // sold on the way in, ledger after 3 s stopped (js/mooring.js)
       const op = await page.evaluate(() => ({ docked, atOutpost, gold: save.gold, title: document.getElementById("portTitle").textContent,
         armory: document.getElementById("armory").closest("section").hidden, ships: document.getElementById("ships").closest("section").hidden }));
       check(op.docked && op.atOutpost && op.title === "Hulk Outpost", `docks at the outpost ("${op.title}")`);
@@ -159,15 +161,15 @@ console.log("Fresh campaign (desktop, en)");
       check(tr.truce && tr.near, "sailing out of the outpost starts inside its truce water");
     }
   }
-  await page.waitForTimeout(3200);
+  await page.waitForTimeout(3200 * SLOW);
   const vic = await page.evaluate(() => ({ shown: !vicEl.hidden, paused, txt: vicEl.textContent }));
   check(vic.shown && vic.paused && /Free Port Stands/.test(vic.txt) && /Time played/.test(vic.txt), "victory screen after Admiral Thorne, with the captain's stats");
   await o.shot("desktop-en-7-victory");
   // a fire key still held from the last broadside must not dismiss the ending: presses inside the grace period are ignored
-  await page.click("[data-v=keep]"); await page.waitForTimeout(100);
+  await page.click("[data-v=keep]"); await page.waitForTimeout(100 * SLOW);
   check(await page.evaluate(() => !vicEl.hidden), "a press right as the victory screen opens does not skip it");
-  await page.waitForTimeout(1300);
-  await page.click("[data-v=keep]"); await page.waitForTimeout(200);
+  await page.waitForTimeout(1300 * SLOW);
+  await page.click("[data-v=keep]"); await page.waitForTimeout(200 * SLOW);
   const keep = await page.evaluate(() => ({ hidden: vicEl.hidden, paused, docked, won: save.campaign.won }));
   check(keep.hidden && !keep.paused && !keep.docked && keep.won, "Keep sailing: back at sea, campaign marked won");
 
@@ -192,7 +194,7 @@ console.log("Fresh campaign (desktop, en)");
   // New Game+ from the harbor poster, then levels +3, then New Game+ again from the victory screen
   await page.evaluate(() => { sendHome(); dock("return"); });
   const before = await page.evaluate(() => ({ seed: save.seed, gunLv: save.gunLv, unlocked: save.unlocked, ach: Object.keys(save.ach).length, stats: save.stats.bounties }));
-  await page.click("[data-camp=ng]"); await page.waitForTimeout(150); await page.click("[data-camp=ng]"); await page.waitForTimeout(300);
+  await page.click("[data-camp=ng]"); await page.waitForTimeout(150 * SLOW); await page.click("[data-camp=ng]"); await page.waitForTimeout(300 * SLOW);
   const ng = await page.evaluate(() => ({ ng: save.ngPlus, bounty: save.campaign.bounty, gold: save.gold, ship: save.ship, seed: save.seed, islandSeed,
     gunLv: save.gunLv, unlocked: save.unlocked, ach: Object.keys(save.ach).length, stats: save.stats.bounties, poster: document.querySelector("#wanted .poster")?.textContent, rec: bountyRecLv(BOUNTIES[0]),
     recBase: (() => { const ng = save.ngPlus; save.ngPlus = 0; const r = bountyRecLv(BOUNTIES[0]); save.ngPlus = ng; return r; })() }));
@@ -208,11 +210,11 @@ console.log("Fresh campaign (desktop, en)");
   check(lv.bad === 0 && lv.min >= 4 && lv.boss === 6, `New Game+ enemies are ring level +3 (min Lv ${lv.min}, Red Ned Lv ${lv.boss})`);
   for (let i = 0; i < 5; i++) await claim(page, i);
   await page.evaluate(() => { player.maxHp = 100; hurt(player, 1e9, 0, null); });   // the Admiral's escorts sink us right after: the ending still comes
-  await page.waitForTimeout(3200);
+  await page.waitForTimeout(3200 * SLOW);
   const die = await page.evaluate(() => ({ vic: !vicEl.hidden, docked }));
   check(die.vic && die.docked, "sunk right after the final kill: the victory screen still shows, over the harbor");
-  await page.waitForTimeout(1300);   // past the victory screen's input grace
-  await page.click("[data-v=ng]"); await page.waitForTimeout(150); await page.click("[data-v=ng]"); await page.waitForTimeout(300);
+  await page.waitForTimeout(1300 * SLOW);   // past the victory screen's input grace
+  await page.click("[data-v=ng]"); await page.waitForTimeout(150 * SLOW); await page.click("[data-v=ng]"); await page.waitForTimeout(300 * SLOW);
   const ng2 = await page.evaluate(() => ({ ng: save.ngPlus, vic: vicEl.hidden, docked, bounty: save.campaign.bounty }));
   check(ng2.ng === 2 && ng2.vic && ng2.docked && ng2.bounty === 0, "New Game+ (victory screen) starts cycle 2 in the harbor");
 
@@ -221,7 +223,7 @@ console.log("Fresh campaign (desktop, en)");
   await page.reload({ waitUntil: "load" }); await ready(page);
   const after = await page.evaluate(() => ({ ach: Object.keys(save.ach).sort().join(), ng: save.ngPlus }));
   check(after.ach === saved && after.ng === 2, `achievements and NG+ count persist across reload (${after.ach.split(",").length})`);
-  await page.click("[data-camp=log]"); await page.waitForTimeout(200);
+  await page.click("[data-camp=log]"); await page.waitForTimeout(200 * SLOW);
   const log = await page.evaluate(() => ({ open: !logEl.hidden, on: logEl.querySelectorAll(".achs li.on").length, all: logEl.querySelectorAll(".achs li").length, txt: logEl.textContent }));
   check(log.open && log.on === after.ach.split(",").length && log.all === 20, `Captain's log lists ${log.on} of ${log.all} achievements`);
   check(/Time played/.test(log.txt) && /Longest sortie/.test(log.txt) && /Pirates/.test(log.txt), "Captain's log shows the stats");
@@ -307,17 +309,17 @@ for (const [tag, vp, mobile] of [["desktop", DESK, false], ["mobile", PHONE, tru
   const o = await open(vp, { lang, mobile }), { page } = o;
   await o.shot(`${tag}-${lang}-1-ledger`);
   await page.evaluate(() => { setSail(); player.x = PORT.x - 1000; player.y = PORT.y + 60; });
-  await page.waitForTimeout(900);
+  await page.waitForTimeout(900 * SLOW);
   await page.evaluate(() => { player.x = PORT.x - 1460; player.y = PORT.y + 60; player.hp = player.maxHp; });
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(1000 * SLOW);
   await o.shot(`${tag}-${lang}-2-banner`);
   await o.ctx.close();
   const o2 = await open(vp, { lang, mobile, saveJson: late }), p2 = o2.page;
   await o2.shot(`${tag}-${lang}-3-ledger-late`);
-  await p2.click("[data-camp=log]"); await p2.waitForTimeout(200);
+  await p2.click("[data-camp=log]"); await p2.waitForTimeout(200 * SLOW);
   await o2.shot(`${tag}-${lang}-4-log`);
   await p2.evaluate(() => closeLog());
-  await claim(p2, 4); await p2.waitForTimeout(3200);
+  await claim(p2, 4); await p2.waitForTimeout(3200 * SLOW);
   check(await p2.evaluate(() => !vicEl.hidden), `${tag} ${lang}: victory screen shows`);
   await o2.shot(`${tag}-${lang}-5-victory`);
   await done(`${tag} ${lang}`, o2);
