@@ -113,6 +113,23 @@ function miniOutpost(c, x, y, u) {
   c.closePath(); c.fillStyle = MINI_TEAL; c.fill();
   c.lineJoin = "round"; c.lineWidth = 1.3 * u; c.strokeStyle = MINI_INK; c.stroke();
 }
+// A supply station: a leaf-green disc with two cream bands (a provisions cask); a trade port: a gold diamond with a dark coin.
+// Neither is the harbor's anchor disc, the outpost's cross, a ship's triangle nor an island's grey chip.
+const MINI_LEAF = "#6fcf7a";
+function miniSupply(c, x, y, u) {
+  c.beginPath(); c.arc(x, y, 6.6 * u, 0, TAU); c.fillStyle = MINI_LEAF; c.fill();
+  c.lineWidth = 1.3 * u; c.strokeStyle = MINI_INK; c.stroke();
+  c.strokeStyle = MINI_CREAM; c.lineWidth = 1.5 * u; c.lineCap = "round";
+  c.beginPath(); c.moveTo(x - 4.2 * u, y - 2.2 * u); c.lineTo(x + 4.2 * u, y - 2.2 * u); c.moveTo(x - 4.2 * u, y + 2.2 * u); c.lineTo(x + 4.2 * u, y + 2.2 * u); c.stroke();
+  c.lineCap = "butt";
+}
+function miniTrade(c, x, y, u) {
+  const a = 8 * u;
+  c.beginPath(); c.moveTo(x, y - a); c.lineTo(x + a, y); c.lineTo(x, y + a); c.lineTo(x - a, y); c.closePath();
+  c.fillStyle = MINI_GOLD; c.fill(); c.lineJoin = "round"; c.lineWidth = 1.3 * u; c.strokeStyle = MINI_INK; c.stroke();
+  c.beginPath(); c.arc(x, y, 2.4 * u, 0, TAU); c.fillStyle = MINI_INK; c.fill();
+}
+const miniStation = (c, kind, x, y, u) => (kind === "trade" ? miniTrade : miniSupply)(c, x, y, u);
 // Land: the world island's own outline (js/scenery.js islandShape) as a flat sand-grey silhouette; a speck of land becomes a
 // 4-5 sided chip (never a triangle, which is a ship's shape). smallIslandPoly is deterministic in the island's seed, so a chart rebuild draws the same chip.
 const ISLAND_FILL = "rgba(184,178,156,.92)";

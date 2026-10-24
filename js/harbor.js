@@ -2,26 +2,31 @@
 // ---------- Harbor ----------
 // prior: what a quick resupply on this pass through the ring already sold (js/mooring.js), for the ledger's message.
 function dock(kind, prior = { sold: 0, bonus: 0 }) {
-  runHook("dock", kind, cargo);   // kind "outpost" docks at the Hulk Outpost (js/campaign.js)
+  const svc = serviceOf(kind);   // js/ports.js: a supply station neither buys nor sells, a trade port does not mend
+  runHook("dock", kind, svc.sell ? cargo : 0);   // kind "outpost" docks at the Hulk Outpost (js/campaign.js)
   paused = true; docked = true; deckSel = null;
   const tally = { sunk: streak, cargo: Math.round(cargo) };
-  const sale = sellHold(kind);   // the hold sells at the sortie's plunder-streak price (js/plunder.js)
+  const sale = svc.sell ? sellHold(kind) : { sold: 0, bonus: 0 };   // the hold sells at the sortie's plunder-streak price (js/plunder.js)
   const sold = sale.sold + prior.sold, bonus = Math.max(sale.bonus, prior.bonus);
-  save.gold += sale.sold; cargo = 0; save.salvage = [];   // salvage aboard is sold now
+  if (svc.sell) { save.gold += sale.sold; cargo = 0; save.salvage = []; }   // salvage aboard is sold now
+  const hull = player.hp;
   applyPlayerStats(true);
+  if (isStationKind(kind)) player.hp = Math.min(player.maxHp, hull);   // a station's ledger does not mend the hull for free
   player.speed = 0; player.burnT = 0;
   persist();
   // keep the message as a key so it re-renders when the language changes
   if (kind === "welcome") portMsg = [save.sunk === 0 ? "welcome" : "welcomeBack"];
   else if (kind === "sunk") portMsg = lastLost > 0 ? ["sunkWreckHalf", { n: fmt(lastLost) }] : ["sunkMsg"];
+  else if (kind === "supply") portMsg = ["supplyMsg"];
+  else if (kind === "trade") portMsg = sold > 0 ? (bonus > 0 ? ["tradeSoldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["tradeSold", { n: fmt(sold) }]) : ["tradeEmpty"];
   else portMsg = sold > 0 ? (bonus > 0 ? ["soldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["sold", { n: fmt(sold) }]) : ["empty"];
   renderPort();
   document.getElementById("port").hidden = false;
   paintGunDeck();   // the ship needs the shown layout; the deck's ResizeObserver only fires on the next rendered frame
   document.querySelector("#port .sheet").scrollTop = 0;   // the result message is at the top; never open scrolled past it
   Snd.music("harbor"); Snd.ambience("harbor");
-  if (kind === "return") Snd.play("bell");
-  if (sale.sold > 0 && (kind === "return" || kind === "outpost")) sortieTally({ ...tally, bonus: sale.bonus, gold: sale.sold });   // count-up (js/juice-ui.js)
+  if (kind === "return" || isStationKind(kind)) Snd.play("bell");
+  if (sale.sold > 0 && (kind === "return" || kind === "outpost" || kind === "trade")) sortieTally({ ...tally, bonus: sale.bonus, gold: sale.sold });   // count-up (js/juice-ui.js)
   document.getElementById("joy").hidden = true; joyVec = { x: 0, y: 0, m: 0 };
 }
 function setSail() {
