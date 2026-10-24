@@ -40,6 +40,8 @@ function drawWorld(sc) {
   bakeSeaDepth(sc);
   drawIslands(sc);   // js/world-seas.js: paints each island (js/scenery.js) and rebuilds them when a new game rolls a new map
   bakeHarbor(sc);
-  harborLabel = sc.add.text(PORT.x, PORT.y + PORT_ISLAND_R + 44, t("harborMap"), { fontFamily: UI_FONT, fontSize: "18px", fontStyle: "700", color: "#f6f1e3" })
+  // in the open water between the south and west piers (straight south it lay across the south pier and its ship)
+  const la = Math.PI * 0.75, lr = PORT_ISLAND_R + 62;
+  harborLabel = sc.add.text(PORT.x + Math.cos(la) * lr, PORT.y + Math.sin(la) * lr, t("harborMap"), { fontFamily: UI_FONT, fontSize: "18px", fontStyle: "700", color: "#f6f1e3" })
     .setOrigin(0.5).setAlpha(0.7).setDepth(1);
 }

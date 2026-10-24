@@ -83,7 +83,8 @@ function step(dt) {
   const living = enemies.filter(e => e.alive);
   for (const g of Object.values(player.guns).flat()) g.cd = Math.max(0, g.cd - dt);   // reload
   const engaged = player.alive && MOUNTS.some(mountEngaged);
-  const tip = engaged && !engagedPrev && releaseTips < 3 && fireTipKey();
+  const coach = typeof coachUp === "function" && coachUp();   // the coach card already says how to fire (js/onboard.js)
+  const tip = engaged && !engagedPrev && releaseTips < 3 && !coach && fireTipKey();
   if (tip) { releaseTips++; toast(t(tip)); }
   engagedPrev = engaged;
   for (const e of living) fire(e, e.target && isHostile(e, e.target) ? [e.target] : [], dt);
@@ -184,8 +185,8 @@ function drawOverlays() {
       for (let q = 0; q < 4; q++) { g.beginPath(); g.arc(e.x, e.y, r, q * Math.PI / 2 + 0.35, q * Math.PI / 2 + 1.22); g.strokePath(); }
     }
   }
-  // health bars, just above each hull's drawn extent
-  for (const e of enemies) {
+  // health bars, just above each hull's drawn extent (none behind the title: a hero shot, not a HUD)
+  if (!titleOpen) for (const e of enemies) {
     if (!e.alive || e.x < v.x - 60 || e.x > v.right + 60 || e.y < v.y - 60 || e.y > v.bottom + 60) continue;
     const w = 46 * lk, h = 4 * lk, x = e.x - w / 2, y = shipTop(e) - 8 * lk;
     bg.fillStyle(0x08222d, 0.8); bg.fillRect(x - lk, y - lk, w + 2 * lk, h + 2 * lk);

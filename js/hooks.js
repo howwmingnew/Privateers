@@ -9,6 +9,7 @@
 //   hurt (ship, dmg, src)        after damage lands, before a possible sink
 //   sunk (ship, killer, crate)   after a ship goes down (crate = its loot, if any)
 //   pickup (crate, taken)        cargo scooped from a crate or wreck
+//   sale (gold, kind)            the hold sold, in the ring or at the ledger (js/plunder.js sellHold)
 //   lang ()                      after the language changed
 //   mini (ctx, k, u)             drawing the minimap: k = px per world px, u = size relative to the old 224-px chart
 const HOOKS = {};

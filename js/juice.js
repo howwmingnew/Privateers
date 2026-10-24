@@ -83,6 +83,7 @@ function fadeUp(txt, delay) {
 }
 function payLine(pay) {
   if (pay.streak == null) return "";
+  if (typeof streakQuiet === "function" && streakQuiet()) return pay.gold > 0 ? `+${fmt(pay.gold)}` : "";   // kill #1: no jargon (js/notify-order.js)
   const x = t("fStreakX", { x: (1 + pay.streak).toFixed(1) });
   return pay.gold > 0 ? `+${fmt(pay.gold)} · ${x}` : x;
 }
@@ -96,7 +97,7 @@ function killCard(s) {
     if (J.word && J.word.active) { S.tweens.killTweensOf(J.word); J.word.destroy(); }   // one big word on screen at a time: a Double replaces the Sunk!
     fadeUp(J.word = popText(s.x, s.y - 26 * lk, t(word), n >= 2 ? "#ffd04a" : "#f0c766", n >= 3 ? 30 : n === 2 ? 27 : 24), 850);
   }
-  const line = payLine(pay);
+  const line = s.boss ? "" : payLine(pay);   // a boss's pay is its Captain's Chest, on the name card
   if (!line) return;
   S.time.delayedCall(250, () => {   // the sink reads first
     const y = s.y + (14 + 18 * Math.min(n - 1, 3)) * labelScale(), txt = popText(s.x, y, line, pay.gold > 0 ? "#ffe08a" : "#9fe0a0", 16);

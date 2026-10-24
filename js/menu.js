@@ -90,8 +90,10 @@ function driftCamera(dt) {
   drift.t += dt;
   const f = typeof attractFocus === "function" ? (attractTick(dt), attractFocus(dt)) : null;
   const a = drift.t * 0.05, k = 1 - Math.exp(-dt * 0.8);
-  const tx = f ? f.x + S.cameras.main.worldView.width * 0.22 + Math.cos(a * 2) * 40 : PORT.x + Math.cos(a) * 280;
-  const ty = f ? f.y + Math.sin(a * 1.6) * 30 : PORT.y + Math.sin(a * 0.8) * 170;
+  // a portrait phone's title card fills the width: there the fight sits above it, in the top band, instead of beside it
+  const v = S.cameras.main.worldView, tall = v.height > v.width;
+  const tx = f ? f.x + (tall ? 0 : v.width * 0.22) + Math.cos(a * 2) * 40 : PORT.x + Math.cos(a) * 280;
+  const ty = f ? f.y + (tall ? v.height * 0.32 : 0) + Math.sin(a * 1.6) * 30 : PORT.y + Math.sin(a * 0.8) * 170;
   drift.x += (tx - drift.x) * k; drift.y += (ty - drift.y) * k;
   S.cameras.main.centerOn(drift.x, drift.y);
 }
@@ -105,12 +107,15 @@ function renderTitle() {
   $m("titleMenu").hidden = false; $m("tConfirm").hidden = true;
 }
 function startGame(fresh) {
+  const skipped = fresh && save.tutorialDone && !hasProgress(save);   // skipped the tutorial, earned nothing: keep it skipped
   if (fresh) wipeProgress();
+  if (skipped) { save = { ...save, tutorialDone: true }; persist(); }
   closeTitle();
   dock("welcome");   // the bookkeeping (sell, stats, save) is the same either way
-  // A new captain goes straight to sea; the ledger and Red Ned's poster first show at the first sale. shellTick only
-  // runs onVoyage on a docked change, and docked never shows here, so start the voyage (the tutorial's mark) by hand.
-  if (fresh && !save.tutorialDone) { setSail(); wasDocked = false; onVoyage(); }
+  // A new captain goes straight to sea ("Set sail" means the sea); the ledger and Red Ned's poster first show at the
+  // first sale. shellTick only runs onVoyage on a docked change, and docked never shows here, so start the voyage (the
+  // easy mark, and the tutorial unless it was skipped) by hand.
+  if (fresh) { setSail(); wasDocked = false; onVoyage(); }
 }
 function closeTitle() {
   titleOpen = false;

@@ -65,19 +65,29 @@ function screenFlash() {
   const el = juiceEl("jFlash");
   el.animate && el.animate([{ opacity: 0.25 }, { opacity: 0 }], { duration: 130, easing: "ease-out" });
 }
-function banner(id, html, ms) {
+function banner(id, html, ms, onShow) {
+  if (typeof bannerGate === "function" && !bannerGate(id, () => banner(id, html, ms, onShow))) return;   // one at a time (js/notify-order.js)
+  if (onShow) onShow();
   const el = juiceEl(id, "jbanner");
   el.innerHTML = html; el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
   clearTimeout(el.timer); el.timer = setTimeout(() => el.classList.remove("on"), ms);
 }
+// The boss card carries the Captain's Chest (bossChest, from js/campaign.js claimBounty) and the game's wordmark: it is
+// the frame people clip, so the link rides along.
 function bossCard(name) {
-  banner("bossCard", `<small>${t("bountyClaimed")}</small><b>${name}</b>`, 2600);
+  const mark = typeof WORDMARK === "string" ? `<i class="jmark">${WORDMARK}</i>` : "";
+  banner("bossCard", `<small>${t("bountyClaimed")}</small><b>${name}</b><span class="b-chest"></span>${mark}`, 2600);
+}
+function bossChest(n) {
+  const el = byId("bossCard"), line = el && el.querySelector(".b-chest");
+  if (!line) { floatText(player.x, player.y - 60, t("fChest", { n: fmt(n) }), "#f6d27a", 22); return; }
+  line.textContent = t("fChest", { n: fmt(n) });
+  // the gold flies to the counter once the name has been read
+  setTimeout(() => { if (el.classList.contains("on")) flyTo(centerOf(line), "gold", "+" + fmt(n), "jfly-gold"); }, 1100);
 }
 // Ship Lv rise after a purchase (js/hud.js calls this when shipRating() goes up)
 function lvBanner(n) {
-  banner("lvBanner", t("lvUp", { n }), 1900);
-  sfx("lvUp", { delay: 0.15 });
-  punch(byId("lv"));
+  banner("lvBanner", t("lvUp", { n }), 1900, () => { sfx("lvUp", { delay: 0.15 }); punch(byId("lv")); });
 }
 
 // ---------- the sale tally ----------

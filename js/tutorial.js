@@ -45,7 +45,7 @@ Object.assign(STR.zh, {
 });
 
 const TUT = ["out", "aim", "fire", "sink", "scoop", "sell", "buy"];
-const tut = { active: false, step: 0, sunk0: 0, gold0: 0, sig: "", target: null, pickT: 0, doneT: 0, html: "", g: null };
+const tut = { active: false, step: 0, sunk0: 0, gold0: 0, sold: false, sig: "", target: null, pickT: 0, doneT: 0, html: "", g: null };
 
 function hasProgress(s) {
   return s.sunk > 0 || s.gold > 0 || s.ship !== "sloop" || s.hull > 1 || s.sails > 1 || s.hold > 1 ||
@@ -130,16 +130,20 @@ function tutorialSkip() {
 }
 function tutorialReset() { Object.assign(tut, { active: false, step: 0, target: null, doneT: 0, html: "" }); renderCoach(); }
 const tutorialRunning = () => tut.active && tut.doneT <= 0;
-// Up to the first sinking only the tutorial's mark may pick a fight with the player (js/ships.js pickTarget), and the
-// volley tip stays quiet (js/volley.js): the first kill is uncontested.
-const tutorialCalm = () => firstVoyage() && tut.step <= TUT.indexOf("sink") && !docked;
+// Up to the first scoop only the tutorial's mark may pick a fight with the player (js/ships.js pickTarget), and the
+// volley tip stays quiet (js/volley.js): the first kill and its crate are uncontested.
+const tutorialCalm = () => firstVoyage() && tut.step <= TUT.indexOf("scoop") && !docked;
+// Plunder the coach can point at: a fort's treasure crate (js/forts.js) sits under its guns, and wrecks are the player's own.
+const lootCrates = () => crates.filter(c => !c.wreck && !(typeof fortSites !== "undefined" && fortSites.some(f => f.crate === c)));
+// The "sell" step passes on a real sale of the hold (js/plunder.js sellHold), not on gold: a warship's bounty is gold too.
+onHook("sale", () => { if (tut.active && TUT[tut.step] === "sell") tut.sold = true; });
 // The coach is up on a voyage the captain has not finished or skipped (a save edited to done also counts as done).
 const firstVoyage = () => tutorialRunning() && !save.tutorialDone;
 
 function enterStep(n) {
   tut.step = n; save.tutorialStep = n;
   if (n <= 3) tut.sunk0 = save.sunk;        // only a sinking from here on counts
-  if (TUT[n] === "sell") tut.gold0 = save.gold;
+  if (TUT[n] === "sell") { tut.gold0 = save.gold; tut.sold = false; }
   if (TUT[n] === "buy") tut.sig = purchaseSig();
   persist();
 }
@@ -160,10 +164,10 @@ function tutorialTick(dt) {
     if (at === "out" && Math.hypot(player.x - PORT.x, player.y - PORT.y) > DOCK_R + 140) next = Math.max(next, 1);
     else if (at === "aim" && aimOnTarget()) next = Math.max(next, 2);
     else if (at === "fire" && balls.some(b => b.fromPlayer)) next = Math.max(next, 3);
-    else if (at === "sell" && save.gold > tut.gold0) next = 6;               // sold on a pass through the ring (js/mooring.js)
-    else if ((at === "scoop" || at === "sell") && cargo <= 0 && !crates.some(c => !c.wreck)) next = 3;   // the loot drifted away
+    else if (at === "sell" && tut.sold) next = 6;                           // sold on a pass through the ring (js/mooring.js)
+    else if ((at === "scoop" || at === "sell") && cargo <= 0 && !lootCrates().length) next = 3;   // the loot drifted away
   } else if (docked) {
-    if (at === "sell") next = save.gold > tut.gold0 ? 6 : 3;               // docked by sinking: the hold was lost
+    if (at === "sell") next = tut.sold ? 6 : 3;              // docked by sinking: the hold was lost
     else if (at === "buy" && purchaseSig() !== tut.sig) { finish(); renderCoach(); return; }
   }
   if (next !== tut.step) enterStep(next);
@@ -216,7 +220,7 @@ function guideTarget(dt) {
     }
     return tut.target ? { x: tut.target.x, y: tut.target.y, r: 46 } : null;
   }
-  if (at === "scoop") { const c = crates.filter(k => !k.wreck).sort((a, b) => dist(a, player) - dist(b, player))[0]; return c ? { x: c.x, y: c.y, r: 24 } : null; }
+  if (at === "scoop") { const c = lootCrates().sort((a, b) => dist(a, player) - dist(b, player))[0]; return c ? { x: c.x, y: c.y, r: 24 } : null; }
   if (at === "sell" || at === "buy") return { x: PORT.x, y: PORT.y, r: 0 };
   return null;
 }
