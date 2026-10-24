@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>更新路線圖 · Privateers Roadmap</title>
+<meta name="description" content="Privateers 私掠者接下來要做的新功能，依 GitHub issues 即時更新。 What's coming next to Privateers, live from GitHub issues.">
+<meta name="theme-color" content="#08222d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230f3f52'/%3E%3Cpath d='M32 6 L37 32 L32 58 L27 32 Z' fill='%23efe3c4'/%3E%3Cpath d='M6 32 L32 27 L58 32 L32 37 Z' fill='%23c08f2e'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Barlow+Semi+Condensed:wght@500;600&family=Noto+Sans+TC:wght@500;600&family=Noto+Serif+TC:wght@600&display=swap">
+<style>
+  :root {
+    --sea: #0f3f52; --sea-deep: #08222d; --parch: #efe3c4; --parch-2: #e0cc9c; --ink: #2a1d10; --ink-soft: #6b5638;
+    --brass: #c08f2e; --blood: #a33a26; --foam: #f6f1e3; --kelp: #3f7a3b;
+    --f-display: "IM Fell English SC", "Noto Serif TC", "Iowan Old Style", Georgia, serif;
+    --f-ui: "Barlow Semi Condensed", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    --f-mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui); font-size: 16px; line-height: 1.5;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 16px; }
+  header.top h1 { font-family: var(--f-display); font-weight: 400; font-size: clamp(28px, 5vw, 44px); margin: 0; color: var(--parch); letter-spacing: .02em; }
+  header.top .sp { flex: 1; }
+  a { color: inherit; }
+  .btn { font: 600 15px/1 var(--f-ui); color: var(--foam); background: transparent; border: 1px solid rgba(240,199,102,.45);
+    border-radius: 3px; padding: 10px 14px; min-height: 44px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+  .btn:hover { border-color: var(--brass); }
+  .btn:focus-visible, .tab:focus-visible, .item a:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
+  .lead { margin: 0 0 4px; color: rgba(246,241,227,.86); max-width: 70ch; }
+  .status { margin: 0 0 16px; font-family: var(--f-mono); font-size: 12px; color: rgba(246,241,227,.62); }
+  .sheet { background: var(--parch); color: var(--ink); border-radius: 4px; padding: 16px 0; margin-bottom: 16px; border: 1px solid #c9b585; }
+  .sheet h2 { font-family: var(--f-display); font-weight: 400; font-size: 22px; margin: 0 20px 8px; }
+  /* diagram-design output rule: the SVG keeps its viewBox width and scrolls inside its own box on a phone */
+  .diagram-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .diagram-container svg { display: block; margin: 0 auto; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 20px 4px; }
+  .tab { font: 600 14px/1.2 var(--f-ui); color: var(--ink); background: rgba(42,29,16,.04); border: 1px solid rgba(42,29,16,.25);
+    border-radius: 3px; padding: 8px 12px; min-height: 44px; cursor: pointer; }
+  .tab[aria-selected="true"] { background: var(--ink); color: var(--parch); border-color: var(--ink); }
+  .tab .n { font-family: var(--f-mono); font-size: 11px; opacity: .75; margin-right: 6px; }
+  ul.items { list-style: none; margin: 8px 20px 0; padding: 0; display: grid; gap: 8px; }
+  .item a { display: flex; gap: 10px; align-items: baseline; text-decoration: none; padding: 10px 12px; border: 1px solid rgba(42,29,16,.18);
+    border-radius: 3px; background: rgba(251,246,233,.6); min-height: 44px; }
+  .item a:hover { border-color: var(--ink); }
+  .item .num { font-family: var(--f-mono); font-size: 12px; color: var(--ink-soft); min-width: 3.2em; }
+  .item .ttl { flex: 1; font-weight: 600; }
+  .item .st { font-size: 13px; font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+  .item .st.done { color: var(--kelp); } .item .st.doing { color: var(--blood); }
+  .swipe { display: none; margin: 4px 20px 0; font-size: 13px; color: var(--ink-soft); }
+  @media (max-width: 1260px) { .swipe { display: block; } }
+  footer { font-size: 13px; color: rgba(246,241,227,.62); }
+  @media (prefers-reduced-motion: no-preference) { .tab, .btn { transition: background .15s, border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 id="h1">更新路線圖</h1>
+    <span class="sp"></span>
+    <button class="btn" id="langBtn" type="button">English</button>
+    <a class="btn" id="backBtn" href="../index.html">← 回到遊戲</a>
+  </header>
+  <p class="lead" id="lead"></p>
+  <p class="status" id="status" aria-live="polite"></p>
+
+  <section class="sheet" aria-labelledby="ovH">
+    <h2 id="ovH"></h2>
+    <div class="diagram-container" id="overview"></div>
+    <p class="swipe" data-ui="swipe"></p>
+  </section>
+
+  <section class="sheet" aria-labelledby="dtH">
+    <h2 id="dtH"></h2>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="diagram-container" id="detail"></div>
+    <p class="swipe" data-ui="swipe"></p>
+    <ul class="items" id="items"></ul>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script src="roadmap-core.js"></script>
+<script src="issues.js"></script>
+<script>
+(function () {
+  "use strict";
+  const RC = window.RoadmapCore;
+  const API = `https://api.github.com/repos/${RC.REPO}/issues?labels=enhancement&state=all&per_page=100`;
+  const CACHE_KEY = "privateers-roadmap-cache", CACHE_MS = 10 * 60 * 1000;
+  const UI = {
+    zh: { h1: "更新路線圖", lang: "English", back: "← 回到遊戲", ov: "總覽", dt: "各階段內容",
+      swipe: "← 圖可以左右滑動 →", lead: "這是《私掠者》接下來要做的新功能，分成幾個階段，一次聚焦一個階段。內容直接來自 GitHub 上標記為 enhancement 的 issue，做完一項就會自動更新。",
+      live: "即時資料（GitHub）", snap: "快照", updated: "更新於", loading: "載入中…", none: "目前沒有可顯示的項目。",
+      foot: "資料來源：GitHub issues（enhancement 標籤）", open: "在 GitHub 查看全部 issue" },
+    en: { h1: "Roadmap", lang: "中文", back: "← Back to the game", ov: "Overview", dt: "Phase by phase",
+      swipe: "← swipe the chart sideways →", lead: "What's coming next to Privateers, one phase at a time. It's read straight from GitHub issues labelled enhancement, so it updates itself as features ship.",
+      live: "Live data (GitHub)", snap: "Snapshot", updated: "updated", loading: "Loading…", none: "Nothing to show yet.",
+      foot: "Source: GitHub issues labelled enhancement", open: "See every issue on GitHub" },
+  };
+
+  let lang = readLang();
+  let model = null, source = "snap", selected = 0;
+
+  function readLang() {
+    try { const l = localStorage.getItem("privateers-lang"); if (l === "en" || l === "zh") return l; } catch (e) {}
+    return /^zh/i.test(navigator.language || "") ? "zh" : "en";
+  }
+  function saveLang() { try { localStorage.setItem("privateers-lang", lang); } catch (e) {} }
+  const $ = id => document.getElementById(id);
+
+  function fmtTime(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d)) return "";
+    const p = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  function render() {
+    const u = UI[lang];
+    document.documentElement.lang = lang === "zh" ? "zh-Hant" : "en";
+    document.title = lang === "zh" ? "更新路線圖 · 私掠者" : "Roadmap · Privateers";
+    $("h1").textContent = u.h1; $("langBtn").textContent = u.lang; $("backBtn").textContent = u.back;
+    $("lead").textContent = u.lead; document.querySelectorAll("[data-ui=swipe]").forEach(el => { el.textContent = u.swipe; }); $("ovH").textContent = u.ov; $("dtH").textContent = u.dt;
+    $("foot").textContent = "";
+    $("foot").append(document.createTextNode(u.foot + " · "));
+    const a = document.createElement("a");
+    a.href = `https://github.com/${RC.REPO}/issues?q=label%3Aenhancement`; a.target = "_blank"; a.rel = "noopener"; a.textContent = u.open;
+    $("foot").append(a);
+    if (!model || !model.phases.length) {
+      $("status").textContent = model ? u.none : u.loading;
+      $("overview").textContent = ""; $("detail").textContent = ""; $("tabs").textContent = ""; $("items").textContent = "";
+      return;
+    }
+    if (!model.phases.some(p => p.n === selected)) selected = model.current;
+    $("status").textContent = `${source === "live" ? u.live : u.snap} · ${u.updated} ${fmtTime(model.fetchedAt)} · ${model.done}/${model.total}`;
+    // SVG strings come from RoadmapCore, which escapes every issue-derived value
+    $("overview").innerHTML = RC.renderOverview(model, lang, { interactive: true, selected });
+    $("detail").innerHTML = RC.renderPhase(model, selected, lang, { interactive: true });
+    renderTabs(); renderItems();
+  }
+
+  function renderTabs() {
+    const box = $("tabs"); box.textContent = "";
+    for (const p of model.phases) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "tab"; b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", String(p.n === selected)); b.tabIndex = p.n === selected ? 0 : -1;
+      const n = document.createElement("span"); n.className = "n"; n.textContent = `P${p.n}`;
+      b.append(n, document.createTextNode(`${RC.phaseName(p.n, lang)} · ${p.done}/${p.items.length}`));
+      b.addEventListener("click", () => select(p.n, true));
+      box.append(b);
+    }
+  }
+
+  function renderItems() {
+    const ul = $("items"); ul.textContent = "";
+    const p = model.phases.find(x => x.n === selected);
+    if (!p) return;
+    for (const it of p.items) {
+      const li = document.createElement("li"); li.className = "item";
+      const a = document.createElement("a"); a.href = it.url; a.target = "_blank"; a.rel = "noopener";
+      const num = document.createElement("span"); num.className = "num"; num.textContent = `#${it.number}`;
+      const ttl = document.createElement("span"); ttl.className = "ttl"; ttl.textContent = lang === "en" && it.en ? it.en : it.title;
+      const st = document.createElement("span"); st.className = `st ${it.status}`; st.textContent = RC.T[lang][it.status];
+      a.append(num, ttl, st); li.append(a); ul.append(li);
+    }
+  }
+
+  function select(n, focusTab) {
+    selected = n; render();
+    if (focusTab) { const t = $("tabs").querySelector('[aria-selected="true"]'); if (t) t.focus(); }
+  }
+
+  // arrow keys move between tabs (WAI-ARIA tabs pattern)
+  $("tabs").addEventListener("keydown", e => {
+    if (!model || (e.key !== "ArrowRight" && e.key !== "ArrowLeft")) return;
+    const ns = model.phases.map(p => p.n), i = ns.indexOf(selected);
+    const j = (i + (e.key === "ArrowRight" ? 1 : -1) + ns.length) % ns.length;
+    e.preventDefault(); select(ns[j], true);
+  });
+  // pointer shortcuts on the diagrams; the tabs and the list stay the accessible route
+  $("overview").addEventListener("click", e => { const g = e.target.closest("[data-phase]"); if (g) select(+g.dataset.phase, false); });
+  $("detail").addEventListener("click", e => {
+    const g = e.target.closest("[data-issue]");
+    if (g) window.open(RC.issueUrl(+g.dataset.issue), "_blank", "noopener");
+  });
+  $("langBtn").addEventListener("click", () => { lang = lang === "zh" ? "en" : "zh"; saveLang(); render(); });
+
+  function useIssues(issues, fetchedAt, src) {
+    const m = RC.buildModel(issues, fetchedAt);
+    if (!m.phases.length && model && model.phases.length) return;   // never swap good data for an empty answer
+    model = m; source = src;
+    if (!selected) selected = m.current;
+    render();
+  }
+
+  // 1) the committed snapshot draws at once (works from file:// and offline)
+  const snap = window.ROADMAP_SNAPSHOT;
+  if (snap && Array.isArray(snap.issues)) useIssues(snap.issues, snap.fetchedAt, "snap"); else render();
+
+  // 2) then live data, cached per tab for 10 minutes to stay far under GitHub's 60 requests/hour
+  (async function live() {
+    try {
+      const c = JSON.parse(sessionStorage.getItem(CACHE_KEY) || "null");
+      if (c && Date.now() - c.t < CACHE_MS && Array.isArray(c.issues)) return useIssues(c.issues, c.fetchedAt, "live");
+    } catch (e) {}
+    if (location.protocol === "file:") return;
+    try {
+      const r = await fetch(API, { headers: { Accept: "application/vnd.github+json" } });
+      if (!r.ok) throw new Error(`GitHub ${r.status}`);
+      const issues = await r.json();
+      if (!Array.isArray(issues)) throw new Error("unexpected response");
+      const fetchedAt = new Date().toISOString();
+      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), fetchedAt, issues })); } catch (e) {}
+      useIssues(issues, fetchedAt, "live");
+    } catch (err) {
+      console.warn("roadmap: live data unavailable, showing the snapshot", err);
+    }
+  })();
+})();
+</script>
+</body>
+</html>

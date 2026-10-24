@@ -4,7 +4,7 @@
 // stack on top of any of them. `paused` and `docked` stay the source of truth for the game loop; this file only
 // adds titleOpen / pauseOpen and freezes the scene while paused.
 Object.assign(STR.en, {
-  m_continue: "Continue", m_new: "New game", m_howto: "How to play", m_settings: "Settings", m_credits: "Credits",
+  m_continue: "Continue", m_new: "New game", m_howto: "How to play", m_settings: "Settings", m_credits: "Credits", m_roadmap: "Roadmap",
   m_newConfirm: "Start a new game? This wipes your gold, ships, upgrades and wrecks. Settings are kept.",
   m_newYes: "Start over", m_cancel: "Cancel", m_back: "Back", m_atSea: "At sea", m_paused: "Paused", m_resume: "Resume",
   m_quit: "Save & quit to title", m_quitArm: "Press again: {n} cargo in the hold will be lost", m_skipTut: "Skip tutorial",
@@ -12,7 +12,7 @@ Object.assign(STR.en, {
   m_padOn: "Controller connected", m_padOff: "Controller disconnected",
 });
 Object.assign(STR.zh, {
-  m_continue: "繼續航程", m_new: "新遊戲", m_howto: "玩法說明", m_settings: "設定", m_credits: "製作群",
+  m_continue: "繼續航程", m_new: "新遊戲", m_howto: "玩法說明", m_settings: "設定", m_credits: "製作群", m_roadmap: "更新路線圖",
   m_newConfirm: "要開始新遊戲嗎？金幣、船隻、升級和殘骸都會清除，設定會保留。",
   m_newYes: "重新開始", m_cancel: "取消", m_back: "返回", m_atSea: "海上", m_paused: "暫停中", m_resume: "繼續",
   m_quit: "存檔並回到標題", m_quitArm: "再按一次：貨艙裡的 {n} 貨物會遺失", m_skipTut: "略過教學",
@@ -250,6 +250,7 @@ function menuAction(act, b) {
     case "new-yes": startGame(true); break;
     case "new-no": $m("tConfirm").hidden = true; $m("titleMenu").hidden = false; $m("tNew").focus({ preventScroll: true }); break;
     case "howto": case "settings": case "credits": openPanel(act, b); break;
+    case "roadmap": window.open("roadmap/index.html", "_blank", "noopener"); break;   // its own page, so the game keeps running behind it
     case "back": closePanel(); break;
     case "pause": pauseGame(); break;
     case "resume": resumeGame(); break;

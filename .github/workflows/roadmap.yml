@@ -1,0 +1,37 @@
+# Redraw the roadmap whenever a GitHub issue changes, so the README art and the page's snapshot follow the issues.
+# The roadmap page (roadmap/index.html) also reads issues live; this keeps the README and offline/file:// copies current.
+name: roadmap
+
+on:
+  issues:
+    types: [opened, edited, closed, reopened, labeled, unlabeled, deleted, transferred]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: roadmap
+  cancel-in-progress: false
+
+jobs:
+  redraw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Redraw from issues
+        run: node tools/roadmap-build.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit if anything changed
+        run: |
+          if git diff --quiet -- roadmap; then echo "roadmap unchanged"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add roadmap
+          git commit -m "chore: refresh roadmap from issues"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME:-main}"
+          git push
