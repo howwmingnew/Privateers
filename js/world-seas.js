@@ -49,7 +49,7 @@ const lootMul = () => NG_LOOT ** ngCycles();
 const ISLAND_COUNT = 85;   // ~1.3 per million px², the old map's density
 let islandSeed = null, islandImgs = [];
 function clearSpots() {
-  return [...BOUNTIES.map(b => ({ ...lairOf(b), r: 330 })), { ...OUTPOST, r: 320 }, ...save.wrecks.map(w => ({ x: w.x, y: w.y, r: 70 })),
+  return [...BOUNTIES.map(b => ({ ...lairOf(b), r: 330 })), { ...OUTPOST, r: 320 }, ...STATIONS.map(p => ({ x: p.x, y: p.y, r: 320 })), ...save.wrecks.map(w => ({ x: w.x, y: w.y, r: 70 })),
     ...(runActive() && runBounty() ? [{ ...lairOf(runBounty()), r: 330 }] : [])];   // the daily captain's lair (js/run.js)
 }
 function genIslands(seed = save.seed) {

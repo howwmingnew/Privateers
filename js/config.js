@@ -107,6 +107,11 @@ const ADMIRAL_EVERY = [190, 300];          // s between sightings; heat shortens
 const ADMIRAL_HEAT = 0.12, ADMIRAL_R = [1400, 2000], ADMIRAL_RING = 3;   // the player must be in at least this ring to meet him
 const ADMIRAL_GONE = 4500;                 // px: an Admiral's fleet left this far behind sails off for good
 const ADMIRAL_HP = 1.3, ADMIRAL_LOOT = 2.5, ADMIRAL_LV = 1;   // flagship: hull x, plunder x, levels above the ring
+
+// Supply stations and trade ports (js/ports.js): a ring-docked service point on the open sea.
+const STATION_TRUCE_R = 280;     // no ship opens fire on the player this close to a station, and idle ships sail out of it
+const SUPPLY_FEE_PER_RING = 25;  // gold for a hull from empty to full at a supply station, per level ring it lies in
+const SUPPLY_HEAL = 0.4;         // share of max hull a supply station mends per second inside its ring (while gold lasts)
 // Ship name and flag (js/flags.js). Name width counts a CJK character as 2, so 10 Chinese or 20 Latin characters fit.
 const FLAG_NAME_UNITS = 20;
 const FLAG_COLORS = ["red", "blue", "green", "black", "gold", "purple", "teal", "orange", "white", "grey"];   // main and second colour ids
