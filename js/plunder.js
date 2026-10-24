@@ -42,10 +42,10 @@ function lootDrop(s, killer) {
     if (warship && value > 0) {
       const g = Math.round(value * BOUNTY_K);
       save.gold += g; value -= g; statsGold(g); persist();
-      floatText(s.x, s.y - 52, t("fBounty", { n: fmt(g) }), "#ffe08a", 15);
-      Snd.play("coin", { amount: g, delay: 0.2 });
+      s.pay = { gold: g };
+      Snd.play("bounty", { amount: g, delay: 0.2 });
     }
-    if (streak * STREAK_STEP <= STREAK_MAX + 1e-9) floatText(s.x, s.y + 8, t("fStreak", { p: Math.round(streakBonus() * 100) }), "#9fe0a0", 14);
+    s.pay = { ...s.pay, streak: streakBonus() };   // shown on the kill card (js/juice.js)
   }
   return value > 0 ? addCrate(s.x, s.y, value, null) : null;
 }

@@ -76,7 +76,7 @@ window.addEventListener("keydown", e => {
   setDevice("keys");
   if (!sailing() || e.repeat) return;
   if (e.code === "KeyW" || e.code === "ArrowUp") setSailLevel(sailLevel + 1);
-  else if (e.code === "KeyS" || e.code === "ArrowDown") setSailLevel(sailLevel - 1);
+  else if (e.code === "KeyS" || e.code === "ArrowDown") setSailLevel(inMoorRing() ? 0 : sailLevel - 1);   // in the dock ring S stops dead
   else if (e.code === "KeyQ") playerFire(["left"]);
   else if (e.code === "KeyE") playerFire(["right"]);
 }, true);
@@ -154,7 +154,7 @@ function padSea(s, pressed) {
   padVec = m > PAD_DEAD ? { x: s.lx, y: s.ly, m } : { x: 0, y: 0, m: 0 };
   if (pressed("a") || pressed("rt")) playerFire();
   if (pressed("up")) setSailLevel(sailLevel + 1);
-  if (pressed("down")) setSailLevel(sailLevel - 1);
+  if (pressed("down")) setSailLevel(inMoorRing() ? 0 : sailLevel - 1);
 }
 
 // ---------- Per-frame steering, called from step() ----------

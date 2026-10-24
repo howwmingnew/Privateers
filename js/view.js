@@ -64,13 +64,16 @@ function fitView(sc) {
   for (const o of sc.children.list) if (isText(o)) crispText(o, VIEW.textRes);   // texts made before this call
 }
 
-// Phaser's shake moves the picture by intensity x camera width x zoom^2 device pixels, and width and zoom both grew
-// by dpr, so scale the intensity back by dpr^2 to keep every shake the size it was before.
+// Every shake is sized in CSS pixels, the same on any screen: `intensity` is read as a share of a 1280-px-wide view
+// (0.006 -> ~8 px), capped at SHAKE_MAX_CSS. Phaser moves the picture by intensity x camera size x zoom^2 device px;
+// the old dpr^2 correction left out the world zoom, so a 0.55-zoom phone shook 1.1 px where a 1080p desktop shook 16.
+const SHAKE_REF_CSS = 1280, SHAKE_MAX_CSS = 10;
 function tameShake(cam) {
   const fx = cam.shakeEffect, start = fx.start;
   fx.start = function (duration, intensity = 0.05, ...rest) {
-    const k = 1 / (VIEW.dpr * VIEW.dpr);
-    return start.call(this, duration, typeof intensity === "number" ? intensity * k : { x: intensity.x * k, y: intensity.y * k }, ...rest);
+    const i = typeof intensity === "number" ? intensity : Math.max(intensity.x, intensity.y);
+    const px = Math.min(SHAKE_MAX_CSS, i * SHAKE_REF_CSS) * VIEW.dpr, z2 = cam.zoom * cam.zoom;
+    return start.call(this, duration, { x: px / (cam.width * z2), y: px / (cam.height * z2) }, ...rest);
   };
 }
 
