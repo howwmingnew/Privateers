@@ -70,8 +70,9 @@ function renderPort() {
     hp: YARD.hull.show(yardVal("hull", h, sh)), kn: YARD.sails.show(yardVal("sails", s, sh)), cargo: fmt(yardVal("hold", o, sh)) });
   const mine = owned.map(e => {
     const sh = SHIPS[e.ship], me = e.id === save.shipId, nm = count[e.ship] > 1 ? t("shipNo", { ship: t("s_" + e.ship), n: idNum(e.id) }) : t("s_" + e.ship);
+    const label = e.name ? `${esc(e.name)}<small>${nm}</small>` : nm;   // the ship's own name (js/flags.js)
     const btn = me ? `<button class="btn max" type="button" disabled>${t("yourShip")}</button>` : `<button class="btn" type="button" data-act="switch" data-id="${e.id}">${t("switchTo")}</button>`;
-    return `<div class="item"><div class="nm">${nm}</div>${btn}<div class="ds">${shipDs(sh, e.hull, e.sails, e.hold)}${t("shipLvs", { h: e.hull, s: e.sails, o: e.hold })}</div></div>`;
+    return `<div class="item"><div class="nm">${label}</div>${btn}<div class="ds">${shipDs(sh, e.hull, e.sails, e.hold)}${t("shipLvs", { h: e.hull, s: e.sails, o: e.hold })}</div></div>`;
   }).join("");
   const full = owned.length >= FLEET_MAX;
   const sale = SHIP_ORDER.filter(forSale).map(id => {

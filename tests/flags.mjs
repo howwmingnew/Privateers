@@ -100,12 +100,22 @@ console.log("Ledger: change the flag and the name");
   await o.reopen();
   const kept = await page.evaluate(() => ({ f: { ...save.flag }, n: save.shipName, liv: player.livery }));
   check(kept.f.main === "red" && kept.f.alt === "gold" && kept.f.emblem === "skull" && kept.n === "Dread Queen" && kept.liv === "pf-red-gold-skull", `reload keeps the flag, the name and the sea livery (${JSON.stringify(kept)})`);
-  // buying a new ship starts a new, unnamed ship under the same flag
-  await page.evaluate(() => { save.gold = 99999; save.campaign = { ...save.campaign, ships: SHIP_ORDER.slice() }; renderPort(); });
-  const lock = await page.evaluate(() => shipLock("schooner"));
-  if (!lock) {
-    await page.evaluate(() => { const id = "schooner"; save = fitMounts({ ...save, ship: id, hull: 1, sails: 1, hold: 1, shipName: "" }); applyPlayerStats(true); renderPort(); });
-  }
+  // names live on the ship, the flag on the captain: buy a brig (unnamed, same flag), name it, switch back
+  await page.evaluate(() => { save.gold = 99999; save.campaign = { ...save.campaign, bounty: 4, ships: SHIP_ORDER.slice() }; renderPort(); });
+  await page.waitForTimeout(500 * SLOW);
+  await page.click('#ships [data-act="ship"][data-id="brig"]'); await page.waitForTimeout(500 * SLOW);
+  await page.click('#ships [data-act="ship"][data-id="brig"]'); await page.waitForTimeout(200 * SLOW);
+  check(await page.evaluate(() => save.ship === "brig" && save.shipName === ""), "a bought ship starts unnamed");
+  check((await page.inputValue("#shipNameIn")) === "" && (await page.textContent("#pStats > span b")).startsWith("Sea Wolf"), "the ledger shows the default name aboard the new ship");
+  check((await flag(page)).emblem === "skull", "the flag stays with the captain");
+  await page.fill("#shipNameIn", "Iron Maiden"); await page.press("#shipNameIn", "Enter");
+  check(await page.evaluate(() => save.shipName === "Iron Maiden" && save.fleet.some(e => e.name === "Dread Queen")), "the brig is named and the sloop keeps her own name");
+  check(await page.evaluate(() => document.querySelector("#ships .item .nm").textContent.includes("Dread Queen")), "the yard lists the parked ship by name");
+  await page.click('#ships [data-act="switch"]'); await page.waitForTimeout(200 * SLOW);
+  check(await page.evaluate(() => save.ship === "sloop" && save.shipName === "Dread Queen" && save.fleet.some(e => e.name === "Iron Maiden")), "switching back shows that ship's name");
+  check((await page.inputValue("#shipNameIn")) === "Dread Queen", "the name field follows the ship");
+  await o.reopen();
+  check(await page.evaluate(() => save.shipName === "Dread Queen" && save.fleet[0].name === "Iron Maiden"), "both names survive a reload");
   await done("ledger", o);
 }
 

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const FILES = ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/hooks.js", "js/data.js", "js/save.js", "js/save-campaign.js", "js/flags.js"];
+const FILES = ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/hooks.js", "js/data.js", "js/save.js", "js/save-campaign.js", "js/shipyard.js", "js/flags.js"];
 const SRC = FILES.map(f => [f, readFileSync(new URL("../" + f, import.meta.url), "utf8")]);
 const dom = new Proxy(function () {}, { get: (_, k) => (k === Symbol.toPrimitive ? () => "" : dom), apply: () => dom, set: () => true, construct: () => dom });
 const ctx = vm.createContext({
@@ -108,4 +108,26 @@ test("livery: the flag becomes the sea livery, cached by its three ids, other pl
   assert.equal(L.hull, "#6e3d1f");
   assert.equal(run('flagLivery({ main: "red", alt: "gold", emblem: "skull" }) === flagLivery({ main: "red", alt: "gold", emblem: "skull" })'), true);
   assert.equal(run('flagLivery({ main: "bad" })'), "pf-blue-white-diag");
+});
+
+test("fleet: each ship keeps its own name; the flag stays the captain's", () => {
+  run('save = sanitizeSave({ v: 2, gold: 99999, ship: "sloop", shipName: "Old Faithful", flag: { main: "green", alt: "gold", emblem: "star" } })');
+  run('save = buyShip(save, "brig")');
+  assert.equal(run("save.ship"), "brig");
+  assert.equal(run("save.shipName"), "", "a new ship starts unnamed");
+  assert.deepEqual(json("save.fleet.map(e => e.name || '')"), ["Old Faithful"], "the parked ship keeps hers");
+  run('save = { ...save, shipName: "Iron Maiden" }');
+  run("save = switchShip(save, save.fleet[0].id)");
+  assert.equal(run("save.shipName"), "Old Faithful");
+  assert.deepEqual(json("save.fleet.map(e => e.name || '')"), ["Iron Maiden"]);
+  assert.deepEqual(json("save.flag"), { main: "green", alt: "gold", emblem: "star" }, "the flag follows the captain, not the ship");
+  assert.deepEqual(json("ownedShips().map(e => e.name || '')"), ["Old Faithful", "Iron Maiden"]);
+});
+
+test("fleet: old fleets (no names) load unnamed; parked names are cleaned like the active one", () => {
+  const s = json('sanitizeSave({ v: 2, ship: "brig", shipId: "s2", fleet: [{ id: "s1", ship: "sloop", hull: 2, sails: 1, hold: 1 }] })');
+  assert.equal(s.fleet[0].name, undefined);
+  const dirty = json('sanitizeSave({ v: 2, ship: "brig", shipId: "s2", fleet: [{ id: "s1", ship: "sloop", name: "<i>Rude</i> fuck" }, { id: "s3", ship: "sloop", name: "<b>Ok</b>" }] })');
+  assert.equal(dirty.fleet.find(e => e.id === "s1").name, undefined);
+  assert.equal(dirty.fleet.find(e => e.id === "s3").name, "bOk/b");
 });

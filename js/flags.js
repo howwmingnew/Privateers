@@ -47,7 +47,9 @@ function shipNameRude(s) {
 }
 const goodShipName = v => { const n = cleanShipName(v); return n && !shipNameRude(n) ? n : ""; };
 SAVE_DEFAULTS.push(() => ({ flag: { ...DEFAULT_FLAG }, shipName: "" }));
-SAVE_SANITIZERS.push(s => ({ ...s, flag: cleanFlag(s.flag), shipName: goodShipName(s.shipName) }));
+// Every ship keeps its own name (the active one in shipName, parked ones in their fleet entry, js/shipyard.js); the flag is the captain's.
+SAVE_SANITIZERS.push(s => ({ ...s, flag: cleanFlag(s.flag), shipName: goodShipName(s.shipName),
+  fleet: Array.isArray(s.fleet) ? s.fleet.map(e => { if (!isObj(e)) return e; const { name, ...rest } = e, n = goodShipName(name); return n ? { ...rest, name: n } : rest; }) : s.fleet }));
 
 const flagOf = () => cleanFlag(typeof save !== "undefined" ? save.flag : null);
 const shipDisplayName = () => (typeof save !== "undefined" && save.shipName) || t("flDefName");
