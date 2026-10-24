@@ -6,7 +6,7 @@ function makeShip(sc, tex, x, y) {
 }
 function playerGuns() {
   // pi / pn: the gun's port and the port count, so a muzzle sits at its port even with empty ports beside it
-  const mk = (gun, pi, pn) => { const id = gun.g, g = GUNS[id], m = gunLvMul(gun.lv);
+  const mk = (gun, pi, pn) => { const id = gun.g, g = GUNS[id], m = gunLvMul(gun.lv) * shipGunK();
     return { id, pi, pn, dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, chain: !!g.chain, range: g.range, speed: g.speed || BALL_SPEED, interval: 60 / g.rpm, cd: 0 }; };
   return Object.fromEntries(MOUNTS.map(({ key }) => [key, save[key].flatMap((gun, i, ports) => gun ? [mk(gun, i, ports.length)] : [])]));
 }
@@ -16,7 +16,7 @@ function applyPlayerStats(full) {
   player.maxSpeed = yardVal("sails");
   player.cap = yardVal("hold");
   player.guns = playerGuns();
-  applyShipArt(player, save.ship, "player");   // hull art, hitbox, muzzles and view follow the ship in the save
+  applyShipArt(player, save.ship, liveryFor(player));   // hull art, hitbox, muzzles and view follow the ship in the save
 }
 function makePlayer(sc) {
   const p = makeShip(sc, "ship-player", PORT.x + 140, PORT.y);
@@ -47,9 +47,9 @@ function spawnEnemy(sc, at) {
   const d0 = Math.hypot(x - PORT.x, y - PORT.y), L = at ? ringAt(d0) + levelBonus() : levelAt(d0);
   const faction = at && at.faction ? at.faction : pickFaction();
   const e = makeEnemy(sc, x, y, L, faction);
-  // placed ships (bosses, escorts, the tutorial's target) sail alone; a convoy only fills what its own ring is short of
-  // its quota (js/world-seas.js), so it never starves the other rings
-  if (e.merchant && !at) maybeConvoy(sc, e, convoyRoom(e));
+  // placed ships (bosses, escorts, the tutorial's target) sail alone; a fleet only fills what its own ring is short of
+  // its quota (js/world-seas.js), so it never starves the other rings (js/fleet.js)
+  if (!at) maybeFleet(sc, e);
   return e;
 }
 // One enemy of level L and faction at (x, y); its class (js/archetypes.js) is picked by level and faction unless given.
@@ -91,6 +91,7 @@ function steer(s, desired, thr, dt) {
   const torn = s.chainT > 0;
   const turn = s.turnRate * (torn ? CHAIN_TURN : 1) * dt * (0.45 + 0.55 * Math.min(1, s.speed / Math.max(1, s.maxSpeed) + 0.2));
   if (desired != null) s.rot += clamp(angDiff(desired, s.rot), -turn, turn);
+  else if (typeof wxYaw === "function") s.rot += wxYaw(s) * dt;   // a storm slews a hull whose helm is let go (js/weather.js)
   const target = thr * s.maxSpeed * (torn ? CHAIN_SPEED : 1);
   s.speed += clamp(target - s.speed, -s.maxSpeed * 1.1 * dt, s.maxSpeed * 0.7 * dt);
 }
@@ -158,7 +159,7 @@ function think(e, dt) {
     const nt = (e.backOffT || 0) > now ? null : pickTarget(e, now);   // turning back out of the Shallows (js/sea-guard.js)
     if (nt && nt !== e.target) { e.target = nt; e.chaseFrom = { x: e.x, y: e.y }; }
   }
-  let desired = null, thr = 0.55;
+  let desired = null, thr = 0.55, fd = 0, fToT = 0;
   const tg = e.target;
   if (tg) {
     const d = dist(e, tg), toT = Math.atan2(tg.y - e.y, tg.x - e.x);
@@ -168,9 +169,9 @@ function think(e, dt) {
     // an ordinary ship breaks off once its quarry has fled two or more rings shallower than the ring it calls home
     const shoal = tg === player && !e.boss && !e.escortOf && e.ring && ringAt(dist(player, PORT)) <= e.ring - 2;
     if ((chased > LEASH && d > range) || d > GIVE_UP_DIST || shoal) giveUp(e, tg, now);
-    else ({ desired, thr } = archTactic(e, tg, d, toT, now));   // each class's battle plan (js/archetypes.js)
+    else { ({ desired, thr } = archTactic(e, tg, d, toT, now)); fd = d; fToT = toT; }   // each class's battle plan (js/archetypes.js)
   }
-  if (desired == null) { const c = convoyIdle(e); if (c) ({ desired, thr } = c); }
+  if (e.fleet) { const c = fleetSteer(e, tg, fd, fToT, now); if (c) ({ desired, thr } = c); }   // formation, flanking, a lost lead (js/fleet.js)
   if (desired == null && e.merchant) {
     // merchants run from any pirate or the player that comes close, even before a shot is fired
     let threat = null, td = 480;
@@ -202,8 +203,9 @@ function think(e, dt) {
 
 function move(s, dt) {
   if (s.fixed) { s.vx = s.vy = s.speed = 0; return; }   // shore batteries stand on their island
-  s.vx = Math.cos(s.rot) * s.speed; s.vy = Math.sin(s.rot) * s.speed;
-  s.x = clamp(s.x + s.vx * dt, 60, W - 60); s.y = clamp(s.y + s.vy * dt, 60, H - 60);
+  const wm = typeof wxMul === "function" ? wxMul(s) : 1, lee = typeof wxLee === "function" ? wxLee(s) : { x: 0, y: 0 };   // wind and storm (js/weather.js)
+  s.vx = Math.cos(s.rot) * s.speed * wm; s.vy = Math.sin(s.rot) * s.speed * wm;
+  s.x = clamp(s.x + (s.vx + lee.x) * dt, 60, W - 60); s.y = clamp(s.y + (s.vy + lee.y) * dt, 60, H - 60);
   // islands are solid to the whole hull: the hit capsule (s.hl / s.hw, cutter to man-o'-war) is kept off the rock
   const solid = islands.concat([{ x: PORT.x, y: PORT.y, r: PORT_ISLAND_R / 0.9, harbor: true }]);
   const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28, hw = s.hw ?? 13;

@@ -10,6 +10,11 @@ const BALL_SPEED = 480;
 const ARC = 0.62;           // half-angle (rad) of each broadside firing arc
 const ZONE_STEP = 320;      // every this many px from the harbor, enemy level +1: the axis edge reaches Lv 10
 const MAX_RING = 10;        // the outermost level ring; the corners past it belong to it too
+// Big gun decks (js/gundeck.js, js/combat.js): the most ports on one side, and the gun-bay layout that goes compact from DENSE_PORTS.
+// A broadside rolls off gun by gun, ROLL_GAP_MS apart but never longer than ROLL_MAX_MS in all; only about FX_GUNS guns of a
+// side get their own muzzle smoke and report; MAX_BALLS caps live shot (the rest of a crowded fight is not drawn).
+const AUTOFIRE_HOLD_MS = 250;   // holding Space this long turns on auto-fire (guns whose aim line is red fire as they reload)
+const MAX_PORTS = 15, DENSE_PORTS = 7, ROLL_GAP_MS = 70, ROLL_MAX_MS = 520, FX_GUNS = 6, MAX_BALLS = 220;
 const AIM_FULL_L = 8;       // enemy gunners get more accurate with level, up to this level
 const REPAIR_RATE = 0.01;        // share of max hull mended per second at sea, always (100 s from empty to full; js/repair.js)
 const REPAIR_RATE_STILL = 0.03;  // ... while the ship lies stopped (about 33 s from empty to full)
@@ -62,3 +67,33 @@ const CRASH_SPARE = 0.15;        // above this share of max hull a crash never k
 const CRASH_GAP = 0.3;           // a blow needs this long without contact before it: pressing on or scraping along a rock is one blow, not many
 const CRASH_SHED = 0.6;          // share of its speed a ship keeps after a ship-on-ship blow
 const CRASH_BIG = 0.1;           // a blow this share of max hull or more shakes the screen hard and shows "Crash!"
+// AI fleets (js/fleet.js): a lead ship and 1-4 wingmen of one faction that keep formation. [PLACEHOLDER] until playtested.
+const FLEET_CHANCE = { shallows: 0.08, reef: 0.18, lanes: 0.22, maelstrom: 0.22 };   // share of new ships that lead a fleet, by sea
+const FLEETS_AT_SEA = 4;          // fleets at sea at once
+const FLEET_SHIPS = 14;       // ships in fleets at once (of ENEMY_COUNT), so the sea keeps loners
+const FLEET_FIRE = 0.8;       // a wingman's effective firepower against the same ship as a lead (owner's call, #36 / #44)
+const FLEET_GAP = 88;         // px between formation slots
+const FLEET_STRAY = 420;      // a wingman this far from its slot for FLEET_STRAY_T s leaves the fleet and sails alone
+const FLEET_STRAY_T = 12;
+const FLEET_HDG_LAG = 1.2;   // s: how slowly the formation turns after its lead
+const FLEET_STUCK_T = 8, FLEET_STUCK_R = 140;   // a fleet ship that stays inside this circle this long claws off the nearest rock
+const FLEET_RAGE_T = 12, FLEET_SCATTER_T = 8;   // after the lead sinks: seconds the wingmen charge or flee
+// Wind, weather and the hour of day (js/weather-core.js is the maths, js/weather.js the sea). Every number here is gameplay:
+// the same for every player whatever the weather-effects setting says, so a daily sea plays the same everywhere.
+const WIND = { tail: 0.20, head: 0.25, full: 0.6 };   // speed gained running before the wind, lost beating into it, at wind strength >= full (a calm gives less)
+const WEATHER = {
+  seg: [75, 150], blend: 12,                          // a spell of weather lasts seg[0]..seg[1] s and fades into the next over `blend` s
+  first: { clear: 0.5, rain: 0.3, storm: 0.2 },       // the opening weather of a sortie
+  next: { clear: { clear: 0.55, rain: 0.38, storm: 0.07 }, rain: { clear: 0.35, rain: 0.35, storm: 0.3 }, storm: { clear: 0.1, rain: 0.55, storm: 0.35 } },
+  hour: { day: 0.55, dusk: 0.2, night: 0.25 },        // the hour a sortie sails in
+  windMin: 0.05, windRain: 0.15, windStorm: 0.35,     // strength 0..1: the wind's own wander, plus what rain and storm add
+  knots: [4, 40],                                     // strength 0 .. 1 as the dial's number
+  yaw: 0.32, leeway: 26, calmRadius: 230,             // storm: rad/s the hull is slewed beam-on at full gale, px/s pushed downwind, px from a coast inside which neither acts
+  ballDrift: 45,                                      // storm: px/s a cannonball is blown downwind
+};
+// Ship name and flag (js/flags.js). Name width counts a CJK character as 2, so 10 Chinese or 20 Latin characters fit.
+const FLAG_NAME_UNITS = 20;
+const FLAG_COLORS = ["red", "blue", "green", "black", "gold", "purple", "teal", "orange", "white", "grey"];   // main and second colour ids
+const FLAG_HEX = { red: "#b02626", blue: "#2f8ad6", green: "#3d8b4a", black: "#1a1618", gold: "#e0b44a", purple: "#7a3f98", teal: "#1f9aa0", orange: "#e07b2c", white: "#f4efe2", grey: "#6b6f78" };
+const FLAG_EMBLEMS = ["diag", "skull", "anchor", "swords", "star", "cross"];
+const DEFAULT_FLAG = { main: "blue", alt: "white", emblem: "diag" };   // what the player's ensign always looked like

@@ -19,21 +19,23 @@ function deckHtml() {
   const btn = (side, label, i) => { const gun = save[side][i], cls = (gun ? "slot" : "slot empty") + (isPicked(side, i) ? " sel" : "");   // js/gunbay.js
     const name = gun ? `${t("gf_" + gun.g)} Lv ${gun.lv}` : t("emptyPort");
     return `<button class="${cls}" type="button" data-act="slot" data-side="${side}" data-i="${i}" data-k="${side}${i}" aria-pressed="${isPicked(side, i)}" aria-label="${t("slotAria", { side: label, n: i + 1, gun: name })}">` +
-      (gun ? `${t("g_" + gun.g)}<small>Lv ${gun.lv}</small>` : `${t("emptyPort")}<small>&nbsp;</small>`) + `</button>`; };
+      (gun ? `${t("g_" + gun.g)}<small>Lv ${gun.lv}</small>` : `${t("emptyPort")}<small>&nbsp;</small>`) + `</button>`; };   // .deck.dense css: one line per port
   const grp = (side, label) => {
     const idx = save[side].map((_, i) => i);
     if (!idx.length) return "";
     if (side === "left" || side === "right") idx.reverse();   // bow-most gun on top, so the list reads like the hull
     return `<div class="dk-grp dk-${side}"><div class="lbl">${label}</div><div class="slots">${idx.map(i => btn(side, label, i)).join("")}</div></div>`;
   };
-  return { style: `--shipw: min(46%, ${Math.round(h * DECK_K)}px); --ship-ar: ${h} / ${w}`,
+  const rows = Math.max(save.left.length, save.right.length);   // a dense deck (js/gundeck.js) stretches the ship cell to as many rows as the longest side
+  return { dense: denseDeck(save.ship), style: `--shipw: min(46%, ${Math.round(h * DECK_K)}px); --ship-ar: ${h} / ${w}; --rows: ${rows}`,
     html: `<svg class="dk-lines" aria-hidden="true"></svg>` + grp("bow", t("bow")) + grp("left", t("larboard")) +
       `<div class="dk-ship" aria-hidden="true"></div>` + grp("right", t("starboard")) + grp("stern", t("stern")) };
 }
 function renderDeck(el = document.getElementById("deck")) {
   // the canvas survives re-renders, so swapping a gun does not repaint the ship
   const cv = el.querySelector("canvas.dk-art") || Object.assign(document.createElement("canvas"), { className: "dk-art" });
-  const { style, html } = deckHtml();
+  const { style, html, dense } = deckHtml();
+  el.classList.toggle("dense", dense);
   el.setAttribute("style", style); el.innerHTML = html; el.prepend(cv);
   paintGunDeck(el);
 }
@@ -44,14 +46,14 @@ function paintGunDeck(el = document.getElementById("deck")) {
   if (!box.width || !r.height) return;   // ledger still hidden: the ResizeObserver calls again once it shows
   const cls = SHIP_ART[save.ship] ? save.ship : "sloop", a = SHIP_ART[cls], k = r.height / texSize(a).w, dpr = window.devicePixelRatio || 1;
   const cx = r.left - box.left + r.width / 2, cy = r.top - box.top + r.height / 2;
-  const key = [cls, box.width, box.height, cx, cy, k, dpr].join("|");
+  const liv = liveryFor(player), key = [cls, liv, box.width, box.height, cx, cy, k, dpr].join("|");
   if (cv.dataset.key !== key) {
     cv.dataset.key = key;
     cv.width = Math.round(box.width * dpr); cv.height = Math.round(box.height * dpr);
     const c = cv.getContext("2d");
     c.setTransform(dpr, 0, 0, dpr, 0, 0); c.translate(cx, cy); c.rotate(-Math.PI / 2); c.scale(k, k);
     BLURK = k * dpr;   // shadowBlur ignores the transform (js/art.js)
-    try { drawShip(c, a, LIVERY.player, 0, 0, false, mulberry32(artSeed(`ship:${cls}:player`))); } finally { BLURK = 1; }
+    try { drawShip(c, a, LIVERY[liv], 0, 0, false, mulberry32(artSeed(`ship:${cls}:${liv}`))); } finally { BLURK = 1; }
   }
   // leader lines: from the button's edge facing the ship to its muzzle (rotated bow-up: local +x is screen up)
   const f = n => n.toFixed(1), on = deckActive(el);

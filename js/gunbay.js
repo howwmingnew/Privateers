@@ -33,7 +33,7 @@ function swapGuns(a, b) {
   const s = withGun(withGun(save, a.side, a.i, gb), b.side, b.i, ga);
   return { ...s, store: s.store.filter(Boolean) };
 }
-const gunStats = (g, lv) => { const G = GUNS[g], m = gunLvMul(lv);
+const gunStats = (g, lv) => { const G = GUNS[g], m = gunLvMul(lv) * shipGunK();   // what it hits for on this hull (js/data.js)
   return t("dmg", { n: Math.round(G.dmg * m) }) + (G.burn ? t("burn", { n: Math.round(G.burn * m * BURN_T) }) : ""); };
 
 // ---------- actions: each returns the sound to play, or null when nothing happened ----------
@@ -103,7 +103,7 @@ function gunCardHtml() {
   const up = max ? `<button class="btn max" type="button" disabled>${t("max")}</button>`
     : `<button class="btn" type="button" data-act="gup" ${short > 0 ? "disabled" : ""}>${upgradeLabel(gun.lv + 1, cost, short)}</button>`;
   const off = deckSel.side === "store" || save.store.length >= MAX_STORE ? "" : `<button class="btn ghost" type="button" data-act="unload">${t("toStore")}</button>`;
-  const next = max ? "" : ` <span class="up">→ ${Math.round(G.dmg * gunLvMul(gun.lv + 1))}</span>`;
+  const next = max ? "" : ` <span class="up">→ ${Math.round(G.dmg * gunLvMul(gun.lv + 1) * shipGunK())}</span>`;
   return `<div class="gcard${swapping ? " swapping" : ""}"><div class="nm">${t("gf_" + gun.g)}<small>Lv ${gun.lv}</small></div><div class="gacts">${up}${swap}${off}</div>
     <div class="ds">${gunStats(gun.g, gun.lv)}${next} · ${t("range", { n: G.range })} · ${t("rpm", { n: G.rpm })}${G.chain ? t("chainFx", { n: CHAIN_T }) : ""}</div>
     <p class="hint-s">${hint || t("selHint")}</p></div>`;

@@ -56,6 +56,12 @@ const SND_SFX = (() => {
       let tc = t + 0.01; for (let i = 0; i < 5 + Math.round(a * 3); i++) { const d = rand(0.015, 0.045), f = rand(500, 1800) * p;
         tone(v, tc, "triangle", f, f * 0.55, 0.12 * k, 0.4, 0.001, d + 0.03); hiss(v, tc, "bandpass", f * 1.6, 2.5, 0.35 * k, 0.001, d); tc += d + rand(0.01, 0.05); }   // planks splintering one by one
       if (!v.crowd) creak(v, t + 0.06, rand(80, 120) * p, 0.7, 0.45 * k); } },
+    // thunder: a sharp crack, then a rumble that rolls away and dies; the mids are there for small speakers
+    thunder: { max: 2, gap: 1.2, pv: 0.12, gv: 0.1, gain: 1, wet: 0.6, fn(v) { const { t, p } = v;
+      hiss(v, t, "highpass", 2200 * p, 0.7, 0.5, 0.002, 0.14);
+      sweep(hiss(v, t + 0.04, "lowpass", 1100 * p, 0.8, 1.1, 0.05, 2.8, true).frequency, t + 0.04, 1100 * p, 110 * p, 2.4);
+      tone(v, t + 0.05, "sine", 62 * p, 30 * p, 2.2, 0.6, 0.08, 2.4);
+      hiss(v, t + 0.3, "bandpass", 380 * p, 0.7, 0.7, 0.4, 2, true); } },
     // tall column: a sharp burst, then the water falling back as a long patter (chosen on tools/cannon-lab.html, splash C)
     splash: { max: 6, gap: 0.03, pv: 0.15, gv: 0.2, gain: 0.55, wet: 0.2, far: 1200, pri: 3, fn(v) { const { t, p } = v;
       hiss(v, t, "highpass", 2200 * p, 0.8, 0.5, 0.003, 0.12);
