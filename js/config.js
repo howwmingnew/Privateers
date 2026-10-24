@@ -39,4 +39,6 @@ const DAILY_LEVEL = 5;                       // the daily captain's ring (the Re
 // The same ship and guns for everyone: a brig with a long 12 on the bow and a carronade between two 6-pounders each side.
 const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,
   bow: ["long12"], left: ["six", "carronade", "six"], right: ["six", "carronade", "six"] };
+const REMATCH_PCT = 0.25;                     // a rematch sinking pays this share of the bounty's Captain's Chest (js/rematch.js)
+const REMATCH_MAX = 2;                        // beaten captains that sail again at once; the farthest lairs first
 const CHAIN_GAP = 20;                        // seconds between sinkings that still count as one kill chain (js/hall.js)
