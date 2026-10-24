@@ -6,8 +6,8 @@
 const LEGACY_SEED = 7;        // the old fixed map
 const LEGACY_SHIFT = 1500;    // the old 5000-px map's harbor sat at 2500, the 8000-px map's sits at 4000
 const BOUNTY_COUNT = 5, RANK_MAX = 4, OUTPOST_BOUNTY = 3;
-// Bounties needed before the yard sells each hull (bounty n unlocks the ship with gate n).
-const SHIP_GATE = { sloop: 0, schooner: 1, brig: 2, frigate: 3, line: 4 };
+// Bounties needed before the yard sells each hull (bounty n unlocks both ships of tier n + 1, one per line).
+const SHIP_GATE = { sloop: 0, schooner: 1, gunboat: 1, brigantine: 2, brig: 2, cruiser: 3, frigate: 3, corsair: 4, line: 4 };
 const randomSeed = () => 1000 + Math.floor(Math.random() * 2147000000);   // never LEGACY_SEED
 const freshCampaign = () => ({ bounty: 0, rank: 0, ships: ["sloop"], outpost: false, deaths: 0, won: false });
 const freshStats = () => ({ time: 0, gold: 0, sunk: { pirate: 0, navy: 0, merchant: 0 }, byLevel: {}, deaths: 0,

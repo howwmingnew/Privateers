@@ -14,13 +14,14 @@ function applyPlayerStats(full) {
   player.maxHp = yardVal("hull");
   if (full) player.hp = player.maxHp;
   player.maxSpeed = yardVal("sails");
+  player.turnRate = PLAYER_TURN * shipTurn();   // the fast line turns tighter, the gunboat wider (js/data.js)
   player.cap = yardVal("hold");
   player.guns = playerGuns();
   applyShipArt(player, save.ship, liveryFor(player));   // hull art, hitbox, muzzles and view follow the ship in the save
 }
 function makePlayer(sc) {
   const p = makeShip(sc, "ship-player", PORT.x + 140, PORT.y);
-  p.isPlayer = true; p.rot = 0; p.turnRate = 2.5; p.spr.setDepth(6);
+  p.isPlayer = true; p.rot = 0; p.spr.setDepth(6);
   player = p; applyPlayerStats(true);
   return p;
 }

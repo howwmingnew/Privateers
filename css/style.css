@@ -178,3 +178,8 @@ button:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
 @media (min-width: 2400px) and (min-height: 1300px) {
   #hud, #hint, #toast, #coach, #achToast, #bossBar, #seaBanner, #port, #title, #pause, #logbook, #victory, #wanted { zoom: 1.5; }
 }
+/* ship lines: the yard's comparison with the ship you sail (js/ship-lines.js) */
+.item .ds.cmp { font-size: calc(12.5px * var(--ts)); }
+.item .ds.cmp i { font-style: normal; color: var(--ink-soft); }
+.item .ds.cmp .gain { color: #2f6b2b; font-weight: 700; }
+.item .ds.cmp .loss { color: var(--blood); font-weight: 700; }

@@ -3,7 +3,7 @@
 // The bow points along +x and each texture is centred on the hull's midpoint, so the sprite's centre is the hitbox centre.
 //
 // API
-//   SHIP_ART[cls]              hull geometry. Player + enemy: sloop schooner brig frigate line; enemy only: cutter fireship fluyt
+//   SHIP_ART[cls]              hull geometry. Player + enemy: sloop schooner brig frigate line; player only: gunboat brigantine cruiser corsair; enemy only: cutter fireship fluyt
 //                              manowar (Admiral Thorne's flagship: a three-decker with a stern gallery, larger than any buyable hull).
 //                              { len, beam } in px, masts (0 = stern .. 1 = bow), rig "fore" | "square", guns (deck guns per
 //                              side, = muzzle count the art expects), rows (gun-port rows on the wale), ports (per row).
@@ -30,6 +30,11 @@ const SHIP_ART = {
   brig:     { len: 88,  beam: 28, masts: [0.67, 0.37], rig: "square", sail: 0.98, spanker: true, sprit: 0.26, guns: 3, boat: true },
   frigate:  { len: 104, beam: 33, masts: [0.74, 0.5, 0.25], rig: "square", sail: 0.94, spanker: true, sprit: 0.24, guns: 7, rows: 1, ports: 9, boat: true },
   line:     { len: 120, beam: 39, masts: [0.75, 0.51, 0.27], rig: "square", sail: 0.92, spanker: true, sprit: 0.22, guns: 12, rows: 2, ports: 13, boat: true },
+  // fast line (narrow, sharp bow, narrow transom) and the gunboat (squat and wide); the heavy line keeps brig / frigate / line
+  gunboat:    { len: 72,  beam: 27, masts: [0.6, 0.34], rig: "fore", boom: 0.28, sprit: 0.26, wide0: 0.28, wide1: 0.66, guns: 3 },
+  brigantine: { len: 86,  beam: 21, masts: [0.7, 0.4], rig: "square", sail: 0.88, spanker: true, sprit: 0.32, bow: 1.2, stern: 0.5, guns: 2 },
+  cruiser:    { len: 100, beam: 25, masts: [0.76, 0.52, 0.27], rig: "square", sail: 0.9, spanker: true, sprit: 0.3, bow: 1.15, stern: 0.55, guns: 4, rows: 1, ports: 6, boat: true },
+  corsair:    { len: 116, beam: 30, masts: [0.76, 0.52, 0.27], rig: "square", sail: 0.92, spanker: true, sprit: 0.3, bow: 1.15, stern: 0.55, guns: 5, rows: 1, ports: 8, boat: true },
   cutter:   { len: 60,  beam: 18, masts: [0.5], rig: "fore", boom: 0.66, sprit: 0.44, bow: 1.25, stern: 0.5, guns: 1, jibs: 2 },
   fireship: { len: 64,  beam: 22, masts: [0.56], rig: "square", sail: 0.82, sprit: 0.22, guns: 0, barrels: true, tattered: true, smoulder: true },
   fluyt:    { len: 86,  beam: 34, masts: [0.7, 0.46, 0.2], rig: "square", sail: 0.8, lateen: true, sprit: 0.2, bow: 0.55, stern: 0.4, wide0: 0.26, wide1: 0.64, guns: 1, hatches: 3 },
@@ -131,7 +136,7 @@ function liveryFor(s) {
   if (s.boss) return bossLivery((typeof findBounty === "function" && findBounty(s.boss)) || { faction: s.faction });
   return LIVERY[s.faction] ? s.faction : "pirate";
 }
-function shipZoomK() { return 1 - 0.05 * Math.max(0, SHIP_ORDER.indexOf(save.ship)); }
+function shipZoomK() { return 1 - 0.05 * Math.max(0, ((SHIPS[save.ship] || SHIPS.sloop).tier || 1) - 1); }
 function threatTier(L) {
   const d = L - shipRating();
   return d <= -1 ? { d, glyph: "▼", color: "#86c46f" } : d === 0 ? { d, glyph: "●", color: "#e8c25a" }

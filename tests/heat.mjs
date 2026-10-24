@@ -206,14 +206,14 @@ const r7 = await ev(() => {
   const res = {};
   const saved = run; run = { kind: "daily", over: false, bounty: null, seed: 1, n: 1, t: 0 };
   heatAdd(60); res.daily = { heat, mul: heatMulNow(), hud: hudState().hidden };
-  const e = navy(); const g0 = save.gold, base = Math.round(e.loot * BOUNTY_K); sink(e, player); res.dailyPay = (save.gold - g0) === base;
+  const e = navy(); const g0 = save.gold; sink(e, player); res.dailyPay = (save.gold - g0) === 0;   // the daily sea pays no gold at all (portsOff, js/ports.js), so heat has no bonus to add
   run = saved;
   fresh(5); save.tutorialDone = false;
   heatAdd(60); res.first = heat; save.tutorialDone = true;
   fresh(5); heatAdd(60); res.live = heat;
   return res;
 });
-check(r7.daily.heat === 0 && r7.daily.mul === 1 && r7.daily.hud && r7.dailyPay, "a daily run: no heat, no bonus, no HUD, plain bounty");
+check(r7.daily.heat === 0 && r7.daily.mul === 1 && r7.daily.hud && r7.dailyPay, "a daily run: no heat, no bonus, no HUD, no gold in the daily sea");
 check(r7.first === 0, "before the tutorial is done a Navy kill makes no heat");
 check(r7.live === 60, "...and back to normal outside a run");
 

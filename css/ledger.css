@@ -49,3 +49,4 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 #hitDirs .hd.pop b { animation: hdPop .35s ease-out; }
 @keyframes hdPop { 0% { transform: scale(1.55); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { #hitDirs .hd.pop b { animation: none; } #hitDirs .hd { transition: none; } }
+.poster .p-rec .speed { display: block; margin-top: 2px; color: var(--ink-soft); font-style: italic; }
