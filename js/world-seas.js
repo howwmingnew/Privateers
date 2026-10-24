@@ -190,20 +190,19 @@ onHook("dock", hideSeaBanner);
 onHook("lang", () => { if (seaShown) renderSeaBanner(seaShown); });
 
 // ---------- Chart (the HUD minimap's base layer) ----------
-// Each sea tinted, a line on every real level boundary (sea borders brighter), the seas' level ranges up the
-// north-west diagonal. M = chart size in canvas px; u = scale relative to the original 224-px chart.
+// One smooth shade out from the harbor, each sea's tint at the middle of its band, darker the deadlier: no ring or border
+// lines, so the chart says only roughly how risky a place is (the seas' level ranges sit up the north-west diagonal).
+// M = chart size in canvas px; u = scale relative to the original 224-px chart.
+const seaBandMid = i => (i === 0 ? SAFE_R + ringEdge(SEAS[1].L0) : ringEdge(SEAS[i].L0) + (i < SEAS.length - 1 ? ringEdge(SEAS[i + 1].L0) : farthestCorner())) / 2;
+const farthestCorner = () => Math.hypot(Math.max(PORT.x, W - PORT.x), Math.max(PORT.y, H - PORT.y));
 function drawSeaChart(c, M) {
-  const k = M / W, u = M / 224, cx = PORT.x * k, cy = PORT.y * k;
-  c.fillStyle = SEAS[SEAS.length - 1].tint; c.fillRect(0, 0, M, M);
-  for (let i = SEAS.length - 2; i >= 0; i--) { c.fillStyle = SEAS[i].tint; c.beginPath(); c.arc(cx, cy, ringEdge(SEAS[i + 1].L0) * k, 0, TAU); c.fill(); }
+  const k = M / W, cx = PORT.x * k, cy = PORT.y * k, far = farthestCorner();
+  const g = c.createRadialGradient(cx, cy, 0, cx, cy, far * k);
+  g.addColorStop(0, SEAS[0].tint);
+  SEAS.forEach((s, i) => g.addColorStop(clamp(seaBandMid(i) / far, 0, 1), s.tint));
+  g.addColorStop(1, SEAS[SEAS.length - 1].tint);
+  c.fillStyle = g; c.fillRect(0, 0, M, M);
   c.fillStyle = "#3a9aab"; c.beginPath(); c.arc(cx, cy, SAFE_R * k, 0, TAU); c.fill();   // the harbor's safe water
-  for (let L = 2; L <= MAX_RING; L++) {
-    const border = SEAS.some(s => s.L0 === L);
-    c.strokeStyle = border ? "rgba(246,241,227,.55)" : "rgba(4,18,24,.32)"; c.lineWidth = (border ? 1.6 : 1) * u;
-    c.setLineDash(border ? [5 * u, 3 * u] : []);   // a sea's border is dashed, so it reads apart from the level rings
-    c.beginPath(); c.arc(cx, cy, ringEdge(L) * k, 0, TAU); c.stroke();
-  }
-  c.setLineDash([]);
 }
 function drawSeaLabels(c, M) {
   const k = M / W, u = M / 224, a = -Math.PI * 0.75, b = levelBonus();

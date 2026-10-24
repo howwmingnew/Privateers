@@ -96,6 +96,7 @@ function steer(s, desired, thr, dt) {
   s.speed += clamp(target - s.speed, -s.maxSpeed * 1.1 * dt, s.maxSpeed * 0.7 * dt);
 }
 function avoidIslands(s, desired) {
+  for (const isl of islands) { const slid = slideOff(s, isl, desired); if (slid !== desired) return slid; }   // about to touch a rock: turn along it (js/ai-nav.js)
   const lx = s.x + Math.cos(s.rot) * 120, ly = s.y + Math.sin(s.rot) * 120;
   for (const isl of islands) {
     if (Math.hypot(isl.x - lx, isl.y - ly) < isl.r * 1.05 + 45) {
@@ -185,9 +186,11 @@ function think(e, dt) {
       const { r0, r1 } = e.ring ? ringBand(e.ring) : ringOf(e.L), r = rand(r0, r1);   // by home ring: level != ring once the war escalates
       const a = Math.atan2(e.y - PORT.y, e.x - PORT.x) + rand(-1, 1) * 600 / r;
       e.thinkT = rand(5, 10);
-      e.wander = { x: clamp(PORT.x + Math.cos(a) * r, 200, W - 200), y: clamp(PORT.y + Math.sin(a) * r, 200, H - 200) };
+      const pt = { x: clamp(PORT.x + Math.cos(a) * r, 200, W - 200), y: clamp(PORT.y + Math.sin(a) * r, 200, H - 200) };
+      e.wander = save.campaign.outpost ? clearOfCircle(pt, OUTPOST, TRUCE_R) : pt;   // never a point on the outpost's hulk (js/ai-nav.js)
     }
     desired = Math.atan2(e.wander.y - e.y, e.wander.x - e.x); thr = 0.5;
+    if (inTruce(e)) { desired = Math.atan2(e.y - OUTPOST.y, e.x - OUTPOST.x); thr = 0.7; }   // an idle ship inside the truce circle sails out of it
   }
   // stay out of the harbor's safe waters
   const dPort = Math.hypot(e.x - PORT.x, e.y - PORT.y);

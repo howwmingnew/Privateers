@@ -47,6 +47,24 @@
 #bossBar .bb { height: 10px; border-radius: 3px; background: rgba(8,34,45,.85); border: 1px solid rgba(240,199,102,.6); overflow: hidden; }
 #bossBar .bb i { display: block; height: 100%; width: 100%; background: linear-gradient(#e2c15a, #b07f1f); transition: width .2s; }
 
+/* Edge markers: off-screen ships, harbor and outpost with their distance (js/edge-marks.js). Sizes follow the UI size slider (--ts)
+   and the HUD's big-screen zoom (--ez); the layer is hidden in photo mode with every other overlay (css/photo.css). */
+#edgeMarks { --ez: 1; --es: calc(var(--ts, 1) * var(--ez)); position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+@media (min-width: 1500px) and (min-height: 900px) { #edgeMarks { --ez: 1.25; } }
+@media (min-width: 2400px) and (min-height: 1300px) { #edgeMarks { --ez: 1.5; } }
+#edgeMarks .em { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: calc(5px * var(--es)); white-space: nowrap;
+  padding: calc(2px * var(--es)) calc(9px * var(--es)) calc(2px * var(--es)) calc(3px * var(--es)); border-radius: 999px;
+  background: rgba(8,34,45,.84); border: 1px solid rgba(246,241,227,.35); color: var(--foam); text-shadow: 0 1px 2px #000;
+  font: 700 calc(12px * var(--es)) / 1 var(--f-ui); font-variant-numeric: tabular-nums; opacity: 0; transition: opacity .25s; }
+#edgeMarks .em.on:not(.gone) { opacity: .95; }
+#edgeMarks .em canvas { width: calc(22px * var(--es)); height: calc(22px * var(--es)); }
+#edgeMarks .em.boss { border-color: #f0c766; font-size: calc(14px * var(--es)); padding-right: calc(11px * var(--es)); }
+#edgeMarks .em.boss canvas { width: calc(30px * var(--es)); height: calc(30px * var(--es)); }
+#edgeMarks .ptr { position: absolute; left: 50%; top: 50%; width: 0; height: 0; border-left: calc(9px * var(--es)) solid rgba(246,241,227,.92);
+  border-block: calc(6px * var(--es)) solid transparent; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
+#edgeMarks .em.boss .ptr { border-left-color: #f0c766; }
+@media (prefers-reduced-motion: reduce) { #edgeMarks .em { transition: none; } }
+
 /* Ship gate in the "New ships" list */
 .item.locked .nm { color: var(--ink-soft); }
 .item .ds .lock { display: block; margin-top: 3px; color: var(--blood); font-weight: 700; }

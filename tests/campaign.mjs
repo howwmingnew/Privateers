@@ -110,8 +110,9 @@ console.log("Fresh campaign (desktop, en)");
   // A fresh save is still on its first voyage, which holds the bounty back (js/campaign.js): call the tutorial done.
   await page.evaluate(() => { save.tutorialDone = true; sendHome(), dock("return"); setSail(); S.cameras.main.centerOn(player.x, player.y); });
   await page.waitForTimeout(400 * SLOW);
-  const arrow =await page.evaluate(() => ({ arrow: !bossArrow.hidden, mini: !!activeBounty() }));
-  check(arrow.arrow, "edge arrow points at the bounty while it is off screen");
+  // within the edge markers' range the bounty's skull box (with its distance, js/edge-marks.js) stands in for the arrow
+  const arrow =await page.evaluate(() => ({ arrow: !bossArrow.hidden || !!document.querySelector("#edgeMarks .em.boss:not(.gone)"), mini: !!activeBounty() }));
+  check(arrow.arrow, "edge arrow (or, within range, the bounty's edge box) points at the bounty while it is off screen");
   await o.shot("desktop-en-3-arrow");
   await page.evaluate(() => { const b = enemies.find(e => e.boss); player.x = b.x - 280; player.y = b.y + 40; player.rot = 0; b.target = null; });
   await page.waitForTimeout(700 * SLOW);
