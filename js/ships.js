@@ -97,7 +97,6 @@ function steer(s, desired, thr, dt) {
 function avoidIslands(s, desired) {
   const away = s.shoreAway;   // just rammed a rock (js/collision.js): head out from it for a moment
   if (away && away.until > S.time.now / 1000) return Math.atan2(s.y - away.y, s.x - away.x);
-  for (const isl of islands) { const slid = slideOff(s, isl, desired); if (slid !== desired) return slid; }   // about to touch a rock: turn along it (js/ai-nav.js)
   const look = 120 + s.speed * 0.5, lx = s.x + Math.cos(s.rot) * look, ly = s.y + Math.sin(s.rot) * look;   // a faster hull needs more warning
   for (const isl of islands) {
     if (Math.hypot(isl.x - lx, isl.y - ly) < isl.r * 1.05 + 45 + (s.hw ?? 13)) {
@@ -105,6 +104,7 @@ function avoidIslands(s, desired) {
       return s.rot - Math.sign(cross || 1) * 1.3;
     }
   }
+  for (const isl of islands) { const slid = slideOff(s, isl, desired); if (slid !== desired) return slid; }   // about to touch a rock: turn along it (js/ai-nav.js)
   return desired;
 }
 // Who fights whom:
