@@ -164,6 +164,7 @@ function renderSeaBanner(id) {
   seaBanner.innerHTML = `<small>${t("seaLv", { a: s.L0 + b + warLevels(s.L0), b: s.L1 + b + warLevels(s.L1) })}</small><b>${t("sea_" + id)}</b><span>${t("seaLine_" + id)}</span>`;
 }
 function showSeaBanner(id) {
+  if (typeof bannerGate === "function" && !bannerGate("seaBanner", () => showSeaBanner(id), id)) return;   // one banner at a time (js/notify-order.js)
   seaShown = id; renderSeaBanner(id);
   seaBanner.classList.remove("on"); void seaBanner.offsetWidth; seaBanner.classList.add("on");   // restart the fade
   clearTimeout(seaBannerT); seaBannerT = setTimeout(hideSeaBanner, 3800);

@@ -61,6 +61,7 @@ function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
   e.badge = sc.add.text(x, y - 36, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#1b1410", padding: { x: 5, y: 1 } })
     .setOrigin(0.5).setDepth(9);
   outfitEnemy(e, cls);   // numbers, guns, and the class's art + hitbox via applyShipArt (js/art.js)
+  if (typeof tameFirstVoyage === "function") tameFirstVoyage(e);   // no ▲▲ ship in the Shallows on a first voyage (js/notify-order.js)
   refreshBadge(e);
   enemies.push(e);
   return e;

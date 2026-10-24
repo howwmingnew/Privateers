@@ -149,7 +149,8 @@ function claimBounty(b, s) {
   save.stats = { ...save.stats, gold: save.stats.gold + reward, bounties: save.stats.bounties + 1 };
   persist();
   storyKey = "done_" + b.id;
-  floatText(s.x, s.y - 60, t("fChest", { n: fmt(reward) }), "#f6d27a", 22);
+  if (typeof bossChest === "function") bossChest(reward);   // on the name card, then to the gold counter (js/juice-ui.js)
+  else floatText(s.x, s.y - 60, t("fChest", { n: fmt(reward) }), "#f6d27a", 22);
   sfx("coin", { amount: reward, delay: 0.35 });
   if (b.final) S.time.delayedCall(2600, showVictory);   // js/victory.js
   else { toast(t("rankUp", { rank: t("rank_" + save.campaign.rank) })); sfx("buy", { big: true, delay: 1.1 }); }

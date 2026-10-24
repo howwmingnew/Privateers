@@ -5,7 +5,7 @@
 // fight in its lair, where other ships join in, so it asks BOSS_MARGIN levels above that, and one more with escorts.
 // Round-2 duels put Red Ned (threat 2) at Ship Lv 4. It reads as a goal ("Ready at Ship Lv 4"), not a warning.
 Object.assign(STR.en, { pRec: "Goal", pRecLv: "Ready at Ship Lv {n}", pRecOk: "Ready: Ship Lv {n}", pRecYou: "you: Lv {n}" });
-Object.assign(STR.zh, { pRec: "目標", pRecLv: "船艦 Lv {n} 即可迎戰", pRecOk: "已可迎戰：船艦 Lv {n}", pRecYou: "你目前 Lv {n}" });
+Object.assign(STR.zh, { pRec: "備戰", pRecLv: "船艦 Lv {n} 即可迎戰", pRecOk: "已可迎戰：船艦 Lv {n}", pRecYou: "你目前 Lv {n}" });
 
 const BOSS_MARGIN = 2, ESCORT_MARGIN = 1;
 function bountyThreat(b) {

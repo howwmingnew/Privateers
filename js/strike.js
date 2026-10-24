@@ -17,7 +17,8 @@ function strikeColors(e, src) {
   if (e.badge) refreshBadge(e);
   if (onScreen(e.x, e.y)) {
     floatText(e.x, e.y - 44, t("fStruck"), "#f6f1e3", 16);
-    if (src === player || dist(e, player) < 900) toast(t("toastStruck"));
+    const coach = typeof coachUp === "function" && coachUp();   // the white flag and the float say it; the coach card has the floor
+    if (!coach && (src === player || dist(e, player) < 900)) toast(t("toastStruck"));
   }
 }
 const canStrike = s => s.merchant && !s.isPlayer && !s.boss && !s.escortOf && s.alive && !s.struck;

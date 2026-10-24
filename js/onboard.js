@@ -30,7 +30,9 @@ function coachGlyphs(at) {
 const seaBannerOn = () => { const b = document.getElementById("seaBanner"); return !!(b && b.classList.contains("on")); };
 // The coach card is up on the sea during the first voyage: achievement toasts and the volley tip wait for it.
 const coachUp = () => typeof firstVoyage === "function" && firstVoyage() && !docked && !titleOpen;
-const toastHeld = () => seaBannerOn();
+// Any banner (sea, Ship Lv, the boss card: js/notify-order.js) has the floor; toasts wait for it.
+const anyBanner = () => seaBannerOn() || (typeof bannerBusy === "function" && bannerBusy());
+const toastHeld = () => anyBanner();
 // The notice lane (js/notices.js) holds while the banner is on; poll it back to life once both are gone.
 let toastWasHeld = false;
 onHook("frame", () => {
@@ -42,7 +44,8 @@ onHook("frame", () => {
   toastWasHeld = held;
   if (freed && !toastOn && toastQueue.length && !docked) { clearTimeout(toastTimer); toastTimer = setTimeout(nextToast, 250); }
 });
-const achHeld = () => coachUp();
+// Achievement cards wait for the coach card, any banner, and (if earned on the first voyage) for the ledger to close.
+const achHeld = () => coachUp() || anyBanner() || (typeof achLedgerHold === "function" && achLedgerHold());
 onHook("frame", () => { if (typeof achQueue !== "undefined" && achQueue.length && !achShowing && !achHeld()) nextAchToast(); });
 
 // ---------- first-voyage chart ----------
@@ -71,7 +74,8 @@ const sinkingNear = r => enemies.some(e => !e.alive && !e.dead && dist(e, player
 
 // ---------- title attract mode ----------
 // The camera drifts over the nearest pair of hostile AI ships within ATTRACT_R of the harbor, and the sea moves under
-// it (AI steering only: no shot is fired, nothing can sink or persist; setSail rebuilds the sea anyway).
+// it. The pair's broadsides are cosmetic (js/title-attract.js): no damage, nothing sinks or persists, and setSail
+// rebuilds the sea anyway.
 const ATTRACT_R = 1500, ATTRACT_PAIR = 700, ATTRACT_PICK = 5;
 const attract = { pair: null, pickT: 0 };
 function attractPick() {
@@ -81,7 +85,8 @@ function attractPick() {
     if (a === b || !(isHostile(a, b) || isHostile(b, a))) continue;
     const d = dist(a, b);
     if (d > ATTRACT_PAIR) continue;
-    const m = Math.hypot((a.x + b.x) / 2 - PORT.x, (a.y + b.y) / 2 - PORT.y);
+    // nearest the harbor, but two warships first: a merchant runs instead of trading broadsides
+    const m = Math.hypot((a.x + b.x) / 2 - PORT.x, (a.y + b.y) / 2 - PORT.y) + (a.merchant || b.merchant ? ATTRACT_R * 2 : 0);
     if (m < bd) { bd = m; best = [a, b]; }
   }
   return best;
@@ -103,11 +108,14 @@ function attractTick(dt) {
     think(e, k); move(e, k);
     e.spr.setPosition(e.x, e.y).setRotation(e.rot);
     vfxShip(e, k);   // wake and badge
+    e.badge?.setVisible(false);   // a hero shot, not a HUD: the plates come back at sea (below, and js/tech.js thinPlates)
   }
+  if (typeof attractGuns === "function") attractGuns(k);   // the pair trades cosmetic broadsides (js/title-attract.js)
 }
 function showPlayer(on) {
   if (player.spr.visible !== on) player.spr.setVisible(on);
   if (!on && typeof halo !== "undefined" && halo) halo.setVisible(false);   // vfxShip shows it again at sea
 }
-onHook("sail", () => { showPlayer(true); attract.pair = null; });
-onHook("dock", () => { showPlayer(true); attract.pair = null; });
+const showPlates = () => { for (const e of enemies) e.badge?.setVisible(true); };
+onHook("sail", () => { showPlayer(true); showPlates(); attract.pair = null; });
+onHook("dock", () => { showPlayer(true); showPlates(); attract.pair = null; });
