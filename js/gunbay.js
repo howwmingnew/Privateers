@@ -33,6 +33,7 @@ function swapGuns(a, b) {
   const s = withGun(withGun(save, a.side, a.i, gb), b.side, b.i, ga);
   return { ...s, store: s.store.filter(Boolean) };
 }
+const gunIcon = (id, cls) => (typeof gunSideImg === "function" ? gunSideImg(id, cls) : "");   // the side view (js/gun-art.js); the unit tests load this file without it
 const gunStats = (g, lv) => { const G = GUNS[g], m = gunLvMul(lv) * shipGunK();   // what it hits for on this hull (js/data.js)
   return t("dmg", { n: Math.round(G.dmg * m) }) + (G.burn ? t("burn", { n: Math.round(G.burn * m * BURN_T) }) : ""); };
 
@@ -91,7 +92,7 @@ function renderGunBay() {
   document.getElementById("gunSel").innerHTML = gunCardHtml();
   document.getElementById("bay").innerHTML = `<div class="lbl">${t("bay")}</div>` + (save.store.length
     ? `<div class="slots">${save.store.map((gun, i) => `<button class="slot${isPicked("store", i) ? " sel" : ""}" type="button" data-act="store" data-i="${i}" aria-pressed="${isPicked("store", i)}" ` +
-      `aria-label="${t("storeAria", { n: i + 1, gun: t("gf_" + gun.g), lv: gun.lv })}">${t("g_" + gun.g)}<small>Lv ${gun.lv}</small></button>`).join("")}</div>`
+      `aria-label="${t("storeAria", { n: i + 1, gun: t("gf_" + gun.g), lv: gun.lv })}">${gunIcon(gun.g, "sm")}${t("g_" + gun.g)}<small>Lv ${gun.lv}</small></button>`).join("")}</div>`
     : `<p class="hint-s">${t("bayEmpty")}</p>`);
 }
 function gunCardHtml() {
@@ -104,7 +105,7 @@ function gunCardHtml() {
     : `<button class="btn" type="button" data-act="gup" ${short > 0 ? "disabled" : ""}>${upgradeLabel(gun.lv + 1, cost, short)}</button>`;
   const off = deckSel.side === "store" || save.store.length >= MAX_STORE ? "" : `<button class="btn ghost" type="button" data-act="unload">${t("toStore")}</button>`;
   const next = max ? "" : ` <span class="up">→ ${Math.round(G.dmg * gunLvMul(gun.lv + 1) * shipGunK())}</span>`;
-  return `<div class="gcard${swapping ? " swapping" : ""}"><div class="nm">${t("gf_" + gun.g)}<small>Lv ${gun.lv}</small></div><div class="gacts">${up}${swap}${off}</div>
+  return `<div class="gcard${swapping ? " swapping" : ""}"><div class="nm">${gunIcon(gun.g)}${t("gf_" + gun.g)}<small>Lv ${gun.lv}</small></div><div class="gacts">${up}${swap}${off}</div>
     <div class="ds">${gunStats(gun.g, gun.lv)}${next} · ${t("range", { n: G.range })} · ${t("rpm", { n: G.rpm })}${G.chain ? t("chainFx", { n: CHAIN_T }) : ""}</div>
     <p class="hint-s">${hint || t("selHint")}</p></div>`;
 }
@@ -116,7 +117,7 @@ function armoryHtml() {
   const full = save.store.length >= MAX_STORE;
   return GUN_ORDER.map(id => {
     const G = GUNS[id], n = allGuns().filter(x => x.g === id).length;
-    return `<div class="item"><div class="nm">${t("gf_" + id)}<small>${t("owned", { n })}</small></div>
+    return `<div class="item"><div class="nm">${gunIcon(id)}${t("gf_" + id)}<small>${t("owned", { n })}</small></div>
       <button class="btn" type="button" data-act="buy" data-id="${id}" ${save.gold < G.cost || full ? "disabled" : ""}>${t("buy", { n: fmt(G.cost) })}</button>
       <div class="ds">${gunStats(id, 1)} · ${t("range", { n: G.range })} · ${t("rpm", { n: G.rpm })}${G.chain ? t("chainFx", { n: CHAIN_T }) : ""} · ${t("gn_" + id)}</div></div>`;
   }).join("");

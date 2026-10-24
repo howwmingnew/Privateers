@@ -3,11 +3,11 @@
 // Light is ambient (no baked direction) because the sprite rotates: hulls are lit along the centreline and shaded at
 // both sides, sails darken under the yard and brighten where they belly out, and soft shadows lift sails off the deck.
 function hexA(hex, al) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${al})`; }
-function drawShip(c, a, L, cx, cy, furled, rng) {
+function drawShip(c, a, L, cx, cy, furled, rng, bare) {   // bare: no deck guns (js/gun-art.js lays them on as sprites)
   const di = a.rows >= 3 ? 5.2 : a.rows === 2 ? 3.8 : a.rows ? 2.9 : 2.3;   // deck inset: heavier bulwarks on the warships
   drawSprit(c, a, cx, cy);
   drawHull(c, a, L, cx, cy);
-  drawDeck(c, a, L, cx, cy, di, rng);
+  drawDeck(c, a, L, cx, cy, di, rng, bare);
   if (a.gallery) drawGallery(c, a, L, cx, cy);
   drawRigging(c, a, cx, cy);
   if (furled) drawFurled(c, a, L, cx, cy); else drawSails(c, a, L, cx, cy, rng);
@@ -55,7 +55,7 @@ function drawHull(c, a, L, cx, cy) {
     }
   }
 }
-function drawDeck(c, a, L, cx, cy, di, rng) {
+function drawDeck(c, a, L, cx, cy, di, rng, bare) {
   const len = a.len, b = a.beam / 2, x0 = cx - len / 2, X = u => x0 + u * len, Wd = u => hullHalf(a, u) - di;
   c.save(); hullPath(c, a, cx, cy, di); c.clip();
   const g = c.createLinearGradient(0, cy - b, 0, cy + b);
@@ -74,13 +74,13 @@ function drawDeck(c, a, L, cx, cy, di, rng) {
   deckGear(c, a, L, cx, cy, rng);
   // one deck gun per side muzzle (same spacing as s.mounts.left in applyShipArt)
   const n = a.guns, span = len * 0.48;
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < (bare ? 0 : n); i++) {
     const off = n === 1 ? 0 : -span / 2 + span * i / (n - 1), w = Wd(0.5 + off / len);
     for (const sg of [-1, 1]) { c.fillStyle = shade(L.deck, -0.5); c.fillRect(cx + off - 1.7, cy + sg * (w - 2.3) - 1.3, 3.4, 2.6); }
   }
   c.restore();
   hullPath(c, a, cx, cy, di - 0.4); c.lineWidth = 0.9; c.strokeStyle = L.gold ? L.trim : shade(L.hull, 0.38); c.stroke();   // rail
-  for (let i = 0; i < n; i++) {   // barrels poke out past the planking, so gun count reads on the hull side
+  for (let i = 0; i < (bare ? 0 : n); i++) {   // barrels poke out past the planking, so gun count reads on the hull side
     const off = n === 1 ? 0 : -span / 2 + span * i / (n - 1), u = 0.5 + off / len, w = hullHalf(a, u);
     for (const sg of [-1, 1]) line(c, cx + off, cy + sg * (w - di - 1.5), cx + off, cy + sg * (w + 1), 1.5, "#1b1816");
   }
