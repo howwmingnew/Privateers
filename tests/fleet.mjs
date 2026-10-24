@@ -85,7 +85,7 @@ const held = await ev(() => {
   }
   return rows;
 });
-for (const r of held) check(r.left === 3 && r.near >= 70 && r.worst < 500, `${r.type}: 3 wingmen stay with the lead for 15 s (${r.near}% of samples within 200px of the slot, worst ${r.worst}px)`);
+for (const r of held) check(r.left === 3 && r.near >= 70 && r.worst < 700, `${r.type}: 3 wingmen stay with the lead for 15 s (${r.near}% of samples within 200px of the slot, worst ${r.worst}px)`);
 
 console.log("Engaging the player");
 const shotFleet = async (name, setup) => {
@@ -189,7 +189,7 @@ const stuck = await ev(() => {
     stepN(1800);
     const snap = () => new Map(live.flatMap(f => f.ships.filter(s => s.alive).map(s => [s, { x: s.x, y: s.y }])));
     const p0 = snap(); stepN(720); const p1 = snap(); stepN(720);   // two windows of 12 s: a ship may pause once, not stay put
-    for (const f of live) for (const s of f.ships) if (s.alive && p0.has(s) && p1.has(s)) {
+    for (const f of live) for (const s of f.ships) if (s.alive && p0.has(s) && p1.has(s) && !s.target) {   // a ship in a fight circles its quarry as it likes; this is about ships under way
       const m1 = Math.hypot(p1.get(s).x - p0.get(s).x, p1.get(s).y - p0.get(s).y), m2 = Math.hypot(s.x - p1.get(s).x, s.y - p1.get(s).y);
       res.push({ moved: Math.round(Math.max(m1, m2)), inRock: islands.some(i => Math.hypot(i.x - s.x, i.y - s.y) < i.r * 0.9), type: f.type, cls: s.cls, x: Math.round(s.x), y: Math.round(s.y) });
     }

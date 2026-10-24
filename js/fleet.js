@@ -179,7 +179,7 @@ function unstick(m, now) {
   let best = null, bd = 1e9;
   for (const isl of islands) { const d = Math.hypot(isl.x - m.x, isl.y - m.y) - isl.r; if (d < bd) { bd = d; best = isl; } }
   const edge = m.x < 220 || m.x > W - 220 || m.y < 220 || m.y > H - 220;
-  m.unstickA = edge ? Math.atan2(H / 2 - m.y, W / 2 - m.x) : best && bd < 260 ? Math.atan2(m.y - best.y, m.x - best.x) : m.rot + Math.PI * 0.6;
+  m.unstickA = best && bd < 260 ? Math.atan2(m.y - best.y, m.x - best.x) : edge ? Math.atan2(H / 2 - m.y, W / 2 - m.x) : m.rot + Math.PI * 0.6;
   m.unstickT = now + 4; m.anchor = { x: m.x, y: m.y, t: now };
 }
 // ---------- Upkeep (every frame, cheap: the heavy part runs twice a second) ----------

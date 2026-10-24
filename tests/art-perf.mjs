@@ -17,7 +17,7 @@ await page.waitForFunction(() => typeof player !== "undefined" && player && type
 await page.waitForTimeout(600);
 const res = await page.evaluate(async N => {
   save = fitMounts({ ...save, ship: "line", unlocked: { six: true, long12: true, carronade: true, fire: true } });
-  ["left", "right"].forEach(k => save[k] = save[k].map((_, i) => ["six", "long12", "carronade", "fire"][i % 4]));
+  ["left", "right"].forEach(k => save[k] = save[k].map((_, i) => ({ g: ["six", "long12", "carronade", "fire"][i % 4], lv: 1 })));
   applyPlayerStats(true);
   document.getElementById("port").hidden = true; docked = false; paused = false; canDock = false; resetEnemies(S);
   // open water well outside the safe ring
