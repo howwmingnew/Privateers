@@ -88,6 +88,7 @@ function posterHtml(b) {
     <div class="p-marque">${t("marque", { n: i + 1, m: BOUNTIES.length })}</div>
     <div class="p-head"><canvas class="p-flag" width="240" height="170" aria-hidden="true"></canvas>
       <div><div class="p-wanted">${t("wanted")}</div><div class="p-name">${bossName(b)}</div><div class="p-sub">${t("sunkOrTaken")}</div></div></div>
+    ${posterShipHtml(b)}
     <p class="p-story">${t("intro_" + b.id)}</p>
     <dl class="p-facts">
       <div><dt>${t("pTarget")}</dt><dd>${t("cls_" + b.cls)}${escorts}</dd></div>
@@ -108,6 +109,8 @@ function renderWanted() {
     `<button class="logbtn" type="button" data-camp="log">${t("logBtn")}</button></div>`;
   const cv = wantedEl.querySelector(".p-flag");
   if (cv && b) drawFlag(cv, b.id);
+  const ship = wantedEl.querySelector(".p-ship");
+  if (ship && b) paintPosterShip(ship, b);   // js/poster-ship.js
 }
 wantedEl.addEventListener("click", ev => {
   const btn = ev.target.closest("[data-camp]");
@@ -137,6 +140,7 @@ document.body.append(bossArrow, bossBar);
   c.strokeStyle = "#f0c766"; c.lineWidth = 3; c.stroke(); drawSkull(c, 32, 33, 17); }
 const EDGE = { side: 34, top: 76 };   // keep the arrow clear of the HUD strip
 function placeBossArrow() {
+  if (edgeShowsBoss) { bossArrow.hidden = true; return; }   // the bounty already has a bigger box on the edge, with its distance (js/edge-marks.js)
   const v = S.cameras.main.worldView, fx = (bossShip.x - v.x) / v.width, fy = (bossShip.y - v.y) / v.height;
   if (fx > 0.03 && fx < 0.97 && fy > 0.03 && fy < 0.97) { bossArrow.hidden = true; return; }
   const vw = VIEW.cssW, vh = VIEW.cssH, cx = vw / 2, cy = (vh + EDGE.top - EDGE.side) / 2;
@@ -158,11 +162,8 @@ onHook("frame", () => {
   }
 });
 
-// ---------- Chart marks: the bounty (live ship, or its lair while in port) and the outpost ----------
+// ---------- Chart marks: the bounty (live ship, or its lair while in port); the outpost is drawn by js/hud.js ----------
 onHook("mini", (c, k, u) => {
-  if (save.campaign.outpost) {
-    miniOutpost(c, OUTPOST.x * k, OUTPOST.y * k, u);   // js/mini-marks.js
-  }
   const b = activeBounty();
   if (!b || (bountyHeld && !docked)) return;   // the first voyage: no bounty until the tutorial is done (js/campaign.js)
   const p = bossShip && bossShip.alive ? bossShip : lairOf(b), x = p.x * k, y = p.y * k, pulse = 1 + 0.25 * Math.sin(performance.now() / 260);

@@ -41,10 +41,9 @@ function buildMiniBase() {
   const M = mini.width, k = M / W, u = miniUnit(M);
   miniBase = document.createElement("canvas"); miniBase.width = miniBase.height = M;
   const c = miniBase.getContext("2d");
-  drawSeaChart(c, M);   // tinted seas and the real level rings (js/world-seas.js)
-  c.fillStyle = "rgba(227,207,150,.72)"; for (const i of islands) { c.beginPath(); c.arc(i.x * k, i.y * k, Math.max(2 * u, i.r * k), 0, TAU); c.fill(); }
+  drawSeaChart(c, M);   // the seas as one smooth shade, darker the deadlier (js/world-seas.js)
+  for (const i of islands) if (!i.outpost) miniIsland(c, i, k, u);   // land silhouettes (js/mini-marks.js); the outpost has its own mark
   drawSeaLabels(c, M);
-  miniHarbor(c, PORT.x * k, PORT.y * k, u);   // marks: js/mini-marks.js
 }
 function drawMini() {
   const M = mini.width, k = M / W, u = miniUnit(M);
@@ -57,11 +56,15 @@ function drawMini() {
   }
   mctx.drawImage(miniBase, 0, 0);
   const treasure = new Set(typeof fortSites !== "undefined" ? fortSites.map(s => s.crate).filter(Boolean) : []);
+  // bottom to top: chests and wrecks, forts, ordinary ships, the harbor and outpost, ships that are close and stronger, the bounty, you
   for (const c of crates) if (!c.wreck) miniChest(mctx, c.x * k, c.y * k, u, treasure.has(c));
-  if (typeof fortSites !== "undefined") for (const s of fortSites) if (s.hp !== 0) miniFort(mctx, s.x * k, s.y * k, s.L, u);
   for (const c of crates) if (c.wreck) miniWreck(mctx, c.x * k, c.y * k, u);
-  for (const e of enemies) if (e.alive && !e.boss && !e.fixed) miniShip(mctx, e, e.x * k, e.y * k, u);
-  runHook("mini", mctx, k, u);   // the bounty's skull, the outpost (js/campaign-ui.js)
+  if (typeof fortSites !== "undefined") for (const s of fortSites) if (s.hp !== 0) miniFort(mctx, s.x * k, s.y * k, s.L, u);
+  drawMiniShips(mctx, k, u, () => {
+    miniHarbor(mctx, PORT.x * k, PORT.y * k, u);
+    if (save.campaign.outpost) miniOutpost(mctx, OUTPOST.x * k, OUTPOST.y * k, u);
+  });
+  runHook("mini", mctx, k, u);   // the bounty's skull (js/campaign-ui.js)
   miniPlayer(mctx, player.x * k, player.y * k, player.rot, u);
   mctx.restore();
 }
