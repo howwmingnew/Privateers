@@ -117,5 +117,11 @@ document.getElementById("port").addEventListener("click", ev => {
 });
 // Not enough gold: a disabled button never receives a click, so listen for the press itself.
 document.getElementById("port").addEventListener("pointerdown", ev => { const b = ev.target.closest("[data-act]"); if (b && b.disabled) Snd.play("denied"); });
-document.getElementById("sail").addEventListener("click", setSail);
+// A ship with every gun in the store can't fight back, so it stays in port and the ledger says why (js/tech.js).
+function trySail() {
+  if (MOUNTS.some(({ key }) => save[key].some(Boolean))) { setSail(); return; }
+  portMsg = ["noGuns"]; renderPort(); Snd.play("denied");
+  document.getElementById("pMsg").scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+document.getElementById("sail").addEventListener("click", trySail);
 // "Reset progress" moved to the settings panel (js/options.js, wipeProgress).

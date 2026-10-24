@@ -6,7 +6,7 @@ Object.assign(STR.en, {
   vAccount: "The captain's account", vSunkOf: "{n} ({p} pirates · {v} navy · {m} merchants)", vRank: "Rank",
   vCredits: "Credits",
   vCreditsTxt: "<b>Privateers</b> · design, code, art and music, all made in code · built with Phaser 3 · type: IM Fell English SC by Igino Marini, Barlow Semi Condensed by Jeremy Tribby, Noto Serif TC and Noto Sans TC by Google. Thank you for sailing.",
-  vKeep: "Keep sailing", vKeepDs: "Free play on these seas",
+  vKeep: "Keep sailing", vKeepDs: "Free play on these seas", vTimeToSink: "Time to sink HMS Sovereign",
   vNg: "New Game+", vNgDs: "New map · enemies +3 levels · loot ×1.5 · keep your guns", vNgArm: "Press again to begin",
 });
 Object.assign(STR.zh, {
@@ -15,9 +15,18 @@ Object.assign(STR.zh, {
   vAccount: "船長的帳", vSunkOf: "{n} 艘（海盜 {p} · 海軍 {v} · 商船 {m}）", vRank: "階級",
   vCredits: "製作名單",
   vCreditsTxt: "<b>Privateers</b> · 設計、程式、美術與音樂，全部用程式碼繪製與合成 · 以 Phaser 3 製作 · 字型：IM Fell English SC（Igino Marini）、Barlow Semi Condensed（Jeremy Tribby）、Noto Serif TC 與 Noto Sans TC（Google）。感謝你一路同行。",
-  vKeep: "繼續航行", vKeepDs: "在這片海域自由航行",
+  vKeep: "繼續航行", vKeepDs: "在這片海域自由航行", vTimeToSink: "擊沉君權號所花的時間",
   vNg: "新遊戲+", vNgDs: "新地圖 · 敵人 +3 級 · 戰利品 ×1.5 · 保留火砲", vNgArm: "再按一次開始",
 });
+
+// The brand line on the two pages people screenshot (this one and the Captain's log, js/logbook.js).
+const WORDMARK = "Privateers · howwmingnew.github.io/Privateers";
+const wordmarkHtml = () => `<p class="wordmark">${WORDMARK}</p>`;
+// winTime: play time from the start of this cycle (cycleT0: stats.time when New Game+ began) to the Admiral's sinking.
+// Both live at the top of the save, so New Game+ (which rebuilds the save) clears winTime by itself.
+SAVE_DEFAULTS.push(() => ({ winTime: 0, cycleT0: 0 }));
+SAVE_SANITIZERS.push(s => ({ ...s, winTime: amountOf(s.winTime), cycleT0: amountOf(s.cycleT0) }));
+onHook("newGamePlus", () => { save.cycleT0 = save.stats.time; persist(); });
 
 const vicEl = document.createElement("div");
 vicEl.id = "victory"; vicEl.hidden = true;
@@ -60,10 +69,11 @@ function renderVictory() {
   vicEl.firstElementChild.innerHTML = `
     <canvas class="v-rose" width="240" height="240" aria-hidden="true"></canvas>
     <div class="eyebrow">${t("vEyebrow")}</div><h1 id="vTitle">${t("vTitle")}</h1>
+    ${save.winTime > 0 ? `<div class="v-brag"><small>${t("vTimeToSink")}</small><b>${fmtDur(save.winTime)}</b></div>` : ""}
     <p class="epi">${t("vEpilogue")}</p>
     <section><h2>${t("vAccount")}</h2><dl class="logstats">${statRows(rows)}</dl></section>
     <section class="credits"><h2>${t("vCredits")}</h2><p>${t("vCreditsTxt")}</p></section>
-    <footer class="v-choices">
+    <footer class="v-choices">${wordmarkHtml()}
       <button class="btn" type="button" data-v="keep">${t("vKeep")}<small>${t("vKeepDs")}</small></button>
       <button class="sail" type="button" data-v="ng">${t(vicNgArmed ? "vNgArm" : "vNg")}<small>${t("vNgDs")}</small></button>
     </footer>`;
@@ -72,6 +82,7 @@ function renderVictory() {
 function showVictory() {
   if (!vicEl.hidden) return;
   flushTime();
+  if (!save.campaign.won && !(save.winTime > 0)) { save.winTime = Math.max(1, save.stats.time - save.cycleT0); persist(); }
   paused = true;
   document.getElementById("joy").hidden = true; joyVec = { x: 0, y: 0, m: 0 };
   vicNgArmed = false; renderVictory();
