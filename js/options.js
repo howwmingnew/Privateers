@@ -48,6 +48,9 @@ function renderSettings() {
   const seg = (name, val) => document.querySelectorAll(`[data-set="${name}"]`).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === val)));
   if (audio && typeof Snd.isMuted === "function") seg("sound", Snd.isMuted() ? "off" : "on");
   seg("lang", lang); seg("shake", SETTINGS.shake ? "on" : "off");
+  const rp = typeof replaySupported === "function" && replaySupported();   // no MediaRecorder / captureStream: no row (js/replay.js)
+  setEl("setReplayRow").hidden = setEl("setReplayNote").hidden = !rp;
+  if (rp) seg("replay", replayWanted() ? "on" : "off");
   document.querySelectorAll("[data-scale]").forEach(inp => { inp.value = SETTINGS[inp.dataset.scale]; inp.nextElementSibling.textContent = inp.value + "%"; });
   if (!scaleDrag) setPreview(false);
   setEl("setFullRow").hidden = !document.fullscreenEnabled;
@@ -104,6 +107,7 @@ setEl("p-settings").addEventListener("click", e => {
       if (lang !== v) { lang = v; try { localStorage.setItem(LANG_KEY, lang); } catch (err) {} applyLang(); }
       break;
     case "shake": saveSettings({ shake: v === "on" }); break;
+    case "replay": saveSettings({ replay: v === "on" }); break;   // the frame hook starts or stops recording (js/replay.js)
     case "scale-reset": saveSettings({ uiPct: SCALE_DEFAULT, miniPct: SCALE_DEFAULT, markPct: SCALE_DEFAULT }); applyUiScale(); applyMiniSize(); break;
     case "full": toggleFullscreen(); break;
     case "reset": pressReset(); return;

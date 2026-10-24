@@ -49,3 +49,8 @@ const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,
 const REMATCH_PCT = 0.25;                     // a rematch sinking pays this share of the bounty's Captain's Chest (js/rematch.js)
 const REMATCH_MAX = 2;                        // beaten captains that sail again at once; the farthest lairs first
 const CHAIN_GAP = 20;                        // seconds between sinkings that still count as one kill chain (js/hall.js)
+
+// Highlight replay (js/replay.js): clips are cut REPLAY_TAIL_S after a big moment from the older of two staggered recorders.
+const REPLAY_FPS = 30, REPLAY_MAX_W = 960, REPLAY_BITRATE = 2000000;   // recording rate, widest picture, bits per second
+const REPLAY_SEG_S = 8, REPLAY_MIN_S = 3;   // a recorder restarts at this age, once the other one holds at least REPLAY_MIN_S
+const REPLAY_TAIL_S = 1.5, REPLAY_COOL_S = 6, REPLAY_OFFER_MS = 10000;   // footage after the moment, quiet time between clips, how long the chip stays
