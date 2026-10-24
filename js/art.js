@@ -11,7 +11,8 @@
 //                              boss = pirate captains (Jolly Roger); bossNavy / admiral fly the Crown's ensign, never the skull.
 //   bossLivery(bounty)         "boss" | "bossNavy" | "admiral" for a BOUNTIES entry (js/campaign.js).
 //   shipArt(cls, livery, opt)  -> texture key ("ship:<cls>:<livery>"), drawn on first use and cached.
-//                              opt.furled: sails stowed (moored boats); opt.key: draw into a fixed key.
+//                              opt.furled: sails stowed (moored boats); opt.key: draw into a fixed key. Both keep the guns baked in; the sea hulls
+//                              are drawn without, and js/gun-art.js lays each ship's real guns over them as layers.
 //   applyShipArt(s, cls, liv)  sets s.spr's texture, s.cls / s.livery / s.art, the hit capsule s.hl / s.hw (hitShip) and
 //                              muzzle geometry s.mounts[mountKey] = { out, span } (muzzle, fire). cls / liv default to
 //                              enemyClassFor(s) / liveryFor(s), so after setting e.boss just call applyShipArt(e) again.
@@ -106,7 +107,7 @@ function shipArt(cls, livery, opt = {}, sc = S) {
   const key = opt.key || `ship:${cls}:${livery}${opt.furled ? ":f" : ""}`;
   if (sc.textures.exists(key)) return key;
   const { w, h } = texSize({ ...a, bigFlag: L.bigFlag || !!L.emblem });
-  return bakeCanvas(sc, key, w, h, opt.res || artRes(), c => drawShip(c, a, L, w / 2, h / 2, !!opt.furled, mulberry32(artSeed(key))));
+  return bakeCanvas(sc, key, w, h, opt.res || artRes(), c => drawShip(c, a, L, w / 2, h / 2, !!opt.furled, mulberry32(artSeed(key)), !opt.furled && !opt.key));   // at sea the guns are separate layers (js/gun-art.js); moored boats keep theirs
 }
 // per-texture rng seed, so a redraw of the same key (the harbor gun deck, js/deck-art.js) matches the sprite exactly
 function artSeed(key) { let seed = 7; for (const ch of key) seed = Math.imul(seed ^ ch.charCodeAt(0), 2654435761); return seed; }

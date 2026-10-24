@@ -16,6 +16,7 @@ await page.evaluate(() => { try { localStorage.clear(); localStorage.setItem("pr
 await page.reload({ waitUntil: "load" });
 await page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S);
 await page.waitForTimeout(600);
+if (process.env.PERF_NOGUNART) await page.evaluate(() => { window.gaSync = () => {}; window.gunFired = () => {}; });   // the "before" run: no gun layers (js/gun-art.js), the hulls as they were
 const cdp = await ctx.newCDPSession(page);
 await cdp.send("Emulation.setCPUThrottlingRate", { rate: RATE });
 const res = await page.evaluate(async N => {

@@ -15,6 +15,7 @@ await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
 await page.reload({ waitUntil: "load" });
 await page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S);
 await page.waitForTimeout(600);
+if (process.env.PERF_NOGUNART) await page.evaluate(() => { window.gaSync = () => {}; window.gunFired = () => {}; });   // the "before" run: no gun layers (js/gun-art.js), the hulls as they were
 const WX = process.env.PERF_WX || "";
 const DIS = process.env.PERF_DIS || "";   // "1": keep a sea disaster running all the time (js/disasters.js): fog from the start, then spouts, whirlpools, waves, strikes in turn   // "storm-night": run the benchmark in a night storm (js/weather.js); empty: the harbor-side default, no weather
 const res = await page.evaluate(async ({ N, WX, DIS }) => {
