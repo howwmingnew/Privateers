@@ -1,0 +1,21 @@
+/* Ship name and flag: the ledger's Colours card and the name on the sale tally (js/flags.js). */
+#flagbox { display: grid; gap: 10px; }
+#flagbox .hint-s { margin: 0; }
+#flagbox .fl-top { display: grid; grid-template-columns: 112px 1fr; gap: 14px; align-items: center; }
+#flagbox .fl-prev { width: 112px; height: 73px; background: rgba(42,29,16,.07); border-radius: 6px; }
+#flagbox .fl-name { display: grid; gap: 4px; justify-items: start; min-width: 0; }
+#flagbox .fl-name label { font: 700 13px/1 var(--f-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+#flagbox input[type="text"] { width: 100%; box-sizing: border-box; font: 600 18px var(--f-ui); color: var(--ink); background: rgba(255,255,255,.55);
+  border: 1.5px solid rgba(42,29,16,.4); border-radius: 6px; padding: 8px 10px; min-height: 44px; }
+#flagbox input[type="text"]:focus-visible { outline: 3px solid var(--brass); outline-offset: 1px; }
+#flagbox .fl-err { margin: 0; min-height: 1em; font-size: 13px; color: #9a2a1f; }
+#flagbox .fl-row { display: grid; gap: 6px; }
+#flagbox .fl-lab { font: 700 13px/1 var(--f-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+#flagbox .fl-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+#flagbox .fl-sw { width: 44px; height: 44px; padding: 0; border-radius: 8px; border: 2px solid rgba(42,29,16,.35); background: transparent; cursor: pointer; display: grid; place-items: center; overflow: hidden; }
+#flagbox .fl-sw i { width: 100%; height: 100%; display: block; }
+#flagbox .fl-sw canvas { width: 40px; height: 40px; }
+#flagbox .fl-sw.on { border-color: var(--ink); box-shadow: 0 0 0 3px var(--brass); }
+#flagbox .fl-sw:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
+#tally .t-ship { margin-top: 4px; font: 600 13px var(--f-ui); opacity: .85; text-align: center; }
+@media (max-width: 420px) { #flagbox .fl-top { grid-template-columns: 1fr; } #flagbox .fl-prev { justify-self: center; } }

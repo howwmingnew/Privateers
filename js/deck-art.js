@@ -46,14 +46,14 @@ function paintGunDeck(el = document.getElementById("deck")) {
   if (!box.width || !r.height) return;   // ledger still hidden: the ResizeObserver calls again once it shows
   const cls = SHIP_ART[save.ship] ? save.ship : "sloop", a = SHIP_ART[cls], k = r.height / texSize(a).w, dpr = window.devicePixelRatio || 1;
   const cx = r.left - box.left + r.width / 2, cy = r.top - box.top + r.height / 2;
-  const key = [cls, box.width, box.height, cx, cy, k, dpr].join("|");
+  const liv = liveryFor(player), key = [cls, liv, box.width, box.height, cx, cy, k, dpr].join("|");
   if (cv.dataset.key !== key) {
     cv.dataset.key = key;
     cv.width = Math.round(box.width * dpr); cv.height = Math.round(box.height * dpr);
     const c = cv.getContext("2d");
     c.setTransform(dpr, 0, 0, dpr, 0, 0); c.translate(cx, cy); c.rotate(-Math.PI / 2); c.scale(k, k);
     BLURK = k * dpr;   // shadowBlur ignores the transform (js/art.js)
-    try { drawShip(c, a, LIVERY.player, 0, 0, false, mulberry32(artSeed(`ship:${cls}:player`))); } finally { BLURK = 1; }
+    try { drawShip(c, a, LIVERY[liv], 0, 0, false, mulberry32(artSeed(`ship:${cls}:${liv}`))); } finally { BLURK = 1; }
   }
   // leader lines: from the button's edge facing the ship to its muzzle (rotated bow-up: local +x is screen up)
   const f = n => n.toFixed(1), on = deckActive(el);
