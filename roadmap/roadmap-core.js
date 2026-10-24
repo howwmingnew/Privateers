@@ -148,24 +148,27 @@
     const o = opt || {};
     const slug = o.slug || "roadmap-overview";
     const ps = model.phases;
+    const Wd = o.width || W;
     const n = Math.max(ps.length, 1);
-    const gap = 24, pad = 52, nodeH = 76, y = 24;
-    const nodeW = Math.floor((W - pad * 2 - gap * (n - 1)) / n / 4) * 4;
-    const left = Math.round((W - (nodeW * n + gap * (n - 1))) / 2 / 4) * 4;
-    const H = 172;
+    const per = Math.min(o.perRow || n, n), rowsN = Math.ceil(n / per);
+    const gap = 24, pad = 40, nodeH = 76, y = 24, rowGap = 24;
+    const nodeW = Math.floor((Wd - pad * 2 - gap * (per - 1)) / per / 4) * 4;
+    const left = Math.round((Wd - (nodeW * per + gap * (per - 1))) / 2 / 4) * 4;
+    const H = y + rowsN * (nodeH + rowGap) - rowGap + 72;
+    const posX = i => left + (i % per) * (nodeW + gap), posY = i => y + Math.floor(i / per) * (nodeH + rowGap);
     const t = T[lang];
-    let s = svgOpen(slug, W, H, t.overview, lang === "zh"
+    let s = svgOpen(slug, Wd, H, t.overview, lang === "zh"
       ? `${ps.length} 個階段、${model.total} 項新功能，已完成 ${model.done} 項；目前在第 ${model.current} 階段。`
       : `${ps.length} phases, ${model.total} features, ${model.done} done; now in phase ${model.current}.`);
     // arrows first, so nodes sit on top
-    for (let i = 0; i < n - 1; i++) {
+    for (let i = 0; i < n - 1 && rowsN === 1; i++) {
       const x1 = left + i * (nodeW + gap) + nodeW, x2 = x1 + gap;
       const past = ps[i].n < model.current;
       s += `<line x1="${x1}" y1="${y + nodeH / 2}" x2="${x2 - 1}" y2="${y + nodeH / 2}" stroke="${C.muted}" stroke-width="1.2"` +
         `${past ? "" : ' stroke-dasharray="5,4"'} marker-end="url(#${slug}-arrow)"/>`;
     }
     ps.forEach((p, i) => {
-      const x = left + i * (nodeW + gap);
+      const x = posX(i), y = posY(i);
       const state = p.done === p.items.length ? "done" : p.n === model.current ? "now" : "later";
       const fill = state === "now" ? C.accentTint : state === "done" ? "rgba(42,29,16,0.05)" : "rgba(42,29,16,0.02)";
       const stroke = state === "now" ? C.accent : state === "done" ? C.muted : "rgba(42,29,16,0.30)";
@@ -189,7 +192,7 @@
     });
     // legend strip
     const ly = H - 36;
-    s += `<line x1="30" y1="${ly - 8}" x2="${W - 30}" y2="${ly - 8}" stroke="${C.rule}" stroke-width="0.8"/>`;
+    s += `<line x1="30" y1="${ly - 8}" x2="${(o.width || W) - 30}" y2="${ly - 8}" stroke="${C.rule}" stroke-width="0.8"/>`;
     s += `<text x="30" y="${ly + 10}" fill="${C.muted}" font-size="11" font-family="${FONT.sans}">${esc(t.legend)}</text>`;
     const leg = [["now", t.now], ["done", t.done], ["later", lang === "zh" ? "之後" : "Later"]];
     leg.forEach(([k, label], i) => {
@@ -208,17 +211,18 @@
     const slug = o.slug || "roadmap-phase";
     const p = model.phases.find(x => x.n === phaseN) || model.phases[0];
     const t = T[lang];
-    if (!p) return svgOpen(slug, W, 120, t.detail, "-") + `</svg>`;
-    const cols = Math.min(Math.max(p.items.length, 3), 5);
+    const Wd = o.width || W;
+    if (!p) return svgOpen(slug, Wd, 120, t.detail, "-") + `</svg>`;
+    const cols = Math.min(Math.max(p.items.length, 3), o.cols || 5);
     const gap = 20, pad = 40, y = 72;
-    const cardW = Math.floor((W - pad * 2 - gap * (cols - 1)) / cols / 4) * 4;
+    const cardW = Math.floor((Wd - pad * 2 - gap * (cols - 1)) / cols / 4) * 4;
     const lineCount = Math.max(1, ...p.items.map(it => wrap(itemName(it, lang), 14, cardW - 20, 3).length));
     const hasNote = p.items.some(it => it.status === "waiting");
     const cardH = Math.ceil((44 + lineCount * 18 + (hasNote ? 22 : 4)) / 4) * 4;
     const rows = Math.ceil(p.items.length / cols);
     const H = y + rows * (cardH + gap) - gap + 80;
-    const left = Math.round((W - (cardW * cols + gap * (cols - 1))) / 2 / 4) * 4;
-    let s = svgOpen(slug, W, H, `${t.phase} ${p.n} · ${phaseName(p.n, lang)}`, lang === "zh"
+    const left = Math.round((Wd - (cardW * cols + gap * (cols - 1))) / 2 / 4) * 4;
+    let s = svgOpen(slug, Wd, H, `${t.phase} ${p.n} · ${phaseName(p.n, lang)}`, lang === "zh"
       ? `第 ${p.n} 階段「${phaseName(p.n, "zh")}」共 ${p.items.length} 項，完成 ${p.done} 項。`
       : `Phase ${p.n}, ${phaseName(p.n, "en")}: ${p.items.length} features, ${p.done} done.`);
     s += `<text x="${pad}" y="34" fill="${C.muted}" font-size="8" font-family="${FONT.mono}" letter-spacing="0.18em">${esc(`PHASE ${p.n} / ${model.phases.length}`)}</text>`;
@@ -250,7 +254,7 @@
       s += `</g>`;
     });
     const ly = H - 36;
-    s += `<line x1="30" y1="${ly - 8}" x2="${W - 30}" y2="${ly - 8}" stroke="${C.rule}" stroke-width="0.8"/>`;
+    s += `<line x1="30" y1="${ly - 8}" x2="${(o.width || W) - 30}" y2="${ly - 8}" stroke="${C.rule}" stroke-width="0.8"/>`;
     s += `<text x="30" y="${ly + 10}" fill="${C.muted}" font-size="11" font-family="${FONT.sans}">${esc(t.legend)}</text>`;
     [["todo", C.white, C.ink, ""], ["doing", C.accentTint, C.accent, ""], ["waiting", "rgba(42,29,16,0.02)", "rgba(42,29,16,0.30)", ' stroke-dasharray="4,3"'],
       ["done", "rgba(42,29,16,0.05)", C.muted, ""]].forEach(([k, fi, st, da], i) => {
