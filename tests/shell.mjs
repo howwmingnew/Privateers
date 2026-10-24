@@ -163,8 +163,8 @@ const tank = page => ev(page, () => { player.maxHp = player.hp = 1e6; });
   await page.keyboard.press("Escape");
   await ev(page, () => { Object.defineProperty(document, "hidden", { configurable: true, get: () => true }); document.dispatchEvent(new Event("visibilitychange")); });
   ok("hidden tab at sea pauses", await ev(page, () => pauseOpen));
-  // become visible again, or Phaser keeps its own loop paused for the rest of this page
-  await ev(page, () => { delete document.hidden; document.dispatchEvent(new Event("visibilitychange")); });
+  // become visible again, or Phaser keeps its own loop paused for the rest of this page (forced: a CI runner's headless page may report hidden natively)
+  await ev(page, () => { Object.defineProperty(document, "hidden", { configurable: true, get: () => false }); document.dispatchEvent(new Event("visibilitychange")); });
   await page.keyboard.press("Escape");
   await ev(page, () => { canDock = true; player.x = PORT.x + 150; player.y = PORT.y; });
   await until(page, () => docked);
