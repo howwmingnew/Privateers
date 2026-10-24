@@ -87,6 +87,21 @@ const FLEET_STRAY_T = 12;
 const FLEET_HDG_LAG = 1.2;   // s: how slowly the formation turns after its lead
 const FLEET_STUCK_T = 8, FLEET_STUCK_R = 140;   // a fleet ship that stays inside this circle this long claws off the nearest rock
 const FLEET_RAGE_T = 12, FLEET_SCATTER_T = 8;   // after the lead sinks: seconds the wingmen charge or flee
+// Escorts (js/escorts.js, js/escort-ai.js): up to 4 ships from the yard follow the flagship. Slot prices are the owner's proposal,
+// not yet confirmed [PLACEHOLDER]; slot n opens once bounty n has been claimed. Repair is charged after a sortie, per escort.
+const ESCORT_PRICES = [200, 800, 2000, 5000];
+const ESCORT_SLOTS = ESCORT_PRICES.length;
+const ESCORT_FIRE = FLEET_FIRE;      // an escort's effective firepower against the same ship as the flagship (owner's call, #44)
+const ESCORT_REPAIR_MAX = 0.10;      // damage repair, at most this share of the ship's base price, by the share of hull lost
+const ESCORT_SUNK_FEE = 0.15, ESCORT_SUNK_MIN = 30;   // a sunk escort is refitted for this share of its base price (never less than the minimum)
+const ESCORT_AIM_L = 6;              // the gun crews aim like a level-6 enemy (js/data.js enemyStats)
+const ESCORT_GAP = 120;              // px between slots of the escort formation
+const ESCORT_SPEED_K = 1.08;         // the crews hold station well: this much faster than the yard's sails, so they can rejoin
+const ESCORT_LOST = 1500;            // an escort this far from the flagship and out of sight is set back on its station
+const ESCORT_RETREAT = 0.3;          // a passive escort under this share of hull breaks off and keeps to the flagship
+// Per attack stance: aggro = how close an enemy must be to the escort to be engaged (active), reach = how far from the flagship it
+// may fight, leash = how far from the flagship it may stray before it rejoins the formation.
+const ESCORT_STANCE = { active: { aggro: 800, reach: 1000, leash: 1300 }, normal: { aggro: 1.2, reach: 620, leash: 760 }, passive: { aggro: 0, reach: 420, leash: 330 } };
 // Wind, weather and the hour of day (js/weather-core.js is the maths, js/weather.js the sea). Every number here is gameplay:
 // the same for every player whatever the weather-effects setting says, so a daily sea plays the same everywhere.
 const WIND = { tail: 0.20, head: 0.25, full: 0.6 };   // speed gained running before the wind, lost beating into it, at wind strength >= full (a calm gives less)

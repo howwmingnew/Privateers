@@ -27,7 +27,7 @@ function edgeIcon(ic, it) {
 }
 function edgeBox(it) {
   const el = document.createElement("div");
-  el.className = "em" + (it.boss ? " boss" : ""); el.dataset.kind = it.boss ? "boss" : it.place || "ship";
+  el.className = "em" + (it.boss ? " boss" : it.ally ? " ally" : ""); el.dataset.kind = it.boss ? "boss" : it.ally ? "ally" : it.place || "ship";
   el.innerHTML = `<canvas width="44" height="44"></canvas><span></span><i class="ptr"></i>`;
   edgeLayer.append(el);
   return { el, ic: el.firstElementChild, txt: el.children[1], ptr: el.lastElementChild, key: "", label: "", w: 0, h: 0 };
@@ -40,7 +40,7 @@ function edgeCandidates(v, kx, ky) {
     if (px > reach || px < 1) return;
     out.push({ ...it, o, px, sx: (o.x - v.x) * kx, sy: (o.y - v.y) * ky });
   };
-  for (const e of enemies) if (e.alive && !e.fixed) add(e, { kind: "ship", e, boss: !!e.boss, d: threatTier(e.threatL ?? e.L).d });
+  for (const e of enemies) if (e.alive && !e.fixed) add(e, { kind: "ship", e, boss: !!e.boss, ally: !!e.ally, d: e.ally ? 0 : threatTier(e.threatL ?? e.L).d });   // an escort that has dropped out of sight keeps a mint box
   add(PORT, { kind: "place", place: "harbor", d: 0 });
   if (save.campaign.outpost) add(OUTPOST, { kind: "place", place: "outpost", d: 0 });
   for (const st of STATIONS) add(st, { kind: "place", place: st.kind, d: 0 });   // supply stations and trade ports (js/ports.js)

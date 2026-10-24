@@ -21,14 +21,14 @@ function mountEngaged(m) {
   const arr = player.guns[m.key];
   if (!arr.length) return false;
   const r = Math.max(...arr.map(g => g.range)) * AIM_SHOW_PAD, normal = player.rot + m.ang;
-  return enemies.some(e => e.alive && dist(e, player) < r && Math.abs(angDiff(Math.atan2(e.y - player.y, e.x - player.x), normal)) < ARC && onScreen(e.x, e.y, AIM_SCREEN_PAD));
+  return enemies.some(e => e.alive && !e.ally && dist(e, player) < r && Math.abs(angDiff(Math.atan2(e.y - player.y, e.x - player.x), normal)) < ARC && onScreen(e.x, e.y, AIM_SCREEN_PAD));
 }
 // Would a straight shot from (x, y) at angle a, length len, pass through an enemy hull right now? Returns that enemy.
 // Only ships the player can see count: a "will hit" line must never point at something off screen.
 function lineHits(x, y, a, len) {
   const c = Math.cos(a), sn = Math.sin(a);
   for (const e of enemies) {
-    if (!e.alive || !onScreen(e.x, e.y, 0)) continue;
+    if (!e.alive || e.ally || !onScreen(e.x, e.y, 0)) continue;   // escorts are never aimed at
     const ext = (e.hl ?? 28) + (e.hw ?? 13), ex = e.x - x, ey = e.y - y, along = ex * c + ey * sn;
     if (along < -ext || along > len + ext || Math.abs(ex * sn - ey * c) > ext + 2) continue;   // cheap reject
     for (let d = Math.max(0, along - ext); d <= Math.min(len, along + ext); d += 5) if (hitShip(e, x + c * d, y + sn * d)) return e;

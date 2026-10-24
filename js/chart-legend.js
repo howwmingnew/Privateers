@@ -2,7 +2,7 @@
 // ---------- How to play: the chart legend's swatches (strings: js/howto.js ht_chart) ----------
 // Each swatch is painted with the very function the chart uses (js/mini-marks.js), so the legend cannot drift from the map.
 // A swatch is a small canvas with a data-mark: threat (▼ ● ▲ ▲▲ side by side in a pirate's threat colours), pirate, navy, trade,
-// fire, harbor, outpost, fort, chest, wreck, boss, land. The ship swatches show a ▲ (one level stronger), as the chart colours it.
+// ally, fire, harbor, outpost, fort, chest, wreck, boss, land. The ship swatches show a ▲ (one level stronger), as the chart colours it.
 const LEGEND_W = 56, LEGEND_H = 28, LEGEND_U = 4.6;   // CSS px; u = chart units per backing pixel
 function paintLegendMark(cv) {
   const dpr = Math.max(2, window.devicePixelRatio || 1), c = cv.getContext("2d"), u = LEGEND_U * dpr / 2;
@@ -12,7 +12,8 @@ function paintLegendMark(cv) {
   c.clearRect(0, 0, cv.width, cv.height);
   if (kind === "threat") {   // the four threat shapes in a row, one swatch for all of them
     [-1, 0, 1, 2].forEach((d, i) => ship("pirate", "brig", d, cv.width * (0.14 + i * 0.24) + (d === 2 ? u : 0)));
-  } else if (kind === "navy") ship("navy", "brig", 1);
+  } else if (kind === "ally") miniAlly(c, mx, my, -0.6, u * 1.1, 0);
+  else if (kind === "navy") ship("navy", "brig", 1);
   else if (kind === "trade") ship("merchant", "fluyt", 1);
   else if (kind === "fire") ship("pirate", "fireship", 1);
   else if (kind === "pirate") ship("pirate", "brig", 1);

@@ -115,12 +115,13 @@ function fleetRoom(lead) {
 // The frame the slots hang on: the lead's position with a heading that follows its own with a lag, so a lead that swings
 // about does not whip the line abreast round with it.
 const fleetFrame = f => ({ x: f.lead.x, y: f.lead.y, rot: f.hdg ?? f.lead.rot });
-const slotOf = (f, e) => formationSlots(f.formation, wingmen(f).length)[wingmen(f).indexOf(e)];
+const slotOf = (f, e) => formationSlots(f.formation, wingmen(f).length, f.gap)[wingmen(f).indexOf(e)];   // f.gap: the escorts' wider spacing (js/escort-ai.js)
 // A slot may not sit on an island: pull it toward the lead until it is clear of the rock.
 function safeSlot(p, lead) {
   p = { x: clamp(p.x, 160, W - 160), y: clamp(p.y, 160, H - 160) };   // a slot over the map's edge would pin its ship to the border
+  const rocks = islands.concat([{ x: PORT.x, y: PORT.y, r: PORT_ISLAND_R / 0.9 }]);   // the harbor island is solid too
   for (let k = 0; k < 3; k++) {
-    if (!islands.some(isl => Math.hypot(isl.x - p.x, isl.y - p.y) < isl.r * 1.05 + 50)) return p;
+    if (!rocks.some(isl => Math.hypot(isl.x - p.x, isl.y - p.y) < isl.r * 1.05 + 50)) return p;
     p = { x: (p.x + lead.x) / 2, y: (p.y + lead.y) / 2 };
   }
   return { x: lead.x - Math.cos(lead.rot) * 70, y: lead.y - Math.sin(lead.rot) * 70 };
@@ -129,9 +130,10 @@ function safeSlot(p, lead) {
 function holdStation(e, f) {
   const s = slotOf(f, e);
   if (!s) return null;
-  const q = slotWorld(fleetFrame(f), s), p = safeSlot({ x: q.x + (f.lead.vx || 0) * 0.5, y: q.y + (f.lead.vy || 0) * 0.5 }, f.lead),   // a half second ahead: on a turn the outer slots run
+  const la = f.look ?? 0.5, q = slotWorld(fleetFrame(f), s), p = safeSlot({ x: q.x + (f.lead.vx || 0) * la, y: q.y + (f.lead.vy || 0) * la }, f.lead),   // a half second ahead: on a turn the outer slots run
      d = Math.hypot(p.x - e.x, p.y - e.y), pace = clamp(f.lead.speed / Math.max(1, e.maxSpeed), 0.3, 1);
   e.strayD = d;
+  if (d < 40 && f.lead.speed < 8) return tac(f.lead.rot, 0);   // the lead lies stopped (the player at anchor): lie to as well
   return tac(d < 25 ? f.lead.rot : Math.atan2(p.y - e.y, p.x - e.x), d > 140 ? 1 : d > 40 ? Math.min(1, pace * 1.4) : pace);
 }
 // The wingman's heading this frame, or null to let its own plan decide (js/archetypes.js archTactic or the idle roam).
@@ -140,6 +142,7 @@ function fleetSteer(e, tg, d, toT, now) {
   const f = e.fleet;
   if (!f) return null;
   if (e.unstickT > now) return tac(e.unstickA, 1);   // clawing off a rock it has sat against (fleetTick)
+  if (f.type === "escort") return escortSteer(e, f, tg, d, toT, now);   // the player's escorts: stance and leash (js/escort-ai.js)
   if (e.scatterT > now) {   // the lead is gone and this one runs, away from whoever sank it
     const from = f.killer && f.killer.alive ? f.killer : f.lead;
     return tac(Math.atan2(e.y - from.y, e.x - from.x) + Math.sin(now * 1.3 + e.L) * 0.3, 1);
@@ -189,7 +192,7 @@ function fleetTick(dt) {
   fleets = fleets.filter(fleetLive);
   for (const f of fleets) {
     f.ships = f.ships.filter(s => s === f.lead || (s.alive && s.fleet === f && enemies.includes(s)));
-    if (!f.lost && !f.lead.alive) {   // retired off-screen, not sunk (that goes through fleetLeadSunk): the next ship leads
+    if (!f.lost && !f.lead.alive && f.type !== "escort") {   // retired off-screen, not sunk (that goes through fleetLeadSunk): the next ship leads
       const n = f.ships.find(s => s.alive);
       if (n) f.lead = n; else { f.dead = true; continue; }
     }
@@ -198,6 +201,7 @@ function fleetTick(dt) {
       if (onScreen(f.lead.x, f.lead.y, 200)) floatText(f.lead.x, f.lead.y - 62, t("fleet_" + f.type), "#f6f1e3", 15);
     }
     f.hdg = (f.hdg ?? f.lead.rot) + angDiff(f.lead.rot, f.hdg ?? f.lead.rot) * Math.min(1, dt / FLEET_HDG_LAG);
+    if (f.type === "escort") continue;   // the player's escorts keep their own watch (js/escort-ai.js escortTick)
     if ((f.shareT -= dt) > 0) continue;
     f.shareT = 0.5;
     for (const m of f.ships) if (m.alive) unstick(m, now);
@@ -213,7 +217,7 @@ function fleetTick(dt) {
 // A hit on one is a hit on all: the wingmen turn on whoever fired (a convoy's alarm is js/archetypes.js convoyAlarm).
 onHook("hurt", (s, dmg, src) => {
   const f = s.fleet;
-  if (!f || f.lost || !src || src === s || src.fleet === f || f.type === "convoy") return;
+  if (!f || f.lost || !src || src === s || src.fleet === f || f.type === "convoy" || f.type === "escort") return;
   for (const m of f.ships) if (m.alive && m !== s && !m.merchant) { m.attacker = src; m.angry = Math.max(m.angry, 8); m.ignore.delete(src); }
 });
 onHook("sunk", (s, killer) => { if (s.fleet && s.fleet.lead === s) fleetLeadSunk(s.fleet, killer); });

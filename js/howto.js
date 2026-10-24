@@ -24,6 +24,7 @@ Object.assign(STR.en, {
     <li><canvas class="sw-mark" data-mark="pirate" aria-hidden="true"></canvas><span><b>Pirate</b>: plain shape in its strength colour</span></li>
     <li><canvas class="sw-mark" data-mark="navy" aria-hidden="true"></canvas><span><b>Navy</b>: solid blue, a bar across</span></li>
     <li><canvas class="sw-mark" data-mark="trade" aria-hidden="true"></canvas><span><b>Merchant</b>: gold, a dot inside</span></li>
+    <li><canvas class="sw-mark" data-mark="ally" aria-hidden="true"></canvas><span><b>Your escort</b>: mint, a cream rim and an arrowhead</span></li>
     <li><canvas class="sw-mark" data-mark="fire" aria-hidden="true"></canvas><span><b>Fireship</b>: flickering orange, an upright tick</span></li>
     <li><canvas class="sw-mark" data-mark="boss" aria-hidden="true"></canvas><span><b>Bounty target</b>: a skull</span></li>
     <li><canvas class="sw-mark" data-mark="harbor" aria-hidden="true"></canvas><span><b>Harbor</b>: an anchor</span></li>
@@ -67,6 +68,7 @@ Object.assign(STR.zh, {
     <li><canvas class="sw-mark" data-mark="pirate" aria-hidden="true"></canvas><span><b>海盜</b>：單純的形狀，顏色表示強弱</span></li>
     <li><canvas class="sw-mark" data-mark="navy" aria-hidden="true"></canvas><span><b>海軍</b>：實心藍色，中間一條橫線</span></li>
     <li><canvas class="sw-mark" data-mark="trade" aria-hidden="true"></canvas><span><b>商船</b>：金色，中間一個小點</span></li>
+    <li><canvas class="sw-mark" data-mark="ally" aria-hidden="true"></canvas><span><b>你的隨從</b>：薄荷綠，奶白邊和一個箭頭</span></li>
     <li><canvas class="sw-mark" data-mark="fire" aria-hidden="true"></canvas><span><b>火船</b>：閃爍的橘色，中間一條直線</span></li>
     <li><canvas class="sw-mark" data-mark="boss" aria-hidden="true"></canvas><span><b>懸賞目標</b>：骷髏頭</span></li>
     <li><canvas class="sw-mark" data-mark="harbor" aria-hidden="true"></canvas><span><b>港口</b>：船錨</span></li>
