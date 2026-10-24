@@ -119,7 +119,7 @@ const GIVE_UP_DIST = 1300;  // ...or as soon as the target is this far away
 const IGNORE_TIME = 10;     // seconds an AI ignores a target it gave up on
 const inSafe = s => Math.hypot(s.x - PORT.x, s.y - PORT.y) < SAFE_R * 0.6 || inTruce(s);   // inTruce: the outpost, js/campaign.js
 function isHostile(e, o) {
-  if (!o || o === e || !o.alive) return false;
+  if (!o || o === e || !o.alive || e.struck) return false;   // a ship that struck her colours fights no more (js/strike.js)
   if (o.isPlayer && (docked || inSafe(o))) return false;
   if (e.ally) return !o.isPlayer && !o.fixed && !o.ally && (o.faction === "pirate" || o.faction === "navy");   // an escort fights pirates and the Navy, not batteries or merchants (js/escort-ai.js)
   if (e.attacker === o && e.angry > 0) return true;
