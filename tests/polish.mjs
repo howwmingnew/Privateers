@@ -5,6 +5,8 @@
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+// CI runners render without a GPU (~10 fps, game time runs at half speed): TEST_SLOW stretches every wait.
+const SLOW = +process.env.TEST_SLOW || 1;
 
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const out = process.argv[3] || ".review/polish";
@@ -23,15 +25,15 @@ async function open(viewport, { mobile = false, lang = "en", tag = "", save = nu
   page.on("pageerror", e => errors.push(`[${tag}] pageerror: ${e.message}`));
   page.on("console", m => { if (m.type() === "error" && !/favicon/i.test(m.text())) errors.push(`[${tag}] console: ${m.text()}`); });
   await page.goto(url, { waitUntil: "load" });
-  await page.waitForFunction(() => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 });
+  await page.waitForFunction(() => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 * SLOW });
   await page.evaluate(([l, s]) => { localStorage.clear(); localStorage.setItem("privateers-lang", l); if (s) localStorage.setItem("privateers-save-v2", s); }, [lang, save]);
   await page.reload({ waitUntil: "load" });
-  await page.waitForFunction(() => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 });
-  await page.waitForTimeout(300);
+  await page.waitForFunction(() => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 * SLOW });
+  await page.waitForTimeout(300 * SLOW);
   return { ctx, page };
 }
 const ev = (page, fn, arg) => page.evaluate(fn, arg);
-const toLedger = async page => { await page.click("[data-smoke=start]"); await page.evaluate(() => { if (!docked) { tutorialReset(); dock("welcome"); } }); await page.waitForFunction(() => docked); await page.waitForTimeout(450); };
+const toLedger = async page => { await page.click("[data-smoke=start]"); await page.evaluate(() => { if (!docked) { tutorialReset(); dock("welcome"); } }); await page.waitForFunction(() => docked); await page.waitForTimeout(450 * SLOW); };
 const padStub = page => ev(page, () => {
   const pad = { id: "Stub pad (STANDARD GAMEPAD)", index: 0, connected: true, mapping: "standard", axes: [0, 0, 0, 0],
     buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })) };
@@ -41,7 +43,7 @@ const padStub = page => ev(page, () => {
   navigator.getGamepads = () => [pad, null, null, null];
   const e = new Event("gamepadconnected"); e.gamepad = pad; window.dispatchEvent(e);
 });
-const tapper = page => async i => { await ev(page, j => __btn(j, 1), i); await page.waitForTimeout(110); await ev(page, j => __btn(j, 0), i); await page.waitForTimeout(110); };
+const tapper = page => async i => { await ev(page, j => __btn(j, 1), i); await page.waitForTimeout(110 * SLOW); await ev(page, j => __btn(j, 0), i); await page.waitForTimeout(110 * SLOW); };
 const desc = () => { const a = document.activeElement; return a === document.body ? "BODY" : a.id ? "#" + a.id : `${a.dataset.act || a.dataset.camp || a.className}:${a.dataset.id || a.dataset.k || a.dataset.i || ""}`; };
 // every control in the sheet that can be pressed, and a walk of the nav graph from the first one
 const navGraph = page => ev(page, () => {
@@ -153,11 +155,11 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
     const ob = showSeaBanner; showSeaBanner = id => { __banners.push(id); return ob(id); };
   });
   await page.click("#sail"); await page.waitForFunction(() => !docked && !paused);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(300 * SLOW);
   const tut = await ev(page, () => ({ tut: tut.active, boss: enemies.some(e => e.boss), arrow: !bossArrow.hidden, hunt: __toasts.filter(m => /Bounty/.test(m)).length, held: bountyHeld }));
   ok("first voyage: the tutorial runs and the bounty is held back (no boss, no arrow, no hunt toast)", tut.tut && !tut.boss && !tut.arrow && tut.hunt === 0 && tut.held, tut);
   await ev(page, () => tutorialSkip());
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(300 * SLOW);
   const sk = await ev(page, () => ({ boss: enemies.some(e => e.boss && e.alive), hunt: __toasts.filter(m => /Bounty/.test(m)).length }));
   ok("skipping the tutorial at sea brings the bounty out, announced once", sk.boss && sk.hunt === 1, sk);
   // sea banner: deep in the Shallows, then 20 s of fighting on the Reef border (±70 px), then deep in the Reef, then back
@@ -202,14 +204,14 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
   await ev(page, () => { sendHome(); dock("return"); toast("Held for later"); });
   const t2 = await ev(page, () => ({ on: document.getElementById("toast").classList.contains("on"), z: +getComputedStyle(document.getElementById("toast")).zIndex, port: +getComputedStyle(document.getElementById("port")).zIndex }));
   await ev(page, () => setSail());
-  await page.waitForFunction(() => document.getElementById("toast").classList.contains("on") && /Held for later/.test(document.getElementById("toast").textContent), null, { timeout: 5000 }).catch(() => {});
+  await page.waitForFunction(() => document.getElementById("toast").classList.contains("on") && /Held for later/.test(document.getElementById("toast").textContent), null, { timeout: 5000 * SLOW }).catch(() => {});
   const t3 = await ev(page, () => ({ on: document.getElementById("toast").classList.contains("on"), txt: document.getElementById("toast").textContent }));
   ok("toasts: docking clears the live one, a toast while docked waits and shows at sea, and the lane sits under the ledger",
     t1 && !t2.on && t2.z < t2.port && t3.on && /Held for later/.test(t3.txt), { t1, t2, t3 });
   // a sinking: the toast is gone by the time the ledger is up
   await ev(page, () => { player.maxHp = 100; player.hp = 1; hurt(player, 50, 0, null); });
-  await page.waitForFunction(() => docked, null, { timeout: 6000 });
-  await page.waitForTimeout(100);
+  await page.waitForFunction(() => docked, null, { timeout: 6000 * SLOW });
+  await page.waitForTimeout(100 * SLOW);
   ok("the sinking toast never sits on the ledger", await ev(page, () => !document.getElementById("toast").classList.contains("on")));
   await ctx.close();
 }
@@ -222,7 +224,7 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
   ok("poster: a goal ship level from the boss's real threat (Red Ned: Ready at Ship Lv 4)", rec.ned === 4 && /Goal/.test(rec.txt) && /Ready/.test(rec.txt) && new RegExp(`Lv ${rec.ned}`).test(rec.txt) && /you: Lv/.test(rec.txt), rec);
   await ev(page, () => { save.tutorialDone = true; });
   await page.click("#sail"); await page.waitForFunction(() => !docked && !paused);
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(200 * SLOW);
   // damage numbers on one ship within 0.3 s merge
   const dm = await ev(page, async () => {
     player.maxHp = player.hp = 1e6;
@@ -299,7 +301,7 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
     put(BOUNTIES[4], 0, -150); put(BOUNTIES[3], 230, 110); put(BOUNTIES[1], -230, 110);
     S.cameras.main.stopFollow(); S.cameras.main.centerOn(player.x, player.y); S.cameras.main.setZoom(S.cameras.main.zoom * 1.6);
   });
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(200 * SLOW);
   await page.screenshot({ path: join(out, "bosses-lineup.png") });
   await ctx.close();
 }
@@ -309,7 +311,7 @@ for (const [vp, tag, mobile] of [[HD, "1080", false], [M, "phone", true]]) {
   const { ctx, page } = await open(vp, { mobile, tag: "sea-" + tag, lang: mobile ? "zh" : "en" });
   await toLedger(page);
   await ev(page, () => { save.tutorialDone = true; setSail(); });
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(300 * SLOW);
   const lap = await ev(page, () => {
     player.maxHp = player.hp = 1e6;
     for (const e of enemies) e.guns = { left: [], right: [] };
@@ -323,7 +325,7 @@ for (const [vp, tag, mobile] of [[HD, "1080", false], [M, "phone", true]]) {
     return { on, overlap: on && !(tt.bottom <= b.top || tt.top >= b.bottom) };   // the toast waits for the banner (js/onboard.js)
   });
   ok(`${tag}: the toast and the sea banner never print over each other`, !lap.overlap, lap);
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(400 * SLOW);
   await page.screenshot({ path: join(out, `sea-${tag}-notices.png`) });
   await ctx.close();
 }

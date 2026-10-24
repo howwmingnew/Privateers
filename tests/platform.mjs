@@ -4,6 +4,8 @@
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+// CI runners render without a GPU (~10 fps, game time runs at half speed): TEST_SLOW stretches every wait.
+const SLOW = +process.env.TEST_SLOW || 1;
 
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const out = process.argv[3] || ".review/platform";
@@ -28,13 +30,13 @@ async function open(browser, { dpr = 1, viewport = { width: 1280, height: 720 },
   await page.goto(url, { waitUntil: "load" });
   return { ctx, page, errors };
 }
-const ready = page => page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S && S.sys.isActive(), null, { timeout: 15000 });
+const ready = page => page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S && S.sys.isActive(), null, { timeout: 15000 * SLOW });
 // The game boots to a title screen (js/menu.js); its start button docks at the harbor ledger as boot used to.
 async function leaveTitle(page) {
   if (!(await page.evaluate(() => typeof titleOpen !== "undefined" && titleOpen))) return;
   await page.click("[data-smoke=start]");
   await page.evaluate(() => { if (!docked) dock("welcome"); });   // a fresh save sails straight out (js/menu.js)
-  await page.waitForFunction(() => docked, null, { polling: 50, timeout: 5000 });
+  await page.waitForFunction(() => docked, null, { polling: 50, timeout: 5000 * SLOW });
 }
 const seaFrozen = async page => { await leaveTitle(page); await page.evaluate(() => { setSail(); paused = true; }); };
 // textContent, not innerText: the error details sit in a collapsed <details>
@@ -169,7 +171,7 @@ try {
   {
     let blocked = true;
     const { ctx, page } = await open(browser, { route: p => p.route(/cdnjs\.cloudflare\.com|fonts\.(googleapis|gstatic)\.com/, r => blocked ? r.abort() : r.continue()) });
-    await page.waitForSelector("#bootFail", { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector("#bootFail", { timeout: 5000 * SLOW }).catch(() => {});
     const text = await failPanel(page);
     check(text && /game engine/i.test(text) && /遊戲引擎/.test(text) && /Try again/.test(text), "blocked CDN shows the bilingual engine message", text);
     await page.screenshot({ path: join(out, "engine-blocked.png") });
@@ -186,7 +188,7 @@ try {
     const { ctx, page } = await open(browser, { route: p => p.route(/js\/world\.js$/, async r => {
       const res = await r.fetch(); r.fulfill({ response: res, body: (await res.text()) + "\nfunction drawWorld() { throw new Error('test: create() failed'); }\n" });
     }) });
-    await page.waitForSelector("#bootFail", { timeout: 8000 }).catch(() => {});
+    await page.waitForSelector("#bootFail", { timeout: 8000 * SLOW }).catch(() => {});
     const text = await failPanel(page);
     check(text && /couldn't start/i.test(text) && /無法啟動/.test(text) && /create\(\) failed/.test(text), "a boot crash shows the start message with details", text);
     await page.screenshot({ path: join(out, "boot-crash.png") });
@@ -204,7 +206,7 @@ try {
     await sleep(3500);
     check(!(await failPanel(page)), "a non-fatal error does not cover the game", await failPanel(page));
     await page.evaluate(() => { player.spr.setPosition = () => { throw new Error("test: frame crashed"); }; });
-    await page.waitForSelector("#bootFail", { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector("#bootFail", { timeout: 5000 * SLOW }).catch(() => {});
     const text = await failPanel(page);
     check(text && /stopped unexpectedly/i.test(text) && /意外停止/.test(text), "a frame-loop crash shows the stopped message", text);
     await page.screenshot({ path: join(out, "frame-crash.png") });
