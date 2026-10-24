@@ -15,11 +15,16 @@ await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
 await page.reload({ waitUntil: "load" });
 await page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S);
 await page.waitForTimeout(600);
-const res = await page.evaluate(async N => {
+const WX = process.env.PERF_WX || "";   // "storm-night": run the benchmark in a night storm (js/weather.js); empty: the harbor-side default, no weather
+const res = await page.evaluate(async ({ N, WX }) => {
   save = fitMounts({ ...save, ship: "line", unlocked: { six: true, long12: true, carronade: true, fire: true } });
-  ["left", "right"].forEach(k => save[k] = save[k].map((_, i) => ({ g: ["six", "long12", "carronade", "fire"][i % 4], lv: 1 })));
+  ["left", "right"].forEach(k => save[k] = save[k].map((_, i) => gunItem(["six", "long12", "carronade", "fire"][i % 4], 3)));   // gun slots hold { g, lv } items
   applyPlayerStats(true);
   document.getElementById("port").hidden = true; docked = false; paused = false; canDock = false; resetEnemies(S);
+  if (WX) {
+    const [kind, hour] = WX.split("-");
+    for (let s = 1; s < 9000; s++) { const w = weatherAt(s, 1); if (w.kind === kind && w.hour === hour && w.spell === 0) { Object.assign(wx, { seed: s, t: 1, easy: false, on: true }); break; } }
+  }
   // open water well outside the safe ring
   let ax = PORT.x + 1700, ay = PORT.y + 300;
   for (let a = 0; a < 64; a++) {
@@ -60,7 +65,7 @@ const res = await page.evaluate(async N => {
   return { frames: N, mean: +(times.reduce((a, b) => a + b, 0) / N).toFixed(2), p50: +q(0.5).toFixed(2), p95: +q(0.95).toFixed(2), max: +s[s.length - 1].toFixed(2),
     ships: enemies.filter(e => e.alive).length + 1, onScreen: enemies.filter(e => e.alive && onScreen(e.x, e.y, 0)).length,
     sunk: save.sunk, peakParticles, peakObjs, zoom: +S.cameras.main.zoom.toFixed(3), renderer: gl ? "webgl" : "canvas" };
-}, N);
-console.log(JSON.stringify(res));
+}, { N, WX });
+console.log(JSON.stringify({ wx: WX || "none", ...res }));
 if (errors.length) { console.error("page errors:\n" + errors.join("\n")); process.exitCode = 1; }
 await browser.close();

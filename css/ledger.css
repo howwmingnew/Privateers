@@ -23,6 +23,14 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 .poster .p-rec .goal.ok { color: #3f6b2a; }
 .poster .p-rec .goal.ok::before { content: "\2713\00a0"; }
 .poster .p-rec .you { color: var(--ink-soft); }
+/* under the asked level: red text (5:1 on the poster) plus a "!" mark and the sentence, so it never rests on colour alone */
+.poster .p-rec.low dt, .poster .p-rec.low .goal, .poster .p-rec.low .you { color: #9c2218; }
+.poster .p-rec .warn { display: block; margin-top: 2px; font-weight: 700; color: #9c2218; }
+.poster .p-rec .warn::before { content: "!"; display: inline-grid; place-items: center; width: 1.15em; height: 1.15em; margin-right: .4em; border: 1.5px solid currentColor; border-radius: 50%;
+  font-size: .85em; line-height: 1; }
+/* the captain's ship under the flag: a sea-dark plate so the gold trim reads */
+.poster .p-ship { display: block; width: 100%; max-width: 300px; height: auto; margin: 10px auto 0; border-radius: 3px; border: 1px solid rgba(42,29,16,.45);
+  background: radial-gradient(ellipse at 50% 55%, #2a6a78 0%, #174553 60%, #0f3340 100%); }
 
 /* ---- toasts: a plated lane under every sheet and menu (never over the ledger: js/notices.js holds them while docked) ---- */
 #toast { z-index: 9; background: rgba(8,34,45,.82); border: 1px solid rgba(240,199,102,.35); border-radius: 3px; padding: 3px 14px 5px; }

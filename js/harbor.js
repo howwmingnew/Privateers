@@ -67,7 +67,7 @@ function renderPort() {
   const owned = ownedShips(), count = {};
   for (const e of owned) count[e.ship] = (count[e.ship] || 0) + 1;
   const shipDs = (sh, h, s, o) => t("shipDs", { b: sh.slots.bow, s: sh.slots.left, t: sh.slots.stern,
-    hp: YARD.hull.show(yardVal("hull", h, sh)), kn: YARD.sails.show(yardVal("sails", s, sh)), cargo: fmt(yardVal("hold", o, sh)) });
+    hp: YARD.hull.show(yardVal("hull", h, sh)), kn: YARD.sails.show(yardVal("sails", s, sh)), cargo: fmt(yardVal("hold", o, sh)) }) + (sh.gunK ? t("gunK", { k: sh.gunK }) : "");
   const mine = owned.map(e => {
     const sh = SHIPS[e.ship], me = e.id === save.shipId, nm = count[e.ship] > 1 ? t("shipNo", { ship: t("s_" + e.ship), n: idNum(e.id) }) : t("s_" + e.ship);
     const btn = me ? `<button class="btn max" type="button" disabled>${t("yourShip")}</button>` : `<button class="btn" type="button" data-act="switch" data-id="${e.id}">${t("switchTo")}</button>`;
@@ -128,6 +128,7 @@ document.getElementById("port").addEventListener("click", ev => {
   // shorter, so focus falls back to the stored gun before it, or the port it went to
   const sel = act === "slot" ? `[data-act="slot"][data-side="${b.dataset.side}"][data-i="${b.dataset.i}"]`
     : act === "store" ? [`#bay [data-i="${b.dataset.i}"]`, `#bay [data-i="${b.dataset.i - 1}"]`, "#deck .slot"]
+    : act === "swap" ? '#gunSel [data-act="swap"]'
     : act === "ship" || act === "switch" ? `#ships [data-act="${act}"]:not(:disabled), #ships [data-act="ship"]:not(:disabled), #sail` : null;
   if (sel) [].concat(sel).map(q => document.querySelector(q)).find(Boolean)?.focus();
 });

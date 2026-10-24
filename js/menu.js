@@ -240,6 +240,7 @@ function goBack() {
   if (modal) { if (modal.id === "logbook" && typeof closeLog === "function") closeLog(); else if (modal.id === "challenge") closeChallenge(); return; }   // victory: its own buttons
   if (pauseOpen) return resumeGame();
   if (titleOpen && !$m("tConfirm").hidden) return menuAction("new-no");
+  if (docked && typeof cancelSwap === "function" && cancelSwap()) return;   // a gun swap waiting for its second tap (js/gunbay.js)
   if (docked) $m("sail").focus({ preventScroll: true });   // from the ledger, "back" heads for Set sail
 }
 
