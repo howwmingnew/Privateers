@@ -67,6 +67,23 @@ const CRASH_SPARE = 0.15;        // above this share of max hull a crash never k
 const CRASH_GAP = 0.3;           // a blow needs this long without contact before it: pressing on or scraping along a rock is one blow, not many
 const CRASH_SHED = 0.6;          // share of its speed a ship keeps after a ship-on-ship blow
 const CRASH_BIG = 0.1;           // a blow this share of max hull or more shakes the screen hard and shows "Crash!"
+// Boarding (js/boarding.js): a struck ship can be boarded by lying alongside. [PLACEHOLDER] until playtested.
+const BOARD_T = 2;               // seconds alongside to finish boarding
+const BOARD_GAP = 26;            // px between the two hull circles that still counts as alongside
+const BOARD_REL_V = 80;          // px/s: faster than this relative to the prize and the grapples will not hold
+const BOARD_HINT_R = 260;        // px from the prize at which the "stay alongside" prompt shows and she heaves to
+const BOARD_DECAY = 2;           // progress drains this many times faster than it fills when you drift off
+const BOARD_GOLD_K = 0.5;        // gold paid at once: this share of the prize's loot (a merchant's cargo already went over the side)
+const BOARD_GUN_CHANCE = { merchant: 0.3, pirate: 0.5, navy: 0.5 };   // chance she yields a gun, by faction
+const BOARD_GUNS = {             // which gun, by faction: weights (a rarity roll joins these in #38)
+  merchant: { six: 5, long12: 3, carronade: 1 },
+  pirate:   { six: 2, carronade: 3, chain: 3, fire: 2 },
+  navy:     { six: 1, long12: 4, carronade: 3, chain: 1 },
+};
+const BOARD_LV_EVERY = 4, BOARD_LV_MAX = 3;   // prize gun level: 1 + floor((L - 1) / this), capped
+const BOARD_FULL_K = 1;          // gun store full: gold of this many times the gun's armory price (times its level) instead
+const SURRENDER_AT = 0.12;       // a pirate or navy hull below this share may strike (once) ...
+const SURRENDER_CHANCE = 0.5;    // ... with this chance
 // AI fleets (js/fleet.js): a lead ship and 1-4 wingmen of one faction that keep formation. [PLACEHOLDER] until playtested.
 const FLEET_CHANCE = { shallows: 0.08, reef: 0.18, lanes: 0.22, maelstrom: 0.22 };   // share of new ships that lead a fleet, by sea
 const FLEETS_AT_SEA = 4;          // fleets at sea at once
