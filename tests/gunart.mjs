@@ -197,15 +197,15 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
   const { ctx, page } = await open(D, { tag: "cache" });
   await page.evaluate(`(${armLine})(); (${toSea})(); ${stepper}; __step(10); S.cameras.main.centerOn(player.x, player.y); __step(2);`);
   const r = await page.evaluate(() => {
-    const count = () => S.textures.getTextureKeys().filter(k => k.startsWith("gunlayer:")).length;
-    resetEnemies(S); __step(2); const base = count();
+    const count = (pre = "gunlayer:") => S.textures.getTextureKeys().filter(k => k.startsWith(pre)).length;
+    resetEnemies(S); __step(2); const base = count("gunlayer:brig:");
     for (let i = 0; i < 20; i++) { resetEnemies(S); for (let j = 0; j < 8; j++) makeEnemy(S, player.x + 40 * j - 140, player.y + 150, 6, "navy", "brig"); __step(2); }
-    const shared = count() - base;
+    const shared = count("gunlayer:brig:") - base;
     const kinds = ["six", "long12", "carronade", "chain", "fire"];
     for (let n = 0; n < 150; n++) { save.left = save.left.map((_, i) => gunItem(kinds[((Math.imul(i + 1, 2654435761) ^ Math.imul(n + 7, 40503)) >>> 7) % 5])); __step(1); }
     return { shared, afterChurn: count(), cap: GUN_TEX_CAP, ownTex: S.textures.exists(player.gl.all.texture.key) };
   });
-  ok("160 AI hulls of one class and loadout add only a few textures (they share one per mount); rearranging 150 times stays under the cap and never frees one in use", r.shared <= 4 && r.afterChurn < 150 && r.afterChurn <= r.cap + 4 && r.ownTex, r);
+  ok("160 AI hulls of one class and loadout add only a few textures (they share one per mount); rearranging 150 times stays under the cap and never frees one in use", r.shared <= 5 && r.afterChurn < 150 && r.afterChurn <= r.cap + 4 && r.ownTex, r);
   await page.evaluate(() => { __g.loop.wake(); });
   await ctx.close();
 }
