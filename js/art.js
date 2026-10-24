@@ -100,7 +100,7 @@ function shipArt(cls, livery, opt = {}, sc = S) {
   const a = SHIP_ART[cls] || SHIP_ART.sloop, L = LIVERY[livery] || LIVERY.pirate;
   const key = opt.key || `ship:${cls}:${livery}${opt.furled ? ":f" : ""}`;
   if (sc.textures.exists(key)) return key;
-  const { w, h } = texSize({ ...a, bigFlag: L.bigFlag });
+  const { w, h } = texSize({ ...a, bigFlag: L.bigFlag || !!L.emblem });
   return bakeCanvas(sc, key, w, h, opt.res || artRes(), c => drawShip(c, a, L, w / 2, h / 2, !!opt.furled, mulberry32(artSeed(key))));
 }
 // per-texture rng seed, so a redraw of the same key (the harbor gun deck, js/deck-art.js) matches the sprite exactly
@@ -126,7 +126,7 @@ function enemyClassFor(e) {
 }
 function bossLivery(b) { return b && b.final ? "admiral" : b && b.faction === "navy" ? "bossNavy" : "boss"; }
 function liveryFor(s) {
-  if (s.isPlayer) return "player";
+  if (s.isPlayer) return typeof playerLivery === "function" ? playerLivery() : "player";   // the captain's flag (js/flags.js)
   if (s.boss) return bossLivery((typeof findBounty === "function" && findBounty(s.boss)) || { faction: s.faction });
   return LIVERY[s.faction] ? s.faction : "pirate";
 }
@@ -163,7 +163,7 @@ function labelText(txt) {
 }
 // Common combos are drawn at boot so no frame hitches when they first sail into view.
 function warmShipArt(sc) {
-  for (const id of SHIP_ORDER) shipArt(id, "player", {}, sc);
+  for (const id of SHIP_ORDER) shipArt(id, typeof playerLivery === "function" ? playerLivery() : "player", {}, sc);
   for (const [c, l] of [["cutter", "pirate"], ["sloop", "navy"], ["brig", "pirate"], ["brig", "navy"], ["frigate", "pirate"], ["frigate", "navy"],
     ["line", "pirate"], ["line", "navy"], ["fluyt", "merchant"]]) shipArt(c, l, {}, sc);
 }

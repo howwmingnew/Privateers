@@ -77,7 +77,7 @@ onHook("victory", w => hallBump({ type: "win", sec: w }, `${t("hallWin")} ${fmtD
 // ---------- the log's section ----------
 const hallOr = (n, f) => (n > 0 ? f(n) : t("hallEmpty"));
 function hallRows(h = save.hall) {
-  return [[t("hallSunk"), hallOr(h.sunk, fmt)], [t("hallChain"), hallOr(h.chain, fmt)], [t("hallWin"), hallOr(h.win, fmtDur)],
+  return [...(typeof shipDisplayName === "function" ? [[t("flShip"), shipDisplayName()]] : []), [t("hallSunk"), hallOr(h.sunk, fmt)], [t("hallChain"), hallOr(h.chain, fmt)], [t("hallWin"), hallOr(h.win, fmtDur)],
     ...BOUNTIES.filter(b => h.boss[b.id]).map(b => [t("hallBoss", { name: bossName(b) }), fmtDur(h.boss[b.id])])];
 }
 // Called at the end of renderLog: the section before the wordmark, with a share button.

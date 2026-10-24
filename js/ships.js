@@ -16,7 +16,7 @@ function applyPlayerStats(full) {
   player.maxSpeed = yardVal("sails");
   player.cap = yardVal("hold");
   player.guns = playerGuns();
-  applyShipArt(player, save.ship, "player");   // hull art, hitbox, muzzles and view follow the ship in the save
+  applyShipArt(player, save.ship, liveryFor(player));   // hull art, hitbox, muzzles and view follow the ship in the save
 }
 function makePlayer(sc) {
   const p = makeShip(sc, "ship-player", PORT.x + 140, PORT.y);
