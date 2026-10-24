@@ -13,3 +13,7 @@ const MAX_RING = 10;        // the outermost level ring; the corners past it bel
 const AIM_FULL_L = 8;       // enemy gunners get more accurate with level, up to this level
 const REPAIR_DELAY = 3;     // seconds without a hit before the hull starts to mend at sea (js/repair.js)
 const REPAIR_RATE = 0.01;   // share of max hull mended per second after that (100 s from empty to full)
+// Powder-magazine crits (js/powder.js): a rake (along the hull) from the player's guns blows the magazine, 1 in POWDER_CHANCE.
+const POWDER_CHANCE = 1 / 12, POWDER_R = 230;   // blast radius, px
+const POWDER_BOSS_FRAC = 0.25;     // a boss takes this share of its max hull and never dies of the crit itself
+const POWDER_SPLASH = { ai: 0.3, player: 0.15, boss: 0.08 };   // share of max hull at the centre of the blast; fades to 40% at the rim

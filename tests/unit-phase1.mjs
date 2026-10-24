@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const FILES = ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/hooks.js", "js/data.js", "js/save.js", "js/repair.js"];
+const FILES = ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/hooks.js", "js/data.js", "js/save.js", "js/repair.js", "js/powder.js"];
 const SRC = FILES.map(f => [f, readFileSync(new URL("../" + f, import.meta.url), "utf8")]);
 
 // A fresh page load. `extra` = more globals the scripts may touch at load time.
@@ -45,4 +45,40 @@ test("repair: empty to full takes about 100 s of calm", () => {
   const g = boot();
   const t = g.run(`(() => { let s = { idle: 3, hp: 0 }, n = 0; while (s.hp < 100 && n < 1e5) { s = repairStep(s.idle, s.hp, 100, 0.05, false); n++; } return n * 0.05; })()`);
   assert.ok(t > 99 && t < 101.5, `took ${t} s`);
+});
+
+// ---------- powder-magazine crits ----------
+const trig = (o, roll) => ({ rake: true, byPlayer: true, fixed: false, tutorial: false, roll, ...o });
+
+test("powder: only a rake from the player, outside the tutorial, on a roll under 1 in 12", () => {
+  const g = boot();
+  const t = o => g.run(`powderTrigger(${JSON.stringify(trig(o, o.roll ?? 0.01))})`);
+  assert.equal(t({}), true);
+  assert.equal(t({ roll: 0.09 }), false, "1/12 is 0.0833");
+  assert.equal(t({ rake: false }), false);
+  assert.equal(t({ byPlayer: false }), false);
+  assert.equal(t({ tutorial: true }), false, "never during the tutorial");
+  assert.equal(t({ fixed: true }), false, "shore batteries do not blow up");
+});
+
+test("powder: about 1 rake in 12 blows the magazine over many rolls", () => {
+  const g = boot();
+  const n = g.run(`(() => { let k = 0; for (let i = 0; i < 120000; i++) if (powderTrigger({ rake: true, byPlayer: true, fixed: false, tutorial: false, roll: (i * 0.6180339887) % 1 })) k++; return k / 120000; })()`);
+  assert.ok(Math.abs(n - 1 / 12) < 0.003, `rate ${n}`);
+});
+
+test("powder: an ordinary ship is finished, a boss is hurt hard but never killed", () => {
+  const g = boot();
+  assert.equal(g.run("powderSelfDmg({ hp: 80, maxHp: 100 }, 10)"), 80);
+  assert.equal(g.run("powderSelfDmg({ boss: 'x', hp: 300, maxHp: 1000 }, 10)"), 250, "25% of max hull");
+  assert.equal(g.run("powderSelfDmg({ boss: 'x', hp: 100, maxHp: 1000 }, 10)"), 99, "a wounded boss is left on 1 hp");
+});
+
+test("powder: the blast fades with distance, and never kills the player or a boss", () => {
+  const g = boot();
+  assert.equal(g.run("powderSplash({ maxHp: 100, hp: 100 }, 0)"), 30);
+  assert.ok(Math.abs(g.run("powderSplash({ maxHp: 100, hp: 100 }, POWDER_R)") - 12) < 1e-9, "40% at the rim");
+  assert.equal(g.run("powderSplash({ isPlayer: true, maxHp: 100, hp: 100 }, 0)"), 15, "the player is hurt");
+  assert.equal(g.run("powderSplash({ isPlayer: true, maxHp: 100, hp: 5 }, 0)"), 4, "but left alive");
+  assert.equal(g.run("powderSplash({ boss: 'x', maxHp: 1000, hp: 30 }, 0)"), 29);
 });
