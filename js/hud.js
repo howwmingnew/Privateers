@@ -9,7 +9,11 @@ function hud(force) {
   $("cargoTxt").textContent = `${fmt(cargo)} / ${fmt(player.cap)}`;
   $("cargoBar").classList.toggle("full", cargo >= player.cap);
   $("gold").textContent = fmt(save.gold);
-  if (force || !hud.lv) { hud.lv = shipRating(); $("lv").textContent = t("shipLv", { n: hud.lv }); }
+  if (force || !hud.lv) {
+    const lv = shipRating();
+    if (hud.lv && lv > hud.lv && typeof lvBanner === "function") lvBanner(lv);   // a purchase raised it (js/juice-ui.js)
+    hud.lv = lv; $("lv").textContent = t("shipLv", { n: lv });
+  }
 }
 const mini = document.getElementById("mini"), mctx = mini.getContext("2d");
 let miniBase;
