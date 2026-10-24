@@ -5,8 +5,8 @@ const STR = {
   en: {
     hull: "Hull", cargo: "Cargo", gold: "Gold", shipLv: "Ship Lv {n}", ledger: "Harbor ledger", harbor: "Safe Harbor", harborMap: "SAFE HARBOR",
     broadside: "Gun deck", slotHint: "Tap a gun port or a stored gun to pick it, then tap another to swap them.", armory: "Armory", shipwright: "Shipwright",
-    ships: "New ships", shipsHint: "A new ship starts with hull, sails and hold back at Lv 1. Your cannons move aboard; extra gun ports start empty.",
-    yourShip: "Your ship", shipArm: "Tap again to buy", boughtShip: "The <em>{ship}</em> is yours. Hull, sails and hold start again at Lv 1, and your cannons are aboard. The new gun ports are empty.",
+    ships: "Switch ship", shipsHint: "Every ship you buy stays in the yard with its own hull, sails and hold upgrades, and you can switch to it for free. Your cannons move aboard; any that don't fit go back to the store. You can buy the same model again at full price.",
+    yourShip: "Your ship", shipArm: "Tap again to buy", boughtShip: "The <em>{ship}</em> is yours, with hull, sails and hold at Lv 1. Your old ship waits in the yard, and your cannons are aboard.",
     shipDs: "Bow <b>{b}</b> · <b>{s}</b> per side · stern <b>{t}</b> · starts at <b>{hp}</b>, <b>{kn}</b>, hold <b>{cargo}</b>",
     s_sloop: "Sloop", s_schooner: "Schooner", s_brig: "Brig", s_frigate: "Frigate", s_line: "Ship of the Line",
     reset: "Reset progress", resetArm: "Tap again to wipe all progress", sail: "Set sail", langBtn: "中文",
@@ -35,8 +35,8 @@ const STR = {
   zh: {
     hull: "船體", cargo: "貨艙", gold: "金幣", shipLv: "船艦 Lv {n}", ledger: "港口帳簿", harbor: "安全港", harborMap: "安全港",
     broadside: "火砲配置", slotHint: "點一下砲位或庫存裡的砲選起來，再點另一處就能互換。", armory: "軍械庫", shipwright: "造船廠",
-    ships: "新船", shipsHint: "換新船後，船體、船帆、貨艙的升級會從 Lv 1 重新開始。火砲會一起搬上新船，多出來的砲位是空的。",
-    yourShip: "目前的船", shipArm: "再點一次購買", boughtShip: "<em>{ship}</em>是你的了。船體、船帆、貨艙從 Lv 1 重新開始，火砲已經搬上船，新的砲位是空的。",
+    ships: "換船", shipsHint: "買過的每艘船都留在船塢，各自保留船體、船帆、貨艙的升級，隨時可以免費換上。火砲會一起搬上船，放不下的退回庫存。同一型號可以再買一艘，一樣原價。",
+    yourShip: "目前的船", shipArm: "再點一次購買", boughtShip: "<em>{ship}</em>是你的了，船體、船帆、貨艙從 Lv 1 開始。舊船留在船塢，火砲已經搬上船。",
     shipDs: "船首 <b>{b}</b> 門 · 每舷 <b>{s}</b> 門 · 船尾 <b>{t}</b> 門 · 起始 <b>{hp}</b>、<b>{kn}</b>、貨艙 <b>{cargo}</b>",
     s_sloop: "單桅帆船", s_schooner: "縱帆船", s_brig: "雙桅橫帆船", s_frigate: "巡防艦", s_line: "戰列艦",
     reset: "重置進度", resetArm: "再點一次會清除所有進度", sail: "啟航", langBtn: "EN",
