@@ -312,7 +312,7 @@ console.log("Swell and roll");
   await q.page.evaluate(() => { for (const e of enemies) if (e.alive && !e.fixed) { e.x = player.x + 400; e.y = player.y - 100; break; } });
   await sky(q.page, "storm", "day"); await q.page.evaluate(() => { wx.t = 3; }); await sleep(2500);
   const quiet = await probe(q.page, 360);
-  check(quiet.rollP > 0.003 && quiet.rollP < stormR.rollP * 0.5 && quiet.heaveP < stormR.heaveP * 0.5, "reduced motion: the roll is much smaller", { quiet, stormR });
+  check(quiet.rollP > 0.003 && quiet.rollP < 0.0275 && quiet.rollE < 0.0275 && quiet.heaveP < 0.0105, "reduced motion: the roll is capped at a quarter of the full size (0.0253 rad, 1% heave)", { quiet, stormR });
   check(q.errors.length === 0, "0 page errors (reduced motion)", q.errors);
   await q.ctx.close();
 }
