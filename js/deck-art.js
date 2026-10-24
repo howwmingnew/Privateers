@@ -46,7 +46,7 @@ function paintGunDeck(el = document.getElementById("deck")) {
   if (!box.width || !r.height) return;   // ledger still hidden: the ResizeObserver calls again once it shows
   const cls = SHIP_ART[save.ship] ? save.ship : "sloop", a = SHIP_ART[cls], k = r.height / texSize(a).w, dpr = window.devicePixelRatio || 1;
   const cx = r.left - box.left + r.width / 2, cy = r.top - box.top + r.height / 2;
-  const key = [cls, box.width, box.height, cx, cy, k, dpr, MOUNTS.map(m => gunSig(save[m.key].map(g => g && g.g))).join("/")].join("|");   // a swapped gun repaints the ship
+  const liv = liveryFor(player), key = [cls, liv, box.width, box.height, cx, cy, k, dpr, MOUNTS.map(m => gunSig(save[m.key].map(g => g && g.g))).join("/")].join("|");   // a swapped gun repaints the ship
   if (cv.dataset.key !== key) {
     cv.dataset.key = key;
     cv.width = Math.round(box.width * dpr); cv.height = Math.round(box.height * dpr);
@@ -54,7 +54,7 @@ function paintGunDeck(el = document.getElementById("deck")) {
     c.setTransform(dpr, 0, 0, dpr, 0, 0); c.translate(cx, cy); c.rotate(-Math.PI / 2); c.scale(k, k);
     BLURK = k * dpr;   // shadowBlur ignores the transform (js/art.js)
     try {
-      drawShip(c, a, LIVERY.player, 0, 0, false, mulberry32(artSeed(`ship:${cls}:player`)), true);   // bare hull, then the guns the save really holds (js/gun-art.js)
+      drawShip(c, a, LIVERY[liv], 0, 0, false, mulberry32(artSeed(`ship:${cls}:${liv}`)), true);   // bare hull, then the guns the save really holds (js/gun-art.js)
       for (const m of MOUNTS) drawGunsOn(c, cls, 0, 0, m.key, save[m.key].map(g => g && g.g));
     } finally { BLURK = 1; }
   }

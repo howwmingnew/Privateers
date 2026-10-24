@@ -220,12 +220,13 @@ function wavyFlag(c, x, y, w, h, wob) {   // a flag streaming aft (-x) from (x, 
   c.closePath();
 }
 function drawFlags(c, a, L, cx, cy) {
-  const len = a.len, x0 = cx - len / 2, big = L.bigFlag ? 1.6 : 1, fw = 9 * big, fh = 6 * big, fx = x0 - 1;
+  const len = a.len, x0 = cx - len / 2, big = L.bigFlag ? 1.6 : L.emblem ? 1.3 : 1, fw = 9 * big, fh = 6 * big, fx = x0 - 1;
   line(c, x0 + 1.5, cy, fx, cy, 0.8, WOOD);   // ensign staff over the transom
   c.save(); blur(c, 2, "rgba(0,0,0,.4)"); wavyFlag(c, fx, cy, fw, fh, 0.7); c.fillStyle = L.flag; c.fill(); c.restore();
   c.save(); wavyFlag(c, fx, cy, fw, fh, 0.7); c.clip();
   const mx = fx - fw * 0.5;
-  if (L.ensign) {   // the Crown's ensign: the field with a white canton and a red cross at the hoist
+  if (L.emblem) drawFlagEmblem(c, L.emblem, mx, cy, fh * 0.36, L.flag2, L.flag);   // the captain's own flag (js/flags.js)
+  else if (L.ensign) {   // the Crown's ensign: the field with a white canton and a red cross at the hoist
     const cw = fw * 0.46, ch = fh * 0.52, y0 = cy - fh / 2 - 1;
     c.fillStyle = L.flag2; c.fillRect(fx - cw, y0, cw + 1, ch + 1);
     line(c, fx - cw / 2, y0, fx - cw / 2, y0 + ch + 1, fh * 0.13, "#c8352a"); line(c, fx - cw, y0 + ch / 2 + 0.5, fx, y0 + ch / 2 + 0.5, fh * 0.13, "#c8352a");
