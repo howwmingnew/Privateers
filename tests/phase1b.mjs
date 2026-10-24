@@ -311,7 +311,7 @@ for (const [tag, viewport, mobile] of [["1280", { width: 1280, height: 720 }, fa
     await page.waitForTimeout(400 * SLOW);
     const sw = await ev(page, () => [...document.querySelectorAll("#p-howto canvas.sw-mark")].map(cv => {
       const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; }));
-    ok(`#42 how-to-play legend (${lg}): 12 chart swatches, every one painted`, sw.length === 12 && sw.every(n => n > 60), sw);
+    ok(`#42 how-to-play legend (${lg}): 14 chart swatches, every one painted`, sw.length === 14 && sw.every(n => n > 60), sw);
     if (lg === "en") { await ev(page, () => document.querySelector("#p-howto canvas.sw-mark").scrollIntoView({ block: "start" })); await page.screenshot({ path: join(out, "howto-chart-legend-en.png") }); }
     await ev(page, () => { goBack(); });
   }

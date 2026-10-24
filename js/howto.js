@@ -28,6 +28,8 @@ Object.assign(STR.en, {
     <li><canvas class="sw-mark" data-mark="boss" aria-hidden="true"></canvas><span><b>Bounty target</b>: a skull</span></li>
     <li><canvas class="sw-mark" data-mark="harbor" aria-hidden="true"></canvas><span><b>Harbor</b>: an anchor</span></li>
     <li><canvas class="sw-mark" data-mark="outpost" aria-hidden="true"></canvas><span><b>Hulk Outpost</b>: a teal cross</span></li>
+    <li><canvas class="sw-mark" data-mark="supply" aria-hidden="true"></canvas><span><b>Supply Station</b>: a green cask. Mends the hull for a fee</span></li>
+    <li><canvas class="sw-mark" data-mark="tradeport" aria-hidden="true"></canvas><span><b>Trade Port</b>: a gold diamond. Buys your hold</span></li>
     <li><canvas class="sw-mark" data-mark="fort" aria-hidden="true"></canvas><span><b>Fort</b>: a stone keep</span></li>
     <li><canvas class="sw-mark" data-mark="chest" aria-hidden="true"></canvas><span><b>Treasure</b>: a small chest</span></li>
     <li><canvas class="sw-mark" data-mark="wreck" aria-hidden="true"></canvas><span><b>Your wreck</b>: a red X</span></li>
@@ -69,6 +71,8 @@ Object.assign(STR.zh, {
     <li><canvas class="sw-mark" data-mark="boss" aria-hidden="true"></canvas><span><b>懸賞目標</b>：骷髏頭</span></li>
     <li><canvas class="sw-mark" data-mark="harbor" aria-hidden="true"></canvas><span><b>港口</b>：船錨</span></li>
     <li><canvas class="sw-mark" data-mark="outpost" aria-hidden="true"></canvas><span><b>廢船前哨站</b>：青綠色十字</span></li>
+    <li><canvas class="sw-mark" data-mark="supply" aria-hidden="true"></canvas><span><b>補給站</b>：綠色木桶。收費修船</span></li>
+    <li><canvas class="sw-mark" data-mark="tradeport" aria-hidden="true"></canvas><span><b>交易港</b>：金色菱形。收購貨艙</span></li>
     <li><canvas class="sw-mark" data-mark="fort" aria-hidden="true"></canvas><span><b>砲台</b>：石造堡壘</span></li>
     <li><canvas class="sw-mark" data-mark="chest" aria-hidden="true"></canvas><span><b>寶藏</b>：小箱子</span></li>
     <li><canvas class="sw-mark" data-mark="wreck" aria-hidden="true"></canvas><span><b>你的沉船</b>：紅色叉號</span></li>
