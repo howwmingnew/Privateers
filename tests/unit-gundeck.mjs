@@ -62,7 +62,7 @@ test("a full row is never shifted, and a smaller old ship keeps its guns at the 
   assert.deepEqual(f.left.map(Boolean), [false, true, true, true, true, false, false], "(7 - 4) / 2 = 1 empty port first");
 });
 
-test("balance: a gun hits for its hull's gunK, and a full big deck lands about a tenth more than the old ladder did", () => {
+test("balance: a gun hits for its hull's gunK, and a full big deck lands about a quarter more than the old ladder did", () => {
   const g = boot();
   const power = (ship, six) => g.run(`(() => { save = fitMounts({ ...defaultSave(), ship: "${ship}" });
     for (const { key } of MOUNTS) save[key] = save[key].map(() => gunItem("six"));
@@ -70,7 +70,7 @@ test("balance: a gun hits for its hull's gunK, and a full big deck lands about a
   const oldGuns = { sloop: 3, schooner: 5, brig: 7, frigate: 11, line: 14 }, dps6 = g.json("GUNS.six.dmg * GUNS.six.rpm / 60 * MOUNT_UPTIME");
   for (const id of Object.keys(oldGuns)) {
     const ratio = power(id) / (oldGuns[id] * dps6);
-    if (id === "frigate" || id === "line") assert.ok(ratio >= 1.05 && ratio <= 1.2, `${id} ${ratio.toFixed(3)}`);
+    if (id === "frigate" || id === "line") assert.ok(ratio >= 1.2 && ratio <= 1.3, `${id} ${ratio.toFixed(3)}`);
     else assert.ok(Math.abs(ratio - 1) < 0.5 || ratio >= 1, `${id} ${ratio.toFixed(3)}`);
   }
   assert.ok(power("line") > power("frigate") && power("frigate") > power("brig"), "the ladder holds when armed");
