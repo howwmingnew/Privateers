@@ -6,17 +6,21 @@ Object.assign(SND_SFX, (() => {
   // a low sine squared off by tanh: its harmonics imply the note on speakers that cannot play it
   function body(v, t, f0, f1, slide, peak, d, k = 3) { const o = O(v, "sine", f0, t, t + d + 0.1), g = G(); sweep(o.frequency, t, f0, f1, slide); perc(g.gain, t, peak, 0.003, d); wire(o, drive(k), g, v.out); }
   return {
-    // the powder magazine going up under the player's last ball: a blast rolling 2 kHz -> 200 Hz over a 70 Hz body.
-    // duck 8 / hold 0.4: the score drops out for the moment so the boom owns it.
-    magazine: { max: 2, gap: 0.12, pv: 0.06, gv: 0.08, gain: 1.05, wet: 0.45, far: 2200, duck: 8, hold: 0.4, fn(v) { const { t, p } = v;
-      sweep(hiss(v, t, "lowpass", 2000 * p, 0.9, 1.1, 0.002, 0.95).frequency, t, 2000 * p, 200 * p, 0.6);
-      hiss(v, t, "highpass", 2400 * p, 0.7, 0.5, 0.001, 0.06);                                            // the crack
-      body(v, t, 140 * p, 70 * p, 0.35, 0.55, 0.6);
-      tone(v, t, "sine", 90 * p, 36 * p, 0.6, 0.9, 0.003, 0.9);
-      hiss(v, t, "bandpass", 480 * p, 0.6, 1.1, 0.002, 0.32);                                             // its chest, for laptop speakers
-      timp(v, t + 0.02, 31, 0.9);
-      for (let i = 0; i < 6; i++) hiss(v, t + 0.12 + rand(0, 0.5), "highpass", rand(2500, 4200) * p, 1, rand(0.12, 0.3), 0.001, 0.02);   // burning powder crackles
-      hiss(v, t + 0.06, "bandpass", 220 * p, 0.8, 0.35, 0.08, 1.4, true); } },                           // its echo over the water
+    // the powder magazine going up under the player's last ball: same low voice as the new cannon, but a double blast.
+    // A crack and a shock-wave thump, then a second, deeper boom 0.14 s later as the rest of the powder follows, and
+    // a long roll over the water with burning powder crackling. duck 8 / hold 0.5: the score drops out so the boom owns it.
+    magazine: { max: 2, gap: 0.12, pv: 0.06, gv: 0.08, gain: 1.0, wet: 0.5, far: 2200, duck: 8, hold: 0.5, fn(v) { const { t, p } = v, t2 = t + 0.14;
+      hiss(v, t, "highpass", 2400 * p, 0.7, 0.45, 0.001, 0.06);                                           // the crack
+      sweep(hiss(v, t, "lowpass", 3200 * p, 0.8, 1.0, 0.002, 0.7).frequency, t, 3200 * p, 240 * p, 0.6);  // the first blast
+      tone(v, t, "sine", 90 * p, 34 * p, 0.3, 0.9, 0.003, 0.7);
+      hiss(v, t, "bandpass", 420 * p, 0.6, 1.1, 0.002, 0.3);                                              // its chest, for laptop speakers
+      body(v, t, 150 * p, 76 * p, 0.25, 0.5, 0.45);
+      sweep(hiss(v, t2, "lowpass", 1800 * p, 0.8, 1.0, 0.005, 1.1).frequency, t2, 1800 * p, 160 * p, 0.9);   // the rest of the powder: deeper, longer
+      tone(v, t2, "sine", 62 * p, 24 * p, 0.7, 1.0, 0.005, 1.3);
+      timp(v, t2, 31, 0.9);
+      hiss(v, t2, "bandpass", 260 * p, 0.7, 0.9, 0.004, 0.6);
+      for (let i = 0; i < 6; i++) hiss(v, t + 0.2 + rand(0, 0.7), "highpass", rand(2500, 4200) * p, 1, rand(0.12, 0.3), 0.001, 0.02);   // burning powder crackles
+      hiss(v, t + 0.08, "lowpass", 320 * p, 0.7, 0.5, 0.3, 2.2, true); } },                               // the long roll over the water
     // bounty gold: a fuller purse than a crate's blip, ending in the till's bell
     bounty: { max: 2, gap: 0.2, pv: 0.02, gv: 0.05, gain: 0.62, wet: 0.25, fn(v) { const { t, p } = v;
       const n = clamp(Math.round(Math.log2(Math.max(1, v.amount || 40) / 15)) + 4, 4, 11);
