@@ -67,6 +67,12 @@ function cleanWreck(w) {
   const ok = x >= 0 && x <= W && y >= 0 && y <= H && Number.isFinite(value) && value > 0;   // NaN fails every comparison
   return ok ? { x: Math.round(x), y: Math.round(y), value: Math.min(value, Number.MAX_SAFE_INTEGER) } : null;
 }
+// A save from before the big gun decks holds a short row of ports and the ship now has more: move the guns to the middle
+// of the longer row, instead of leaving them all at the stern end. Idempotent: the row is full length from then on.
+function centreOld(arr, n) {
+  if (!Array.isArray(arr) || arr.length >= n) return arr;
+  return Array(Math.floor((n - arr.length) / 2)).fill(null).concat(arr);
+}
 function sanitizeCore(raw) {
   const keep = Object.fromEntries(Object.keys(raw).filter(k => !UNSAFE_KEYS.has(k)).map(k => [k, raw[k]]));
   const has = (o, k) => isObj(o) && Object.hasOwn(o, k);
@@ -80,7 +86,7 @@ function sanitizeCore(raw) {
   const port = v => typeof v === "string" && Object.hasOwn(GUNS, v) && owned(v) ? gunItem(v, lvOf(v)) : gunItem("six", lvOf("six"));
   const mounts = Object.fromEntries(MOUNTS.map(({ key }) => {
     const arr = Array.isArray(raw[key]) ? raw[key] : [];
-    return [key, legacy ? Array.from({ length: SHIPS[ship].slots[key] }, (_, i) => port(arr[i])) : arr];
+    return [key, legacy ? Array.from({ length: SHIPS[ship].slots[key] }, (_, i) => port(arr[i])) : centreOld(arr, SHIPS[ship].slots[key])];
   }));
   const aboard = new Set(Object.values(mounts).flat().map(v => cleanGun(v)?.g));
   const store = legacy ? GUN_ORDER.filter(id => id !== "six" && owned(id) && !aboard.has(id)).map(id => gunItem(id, lvOf(id))) : raw.store;
