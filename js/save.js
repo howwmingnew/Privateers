@@ -41,7 +41,7 @@ function fitMounts(s) {
 // hold, rather than letting the old levels multiply its bigger base stats (a free 3x on a frigate).
 function migrateV1(s) {
   const { ports, ...rest } = s;
-  const ship = SHIP_ORDER[Math.min(Math.max((ports | 0) - 1, 0), 3)];
+  const ship = ["sloop", "schooner", "brig", "frigate"][Math.min(Math.max((ports | 0) - 1, 0), 3)];   // fixed list: the yard has more than one ship per tier now
   const yard = Object.fromEntries(Object.keys(YARD).map(k => {
     const was = YARD[k].val(toInt(rest[k], 1, YARD[k].max, 1), SHIPS.sloop);
     let best = 1;

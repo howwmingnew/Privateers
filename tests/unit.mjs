@@ -210,16 +210,17 @@ test("a failed write is reported once, not silently dropped", () => {
 test("yard values and costs rise with level, and ships get pricier", () => {
   const g = boot();
   const ships = g.json("SHIP_ORDER");
+  const ladders = [["sloop", "schooner", "brigantine", "cruiser", "corsair"], ["sloop", "gunboat", "brig", "frigate", "line"]];   // fast and heavy lines
   for (const k of ["hull", "sails", "hold"]) {
     const max = g.run(`YARD.${k}.max`);
     for (const ship of ships) for (let l = 1; l < max; l++)
       assert.ok(g.run(`yardVal("${k}", ${l + 1}, SHIPS.${ship})`) > g.run(`yardVal("${k}", ${l}, SHIPS.${ship})`), `${k} ${ship} Lv ${l}`);
     for (let l = 1; l < max; l++) assert.ok(g.run(`YARD.${k}.cost(${l + 1})`) > g.run(`YARD.${k}.cost(${l})`), `${k} cost Lv ${l}`);
   }
-  for (let i = 1; i < ships.length; i++) {
-    const [a, b] = [g.json(`SHIPS.${ships[i - 1]}`), g.json(`SHIPS.${ships[i]}`)];
-    assert.ok(b.cost > a.cost, `${ships[i]} costs more than ${ships[i - 1]}`);
-    assert.ok(b.hp >= a.hp && b.hold >= a.hold, `${ships[i]} is no weaker than ${ships[i - 1]}`);
+  for (const ladder of ladders) for (let i = 1; i < ladder.length; i++) {
+    const [a, b] = [g.json(`SHIPS.${ladder[i - 1]}`), g.json(`SHIPS.${ladder[i]}`)];
+    assert.ok(b.cost > a.cost, `${ladder[i]} costs more than ${ladder[i - 1]}`);
+    assert.ok(b.hp >= a.hp && b.hold >= a.hold, `${ladder[i]} is no weaker than ${ladder[i - 1]}`);
   }
   for (const id of g.json("GUN_ORDER")) for (let l = 1; l < g.run("GUN_MAX"); l++)
     assert.ok(g.run(`gunUpCost(gunItem("${id}", ${l + 1}))`) > g.run(`gunUpCost(gunItem("${id}", ${l}))`), `${id} upgrade Lv ${l}`);
@@ -288,12 +289,12 @@ test("no damage gun beats the next best by more than 40% in DPS for the same gol
 
 test("a new ship is never a downgrade from the previous one at a typical refit", () => {
   const g = boot();
-  const ships = g.json("SHIP_ORDER");
+  const ladders = [["sloop", "gunboat", "brig", "frigate", "line"], ["sloop", "schooner"]];   // the heavy line; the fast line's hull dips by design (tests/unit-shiplines.mjs)
   // every port armed with a 6-pounder: a big gun deck only pays once it is filled (each gun on it hits for its hull's gunK)
   const at = (ship, hull, hold) => g.json(`(() => { save = fitMounts({ ...defaultSave(), ship: "${ship}", hull: ${hull}, hold: ${hold} });
     for (const { key } of MOUNTS) save[key] = save[key].map(() => gunItem("six"));
     return { p: playerPower(), hp: yardVal("hull"), hold: yardVal("hold") }; })()`);
-  for (let i = 1; i < ships.length; i++) {
+  for (const ships of ladders) for (let i = 1; i < ships.length; i++) {
     const old = at(ships[i - 1], 5, 4), nw = at(ships[i], 1, 1);
     for (const k of ["p", "hp", "hold"]) assert.ok(nw[k] >= old[k], `${ships[i]} Lv1 ${k} ${nw[k]} vs ${ships[i - 1]} hull 5 / hold 4 ${old[k]}`);
   }
