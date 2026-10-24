@@ -8,11 +8,11 @@
 // wingman sits), makeFleet (bind ships), fleetFirepower (the wingman's 80%), fleetSteer (a wingman's heading, called from
 // think() in js/ships.js), fleetLeadSunk (the leader's loss: charge or scatter).
 Object.assign(STR.en, {
-  fleet_wolfpack: "Pirate wolfpack", fleet_patrol: "Navy patrol", fleet_convoy: "Merchant convoy",
+  fleet_wolfpack: "Pirate wolfpack", fleet_patrol: "Navy patrol", fleet_convoy: "Merchant convoy", fleet_admiral: "Admiral's fleet",
   fleetCharge: "Avenge the leader!", fleetScatter: "Scatter!",
 });
 Object.assign(STR.zh, {
-  fleet_wolfpack: "海盜狼群", fleet_patrol: "海軍巡邏隊", fleet_convoy: "商船隊",
+  fleet_wolfpack: "海盜狼群", fleet_patrol: "海軍巡邏隊", fleet_convoy: "商船隊", fleet_admiral: "上將艦隊",
   fleetCharge: "替老大報仇！", fleetScatter: "快逃啊！",
 });
 
@@ -22,6 +22,7 @@ const FLEET_TYPES = {
   wolfpack: { faction: "pirate",   formation: "wedge",  engage: "flank",  leadLoss: "mixed",   minSize: 2 },
   patrol:   { faction: "navy",     formation: "line",   engage: "column", leadLoss: "charge",  minSize: 2 },
   convoy:   { faction: "merchant", formation: "column", engage: "guard",  leadLoss: "scatter", minSize: 3 },
+  admiral:  { faction: "navy",     formation: "wedge",  engage: "column", leadLoss: "charge",  minSize: 3 },   // the Admiral's flagship and escort (js/heat.js); only ever made there
 };
 const fleetTypeFor = faction => Object.keys(FLEET_TYPES).find(k => FLEET_TYPES[k].faction === faction) || null;
 // Ships in a fleet by ring: the shallows send pairs and trios, the deep sends five.
@@ -80,15 +81,9 @@ function makeFleet(type, ships, opts = {}) {
   fleets.push(f);
   return f;
 }
-// Called from spawnEnemy for each ordinary new ship: it may lead a fleet. Returns the fleet or null.
-function maybeFleet(sc, lead) {
-  if (lead.boss || lead.escortOf || lead.fixed || (typeof firstVoyage === "function" && firstVoyage())) return null;
-  const type = fleetTypeFor(lead.faction), sea = seaOfRing(lead.ring);
-  if (!type || grandom() >= (FLEET_CHANCE[sea.id] || 0)) return null;
-  const live = fleetsLive(), used = live.reduce((a, f) => a + f.ships.filter(s => s.alive).length, 0);
-  if (live.length >= FLEETS_AT_SEA || used + 2 > FLEET_SHIPS) return null;
-  const classes = fleetPlan(type, lead, Math.min(FLEET_SHIPS - used - 1, fleetRoom(lead)));
-  if (!classes.length) return null;
+// The wingmen for `lead` in their formation slots (a fresh ship per class, in the lead's ring and level); returns [lead, ...them].
+// Shared with the Navy's hunters and the Admiral's fleet (js/heat.js).
+function spawnWing(sc, type, lead, classes) {
   const slots = formationSlots(FLEET_TYPES[type].formation, classes.length), d0 = dist(lead, PORT);
   const r0 = SAFE_R + (lead.ring - 1) * ZONE_STEP + 6, r1 = r0 + ZONE_STEP - 12, ships = [lead];
   classes.forEach((cls, i) => {
@@ -101,6 +96,18 @@ function maybeFleet(sc, lead) {
     e.rot = lead.rot; ships.push(e);
     if (type === "convoy" && cls === "brig") e.escort = true;   // keeps pirates off the fluyts (js/ships.js isHostile)
   });
+  return ships;
+}
+// Called from spawnEnemy for each ordinary new ship: it may lead a fleet. Returns the fleet or null.
+function maybeFleet(sc, lead) {
+  if (lead.boss || lead.escortOf || lead.fixed || (typeof firstVoyage === "function" && firstVoyage())) return null;
+  const type = fleetTypeFor(lead.faction), sea = seaOfRing(lead.ring);
+  if (!type || grandom() >= (FLEET_CHANCE[sea.id] || 0)) return null;
+  const live = fleetsLive(), used = live.reduce((a, f) => a + f.ships.filter(s => s.alive).length, 0);
+  if (live.length >= FLEETS_AT_SEA || used + 2 > FLEET_SHIPS) return null;
+  const classes = fleetPlan(type, lead, Math.min(FLEET_SHIPS - used - 1, fleetRoom(lead)));
+  if (!classes.length) return null;
+  const ships = spawnWing(sc, type, lead, classes);
   if (ships.length < 2) return null;
   return makeFleet(type, ships);
 }
