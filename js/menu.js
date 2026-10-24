@@ -84,10 +84,14 @@ function showTitle() {
   renderCoach();
   focusFirst($m("title"));
 }
-// The harbor seen from a slow boat: glide from wherever the camera was, then circle the harbor.
+// The harbor seen from a slow boat: glide from wherever the camera was, then circle the harbor, or hang over the
+// nearest AI fight near it (attract mode, js/onboard.js), a little left of center so the title card leaves it in view.
 function driftCamera(dt) {
   drift.t += dt;
-  const a = drift.t * 0.05, tx = PORT.x + Math.cos(a) * 280, ty = PORT.y + Math.sin(a * 0.8) * 170, k = 1 - Math.exp(-dt * 0.8);
+  const f = typeof attractFocus === "function" ? (attractTick(dt), attractFocus(dt)) : null;
+  const a = drift.t * 0.05, k = 1 - Math.exp(-dt * 0.8);
+  const tx = f ? f.x + S.cameras.main.worldView.width * 0.22 + Math.cos(a * 2) * 40 : PORT.x + Math.cos(a) * 280;
+  const ty = f ? f.y + Math.sin(a * 1.6) * 30 : PORT.y + Math.sin(a * 0.8) * 170;
   drift.x += (tx - drift.x) * k; drift.y += (ty - drift.y) * k;
   S.cameras.main.centerOn(drift.x, drift.y);
 }
@@ -95,6 +99,7 @@ function renderTitle() {
   const prog = hasProgress(save), cont = $m("tContinue"), neu = $m("tNew");
   cont.hidden = !prog;
   cont.classList.toggle("primary", prog); neu.classList.toggle("primary", !prog);
+  neu.dataset.i18n = prog ? "m_new" : "sail"; neu.textContent = t(neu.dataset.i18n);   // a fresh captain: "Set sail", straight to sea
   delete cont.dataset.smoke; delete neu.dataset.smoke;
   (prog ? cont : neu).dataset.smoke = "start";
   $m("titleMenu").hidden = false; $m("tConfirm").hidden = true;
@@ -102,7 +107,10 @@ function renderTitle() {
 function startGame(fresh) {
   if (fresh) wipeProgress();
   closeTitle();
-  dock("welcome");
+  dock("welcome");   // the bookkeeping (sell, stats, save) is the same either way
+  // A new captain goes straight to sea; the ledger and Red Ned's poster first show at the first sale. shellTick only
+  // runs onVoyage on a docked change, and docked never shows here, so start the voyage (the tutorial's mark) by hand.
+  if (fresh && !save.tutorialDone) { setSail(); wasDocked = false; onVoyage(); }
 }
 function closeTitle() {
   titleOpen = false;

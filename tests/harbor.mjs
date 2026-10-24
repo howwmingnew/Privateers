@@ -38,7 +38,8 @@ async function until(page, fn, arg = null, { timeout = 8000 } = {}) {
 }
 // From the title to open sea, tutorial off, no enemy near the harbor to interfere.
 async function toSea(page, { tutorial = false } = {}) {
-  await page.click("[data-smoke=start]");
+  await page.click("[data-smoke=start]");   // a fresh save sails straight out (js/menu.js); dock for a clean departure
+  await ev(page, () => { if (!docked) dock("welcome"); });
   await until(page, () => docked);
   if (!tutorial) await ev(page, () => { save.tutorialDone = true; tutorialReset(); });
   await page.waitForTimeout(450);

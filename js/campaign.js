@@ -13,10 +13,10 @@ Object.assign(STR.en, {
   intro_saint: "A preacher turned pirate who sets ships ablaze and calls it mercy. Never sails without his fire-raiders.",
   intro_hale: "The Navy wants the free port for itself. Hale has orders to blockade it, and to hang you from his yardarm.",
   intro_thorne: "Admiral Thorne has brought HMS Sovereign, the greatest warship ever to sail these waters, to burn the free port. Meet her in the Maelstrom.",
-  done_ned: "Red Ned's colours hang over the tavern door. The Harbourmaster signs your Letter of Marque: you sail as a <em>Privateer</em> now, and the yard will sell you a <em>schooner</em>.",
+  done_ned: "Red Ned's colors hang over the tavern door. The Harbormaster signs your Letter of Marque: you sail as a <em>Privateer</em> now, and the yard will sell you a <em>schooner</em>.",
   done_carey: "Mother Carey's brig lies on the reef she ruled. The docks stand you drinks and call you <em>Captain</em>, and there's a <em>brig</em> at the yard with your name on it.",
   done_saint: "The Saint's fires are out. The merchants have moored an old hulk on the Navy Lanes as the <em>Hulk Outpost</em>: sell and patch up there, far from home. They call you <em>Commodore</em> now, and a <em>frigate</em> waits at the yard.",
-  done_hale: "Hale struck his colours. The Navy calls you a pirate; the harbour calls you <em>Pirate Lord</em>. A <em>Ship of the Line</em> waits at the yard. Admiral Thorne is coming.",
+  done_hale: "Hale struck his colors. The Navy calls you a pirate; the harbor calls you <em>Pirate Lord</em>. A <em>Ship of the Line</em> waits at the yard. Admiral Thorne is coming.",
   done_thorne: "HMS Sovereign lies at the bottom of the Maelstrom, and the free port is free.",
   ngStory: "<em>New Game+ {n}.</em> A new sea, fiercer captains and richer prizes. Your guns came with you; your fortune did not.",
   huntToast: "Bounty: {name} · {sea}", bossSighted: "{name} sighted!", fChest: "Captain's Chest +{n}",
@@ -24,7 +24,7 @@ Object.assign(STR.en, {
   bossEscaped: "{name}'s ship went down to other guns, but {name} got away in a longboat. Back next time you sail.",
   locked: "Locked", shipLock: "Sink {name} to unlock",
   outpostName: "Hulk Outpost", outpostMap: "HULK OUTPOST",
-  outpostNote: "A trading post on an old hulk: it buys cargo and patches hulls. The shipyard and armoury are back at Safe Harbor.",
+  outpostNote: "A trading post on an old hulk: it buys cargo and patches hulls. The shipyard and armory are back at Safe Harbor.",
 });
 Object.assign(STR.zh, {
   boss_ned: "紅鬍奈德", boss_carey: "凱莉大娘", boss_saint: "灰燼聖徒", boss_hale: "海爾准將", boss_thorne: "索恩上將",

@@ -41,9 +41,9 @@ async function until(page, fn, arg = null, { timeout = 8000 } = {}) {
   }
 }
 async function toSea(page) {
-  await page.click("[data-smoke=start]");
-  await until(page, () => docked);
-  await page.click("#sail");
+  await page.click("[data-smoke=start]");   // a fresh save sails straight out; one with progress docks first
+  await until(page, () => docked || (!paused && !titleOpen));
+  if (await ev(page, () => docked)) await page.click("#sail");
   await until(page, () => !docked && !paused);
   await page.waitForTimeout(150);
 }
@@ -73,15 +73,19 @@ const tank = page => ev(page, () => { player.maxHp = player.hp = 1e6; });
   const before = await ev(page, () => ({ cam: [S.cameras.main.midPoint.x, S.cameras.main.midPoint.y], e: enemies.map(e => e.x + e.y).join() }));
   await page.waitForTimeout(1200);
   const after = await ev(page, () => ({ cam: [S.cameras.main.midPoint.x, S.cameras.main.midPoint.y], e: enemies.map(e => e.x + e.y).join() }));
-  ok("title: camera drifts, ships stay still", Math.hypot(after.cam[0] - before.cam[0], after.cam[1] - before.cam[1]) > 1 && after.e === before.e);
+  ok("title: camera drifts, the player's ship is hidden", Math.hypot(after.cam[0] - before.cam[0], after.cam[1] - before.cam[1]) > 1 && await ev(page, () => !player.spr.visible));
   await page.screenshot({ path: join(out, "d-title-en.png") });
 
   await page.keyboard.down("Enter");                  // a held Enter starts the game once and stops at the ledger
   await page.keyboard.down("Enter"); await page.keyboard.down("Enter");   // (Playwright sends these as auto-repeats)
   await page.keyboard.up("Enter");
+  await until(page, () => !titleOpen);
+  await page.waitForTimeout(100);
+  ok("held Enter on the title starts once: a fresh captain is at sea, not paused", await ev(page, () => !docked && !paused && !pauseOpen));
+  await ev(page, () => { tutorialReset(); dock("welcome"); });
   await until(page, () => docked);
   await page.waitForTimeout(100);
-  ok("held Enter on the title stops at the ledger; it opens at the top with focus on the sheet, not Set sail", await ev(page, () =>
+  ok("the ledger opens at the top with focus on the sheet, not Set sail", await ev(page, () =>
     docked && document.querySelector("#port .sheet").scrollTop === 0 && document.activeElement === document.querySelector("#port .sheet")));
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("PageDown");
@@ -207,8 +211,9 @@ const tank = page => ev(page, () => { player.maxHp = player.hp = 1e6; });
   await page.click("#pQuit");
   const q = await ev(page, () => ({ titleOpen, cargo, docked, paused, px: Math.round(player.x - PORT.x), sail: document.querySelector("[data-smoke=start]").id }));
   ok("Save & quit: second press needed with cargo aboard; title back, hold emptied, ship home", /40/.test(armed) && q.titleOpen && q.cargo === 0 && !q.docked && q.paused && q.px === 140, { armed, q });
+  const fresh = await ev(page, () => !hasProgress(save) && !save.tutorialDone);
   await page.click("[data-smoke=start]");
-  ok("from the title the start button docks at the harbor", await ev(page, () => docked && !titleOpen));
+  ok("from the title the start button docks at the harbor (a fresh captain sails straight out)", await ev(page, f => (f ? !docked && !paused : docked) && !titleOpen, fresh), { fresh });
   await ctx.close();
 }
 
@@ -271,7 +276,9 @@ for (const dpr of [1, 2]) {
   await tap(13);                                    // D-pad down on the title
   const f1 = await ev(page, () => document.activeElement.dataset.menu);
   await tap(12);
-  await tap(0);                                     // A on New game
+  await tap(0);                                     // A on Set sail (a fresh save sails straight out)
+  await until(page, () => !titleOpen && !paused);
+  await ev(page, () => { tutorialReset(); dock("welcome"); });   // the ledger checks below
   await until(page, () => docked);
   await page.waitForTimeout(100);
   ok("pad on title: D-pad moves focus, A starts; pad focus ring class on", f1 === "howto" && await ev(page, () => device === "pad" && document.body.classList.contains("pad-nav")), { f1 });
@@ -379,7 +386,7 @@ for (const dpr of [1, 2]) {
   const kept = await ev(page, () => save.gold);
   await page.click("#tNew"); await page.click('[data-menu="new-yes"]');
   const ng = await ev(page, () => ({ gold: save.gold, sunk: save.sunk, docked, ts: JSON.parse(localStorage.getItem("privateers-settings")).textScale }));
-  ok("New game with a save asks first (Cancel focused, Cancel keeps it), then wipes progress but not settings", cf.vis && cf.focus === "new-no" && kept === 300 && ng.gold === 0 && ng.sunk === 0 && ng.docked && ng.ts === 1.15, { cf, ng });
+  ok("New game with a save asks first (Cancel focused, Cancel keeps it), then wipes progress but not settings and sails out", cf.vis && cf.focus === "new-no" && kept === 300 && ng.gold === 0 && ng.sunk === 0 && !ng.docked && ng.ts === 1.15, { cf, ng });
   await ctx.close();
 }
 
@@ -436,7 +443,7 @@ for (const lg of ["en", "zh"]) {
     const grab = async where => texts.push({ where, s: await ev(page, () => document.body.innerText) });
     await grab("title");
     for (const p of ["howto", "settings", "credits"]) { await page.click(`#title [data-menu=${p}]`); await grab(p); if (vp === D || p === "howto") await page.screenshot({ path: join(out, `${tag}-${p}.png`) }); await page.keyboard.press("Escape"); }
-    await page.click("[data-smoke=start]"); await until(page, () => docked); await grab("ledger");
+    await page.click("[data-smoke=start]"); await ev(page, () => { if (!docked) dock("welcome"); }); await until(page, () => docked); await grab("ledger");
     await page.screenshot({ path: join(out, `${tag}-ledger.png`) });
     await page.click("#sail"); await page.waitForTimeout(300); await grab("sea");
     await page.screenshot({ path: join(out, `${tag}-sea.png`) });

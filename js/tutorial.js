@@ -5,9 +5,9 @@
 // replayed from How to play. Progress is kept in the save (tutorialDone / tutorialStep).
 Object.assign(STR.en, {
   tut_title: "First voyage", tut_skip: "Skip", tut_count: "{n} of {m}",
-  tut_out: "{steer} Head out of the harbor.",
-  tut_aim: "Find a ship with a green badge (the gold ring marks one). Turn until an aim line touches it: the line turns red when the shot will hit.",
-  tut_fire: "Red means a hit. {fire}",
+  tut_out: "Sail out of the harbor.",
+  tut_aim: "Find the gold-ringed ship. Turn until the aim line turns red.",
+  tut_fire: "Red means a hit. Fire!",
   tut_sink: "Keep firing until it sinks. Faint lines are still reloading.",
   tut_scoop: "Sunk! Sail over the floating crate to scoop up the plunder.",
   tut_sell: "Now sail back into the dashed ring around the harbor to sell your cargo.",
@@ -25,9 +25,9 @@ Object.assign(STR.en, {
 });
 Object.assign(STR.zh, {
   tut_title: "首航", tut_skip: "略過", tut_count: "第 {n}／{m} 步",
-  tut_out: "{steer}先駛出港口。",
-  tut_aim: "找一艘綠色標籤的船（金色圓圈標出了一艘）。轉動船身，讓瞄準線碰到它；線變紅，就代表這一發會命中。",
-  tut_fire: "紅線代表會命中。{fire}",
+  tut_out: "駛出港口。",
+  tut_aim: "找綠色標籤的船（金圈標示），轉向讓瞄準線變紅。",
+  tut_fire: "紅線代表會命中。開火！",
   tut_sink: "繼續開火，直到它沉沒。淡色的線代表還在裝填。",
   tut_scoop: "擊沉了！駛過漂浮的木箱，把戰利品撈上船。",
   tut_sell: "現在駛回港口周圍的虛線圈，把貨物賣掉。",
@@ -90,14 +90,20 @@ function aimOnTarget() {
 }
 
 // Until the captain's first sinking, every departure puts an easy Lv 1 merchant just past the safe waters,
-// in the direction the ship leaves the harbor.
+// in the direction the ship leaves the harbor. It sails at TUT_MARK_HULL of its hull, so 3-4 hits sink it, and its
+// hold is worth at least the cheapest buy, so the first sale buys something.
+const TUT_MARK_HULL = 0.4;
 function forgivingSpawn() {
   if (save.sunk > 0) return null;
   const base = Math.atan2(player.y - PORT.y, player.x - PORT.x), r = SAFE_R + 140;   // still inside the Lv 1 ring
   for (let i = 0; i < 24; i++) {
     const a = base + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.22, x = PORT.x + Math.cos(a) * r, y = PORT.y + Math.sin(a) * r;
     if (islands.some(s => Math.hypot(s.x - x, s.y - y) < s.r * 1.3 + 60)) continue;
-    return spawnEnemy(S, { x, y, faction: "merchant", near: true }) || null;
+    const e = spawnEnemy(S, { x, y, faction: "merchant", near: true });
+    if (!e) return null;
+    e.maxHp = e.hp = Math.ceil(e.maxHp * TUT_MARK_HULL);
+    e.loot = Math.max(e.loot || 0, cheapestBuy());
+    return e;
   }
   return null;
 }
@@ -124,6 +130,11 @@ function tutorialSkip() {
 }
 function tutorialReset() { Object.assign(tut, { active: false, step: 0, target: null, doneT: 0, html: "" }); renderCoach(); }
 const tutorialRunning = () => tut.active && tut.doneT <= 0;
+// Up to the first sinking only the tutorial's mark may pick a fight with the player (js/ships.js pickTarget), and the
+// volley tip stays quiet (js/volley.js): the first kill is uncontested.
+const tutorialCalm = () => firstVoyage() && tut.step <= TUT.indexOf("sink") && !docked;
+// The coach is up on a voyage the captain has not finished or skipped (a save edited to done also counts as done).
+const firstVoyage = () => tutorialRunning() && !save.tutorialDone;
 
 function enterStep(n) {
   tut.step = n; save.tutorialStep = n;
@@ -184,6 +195,8 @@ function renderCoach() {
   tut.html = html;
   tutEl("coachStep").textContent = head;
   tutEl("coachTxt").textContent = coachText();
+  // steps 1-3 show the control itself: keycaps, a mouse or a finger (js/onboard.js)
+  tutEl("coachKeys").innerHTML = !docked && tut.doneT <= 0 && typeof coachGlyphs === "function" ? coachGlyphs(TUT[tut.step]) : "";
   tutEl("coachSkip").hidden = tut.doneT > 0;
 }
 document.addEventListener("langchange", () => { tut.html = ""; renderCoach(); });
