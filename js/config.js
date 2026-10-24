@@ -101,6 +101,11 @@ const WEATHER = {
   ballDrift: 45,                                      // storm: px/s a cannonball is blown downwind
 };
 
+// Highlight replay (js/replay.js): two recorders, staggered by half a clip, each lives exactly REPLAY_SEG_S; the first one that ends
+// at least REPLAY_TAIL_S after a big moment is the clip, so a clip is always REPLAY_SEG_S long.
+const REPLAY_FPS = 30, REPLAY_MAX_W = 960, REPLAY_BITRATE = 2000000;   // recording rate, widest picture, bits per second
+const REPLAY_SEG_S = 6, REPLAY_MIN_S = 3;   // clip length; the second recorder starts this long after the first
+const REPLAY_TAIL_S = 1.5, REPLAY_COOL_S = 6, REPLAY_OFFER_MS = 10000;   // footage after the moment, quiet time between clips, how long the chip stays
 // Supply stations and trade ports (js/ports.js): a ring-docked service point on the open sea.
 const STATION_TRUCE_R = 280;     // no ship opens fire on the player this close to a station, and idle ships sail out of it
 const SUPPLY_FEE_PER_RING = 25;  // gold for a hull from empty to full at a supply station, per level ring it lies in
