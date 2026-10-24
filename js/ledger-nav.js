@@ -6,7 +6,7 @@
 // down from the last control (or with pad Y) and left by going up. LB / RB jump between the shop's sections.
 // After a purchase the shop is rebuilt (renderPort); focus goes back to the same item, or the next one that can still
 // be pressed, never to <body>.
-const LEDGER_BOXES = ["deck", "armory", "yard", "ships"];
+const LEDGER_BOXES = ["deck", "armory", "yard", "ships", "escorts"];
 const inFooter = el => !!el.closest("footer");
 const ledgerControls = () => focusables(sheetEl).filter(el => el !== sheetEl);
 function centre(el) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }

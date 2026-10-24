@@ -39,7 +39,7 @@ function dodgeAlong(pos, half, spans, lo, hi) {
 const EDGE_REF_W = 1300;   // a typical world view width in px, to scale distance against the range
 // Which targets get a box: the bounty first, then dangerous ships, then places and the rest, nearer before farther; at most EDGE_MAX.
 function edgeRank(it) {   // it: { boss, kind: "ship" | "place", d: threat step vs you, px: world distance }
-  const base = it.boss ? 1000 : it.kind === "place" ? 60 : it.d >= 1 ? 100 + it.d * 20 : 50;
+  const base = it.boss ? 1000 : it.ally ? 45 : it.kind === "place" ? 60 : it.d >= 1 ? 100 + it.d * 20 : 50;   // an escort out of sight ranks below the sea's own ships
   return base - it.px / (EDGE_RANGE * EDGE_REF_W) * 40;   // up to 40 points off for distance
 }
 const edgePick = items => items.slice().sort((a, b) => edgeRank(b) - edgeRank(a)).slice(0, EDGE_MAX);

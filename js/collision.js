@@ -61,7 +61,7 @@ function crashLand(s, dmg, src, x, y, nx, ny) {
 // Called by move() (js/ships.js) when the hull is pushed off an island; (nx, ny) points from the ship to the island,
 // vx / vy are the velocity it arrived with.
 function crashIsland(s, isl, nx, ny) {
-  if (!s.alive || s.fixed || crashSafe(s, isl)) return;
+  if (!s.alive || s.fixed || s.ally || crashSafe(s, isl)) return;   // an escort scrapes a rock harmlessly: it must not be bled for its flagship's course
   const now = S.time.now / 1000, book = s.crashBook || (s.crashBook = new Map());
   const fresh = crashContact(book, isl, now), frac = crashFrac(s.vx * nx + s.vy * ny, CRASH_ISLAND_K);
   if (!frac || !fresh || !crashDue(book, isl, now)) return;
@@ -73,6 +73,7 @@ function crashShips(a, b, nx, ny) {
   if (a.struck || b.struck) return;   // a ship that struck her colours (js/strike.js) is never rammed to the bottom, and lying alongside her to board (js/boarding.js) is no collision
   if (a.fixed || b.fixed || (a.A && a.A.boom) || (b.A && b.A.boom) || (docked && (a.isPlayer || b.isPlayer))) return;
   if ((typeof inSafe === "function") && (inSafe(a) || inSafe(b))) return;
+  if ((a.isPlayer || a.ally) && (b.isPlayer || b.ally)) return;   // the flagship and its escorts jostle in formation: no blow, no damage
   const now = S.time.now / 1000, book = a.crashBook || (a.crashBook = new Map());
   const fresh = crashContact(book, b, now), base = shipFrac((a.vx - b.vx) * nx + (a.vy - b.vy) * ny);
   if (!fresh || !crashDue(book, b, now)) return;

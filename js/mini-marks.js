@@ -4,13 +4,14 @@
 // kind of thing has its own silhouette, so colour is never the only cue.
 //   ships    the threat shape (▼ ● ▲ ▲▲, threatMark in js/art.js: can you beat it?) filled by who they are: pirates in their
 //            threat colour, the Navy solid blue with a bar across, merchants gold with a dot, fireships flickering orange
-//            with an upright tick. The small detail inside the shape tells them apart without colour.
+//            with an upright tick. The small detail inside the shape tells them apart without colour. Your escorts (js/escorts.js) are
+//            a mint disc with a cream rim and an arrowhead: never a threat shape, because they are not something to beat.
 //   places   the harbor's anchor disc, the outpost's teal cross, a fort's stone keep, an island's land silhouette
 //   plunder  a small chest outline (a fort's treasure is a bigger one), a red X for a wreck
 // Where marks pile up, the more important one is on top: the player, then the bounty and ships that are close and stronger
 // than you, then harbor and outpost, then other ships, then chests and wrecks; ordinary ships in one spot merge into one mark.
 // Sizes are in chart units: u is one pixel of the original 224-px chart.
-const MINI_INK = "rgba(4,18,24,.9)", MINI_CREAM = "#f6f1e3", MINI_GOLD = "#f0c766", MINI_TEAL = "#43d1b0";
+const MINI_INK = "rgba(4,18,24,.9)", MINI_CREAM = "#f6f1e3", MINI_GOLD = "#f0c766", MINI_TEAL = "#43d1b0", MINI_ALLY = "#4cf0a8";
 const MARK_FILL = { trade: MINI_GOLD, navy: "#5aa0f0" };   // pirates keep their threat colour, fireships flicker orange
 
 // A ship under way leaves a short wake behind it, so the chart shows where it is heading.
@@ -18,13 +19,22 @@ function miniWake(c, x, y, rot, u) {
   c.strokeStyle = "rgba(246,241,227,.55)"; c.lineWidth = 1.2 * u;
   c.beginPath(); c.moveTo(x - Math.cos(rot) * 5 * u, y - Math.sin(rot) * 5 * u); c.lineTo(x - Math.cos(rot) * 10 * u, y - Math.sin(rot) * 10 * u); c.stroke();
 }
-const shipKind = e => e.merchant || e.faction === "merchant" ? "trade" : e.faction === "navy" ? "navy" : e.arch === "fireship" ? "fire" : "pirate";
+const shipKind = e => e.ally ? "ally" : e.merchant || e.faction === "merchant" ? "trade" : e.faction === "navy" ? "navy" : e.arch === "fireship" ? "fire" : "pirate";
 // Where the threat shape's solid parts are (one, or two for ▲▲) and their half-size, so a detail sits inside each.
 function threatCenters(tier, x, y, r) {
   if (tier.d >= 2) return [[x - r * 0.75, y, r * 0.85], [x + r * 0.75, y, r * 0.85]];
   return [[x, y, r * (tier.d <= -1 ? 0.9 : tier.d === 0 ? 0.75 : 1)]];
 }
+// An escort: a mint disc, a cream rim, and an arrowhead pointing the way it sails.
+function miniAlly(c, x, y, rot, u, speed = 0) {
+  if (speed > 5) miniWake(c, x, y, rot, u);
+  c.beginPath(); c.arc(x, y, 4.3 * u, 0, TAU); c.fillStyle = MINI_ALLY; c.fill();
+  c.lineWidth = 1.6 * u; c.strokeStyle = MINI_CREAM; c.stroke();
+  c.save(); c.translate(x, y); c.rotate(rot || 0); c.fillStyle = MINI_INK;
+  c.beginPath(); c.moveTo(2.6 * u, 0); c.lineTo(-1.6 * u, -1.9 * u); c.lineTo(-0.6 * u, 0); c.lineTo(-1.6 * u, 1.9 * u); c.closePath(); c.fill(); c.restore();
+}
 function miniShip(c, e, x, y, u) {
+  if (e.ally) return miniAlly(c, x, y, e.rot, u, e.speed);
   const tier = threatTier(e.threatL ?? e.L), kind = shipKind(e), r = 4 * u;
   if (e.speed > 5) miniWake(c, x, y, e.rot, u);
   const fill = kind === "fire" ? `rgba(255,140,40,${0.68 + 0.32 * Math.sin(performance.now() / 90 + x)})` : MARK_FILL[kind] || tier.color;
@@ -49,7 +59,7 @@ const isNearThreat = (e, tier) => tier.d >= 1 && dist(e, player) < MINI_NEAR_R; 
 // Every ship, in priority order: ordinary ones first (merged where they pile up), then the near threats on top.
 // `between` runs after the ordinary ships, so places (harbor, outpost) land above them and below the threats.
 function drawMiniShips(c, k, u, between) {
-  const ships = enemies.filter(e => e.alive && !e.boss && !e.fixed && !(typeof disFogHides === "function" && disFogHides(e))).map(e => ({ e, tier: threatTier(e.threatL ?? e.L) }));
+  const ships = enemies.filter(e => e.alive && !e.boss && !e.fixed && !e.ally && !(typeof disFogHides === "function" && disFogHides(e))).map(e => ({ e, tier: threatTier(e.threatL ?? e.L) }));
   const rows = ships.filter(s => !isNearThreat(s.e, s.tier)).map(s => ({ ...s, x: s.e.x * k, y: s.e.y * k, rank: s.tier.d }));
   for (const m of clusterMarks(rows, MINI_MERGE * u)) {
     miniShip(c, m.e, m.x, m.y, u);
