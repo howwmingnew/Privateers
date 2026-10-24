@@ -28,6 +28,7 @@ const MINI_CANVAS_MIN = 160, MINI_CANVAS_MAX = 1024;   // the chart's drawing si
 const MINI_UNIT_MIN = 0.35;   // a chart unit never draws smaller than this many CSS px, so the marks stay readable at 50% icon size on a small chart
 
 // Sharing (js/sharecard.js) and the daily sea (js/daily.js, js/run.js). [PLACEHOLDER] loadout until playtested.
+const FLEET_MAX = 12;   // ships the yard keeps for one captain, the one you sail included (js/shipyard.js)
 const SHARE_URL = "https://howwmingnew.github.io/Privateers/";
 const DAILY_EPOCH = Date.UTC(2026, 9, 24);   // daily #1: 2026-10-24, UTC, so every device agrees on the day
 const DAILY_SECONDS = 300;                   // a daily run lasts five minutes
@@ -38,6 +39,8 @@ const DAILY_LEVEL = 5;                       // the daily captain's ring (the Re
 // The same ship and guns for everyone: a brig with a long 12 on the bow and a carronade between two 6-pounders each side.
 const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,
   bow: ["long12"], left: ["six", "carronade", "six"], right: ["six", "carronade", "six"] };
+const REMATCH_PCT = 0.25;                     // a rematch sinking pays this share of the bounty's Captain's Chest (js/rematch.js)
+const REMATCH_MAX = 2;                        // beaten captains that sail again at once; the farthest lairs first
 const CHAIN_GAP = 20;                        // seconds between sinkings that still count as one kill chain (js/hall.js)
 // Wind, weather and the hour of day (js/weather-core.js is the maths, js/weather.js the sea). Every number here is gameplay:
 // the same for every player whatever the weather-effects setting says, so a daily sea plays the same everywhere.
