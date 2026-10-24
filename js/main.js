@@ -157,6 +157,7 @@ function threatLevel(living, engaged) {
 
 function drawOverlays() {
   const g = S.arcG, bg = S.barG; g.clear(); bg.clear();
+  if (photoOn()) return;   // photo mode: no aim lines, bars or warnings in the shot (js/photo.js)
   const v = S.cameras.main.worldView, lk = labelScale();   // widths counter-scaled with the labels, so lines survive zoom 0.55
   // Aim lines: hidden until an enemy nears a mount's firing arc. One straight line per cannon.
   //   red    = loaded, and the line passes through an enemy on screen right now (that ship also gets a bracket)

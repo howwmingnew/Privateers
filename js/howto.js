@@ -7,7 +7,8 @@ Object.assign(STR.en, {
     <dt>Keyboard</dt><dd><kbd>A</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>→</kbd> turn. <kbd>W</kbd> <kbd>S</kbd> or <kbd>↑</kbd> <kbd>↓</kbd> raise and lower the sail (stopped, slow, half, full); the ship holds that speed. <kbd>Space</kbd> fires every loaded gun that bears; <kbd>Q</kbd> / <kbd>E</kbd> fire only the larboard / starboard broadside. <kbd>M</kbd> mutes. <kbd>Esc</kbd> or <kbd>P</kbd> pauses.</dd>
     <dt>Mouse</dt><dd>Hold the right button to steer toward the cursor (the farther the cursor, the more sail) and left-click to fire. Or use the left button alone: hold to steer, let go to fire. The wheel zooms.</dd>
     <dt>Touch</dt><dd>Drag anywhere to steer with the floating stick, and let go to fire. The <b>❚❚</b> button pauses.</dd>
-    <dt>Controller</dt><dd>Left stick steers. D-pad <kbd>↑</kbd> <kbd>↓</kbd> sets the sail. <kbd>A</kbd> or <kbd>RT</kbd> fires. <kbd>Start</kbd> pauses. In menus the D-pad or stick moves, <kbd>A</kbd> selects and <kbd>B</kbd> goes back.</dd></dl>`,
+    <dt>Controller</dt><dd>Left stick steers. D-pad <kbd>↑</kbd> <kbd>↓</kbd> sets the sail. <kbd>A</kbd> or <kbd>RT</kbd> fires. <kbd>Start</kbd> pauses. In menus the D-pad or stick moves, <kbd>A</kbd> selects and <kbd>B</kbd> goes back.</dd><dt>Photo mode</dt><dd><kbd>H</kbd> (or Photo mode in the pause menu) freezes the sea and hides the interface. Drag to move the camera, wheel or pinch to zoom, and save the shot as a postcard. <kbd>H</kbd> or <kbd>Esc</kbd> returns to the game exactly as it was.</dd>
+  </dl>`,
   ht_aim: `<h3>Aim lines</h3><p>When an enemy comes near your bow, stern or a broadside, that side shows one line per cannon. Each ball flies straight along its line, so you aim by turning the ship.</p>
     <ul class="legend"><li><i class="sw-aim hit"></i><span><b>Red</b>: loaded, and the shot will hit.</span></li>
     <li><i class="sw-aim miss"></i><span><b>Yellow</b>: loaded, but the shot will miss.</span></li>
@@ -24,7 +25,7 @@ Object.assign(STR.en, {
     <p>The farther from the harbor you sail, the richer and deadlier the ships.</p>`,
   ht_wreck: `<h3>Wrecks</h3><p>If your ship goes down, the cargo in the hold sinks with it. The wreck stays where you sank, marked with a red <i class="sw-x"></i> on the map, even if you close the game. Sail over it to scoop the cargo back up, then bring it home to sell.</p>`,
   cr_body: `<p><b>Privateers</b> · 私掠者</p><p>Made with <b>Phaser 3</b>.</p>
-    <p>All art and sound are generated in code. The game ships no image or audio files.</p>
+    <p>All art and sound are generated in code. The game itself loads no image or audio files.</p>
     <p class="note">Fonts: IM Fell English SC, Barlow Semi Condensed, Noto Serif TC and Noto Sans TC, from Google Fonts under the SIL Open Font License.</p>`,
 });
 Object.assign(STR.zh, {
@@ -33,7 +34,8 @@ Object.assign(STR.zh, {
     <dt>鍵盤</dt><dd><kbd>A</kbd> <kbd>D</kbd> 或 <kbd>←</kbd> <kbd>→</kbd> 轉向。<kbd>W</kbd> <kbd>S</kbd> 或 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆（收帆、慢速、半帆、滿帆），船會維持這個速度。<kbd>空白鍵</kbd>讓所有對準目標且已裝填的火砲開火；<kbd>Q</kbd> / <kbd>E</kbd> 只開左舷／右舷。<kbd>M</kbd> 靜音。<kbd>Esc</kbd> 或 <kbd>P</kbd> 暫停。</dd>
     <dt>滑鼠</dt><dd>按住右鍵，船會朝游標駛去（游標離船越遠，帆張得越滿），點左鍵開火。也可以只用左鍵：按住轉向，放開開火。滾輪可以縮放。</dd>
     <dt>觸控</dt><dd>在任意位置拖曳，用浮動搖桿轉向，放開就開火。按 <b>❚❚</b> 暫停。</dd>
-    <dt>控制器</dt><dd>左搖桿轉向。十字鍵 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆。<kbd>A</kbd> 或 <kbd>RT</kbd> 開火。<kbd>Start</kbd> 暫停。在選單中用十字鍵或搖桿移動，<kbd>A</kbd> 確認，<kbd>B</kbd> 返回。</dd></dl>`,
+    <dt>控制器</dt><dd>左搖桿轉向。十字鍵 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆。<kbd>A</kbd> 或 <kbd>RT</kbd> 開火。<kbd>Start</kbd> 暫停。在選單中用十字鍵或搖桿移動，<kbd>A</kbd> 確認，<kbd>B</kbd> 返回。</dd><dt>拍照模式</dt><dd>按 <kbd>H</kbd>（或在暫停選單選「拍照模式」）會凍結海面並隱藏介面。拖曳移動鏡頭、滾輪或兩指縮放，再把畫面存成明信片。按 <kbd>H</kbd> 或 <kbd>Esc</kbd> 回到遊戲，一切都和離開時一樣。</dd>
+  </dl>`,
   ht_aim: `<h3>瞄準線</h3><p>敵船靠近船首、船尾或舷側時，那一側的每門火砲都會顯示一條瞄準線。砲彈會沿著線直直飛出去，所以要靠轉動船身來瞄準。</p>
     <ul class="legend"><li><i class="sw-aim hit"></i><span><b>紅色</b>：已裝填，這一發會命中。</span></li>
     <li><i class="sw-aim miss"></i><span><b>黃色</b>：已裝填，但這一發會落空。</span></li>
@@ -50,6 +52,6 @@ Object.assign(STR.zh, {
     <p>離港口越遠，敵船越富有，也越危險。</p>`,
   ht_wreck: `<h3>殘骸</h3><p>船沉的時候，貨艙裡的貨物也會跟著沉下去。殘骸會留在沉沒的地方，地圖上以紅色 <i class="sw-x"></i> 標示，關掉遊戲也不會消失。駛過殘骸就能把貨物撈回來，再帶回港口賣掉。</p>`,
   cr_body: `<p><b>私掠者</b> · Privateers</p><p>使用 <b>Phaser 3</b> 製作。</p>
-    <p>所有美術和音效都由程式即時生成，遊戲裡沒有任何圖片或音訊檔。</p>
+    <p>所有美術和音效都由程式即時生成，遊戲本身不載入任何圖片或音訊檔。</p>
     <p class="note">字型：IM Fell English SC、Barlow Semi Condensed、Noto Serif TC、Noto Sans TC，來自 Google Fonts，採用 SIL 開放字型授權。</p>`,
 });

@@ -160,6 +160,7 @@ function pauseGame() {
 }
 function resumeGame() {
   if (!pauseOpen) return;
+  if (photoOn()) { photoExit(); return; }   // photo mode (js/photo.js) rides on the pause: leaving it is what "resume" means there
   closeAllPanels();
   pauseOpen = false; $m("pause").hidden = true; document.body.classList.remove("on-pause");
   freeze(false);
@@ -253,6 +254,7 @@ function menuAction(act, b) {
     case "roadmap": openRoadmap(b); break;   // js/roadmap-panel.js
     case "back": closePanel(); break;
     case "pause": pauseGame(); break;
+    case "photo": photoEnter("pause"); break;   // js/photo.js
     case "resume": resumeGame(); break;
     case "quit": pressQuit(); break;
     case "skip-tut": tutorialSkip(); if (pauseOpen) { renderPause(); focusFirst($m("pause")); } break;

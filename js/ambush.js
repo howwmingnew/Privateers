@@ -21,9 +21,10 @@ function ambushSpot(isl, from, side) {
   const a = Math.atan2(isl.y - from.y, isl.x - from.x), d = isl.r * 1.3 + 50;
   return { x: isl.x + Math.cos(a) * d - Math.sin(a) * side * 70, y: isl.y + Math.sin(a) * d + Math.cos(a) * side * 70 };
 }
-// The nearest island 350-1100 px away whose far side is open water outside the safe waters; null if none.
+// The nearest island 350-1100 px away whose far side is open water outside the safe waters and within 1000 px of the ship
+// (an AI gives up a chase from 1300); null if none.
 function ambushIsland() {
-  const clear = p => p.x > 200 && p.x < W - 200 && p.y > 200 && p.y < H - 200 && Math.hypot(p.x - PORT.x, p.y - PORT.y) > SAFE_R + 150 &&
+  const clear = p => dist(p, player) < 1000 && p.x > 200 && p.x < W - 200 && p.y > 200 && p.y < H - 200 && Math.hypot(p.x - PORT.x, p.y - PORT.y) > SAFE_R + 150 &&
     !islands.some(o => Math.hypot(o.x - p.x, o.y - p.y) < o.r * 1.3 + 30);
   return islands.map(i => ({ i, d: dist(i, player) })).filter(o => o.d > 350 && o.d < 1100).sort((a, b) => a.d - b.d)
     .map(o => o.i).find(i => [-1, 1].every(s => clear(ambushSpot(i, player, s)))) || null;
@@ -33,6 +34,7 @@ function ambushSpawn(isl) {
   save.ambushDone = true; persist();
   [-1, 1].forEach(side => {
     const p = ambushSpot(isl, player, side), e = makeEnemy(S, p.x, p.y, L, "pirate", "cutter");
+    e.ring = Math.min(e.ring, ringAt(dist(player, PORT)) + 1);   // at home where the player is: an AI breaks off a chase 2 rings shallower than its own (js/ships.js think)
     e.maxHp = e.hp = Math.ceil(e.maxHp * AMBUSH_HULL);
     for (const k in e.vol) e.vol[k].cd = AMBUSH_HOLD;
     Object.assign(e, { target: player, attacker: player, angry: 12, chaseFrom: { x: p.x, y: p.y }, rot: Math.atan2(player.y - p.y, player.x - p.x) });

@@ -121,6 +121,7 @@ function sortieTally({ sunk, cargo: c, bonus, gold }) {
   const num = el.querySelector(".t-gold b"), t0 = performance.now(), dur = reduceMotion() ? 0 : TALLY_MS;
   tallyUntil = t0 + TALLY_SHOW_MS;
   sfx("coinRoll");
+  if (sunk > 0 && !docked && typeof postcardOffer === "function") postcardOffer();   // a sortie worth a postcard (js/postcard.js)
   const tick = () => {
     const k = dur ? Math.min(1, (performance.now() - t0) / dur) : 1;
     num.textContent = fmt(Math.round(gold * (1 - Math.pow(1 - k, 3))));
