@@ -30,7 +30,7 @@ class Main extends Phaser.Scene {
     cam.startFollow(player.spr, true, 0.15, 0.15);
     this.keys = this.input.keyboard.addKeys("W,A,S,D,UP,DOWN,LEFT,RIGHT");
     this.input.keyboard.on("keydown-SPACE", () => playerFire());
-    this.input.keyboard.on("keydown-M", () => toast(t(Snd.toggleMute() ? "muted" : "unmuted")));
+    this.input.keyboard.on("keydown-M", () => toast(t(Snd.toggleMute() ? "muted" : "unmuted"), true));
     for (let i = 0; i < ENEMY_COUNT; i++) spawnEnemy(this);
     for (const w of save.wrecks) addCrate(w.x, w.y, w.value, w);
     fitView(this);   // camera zoom, crisp text and canvas size for HiDPI screens (js/view.js)
@@ -71,7 +71,9 @@ function step(dt) {
   for (let i = 0; i < ships.length; i++) for (let j = i + 1; j < ships.length; j++) {
     const a = ships[i], b = ships[j];
     if (a.fixed || b.fixed) continue;   // shore batteries aren't shoved; their island keeps ships off
-    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy), r = shipRadius(a) + shipRadius(b);   // sized per hull
+    const dx = b.x - a.x, dy = b.y - a.y;
+    if (dx > 120 || dx < -120 || dy > 120 || dy < -120) continue;   // wider than any two hulls' radii: no shove
+    const d = Math.hypot(dx, dy), r = shipRadius(a) + shipRadius(b);   // sized per hull
     if (d < r && d > 0.01) { const p = (r - d) / 2; a.x -= dx / d * p; a.y -= dy / d * p; b.x += dx / d * p; b.y += dy / d * p; }
   }
   for (const s of ships) {
@@ -161,7 +163,7 @@ function drawOverlays() {
   //   yellow = loaded, line misses
   //   faint  = reloading; the line grows back to full length as the gun reloads
   // With many guns every line is drawn thinner and fainter, so a 14-gun broadside doesn't paint a red grid.
-  if (player.alive && !docked) {
+  if (player.alive && !docked && !titleOpen) {   // the title hides the player at the harbor: no ghost aim lines
     const mounts = MOUNTS.filter(mountEngaged), total = mounts.reduce((n, m) => n + player.guns[m.key].length, 0);
     const k = clamp(2.2 / Math.sqrt(Math.max(1, total)), 0.5, 1), marked = new Set();
     for (const mount of mounts) {
@@ -188,6 +190,7 @@ function drawOverlays() {
   // health bars, just above each hull's drawn extent (none behind the title: a hero shot, not a HUD)
   if (!titleOpen) for (const e of enemies) {
     if (!e.alive || e.x < v.x - 60 || e.x > v.right + 60 || e.y < v.y - 60 || e.y > v.bottom + 60) continue;
+    if (e.badge && e.badge.alpha < 0.5) continue;   // its plate is faded under the HUD corner (js/sea-guard.js): the bar too
     const w = 46 * lk, h = 4 * lk, x = e.x - w / 2, y = shipTop(e) - 8 * lk;
     bg.fillStyle(0x08222d, 0.8); bg.fillRect(x - lk, y - lk, w + 2 * lk, h + 2 * lk);
     bg.fillStyle(e.burnT > 0 ? 0xff8a3a : 0x86c46f, 1); bg.fillRect(x, y, w * clamp(e.hp / e.maxHp, 0, 1), h);

@@ -15,7 +15,7 @@
 //   vfxHitStop(sec)         freeze the simulation briefly; particles and tweens keep moving
 //   vfxSlowMo(sec, k)       run the simulation at k (< 1) for a while: a boss going down
 const VFX_LOW = (() => { try { return matchMedia("(pointer: coarse)").matches; } catch (e) { return false; } })();
-let PERF_LOW = false;   // set by js/tech.js while frames run long: damage smoke and flames puff half as often
+let PERF_LOW = false;   // set by js/tech.js while frames run long: thinner smoke, flames, sparks and off-screen wakes
 const vfxCap = n => Math.round(n * (VFX_LOW ? 0.55 : 1));
 const FX = { deg: 0, tint: 0xffffff, sTint: 0xe9e5dc };
 const SINK_TINT = 0x1d4e60;   // the hull fades toward the sea colour, so it goes under rather than into thin air
@@ -93,7 +93,7 @@ function vfxShip(s, dt) {
   s.wakeT -= dt;
   if (s.kick) kickApply(s);   // hit knockback / broadside recoil, drawn on the sprite only (js/juice.js)
   if (s.speed > 25 && s.wakeT <= 0) {
-    s.wakeT = 0.07;
+    s.wakeT = PERF_LOW && !vis ? 0.2 : 0.07;   // frames running long: off-screen wakes go sparser (nobody sees them form)
     const back = a.len * 0.46;
     S.fx.wake.emitParticleAt(s.x - c * back, s.y - sn * back, 1);
     if (vis && s.speed > s.maxSpeed * 0.4) {   // bow spray: foam peeling off both shoulders in a V
@@ -129,7 +129,7 @@ function vfxMuzzle(x, y, a) {
   FX.flash.emitParticleAt(x + c * 12, y + s * 12, 1);   // the teardrop's base sits on the muzzle
   FX.bloom.emitParticleAt(x + c * 10, y + s * 10, 1);
   // smoke strung out along the barrel line, the outer puffs dirtier: a plume, not a white disc on the muzzle
-  for (let i = 0; i < 5; i++) {
+  for (let i = PERF_LOW ? 2 : 0; i < 5; i++) {   // frames running long: the three outer puffs only
     const d = 4 + i * 6.5 + rand(-2, 2), w = rand(-2.5, 2.5);
     FX.sTint = i >= 3 ? 0xb3a998 : 0xe9e5dc;
     FX.smoke.emitParticleAt(x + c * d - s * w, y + s * d + c * w, 1);
@@ -146,13 +146,14 @@ function vfxFlash(s) {
 }
 function vfxHit(x, y) {
   if (!onScreen(x, y, 80)) return;
-  S.fx.spark.explode(8, x, y); FX.splinter.explode(7, x, y);
+  const lo = PERF_LOW;   // frames running long: fewer sparks and splinters, the same flash
+  S.fx.spark.explode(lo ? 5 : 8, x, y); FX.splinter.explode(lo ? 4 : 7, x, y);
   FX.deg = rand(0, 360); FX.smoke.emitParticleAt(x, y, 2);
 }
 function vfxSplash(x, y, rock) {
   if (!onScreen(x, y, 60)) return;
   if (rock) { FX.dust.explode(5, x, y); S.fx.splash.explode(3, x, y); return; }
-  FX.ring.emitParticleAt(x, y, 1); FX.column.explode(3, x, y); S.fx.splash.explode(7, x, y);
+  FX.ring.emitParticleAt(x, y, 1); FX.column.explode(3, x, y); S.fx.splash.explode(PERF_LOW ? 4 : 7, x, y);
 }
 // A quick zoom kick that hands the zoom back untouched unless something else changed it meanwhile. One punch at a
 // time: a bigger one takes over from a running one at its base zoom (a boss kill's +9% comes in the same frame as the

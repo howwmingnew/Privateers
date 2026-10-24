@@ -61,9 +61,11 @@ function playerFire(only) {
 
 // ship hit test: capsule along the hull axis, sized to the drawn hull by applyShipArt (s.hl / s.hw)
 function hitShip(s, x, y) {
-  const dx = x - s.x, dy = y - s.y, c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28;
+  const dx = x - s.x, dy = y - s.y, hl = s.hl ?? 28, hw = s.hw ?? 13;
+  if (dx > hl + hw || dx < -hl - hw || dy > hl + hw || dy < -hl - hw) return false;   // far off: skip the trig
+  const c = Math.cos(s.rot), sn = Math.sin(s.rot);
   const along = clamp(dx * c + dy * sn, -hl, hl);
-  return Math.hypot(dx - c * along, dy - sn * along) < (s.hw ?? 13);
+  return Math.hypot(dx - c * along, dy - sn * along) < hw;
 }
 function floatText(x, y, str, color, size = 16) {
   const txt = S.add.text(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
@@ -110,7 +112,7 @@ function sink(s, killer) {
     if (lastLost > 0) { const w = { x: Math.round(s.x), y: Math.round(s.y), value: lastLost }; save.wrecks.push(w); addCrate(w.x, w.y, w.value, w); }
     save.salvage = [];   // whatever was salvaged went down again inside the new wreck
     cargo = 0; persist();
-    toast(t(lastLost > 0 ? "toastSunkHalf" : "toastSunk"));
+    toast(t(lastLost > 0 ? "toastSunkHalf" : "toastSunk"), true);
     S.time.delayedCall(1700, () => {
       cargo = 0;
       Object.assign(player, { x: PORT.x + 140, y: PORT.y, rot: 0, speed: 0, alive: true, burnT: 0 });

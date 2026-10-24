@@ -152,7 +152,7 @@ function think(e, dt) {
   e.retarget -= dt;
   if (e.retarget <= 0) {
     e.retarget = 0.5;
-    const nt = pickTarget(e, now);
+    const nt = (e.backOffT || 0) > now ? null : pickTarget(e, now);   // turning back out of the Shallows (js/sea-guard.js)
     if (nt && nt !== e.target) { e.target = nt; e.chaseFrom = { x: e.x, y: e.y }; }
   }
   let desired = null, thr = 0.55;
