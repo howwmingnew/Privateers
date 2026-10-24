@@ -19,21 +19,23 @@ function deckHtml() {
   const btn = (side, label, i) => { const gun = save[side][i], cls = (gun ? "slot" : "slot empty") + (isPicked(side, i) ? " sel" : "");   // js/gunbay.js
     const name = gun ? `${t("gf_" + gun.g)} Lv ${gun.lv}` : t("emptyPort");
     return `<button class="${cls}" type="button" data-act="slot" data-side="${side}" data-i="${i}" data-k="${side}${i}" aria-pressed="${isPicked(side, i)}" aria-label="${t("slotAria", { side: label, n: i + 1, gun: name })}">` +
-      (gun ? `${t("g_" + gun.g)}<small>Lv ${gun.lv}</small>` : `${t("emptyPort")}<small>&nbsp;</small>`) + `</button>`; };
+      (gun ? `${t("g_" + gun.g)}<small>Lv ${gun.lv}</small>` : `${t("emptyPort")}<small>&nbsp;</small>`) + `</button>`; };   // .deck.dense css: one line per port
   const grp = (side, label) => {
     const idx = save[side].map((_, i) => i);
     if (!idx.length) return "";
     if (side === "left" || side === "right") idx.reverse();   // bow-most gun on top, so the list reads like the hull
     return `<div class="dk-grp dk-${side}"><div class="lbl">${label}</div><div class="slots">${idx.map(i => btn(side, label, i)).join("")}</div></div>`;
   };
-  return { style: `--shipw: min(46%, ${Math.round(h * DECK_K)}px); --ship-ar: ${h} / ${w}`,
+  const rows = Math.max(save.left.length, save.right.length);   // a dense deck (js/gundeck.js) stretches the ship cell to as many rows as the longest side
+  return { dense: denseDeck(save.ship), style: `--shipw: min(46%, ${Math.round(h * DECK_K)}px); --ship-ar: ${h} / ${w}; --rows: ${rows}`,
     html: `<svg class="dk-lines" aria-hidden="true"></svg>` + grp("bow", t("bow")) + grp("left", t("larboard")) +
       `<div class="dk-ship" aria-hidden="true"></div>` + grp("right", t("starboard")) + grp("stern", t("stern")) };
 }
 function renderDeck(el = document.getElementById("deck")) {
   // the canvas survives re-renders, so swapping a gun does not repaint the ship
   const cv = el.querySelector("canvas.dk-art") || Object.assign(document.createElement("canvas"), { className: "dk-art" });
-  const { style, html } = deckHtml();
+  const { style, html, dense } = deckHtml();
+  el.classList.toggle("dense", dense);
   el.setAttribute("style", style); el.innerHTML = html; el.prepend(cv);
   paintGunDeck(el);
 }

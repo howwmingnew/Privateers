@@ -289,7 +289,9 @@ test("no damage gun beats the next best by more than 40% in DPS for the same gol
 test("a new ship is never a downgrade from the previous one at a typical refit", () => {
   const g = boot();
   const ships = g.json("SHIP_ORDER");
+  // every port armed with a 6-pounder: a big gun deck only pays once it is filled (each gun on it hits for its hull's gunK)
   const at = (ship, hull, hold) => g.json(`(() => { save = fitMounts({ ...defaultSave(), ship: "${ship}", hull: ${hull}, hold: ${hold} });
+    for (const { key } of MOUNTS) save[key] = save[key].map(() => gunItem("six"));
     return { p: playerPower(), hp: yardVal("hull"), hold: yardVal("hold") }; })()`);
   for (let i = 1; i < ships.length; i++) {
     const old = at(ships[i - 1], 5, 4), nw = at(ships[i], 1, 1);
@@ -300,11 +302,11 @@ test("a new ship is never a downgrade from the previous one at a typical refit",
 test("ship rating: a fresh sloop is Lv 2, and fires are counted once however many incendiaries", () => {
   const g = boot();
   assert.equal(g.run("shipRating()"), 2);
-  // 14 incendiaries on a ship of the line: impact for each gun at its uptime, but burning only BURN_MAX fires at once
-  const dps = g.run(`save = fitMounts({ ...defaultSave(), ship: "line", unlocked: { six: true, fire: true }, left: Array(5).fill("fire"), right: Array(5).fill("fire"), bow: ["fire", "fire"], stern: ["fire", "fire"] }),
+  // 30 incendiaries on a ship of the line (a gun there hits for its hull's gunK): impact for each gun at its uptime, but burning only BURN_MAX fires at once
+  const dps = g.run(`save = fitMounts({ ...defaultSave(), ship: "line", unlocked: { six: true, fire: true }, left: Array(12).fill("fire"), right: Array(12).fill("fire"), bow: Array(3).fill("fire"), stern: Array(3).fill("fire") }),
     playerPower() ** 2 / yardVal("hull")`);
-  const g1 = g.json("GUNS.fire"), impact = 14 * g1.dmg * g1.rpm / 60 * g.run("MOUNT_UPTIME");
-  assert.ok(Math.abs(dps - (impact + g.run("BURN_MAX") * g1.burn)) < 1e-6, `dps ${dps}`);
+  const g1 = g.json("GUNS.fire"), k = g.run("shipGunK()"), impact = 30 * g1.dmg * k * g1.rpm / 60 * g.run("MOUNT_UPTIME");
+  assert.ok(Math.abs(dps - (impact + g.run("BURN_MAX") * g1.burn * k)) < 1e-6, `dps ${dps}`);
 });
 
 test("combat strings exist in both languages", () => {
