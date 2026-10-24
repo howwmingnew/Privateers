@@ -224,7 +224,7 @@ function closePanel() {
 }
 function closeAllPanels() { while (panels.length) panels.pop().el.hidden = true; }
 // Campaign modals (js/logbook.js, js/victory.js) sit over the ledger or the sea; focus and the pad stay inside them.
-const campaignModal = () => document.querySelector("#victory:not([hidden]), #logbook:not([hidden]), #runEnd:not([hidden])");
+const campaignModal = () => document.querySelector("#victory:not([hidden]), #logbook:not([hidden]), #runEnd:not([hidden]), #challenge:not([hidden])");
 function activeRoot() {
   if (panels.length) return panels[panels.length - 1].el;
   const modal = campaignModal();
@@ -237,7 +237,7 @@ function activeRoot() {
 function goBack() {
   if (panels.length) return closePanel();
   const modal = campaignModal();
-  if (modal) { if (modal.id === "logbook" && typeof closeLog === "function") closeLog(); return; }   // victory: its own buttons
+  if (modal) { if (modal.id === "logbook" && typeof closeLog === "function") closeLog(); else if (modal.id === "challenge") closeChallenge(); return; }   // victory: its own buttons
   if (pauseOpen) return resumeGame();
   if (titleOpen && !$m("tConfirm").hidden) return menuAction("new-no");
   if (docked) $m("sail").focus({ preventScroll: true });   // from the ledger, "back" heads for Set sail

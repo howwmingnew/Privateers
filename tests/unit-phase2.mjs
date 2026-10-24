@@ -100,7 +100,7 @@ test("daily: every day makes a hunt the campaign code can run, and the days vary
   for (const s of specs) {
     assert.match(s.id, /^d([0-9]|1[01])$/);
     assert.ok(["cutter", "brig", "frigate"].includes(s.cls));
-    assert.ok(s.hpMul >= 1 && s.hpMul <= 4, "hull multiplier " + s.hpMul);
+    assert.ok(s.hpMul >= 0.5 && s.hpMul <= 7, "hull multiplier " + s.hpMul);
     assert.ok(s.ang >= 0 && s.ang <= 2 * Math.PI);
     assert.ok(Array.isArray(s.escorts));
   }
@@ -190,13 +190,94 @@ test("daily: the record lives under its own key and never touches the campaign s
 });
 
 test("links: #daily and #seed=N open the right run; anything else does not", () => {
-  assert.deepEqual(g.json(`parseRunHash("#daily")`), { kind: "daily", seed: 0 });
-  assert.deepEqual(g.json(`parseRunHash("#seed=12345")`), { kind: "seed", seed: 12345 });
-  for (const bad of ["", "#", "#seed=", "#seed=0", "#seed=abc", "#seed=-5", "#seed=99999999999", "#seed=2147483648", "#daily2", "#other"]) {
+  assert.deepEqual(g.json(`parseRunHash("#daily")`), { kind: "daily", n: 0, seed: 0, friend: null });
+  assert.deepEqual(g.json(`parseRunHash("#seed=12345")`), { kind: "seed", n: 0, seed: 12345, friend: null });
+  for (const bad of ["", "#", "#seed=", "#seed=0", "#seed=abc", "#seed=-5", "#seed=99999999999", "#seed=2147483648", "#daily2", "#other", "#daily=0", "#daily=abc", "#daily=-3", "#daily=1234567"]) {
     assert.equal(g.json(`parseRunHash(${JSON.stringify(bad)})`), null, bad);
   }
   assert.equal(g.run(`parseRunHash("#seed=2147483647").seed`), 2147483647);
 });
+
+test("links: a friend's result rides in the address; figures are validated and clamped", () => {
+  const p = h => g.json(`parseRunHash(${JSON.stringify(h)})`);
+  assert.deepEqual(p("#daily=57&t=102&hp=64&k=9"), { kind: "daily", n: 57, seed: 0, friend: { won: true, bossT: 102, hull: 64, sunk: 9 } });
+  assert.deepEqual(p("#daily=57&hp=0&k=3").friend, { won: false, bossT: 0, hull: 0, sunk: 3 }, "no t: the captain got away");
+  assert.deepEqual(p("#daily=57&t=9999&hp=500&k=123456").friend, { won: true, bossT: 300, hull: 100, sunk: 999 }, "clamped to what a run can reach");
+  assert.equal(p("#daily=57&t=abc&hp=50&k=2").friend.won, false, "a bad t is ignored");
+  assert.equal(p("#daily=57&t=60&hp=x&k=2").friend, null, "a bad hp drops the friend result");
+  assert.equal(p("#daily=57&t=60&hp=50").friend, null, "k missing");
+  assert.equal(p("#daily=57&t=-5&hp=50&k=2").friend.won, false, "negative is not a number here");
+  assert.equal(p("#daily=57&t=60&hp=50&k=2&__proto__=1&name=bob").friend.sunk, 2, "unknown parameters are ignored");
+  assert.equal(p("#daily=57&t=1e3&hp=5.5&k=2").friend, null);
+  assert.equal(p("#daily=57").friend, null);
+});
+
+test("links: a result becomes an address that parses back to the same figures", () => {
+  const won = g.json(`dailyLink(57, dailyResult({ won: true, bossT: 102, sunk: 9, hull: 64 }))`);
+  assert.equal(won, "#daily=57&t=102&hp=64&k=9");
+  const lost = g.json(`dailyLink(57, dailyResult({ won: false, bossT: 0, sunk: 4, hull: 0 }))`);
+  assert.equal(lost, "#daily=57&hp=0&k=4");
+  assert.deepEqual(g.json(`parseRunHash(${JSON.stringify(won)}).friend`), { won: true, bossT: 102, hull: 64, sunk: 9 });
+  assert.deepEqual(g.json(`parseRunHash(${JSON.stringify(lost)}).friend`), { won: false, bossT: 0, hull: 0, sunk: 4 });
+});
+
+// ---------- difficulty by weekday ----------
+test("difficulty: Monday is 1 and Sunday is 7 by the UTC date, the same for everyone", () => {
+  // #1 = 2026-10-24, a Saturday (6); the 7 days from Monday 2026-10-26 (#3) climb 1..7
+  assert.equal(g.run("dailyTier(1)"), 6);
+  assert.equal(g.run("dailyTier(2)"), 7);
+  assert.deepEqual(g.json("[3, 4, 5, 6, 7, 8, 9].map(dailyTier)"), [1, 2, 3, 4, 5, 6, 7]);
+  assert.equal(g.run("dailyTier(10)"), 1, "and it wraps");
+  assert.equal(g.run("dailyTier(0)"), g.run("dailyTier(1)"), "an impossible day reads as #1");
+});
+
+test("difficulty: the table has 7 levels that only get harder, and the captain follows it", () => {
+  const T = g.json("DAILY_TIERS");
+  assert.equal(T.length, 7);
+  for (let i = 1; i < 7; i++) assert.ok(T[i].hp > T[i - 1].hp && T[i].speed >= T[i - 1].speed, "tier " + (i + 1));
+  const hp = tier => g.run(`dailySpec(dailySeed(57), ${tier}).hpMul`), sp = tier => g.run(`dailySpec(dailySeed(57), ${tier}).speed`);
+  assert.ok(hp(7) > hp(1) * 2, `${hp(1)} -> ${hp(7)}`); assert.ok(sp(7) > sp(1));
+  const a = g.json("dailySpec(dailySeed(57), 3)"), b = g.json("dailySpec(dailySeed(57), 3)");
+  assert.deepEqual(a, b, "same day, same tier, same captain");
+  const x = g.json("dailySpec(dailySeed(57), 2)"), y = g.json("dailySpec(dailySeed(57), 6)");
+  assert.deepEqual({ ...x, hpMul: 0, speed: 0 }, { ...y, hpMul: 0, speed: 0 }, "only the hull and speed change with the tier");
+  assert.equal(g.json("dailySpec(dailySeed(57), 99)").hpMul, hp(7), "a tier out of range is clamped");
+});
+
+test("difficulty: the label names the weekday in both languages", () => {
+  const b = boot();
+  lang(b, "en"); assert.equal(b.run("dailyTierLabel(9)"), "Sunday · Difficulty 7/7"); assert.equal(b.run("dailyTierLabel(3)"), "Monday · Difficulty 1/7");
+  lang(b, "zh"); assert.equal(b.run("dailyTierLabel(9)"), "週日・難度 7/7");
+});
+
+// ---------- comparing with a friend ----------
+test("friend: both sank the captain: faster or slower, more or fewer ships, more or less hull", () => {
+  const cmp = (me, fr) => g.json(`compareFriend(${JSON.stringify(me)}, ${JSON.stringify(fr)})`);
+  assert.deepEqual(cmp({ won: true, bossT: 90, sunk: 7, hull: 74 }, { won: true, bossT: 102, sunk: 9, hull: 64 }),
+    [["dc_faster", { s: 12 }], ["dc_fewer", { n: 2 }], ["dc_hullUp", { n: 10 }]]);
+  assert.deepEqual(cmp({ won: true, bossT: 110, sunk: 9, hull: 60 }, { won: true, bossT: 102, sunk: 7, hull: 64 }),
+    [["dc_slower", { s: 8 }], ["dc_more", { n: 2 }], ["dc_hullDown", { n: 4 }]]);
+  assert.deepEqual(cmp({ won: true, bossT: 100, sunk: 3, hull: 50 }, { won: true, bossT: 100, sunk: 3, hull: 50 }), [["dc_same", {}], ], "same time; nothing else differs");
+});
+test("friend: one of you let the captain get away", () => {
+  const cmp = (me, fr) => g.json(`compareFriend(${JSON.stringify(me)}, ${JSON.stringify(fr)})`);
+  assert.equal(cmp({ won: true, bossT: 100, sunk: 3, hull: 50 }, { won: false, bossT: 0, sunk: 3, hull: 50 })[0][0], "dc_winOnly");
+  assert.equal(cmp({ won: false, bossT: 0, sunk: 3, hull: 50 }, { won: true, bossT: 100, sunk: 3, hull: 50 })[0][0], "dc_friendOnly");
+  assert.deepEqual(cmp({ won: false, bossT: 0, sunk: 3, hull: 20 }, { won: false, bossT: 0, sunk: 3, hull: 20 }), [["dc_tie", {}]]);
+  assert.deepEqual(cmp({ won: false, bossT: 0, sunk: 5, hull: 20 }, { won: false, bossT: 0, sunk: 3, hull: 30 }), [["dc_more", { n: 2 }], ["dc_hullDown", { n: 10 }]]);
+});
+test("friend: the lines read in both languages, and the friend's result names today's captain", () => {
+  const b = boot();
+  const lines = r => b.json(`compareFriend(dailyResult(${JSON.stringify(r[0])}), dailyResult(${JSON.stringify(r[1])})).map(([k, v]) => t(k, v))`);
+  const pair = [{ won: true, bossT: 90, sunk: 7, hull: 74 }, { won: true, bossT: 102, sunk: 9, hull: 64 }];
+  lang(b, "zh"); assert.deepEqual(lines(pair), ["比朋友快 12 秒", "還差 2 艘", "船體多 10%"]);
+  lang(b, "en"); assert.deepEqual(lines(pair), ["12 s faster than your friend", "2 ships short", "10% more hull"]);
+  const name = b.run(`t("boss_" + dailySpec(dailySeed(57)).id)`);
+  assert.equal(b.run(`friendText(57, { won: true, bossT: 102, hull: 64, sunk: 9 })`), `Friend: ${name} sunk in 1:42 · hull 64% · 9 sunk`);
+  lang(b, "zh");
+  assert.match(b.run(`friendText(57, { won: false, bossT: 0, hull: 0, sunk: 3 })`), /^朋友：.+ 逃脫 · 船體 0% · 擊沉 3 艘$/);
+});
+
 
 // ---------- share text ----------
 const lang = (b, l) => b.run(`lang = "${l}"`);
@@ -225,7 +306,7 @@ test("share text: the daily line has the number, the captain, the time and the h
 test("share text: the link is the game's page, with #daily for the daily and #seed= for a seeded sea", () => {
   const b = boot();
   assert.equal(b.run(`shareSpec("sortie", { sunk: 1, gold: 1, secs: 1 }).url`), "https://howwmingnew.github.io/Privateers/");
-  assert.equal(b.run(`shareSpec("daily", { n: 1, bossName: "x", won: true, bossT: 5, sunk: 0, hull: 1 }).url`), "https://howwmingnew.github.io/Privateers/#daily");
+  assert.equal(b.run(`shareSpec("daily", { n: 1, bossName: "x", won: true, bossT: 5, sunk: 0, hull: 1 }).url`), "https://howwmingnew.github.io/Privateers/#daily=1&t=5&hp=1&k=0");
   assert.equal(b.run(`shareSpec("sortie", { sunk: 1, gold: 1, secs: 1, link: "#seed=77" }).url`), "https://howwmingnew.github.io/Privateers/#seed=77");
   assert.equal(b.run(`(() => { const s = shareSpec("sortie", { sunk: 2, gold: 3, secs: 4 }); return shareFull(s) === s.text + " " + s.url; })()`), true);
 });

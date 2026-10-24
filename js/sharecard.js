@@ -52,7 +52,7 @@ function shareSpec(kind, d = {}) {
       return { ...base, title: t("sc_t_log"), sub: "",
         stats: [[t("sc_best"), fmt(h.sunk)], [t("sc_chain"), fmt(h.chain)], ...(h.win > 0 ? [[t("sc_fastest"), fmtDur(h.win)]] : [[t("sc_total"), fmt(d.total || 0)]])],
         text: t("sc_x_log", { a: fmt(h.sunk), b: fmt(h.chain) }) }; }
-    case "daily": return { ...base, url: SHARE_URL + "#daily", title: t("sc_t_daily", { n: d.n }), sub: d.bossName,
+    case "daily": return { ...base, url: SHARE_URL + dailyLink(d.n, d), title: t("sc_t_daily", { n: d.n }), sub: d.tier ? `${d.bossName} · ${dailyTierLabel(d.n)}` : d.bossName,
       stats: [[t("sc_captain"), d.won ? fmtClock(d.bossT) : t("sc_away")], [t("sc_sunk"), fmt(d.sunk)], [t("sc_hull"), d.hull + "%"],
         ...(d.streak > 1 ? [[t("sc_streak"), String(d.streak)]] : [])],
       text: dailyShareText(d) };

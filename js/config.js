@@ -22,6 +22,9 @@ const POWDER_SPLASH = { ai: 0.3, player: 0.15, boss: 0.08 };   // share of max h
 const SHARE_URL = "https://howwmingnew.github.io/Privateers/";
 const DAILY_EPOCH = Date.UTC(2026, 9, 24);   // daily #1: 2026-10-24, UTC, so every device agrees on the day
 const DAILY_SECONDS = 300;                   // a daily run lasts five minutes
+// Difficulty by UTC weekday, Monday (1) easiest to Sunday (7) hardest: the captain's hull and speed times these. [PLACEHOLDER]
+const DAILY_TIERS = [{ hp: 0.7, speed: 0.9 }, { hp: 0.85, speed: 0.95 }, { hp: 1, speed: 1 }, { hp: 1.15, speed: 1.03 },
+  { hp: 1.3, speed: 1.06 }, { hp: 1.5, speed: 1.1 }, { hp: 1.75, speed: 1.15 }];
 const DAILY_LEVEL = 5;                       // the daily captain's ring (the Reef Straits)
 // The same ship and guns for everyone: a brig with a long 12 on the bow and a carronade between two 6-pounders each side.
 const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,

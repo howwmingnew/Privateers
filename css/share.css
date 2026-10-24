@@ -14,10 +14,13 @@ body:has(#runClock:not([hidden])) #seaBanner { top: calc(env(safe-area-inset-top
 @media (max-width: 560px) { #runClock { font-size: calc(15px * var(--ts, 1)); } }
 
 /* the daily result page: the victory sheet, over everything at sea */
-#runEnd { position: fixed; inset: 0; z-index: 12; display: grid; place-items: center; background: rgba(4,18,24,.78);
+#runEnd, #challenge { position: fixed; inset: 0; z-index: 12; display: grid; place-items: center; background: rgba(4,18,24,.78);
   padding-block: calc(env(safe-area-inset-top, 0px) + 12px) calc(env(safe-area-inset-bottom, 0px) + 12px);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-#runEnd[hidden] { display: none; }
+#challenge { z-index: 30; }
+#runEnd[hidden], #challenge[hidden] { display: none; }
+#challenge .sheet.victory { width: min(100%, 460px); text-align: center; }
+.vs-list { margin: 4px 0 0; padding-left: 18px; font-size: 15px; font-weight: 700; }
 #runEnd .sheet.victory { width: min(100%, 520px); }
 #runEnd .v-choices .v-card { order: 0; }
 .sheet .hall .btn { margin-top: 4px; }

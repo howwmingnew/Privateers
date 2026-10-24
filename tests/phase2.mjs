@@ -43,6 +43,9 @@ async function toSea(page) {   // the title's start button, then out of the ledg
   await page.waitForFunction(() => !docked && !paused, null, { timeout: 8000 * SLOW });
   await ev(page, () => { save.tutorialDone = true; tutorialReset(); });
 }
+// A link opens the challenge panel over the title and starts nothing: press its Start.
+const startChallenge = async page => { await page.click("#challenge [data-ch=start]"); await page.waitForFunction(() => runActive(), null, { timeout: 8000 * SLOW }); };
+const TODAY = Math.floor((Date.now() - Date.UTC(2026, 9, 24)) / 864e5) + 1;   // the daily's number, as js/daily.js reckons it
 // keep every ship the test did not place away from the player
 const calm = page => ev(page, () => { window.__calm = setInterval(() => { for (const e of enemies) if (!e.boss && !e.escortOf && Math.hypot(e.x - player.x, e.y - player.y) < 1300) { e.x = 200; e.y = 200; } }, 40); });
 const stored = (page, k) => ev(page, k => localStorage.getItem(k), k);
@@ -149,7 +152,11 @@ const freshSnap = (page, kind, seed = 0) => ev(page, ([kind, seed]) => {
 let snapA = null;
 {
   const { ctx, page } = await open({ seedStore: { [SAVE_KEY]: OLD_SAVE }, hash: "#daily" });
-  ok("#daily opens a daily run straight from the link", await ev(page, () => runActive() && runKind() === "daily"));
+  ok("#daily opens the challenge panel over the title and does not start", await page.locator("#challenge").isVisible() && await ev(page, () => !runActive() && titleOpen));
+  ok("...it names the daily and today's difficulty rules", /Daily #\d+/i.test(await page.locator("#challenge").innerText()));
+  await startChallenge(page);
+  ok("Start begins the daily run", await ev(page, () => runActive() && runKind() === "daily" && !titleOpen));
+  ok("...the challenge panel is gone and the address is cleaned", !(await page.locator("#challenge").isVisible()) && await ev(page, () => location.hash === ""));
   ok("...on a throwaway save: a fixed brig, the real gold is not in it", await ev(page, () => save.ship === "brig" && save.gold === 0 && save.hull === 3));
   ok("...the clock is up", await page.locator("#runClock").isVisible(), await page.locator("#runClock").textContent());
   snapA = await freshSnap(page, "daily");
@@ -176,7 +183,8 @@ let snapA = null;
   await dl;
   await page.waitForTimeout(300 * SLOW);
   const clip = await ev(page, () => navigator.clipboard.readText().catch(e => "ERR " + e.message));
-  ok("sharing the result copies the line with the #daily link", /#daily$/.test(clip) && /Privateers Daily #\d+/.test(clip), clip);
+  ok("sharing the result copies the line with a #daily= link that carries the result", /#daily=\d+&t=\d+&hp=\d+&k=\d+$/.test(clip) && /Privateers Daily #\d+/.test(clip), clip);
+  ok("...and the result page names the weekday and its difficulty", /Difficulty \d\/7/i.test(t1), t1.slice(0, 60));
   await page.screenshot({ path: join(out, "daily-result.png") });
   await page.click("[data-run=title]");
   await page.waitForTimeout(800 * SLOW);
@@ -190,6 +198,7 @@ let snapA = null;
 {
   // a second device, same day: the same captain, the same escort, the same islands, the same opening sea
   const { ctx, page } = await open({ hash: "#daily" });
+  await startChallenge(page);
   const snapB = await freshSnap(page, "daily");
   ok("a second device sees the same captain, hull, lair and escort", JSON.stringify(snapB.boss) === JSON.stringify(snapA.boss), { a: snapA.boss, b: snapB.boss });
   ok("...the same islands", JSON.stringify(snapB.islands) === JSON.stringify(snapA.islands), snapB.islands.length);
@@ -212,6 +221,8 @@ let snapA = null;
 // ============ 5. #seed= ============
 {
   const { ctx, page } = await open({ seedStore: { [SAVE_KEY]: OLD_SAVE }, hash: "#seed=12345" });
+  ok("#seed= opens the challenge panel first", await page.locator("#challenge").isVisible() && /seed 12345/i.test(await page.locator("#challenge").innerText()) && await ev(page, () => !runActive()));
+  await startChallenge(page);
   ok("#seed=12345 opens a free voyage on that seed", await ev(page, () => runActive() && runKind() === "seed" && save.seed === 12345 && runLink() === "#seed=12345"));
   const a = await freshSnap(page, "seed", 12345);
   await page.waitForTimeout(800 * SLOW);
@@ -223,11 +234,58 @@ let snapA = null;
   ok("a share from a seeded sea carries the seed link", link.endsWith("#seed=12345"), link);
   await ctx.close();
   const b = await open({ hash: "#seed=12345" });
+  await startChallenge(b.page);
   const bb = await freshSnap(b.page, "seed", 12345);
   ok("the same seed on another device: the same islands and opening sea", JSON.stringify(bb.islands) === JSON.stringify(a.islands) && JSON.stringify(bb.ships) === JSON.stringify(a.ships) && JSON.stringify(bb.boss) === JSON.stringify(a.boss));
   const c = await open({ hash: "#seed=12346" });
+  await startChallenge(c.page);
   ok("a different seed is a different sea", JSON.stringify((await freshSnap(c.page, "seed", 12346)).islands) !== JSON.stringify(a.islands));
   await b.ctx.close(); await c.ctx.close();
+}
+
+// ============ 6. a friend's result: the panel, closing it, the comparison, sharing back; stale and bad links ============
+{
+  const { ctx, page } = await open({ seedStore: { [SAVE_KEY]: OLD_SAVE }, hash: `#daily=${TODAY}&t=102&hp=64&k=9` });
+  const panel = await page.locator("#challenge").innerText();
+  ok("a link with a friend's result shows it on the panel", /Friend: .+ sunk in 1:42 · hull 64% · 9 sunk/.test(panel), panel.replace(/\n+/g, " | "));
+  await page.screenshot({ path: join(out, "challenge-friend.png") });
+  await page.click("#challenge [data-ch=close]");
+  ok("closing it goes back to the ordinary title, nothing started", await ev(page, () => titleOpen && !runActive()) && !(await page.locator("#challenge").isVisible()));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open({ seedStore: { [SAVE_KEY]: OLD_SAVE }, hash: `#daily=${TODAY}&t=102&hp=64&k=9` });
+  await startChallenge(page); await calm(page);
+  ok("the run keeps the friend's result", await ev(page, () => run.friend && run.friend.bossT === 102 && run.friend.sunk === 9));
+  await ev(page, () => { run = { ...run, t: DAILY_SECONDS - 0.4 }; });   // time up, the captain got away
+  await page.locator("#runEnd").waitFor({ state: "visible", timeout: 8000 * SLOW });
+  const t = await page.locator("#runEnd").innerText();
+  ok("the result compares with the friend", /versus your friend/i.test(t) && /your friend sank the captain/i.test(t) && /ships short/i.test(t), t.replace(/\n+/g, " | ").slice(0, 260));
+  await page.screenshot({ path: join(out, "daily-vs-friend.png") });
+  const link = await ev(page, () => shareSpec("daily", { n: run.n, tier: run.tier, bossName: "x", ...run.result }).url);
+  ok("sharing back carries my own figures", /#daily=\d+&hp=\d+&k=0$/.test(link), link);
+  await ctx.close();
+}
+{
+  const stale = TODAY + 5;
+  const { ctx, page } = await open({ hash: `#daily=${stale}&t=50&hp=50&k=2` });
+  const panel = await page.locator("#challenge").innerText();
+  ok("a link to another day says so and offers today's daily or that sea", new RegExp(`daily #${stale}; today is #${TODAY}`, "i").test(panel) && await page.locator("#challenge [data-ch=today]").count() === 1 && await page.locator("#challenge [data-ch=free]").count() === 1 && await page.locator("#challenge [data-ch=start]").count() === 0, panel.replace(/\n+/g, " | "));
+  await page.click("#challenge [data-ch=free]");
+  await page.waitForFunction(() => runActive(), null, { timeout: 8000 * SLOW });
+  ok("'free voyage' sails that day's seed, not a daily run", await ev(page, ([n]) => runKind() === "seed" && save.seed === dailySeed(n) && !run.friend, [stale]));
+  await ctx.close();
+  const o = await open({ hash: `#daily=${stale}&t=50&hp=50&k=2` });
+  await o.page.click("#challenge [data-ch=today]");
+  await o.page.waitForFunction(() => runActive(), null, { timeout: 8000 * SLOW });
+  ok("'play today's daily' starts today's run without the old friend", await ev(o.page, () => runKind() === "daily" && run.n === dailyNumber() && !run.friend));
+  await o.ctx.close();
+  const bad = await open({ hash: "#daily=abc" });
+  ok("a malformed link opens no panel", !(await bad.page.locator("#challenge").isVisible()) && await ev(bad.page, () => titleOpen));
+  await bad.ctx.close();
+  const clamp = await open({ hash: `#daily=${TODAY}&t=99999&hp=900&k=77777` });
+  ok("out-of-range figures are clamped", /sunk in 5:00 · hull 100% · 999 sunk/.test(await clamp.page.locator("#challenge").innerText()));
+  await clamp.ctx.close();
 }
 
 ok("no page errors", errors.length === 0, errors.slice(0, 5));
