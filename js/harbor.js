@@ -1,10 +1,12 @@
 "use strict";
 // ---------- Harbor ----------
-function dock(kind) {
+// prior: what a quick resupply on this pass through the ring already sold (js/mooring.js), for the ledger's message.
+function dock(kind, prior = { sold: 0, bonus: 0 }) {
   runHook("dock", kind, cargo);   // kind "outpost" docks at the Hulk Outpost (js/campaign.js)
   paused = true; docked = true; deckSel = null;
-  const { sold, bonus } = sellHold(kind);   // the hold sells at the sortie's plunder-streak price (js/plunder.js)
-  save.gold += sold; cargo = 0; save.salvage = [];   // salvage aboard is sold now
+  const sale = sellHold(kind);   // the hold sells at the sortie's plunder-streak price (js/plunder.js)
+  const sold = sale.sold + prior.sold, bonus = Math.max(sale.bonus, prior.bonus);
+  save.gold += sale.sold; cargo = 0; save.salvage = [];   // salvage aboard is sold now
   applyPlayerStats(true);
   player.speed = 0; player.burnT = 0;
   persist();
@@ -17,7 +19,7 @@ function dock(kind) {
   paintGunDeck();   // the ship needs the shown layout; the deck's ResizeObserver only fires on the next rendered frame
   document.querySelector("#port .sheet").scrollTop = 0;   // the result message is at the top; never open scrolled past it
   Snd.music("harbor"); Snd.ambience("harbor");
-  if (kind === "return") { Snd.play("bell"); if (sold > 0) Snd.play("coin", { amount: sold, delay: 0.45 }); }
+  if (kind === "return") { Snd.play("bell"); if (sale.sold > 0) Snd.play("coin", { amount: sale.sold, delay: 0.45 }); }
   document.getElementById("joy").hidden = true; joyVec = { x: 0, y: 0, m: 0 };
 }
 function setSail() {
