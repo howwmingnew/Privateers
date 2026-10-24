@@ -60,15 +60,19 @@ function renderSettings() {
 document.addEventListener("langchange", () => { if (!setEl("p-settings").hidden) renderSettings(); });
 document.addEventListener("fullscreenchange", () => { if (!setEl("p-settings").hidden) renderSettings(); });
 
-// Live preview: while a size slider is held (or just nudged with the keys) the panel fades out so the HUD shows through.
+// Live preview: while a size slider is held (or just nudged with the keys) the panel turns invisible so the game shows
+// through, and a small badge keeps the slider's name and value on screen.
 // On the title the HUD is hidden, so the body class brings it back for the duration (css/menu.css).
 let scaleDrag = false, previewTimer;
-function setPreview(on) {
+const scaleBadge = (() => { const el = document.createElement("div"); el.id = "scaleBadge"; el.hidden = true; el.setAttribute("aria-live", "polite"); document.body.appendChild(el); return el; })();
+function setPreview(on, inp) {
   clearTimeout(previewTimer);
   setEl("p-settings").classList.toggle("previewing", on);
   document.body.classList.toggle("scale-preview", on);
+  if (inp) scaleBadge.textContent = `${inp.previousElementSibling.textContent} ${inp.value}%`;
+  scaleBadge.hidden = !on;
 }
-setEl("p-settings").addEventListener("pointerdown", e => { if (e.target.closest("[data-scale]")) { scaleDrag = true; setPreview(true); } });
+setEl("p-settings").addEventListener("pointerdown", e => { const sc = e.target.closest("[data-scale]"); if (sc) { scaleDrag = true; setPreview(true, sc); } });
 for (const ev of ["pointerup", "pointercancel"]) addEventListener(ev, () => {
   if (!scaleDrag) return;
   scaleDrag = false; clearTimeout(previewTimer); previewTimer = setTimeout(() => setPreview(false), 250);
@@ -78,7 +82,7 @@ function scaleInput(inp) {
   if (v === null || !(key in SCALE_APPLY)) return;
   saveSettings({ [key]: v }); SCALE_APPLY[key]();
   inp.nextElementSibling.textContent = v + "%";
-  setPreview(true);
+  setPreview(true, inp);
   if (!scaleDrag) previewTimer = setTimeout(() => setPreview(false), 800);   // keys and the gamepad send no release
 }
 setEl("p-settings").addEventListener("input", e => {

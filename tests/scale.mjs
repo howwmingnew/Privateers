@@ -83,18 +83,21 @@ console.log("Sliders (title screen, 1280x720)");
   await page.mouse.move(box.x + box.width * 0.8, box.y + box.height / 2, { steps: 6 });
   await sleep(300);
   const mid = await page.evaluate(() => ({ previewing: document.getElementById("p-settings").classList.contains("previewing"),
-    op: +getComputedStyle(document.querySelector("#p-settings .panel")).opacity, pct: SETTINGS.miniPct, out: document.querySelector('[data-scale="miniPct"]').nextElementSibling.textContent }));
+    op: +getComputedStyle(document.querySelector("#p-settings .panel")).opacity, pct: SETTINGS.miniPct, out: document.querySelector('[data-scale="miniPct"]').nextElementSibling.textContent,
+    title: +getComputedStyle(document.getElementById("title")).opacity,
+    badge: document.getElementById("scaleBadge").hidden ? null : document.getElementById("scaleBadge").textContent }));
   await sleep(300);
   const during = await cssW();
-  check(mid.previewing && await hudShown(), "dragging: panel fades and the HUD shows through on the title", mid);
-  check(mid.op < 0.5, `dragging: panel opacity is low (${mid.op})`, mid);
+  check(mid.previewing && await hudShown(), "dragging: the HUD shows through on the title", mid);
+  check(mid.op === 0 && mid.title === 0, `dragging: the settings panel and the title menu are hidden (${mid.op}, ${mid.title})`, mid);
+  check(!!mid.badge && mid.badge.endsWith(mid.pct + "%"), `dragging: a small badge shows the value (${mid.badge})`, mid);
   check(during > before * 1.5 && mid.out === mid.pct + "%", `dragging: chart grows live (${before} -> ${during}px) and the readout follows (${mid.out})`, { before, during, mid });
   await page.screenshot({ path: join(out, "preview-dragging-720.png") });
   await page.mouse.up();
   await sleep(600);
   const after = await page.evaluate(() => ({ previewing: document.getElementById("p-settings").classList.contains("previewing"), body: document.body.classList.contains("scale-preview"),
-    saved: JSON.parse(localStorage.getItem("privateers-settings")).miniPct, pct: SETTINGS.miniPct }));
-  check(!after.previewing && !after.body && after.saved === after.pct, "release: panel returns and the value is saved", after);
+    saved: JSON.parse(localStorage.getItem("privateers-settings")).miniPct, pct: SETTINGS.miniPct, badge: !document.getElementById("scaleBadge").hidden }));
+  check(!after.previewing && !after.body && !after.badge && after.saved === after.pct, "release: panel returns, the badge goes and the value is saved", after);
   // keyboard: arrow keys move 5 per press and also preview
   await page.focus('[data-scale="markPct"]');
   const m0 = await page.evaluate(() => SETTINGS.markPct);

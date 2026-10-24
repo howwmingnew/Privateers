@@ -75,11 +75,16 @@ label.srow { grid-template-columns: minmax(0, 1fr) minmax(120px, 46%) 3.2em; }
 .seg button + button { border-left: 1.5px solid var(--ink); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--parch); }
 #setReset { justify-self: start; }
-/* While a size slider is held the panel fades out (it keeps its place, so the drag carries on) to show the HUD behind it. */
+/* While a size slider is held the panel goes fully transparent (it keeps its place, so the drag carries on) to show the
+   game behind it; only a small readout of the value stays (#scaleBadge, js/options.js). */
 #p-settings { transition: background .15s; }
 #p-settings .panel { transition: opacity .15s; }
 #p-settings.previewing { background: transparent; }
-#p-settings.previewing .panel { opacity: .2; }
+#p-settings.previewing .panel { opacity: 0; }
+body.scale-preview #title, body.scale-preview #pause { opacity: 0; pointer-events: none; }   /* the title / pause menu behind settings goes too */
+#scaleBadge { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); transform: translateX(-50%); z-index: 60;
+  padding: 8px 16px; border-radius: 999px; background: rgba(16, 24, 32, .82); color: #f6d27a; font-weight: 700; font-size: calc(16px * var(--ts, 1)); line-height: 1.2;
+  pointer-events: none; white-space: nowrap; }
 
 /* how to play */
 .ht { font-size: calc(15px * var(--ts)); line-height: 1.5; }
