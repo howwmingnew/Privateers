@@ -207,6 +207,15 @@
   </div>
 </div>
 
+<!-- Roadmap (js/roadmap-panel.js): roadmap/index.html in embed mode, loaded only when the panel first opens -->
+<div id="p-roadmap" class="shell dim sub" hidden>
+  <div class="panel roadmap" role="dialog" aria-modal="true" aria-labelledby="rmTitle">
+    <h2 id="rmTitle" data-i18n="m_roadmap">Roadmap</h2>
+    <iframe id="rmFrame" title="Roadmap"></iframe>
+    <footer class="pf"><button class="pbtn primary" type="button" data-menu="back" data-i18n="m_back">Back</button></footer>
+  </div>
+</div>
+
 <script defer src="js/boot-guard.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
 <script defer src="js/config.js"></script>
@@ -252,6 +261,7 @@
 <script defer src="js/howto.js"></script>
 <script defer src="js/tutorial.js"></script>
 <script defer src="js/menu.js"></script>
+<script defer src="js/roadmap-panel.js"></script>
 <script defer src="js/hud.js"></script>
 <script defer src="js/notices.js"></script>
 <script defer src="js/world-seas.js"></script>

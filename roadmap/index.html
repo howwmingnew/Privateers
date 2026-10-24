@@ -51,9 +51,12 @@
   .item .ttl { flex: 1; font-weight: 600; }
   .item .st { font-size: 13px; font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
   .item .st.done { color: var(--kelp); } .item .st.doing { color: var(--blood); }
-  .swipe { display: none; margin: 4px 20px 0; font-size: 13px; color: var(--ink-soft); }
-  @media (max-width: 1260px) { .swipe { display: block; } }
+  .swipe { margin: 4px 20px 0; font-size: 13px; color: var(--ink-soft); }
   footer { font-size: 13px; color: rgba(246,241,227,.62); }
+  /* embed mode (?embed=1, the in-game panel): the game supplies the title, Back and the language */
+  .embed body { padding: 12px 12px 16px; }
+  .embed header.top { display: none; }
+  .embed .lead { font-size: 15px; }
   @media (prefers-reduced-motion: no-preference) { .tab, .btn { transition: background .15s, border-color .15s; } }
 </style>
 </head>
@@ -71,14 +74,14 @@
   <section class="sheet" aria-labelledby="ovH">
     <h2 id="ovH"></h2>
     <div class="diagram-container" id="overview"></div>
-    <p class="swipe" data-ui="swipe"></p>
+    <p class="swipe" data-ui="swipe" hidden></p>
   </section>
 
   <section class="sheet" aria-labelledby="dtH">
     <h2 id="dtH"></h2>
     <div class="tabs" role="tablist" id="tabs"></div>
     <div class="diagram-container" id="detail"></div>
-    <p class="swipe" data-ui="swipe"></p>
+    <p class="swipe" data-ui="swipe" hidden></p>
     <ul class="items" id="items"></ul>
   </section>
 
@@ -104,7 +107,10 @@
       foot: "Source: GitHub issues labelled enhancement", open: "See every issue on GitHub" },
   };
 
-  let lang = readLang();
+  const params = new URLSearchParams(location.search);
+  const embed = params.get("embed") === "1";
+  if (embed) document.documentElement.classList.add("embed");
+  let lang = params.get("lang") === "en" || params.get("lang") === "zh" ? params.get("lang") : readLang();
   let model = null, source = "snap", selected = 0;
 
   function readLang() {
@@ -143,8 +149,17 @@
     // SVG strings come from RoadmapCore, which escapes every issue-derived value
     $("overview").innerHTML = RC.renderOverview(model, lang, { interactive: true, selected });
     $("detail").innerHTML = RC.renderPhase(model, selected, lang, { interactive: true });
-    renderTabs(); renderItems();
+    renderTabs(); renderItems(); markOverflow();
   }
+
+  // the "swipe sideways" hint shows only under a chart that is actually wider than its box
+  function markOverflow() {
+    for (const box of document.querySelectorAll(".diagram-container")) {
+      const hint = box.nextElementSibling;
+      if (hint && hint.classList.contains("swipe")) hint.hidden = box.scrollWidth <= box.clientWidth + 1;
+    }
+  }
+  window.addEventListener("resize", markOverflow);
 
   function renderTabs() {
     const box = $("tabs"); box.textContent = "";
@@ -192,6 +207,10 @@
     if (g) window.open(RC.issueUrl(+g.dataset.issue), "_blank", "noopener");
   });
   $("langBtn").addEventListener("click", () => { lang = lang === "zh" ? "en" : "zh"; saveLang(); render(); });
+  // inside the game's panel, Esc closes the panel (the game never sees keys pressed in this frame)
+  if (embed) document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && window.parent !== window) { e.preventDefault(); window.parent.postMessage({ type: "privateers-roadmap-close" }, "*"); }
+  });
 
   function useIssues(issues, fetchedAt, src) {
     const m = RC.buildModel(issues, fetchedAt);
