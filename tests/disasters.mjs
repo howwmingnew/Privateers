@@ -46,7 +46,7 @@ await ev(() => {
   window.stage = (ring = 7, { rot = 0, hp = 1000, skip = 0 } = {}) => {
     depart(); clearSea(); joyVec = { x: 0, y: 0, m: 0 }; padVec = { x: 0, y: 0, m: 0 };
     for (const e of dis.live) e.txt?.destroy();
-    Object.assign(dis, { plan: [], i: 0, live: [], protectUntil: -1, fog: 0 });
+    Object.assign(dis, { plan: [], i: 0, live: [], protectUntil: -1, fog: 0, noDodge: true });   // the staged hulls stand still unless a test lets them answer
     Object.assign(wx, { on: true, easy: false, t: 100 }); clearSky(); wxCompute();
     const p = openAt(ring, 560, skip);
     Object.assign(player, { x: p.x, y: p.y, rot, speed: 0, maxHp: 1000, hp, low: hp, alive: true, burnT: 0, hl: 30, dvx: 0, dvy: 0, dpT: 0, disSlowT: 0, disStunT: 0, disBoostT: 0, disLostT: 0, disStableT: 0 });
@@ -211,15 +211,72 @@ console.log("Lightning: picks the tallest mast (an enemy's, if it is taller), sn
   const hit = await ev(() => ({ tallPct: hpPct(tall), slow: tall.disSlowT > 0 || tall.disStunT > 0, playerPct: hpPct(player) }));
   check(hit.tallPct >= 7.5 && hit.tallPct <= 12.01 && hit.slow && hit.playerPct === 0, "the tall enemy is struck for 8-12%, slowed and stunned; the player is untouched", hit);
   await shot("lightning-2-strike");
+  await ev(() => { DISASTER.lightning.fire = 0; });   // (the next checks are about the mast)
   await ev(() => { stage(7); window.sm = addShip(260, 0, 0, 20); window.lt = disForce("lightning", { x: player.x, y: player.y }, { warn: 3 }); stepN(200); });
   const mine = await ev(() => ({ pct: hpPct(player), slow: player.disSlowT > 0, stun: player.disStunT > 0, mul: disMul(player), alive: player.alive }));
   check(mine.pct >= 7.5 && mine.pct <= 12.01 && mine.slow && mine.alive, "the tallest mast being yours, you take 8-12% and a snapped mast", mine);
   check(Math.abs(mine.mul - 0.8 * (mine.stun ? 0.4 : 1)) < 1e-6, "a snapped mast leaves 80% of the speed (the effect is the same physics for all)", mine);
+  await ev(() => { DISASTER.lightning.fire = 0.5; });
+  // fire or a snapped mast: both through the existing systems (addBurn, the 0.8 speed mast)
+  const fireRun = await ev(() => {
+    DISASTER.lightning.fire = 1;
+    stage(7); window.tall = addShip(260, 0, 0, 90); window.lt = disForce("lightning", { x: player.x, y: player.y }, { warn: 3 }); stepN(200);
+    const enemy = { burn: tall.burnT > 0, mast: tall.disSlowT > 0, dps: tall.burnDps };
+    stage(7, { hp: 125 }); addShip(260, 0, 0, 20); disForce("lightning", { x: player.x, y: player.y }, { warn: 3 }); stepN(60 * 14);
+    const me = { burn: player.burnT > 0 || (player.burns && player.burns.length > 0), low: Math.min(player.low, player.hp), alive: player.alive };
+    DISASTER.lightning.fire = 0;
+    stage(7); window.tall = addShip(260, 0, 0, 90); disForce("lightning", { x: player.x, y: player.y }, { warn: 3 }); stepN(200);
+    const mast = { burn: tall.burnT > 0, mast: tall.disSlowT > 0 };
+    DISASTER.lightning.fire = 0.5;
+    return { enemy, me, mast };
+  });
+  check(fireRun.enemy.burn && !fireRun.enemy.mast, "lightning with fire: the struck hull burns (the ordinary burn system), no snapped mast", fireRun.enemy);
+  check(fireRun.mast.mast && !fireRun.mast.burn, "lightning without fire: the mast snaps (0.8 speed for 7 s)", fireRun.mast);
+  check(fireRun.me.alive && fireRun.me.low >= 125 * 0 + 100 - 1e-6, "fire on a player at 12.5% hull never takes him under 10%", fireRun.me);
   // dodging: the strike point locks 1.2 s before the stroke; sailing off in that time (200 px/s against an 80 px ring) escapes it
   await ev(() => { stage(7); window.lt = disForce("lightning", { x: player.x, y: player.y }, { warn: 4 }); joyVec = { x: 0, y: 1, m: 1 }; stepN(4 * 60 + 20); });
   const dodge = await ev(() => ({ pct: hpPct(player), d: Math.hypot(player.x - lt.x, player.y - lt.y), speed: player.speed, nh: [Math.round(dist(player, nearestHarbor())), nearestHarbor().kind], truce: inTruce(player), ring: ringAt(dist(player, PORT)), pos: [Math.round(player.x), Math.round(player.y)], isl: islands.filter(i => dist(i, player) < i.r + 150).length }));
   check(dodge.pct === 0 && dodge.d > 80, "moving away during the warning dodges the stroke", dodge);
   await ev(() => { joyVec = { x: 0, y: 0, m: 0 }; });
+}
+
+// ---------- 5b. the AI answers ----------
+console.log("AI answers a disaster: most hulls in the way sail clear after their reaction time; some are caught");
+{
+  await ev(() => {
+    window.herd = (kind, noDodge, warn) => {
+      stage(7); dis.noDodge = noDodge;
+      const c = { x: player.x + 1100, y: player.y }, ships = [];
+      for (let i = 0; i < 16; i++) {
+        const a = i / 16 * Math.PI * 2, r = 90 + (i % 3) * 50, e = addShip(1100 + Math.cos(a) * r, Math.sin(a) * r, a);
+        e.maxSpeed = 120; e.turnRate = 2.2; e.L = 3 + (i % 5); e.target = null; ships.push(e);
+      }
+      window.herdShips = ships;
+      window.herdEv = disForce(kind, c, { warn, a: 0, a2: 0 });
+      return c;
+    };
+  });
+  let late = 0;
+  for (const [kind, warn, label] of [["vortex", 8, "a whirlpool"], ["spout", 10, "a waterspout"], ["tsunami", 18, "a tsunami lane"], ["rogue", 6, "a rogue wave"]]) {
+    const out = await ev(([kind, warn]) => {
+      const meas = () => {
+        const R = DISASTER[kind], ev = herdEv; let ok = 0;
+        for (const e of herdShips) {
+          if (kind === "tsunami") { const dx = e.x - ev.o.x, dy = e.y - ev.o.y, side = -dx * Math.sin(ev.dir) + dy * Math.cos(ev.dir); ok += Math.abs(side) > R.len / 2 ? 1 : 0; }
+          else if (kind === "rogue") ok += dist(e, ev) > R.R || disBowOn(e.rot, ev.dir) >= Math.cos(R.bowAng) ? 1 : 0;
+          else ok += dist(e, ev) > R.R ? 1 : 0;
+        }
+        return ok / herdShips.length;
+      };
+      const run = nd => { herd(kind, nd, warn); stepN(Math.round((warn - 0.05) * 60)); return meas(); };
+      const free = run(true), withDodge = run(false);
+      return { free: +free.toFixed(2), withDodge: +withDodge.toFixed(2) };
+    }, [kind, warn]);
+    late += 1 - out.withDodge;
+    check(out.withDodge >= 0.6 && out.withDodge > out.free, `${label}: most hulls clear or bow-on by the strike (${out.withDodge}), against ${out.free} when no one answers`, out);
+  }
+  await ev(() => { dis.noDodge = true; });
+  check(late > 0, "not omniscient: across the four, some hull was still in the way when it struck (an AI can be lured in)", late);
 }
 
 // ---------- 6. fog ----------

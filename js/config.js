@@ -117,7 +117,9 @@ const DISASTER = {
   spout:   { high: 1, warn: [8, 12], max: 1, ring: 4, p: 0.01, wx: [0, 1, 1.5], dps: [0.02, 0.03], cap: 0.18, R: 340, core: 110, pull: 0.5, swirl: 0.45, life: 30, speed: 55, mast: 0.35, mastT: 7, away: [700, 900] },
   vortex:  { high: 1, warn: [6, 10], max: 1, ring: 4, p: 0.004, wx: [1, 1, 1], dps: [0.01, 0.02], cap: 0.15, R: 360, core: 80, pull: 0.5, swirl: 0.5, life: 24, away: [650, 850] },
   rogue:   { high: 1, warn: [4, 6], max: 2, ring: 3, p: 0.01, wx: [0.1, 1, 1.4], dmg: [0.10, 0.18], R: 240, bowK: 0.3, bowAng: 0.6, lostT: 1.6, stableT: 3, stableK: 1.35, push: 140 },
-  lightning: { high: 0, warn: [3, 5], max: 2, ring: 4, p: 0.04, wx: [0, 0, 1], dmg: [0.08, 0.12], R: 80, mastT: 7, stunT: 1.5, own: 40, track: 700, lock: 1.2 },
+  lightning: { high: 0, warn: [3, 5], max: 2, ring: 4, p: 0.04, wx: [0, 0, 1], dmg: [0.08, 0.12], R: 80, mastT: 7, stunT: 1.5, own: 40, track: 700, lock: 1.2,
+    fire: 0.5, fireDps: 0.005 },   // the struck hull either catches fire (chance `fire`, burning fireDps of the hull per second for BURN_T s, js/arsenal.js addBurn) or loses a mast (the rest)
   fog:     { high: 0, warn: [8, 12], max: 1, ring: 1, p: 0.006, wx: [1, 1, 0], dur: [45, 70], sight: 380, fade: 6, react: [0.5, 2] },
+  dodge: { aware: 0.85, busy: 0.55, look: 1300, margin: 1.2 },   // an AI notices a hazard it is in the way of with this chance (busy: it has a target), then answers after disReact() s; margin: how far past the radius it sails to be clear
   mastK: 0.8, stunK: 0.4,               // a snapped mast leaves 80% of the speed; a lightning stun 40%
 };

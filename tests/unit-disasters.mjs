@@ -198,3 +198,8 @@ test("a fair place needs a way out: rocks all round it, or the map's edge, do no
   const ring = Array.from({ length: 8 }, (_, i) => ({ x: 4000 + Math.cos(i * Math.PI / 4) * 400, y: 4000 + Math.sin(i * Math.PI / 4) * 400, r: 90 }));
   assert.ok(!ok(ring), "boxed in");
 });
+
+test("lightning: fire or a snapped mast, the split is in the config; the AI's answer has a chance and a delay", () => {
+  assert.ok(D.lightning.fire > 0 && D.lightning.fire < 1 && D.lightning.fireDps > 0);
+  assert.ok(D.dodge.aware < 1 && D.dodge.busy < D.dodge.aware && D.dodge.margin > 1);
+});

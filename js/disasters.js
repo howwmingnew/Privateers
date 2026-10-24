@@ -14,7 +14,7 @@ Object.assign(STR.en, {
   dis_w_rogue: "Rogue wave! Turn the bow into it, now.",
   dis_w_lightning: "Lightning is picking the tallest mast. Move!",
   dis_w_fog: "Fog rolling in. Slow down and steer by the chart.",
-  dis_cd: "{name} {s} s", dis_mast: "Mast snapped!", dis_surf: "Surfing!", dis_steady: "Bow into it! Steady helm", dis_lost: "Helm lost!", dis_struck: "Struck!",
+  dis_cd: "{name} {s} s", dis_mast: "Mast snapped!", dis_surf: "Surfing!", dis_steady: "Bow into it! Steady helm", dis_lost: "Helm lost!", dis_struck: "Struck!", dis_fire: "On fire!",
 });
 Object.assign(STR.zh, {
   dis_tsunami: "海嘯", dis_spout: "水龍捲", dis_vortex: "漩渦", dis_rogue: "瘋狗浪", dis_lightning: "落雷", dis_fog: "濃霧",
@@ -24,7 +24,7 @@ Object.assign(STR.zh, {
   dis_w_rogue: "瘋狗浪！立刻轉舵，船頭迎浪。",
   dis_w_lightning: "雷要打最高的桅杆，快移動！",
   dis_w_fog: "起霧了。減速，靠海圖航行。",
-  dis_cd: "{name} {s} 秒", dis_mast: "桅杆斷了！", dis_surf: "順浪衝刺！", dis_steady: "迎浪成功！操舵穩定", dis_lost: "失去舵控！", dis_struck: "被雷擊中！",
+  dis_cd: "{name} {s} 秒", dis_mast: "桅杆斷了！", dis_surf: "順浪衝刺！", dis_steady: "迎浪成功！操舵穩定", dis_lost: "失去舵控！", dis_struck: "被雷擊中！", dis_fire: "起火了！",
 });
 
 const dis = { plan: [], i: 0, live: [], protectUntil: -1, fog: 0, g: null, fogImg: null, fogRects: [], whirlT: 0 };
@@ -49,6 +49,36 @@ function disFogLose(e) {
   const at = e.lastSeen || { x: e.target.x, y: e.target.y };
   e.target = null; e.wander = { ...at }; e.thinkT = rand(5, 8);
   return true;
+}
+
+// ---------- an AI answers a disaster ----------
+// Called from think() (js/ships.js), after the fleet's own steering, so it wins. A hull that finds itself in a hazard's way notices it
+// with chance DISASTER.dodge.aware (less when it is busy with a target) and, after disReact() s (0.5-2 s, quicker at higher levels),
+// sails clear: away from a whirl, out of a tsunami's lane, bow into a rogue wave, off the lightning's mark. A hull that did not notice, or
+// is still reacting, is caught: luring an enemy into a whirlpool still works. Same rules and same hazards as the player's.
+function disClear(ev, e) {
+  const c = DISASTER[ev.kind], m = DISASTER.dodge.margin;
+  if (ev.kind === "spout" || ev.kind === "vortex") return dist(e, ev) < c.R * m ? Math.atan2(e.y - ev.y, e.x - ev.x) : null;
+  if (ev.kind === "tsunami") {
+    const dx = e.x - ev.o.x, dy = e.y - ev.o.y, along = dx * Math.cos(ev.dir) + dy * Math.sin(ev.dir), side = -dx * Math.sin(ev.dir) + dy * Math.cos(ev.dir);
+    const front = ev.st === "live" ? ev.front : 0;
+    return Math.abs(side) < c.len / 2 + 80 && along > front - c.thick && along < c.travel ? ev.dir + (side < 0 ? -1 : 1) * Math.PI / 2 : null;
+  }
+  if (ev.kind === "rogue") return ev.st === "warn" && dist(e, ev) < c.R + 60 ? ev.dir + Math.PI : null;
+  if (ev.kind === "lightning") return ev.st === "warn" && dist(e, ev) < c.R * 2 ? Math.atan2(e.y - ev.y, e.x - ev.x) : null;
+  return null;
+}
+function disDodge(e) {
+  if (dis.noDodge || !dis.live.length || !e.alive) return null;
+  const d = DISASTER.dodge, now = wx.t, memo = e.disAw || (e.disAw = {});
+  for (const ev of dis.live) {
+    if (ev.kind === "fog" || ev.st === "done") continue;
+    const to = disClear(ev, e);
+    if (to === null) continue;
+    const m = memo[ev.uid] || (memo[ev.uid] = { at: now + disReact(e.L), aware: Math.random() < (e.target ? d.busy : d.aware) });
+    if (m.aware && now >= m.at) return { desired: to, thr: ev.kind === "rogue" ? 0.5 : 1 };
+  }
+  return null;
 }
 
 // ---------- placing one fairly ----------
@@ -101,7 +131,7 @@ function disAim(ev, first) {
   if (best) { ev.x = best.x; ev.y = best.y; }
 }
 function disArm(ev) {
-  ev.st = "warn"; ev.spent = {}; ev.hit = new Set(); ev.tick = 0; ev.txt = null;
+  ev.st = "warn"; ev.uid = ++disIds; ev.spent = {}; ev.hit = new Set(); ev.tick = 0; ev.txt = null;
   if (ev.kind === "tsunami") ev.front = 0;
   toast(t("dis_w_" + ev.kind), true); sfx("disWarn");
   if (ev.kind !== "fog") ev.txt = labelText(S.add.text(ev.x, ev.y, "", { fontFamily: UI_FONT, fontSize: "15px", fontStyle: "700", color: "#ffd8a0", stroke: "#0b2530", strokeThickness: 4 }).setOrigin(0.5).setDepth(9.5));
@@ -137,6 +167,16 @@ let disIds = 0;
 function disMast(s, c) {
   if (s.isPlayer && (wx.t < dis.protectUntil || disSafeSpot(s))) return;
   s.disSlowT = c.mastT; if (onScreen(s.x, s.y)) floatText(s.x, s.y - 54, t("dis_mast"), "#ffd36a", 15);
+}
+// Fire: the ordinary burn (js/arsenal.js addBurn), sized so the whole of it stays inside the event's cap and, for the player, above the 10% floor.
+function disFire(s, ev, c) {
+  if (s.isPlayer && (wx.t < dis.protectUntil || disSafeSpot(s))) return;
+  let room = (c.dmg[1] - (ev.spent[s.id] || 0)) * s.maxHp;
+  if (s.isPlayer) room = Math.min(room, s.hp - DISASTER.floor * s.maxHp);
+  const dps = Math.min(c.fireDps * s.maxHp, Math.max(0, room) / BURN_T);
+  if (dps <= 0) return;
+  addBurn(s, dps, null); ev.spent[s.id] = (ev.spent[s.id] || 0) + dps * BURN_T / s.maxHp;
+  if (onScreen(s.x, s.y)) floatText(s.x, s.y - 54, t("dis_fire"), "#ff9a4a", 15);
 }
 const disText = (s, key, col) => { if (onScreen(s.x, s.y)) floatText(s.x, s.y - 48, t(key), col, 15); };
 function disShove(s, dx, dy, v, tt = 1.2) { s.dpx = dx * v; s.dpy = dy * v; s.dpT = tt; s.dpK = tt; }
@@ -193,7 +233,7 @@ function disBolt(ev, ships) {   // lightning: the strike point is fixed; whoever
     if (Math.hypot(s.x - ev.x, s.y - ev.y) > c.R) continue;
     disHit(s, ev, disMid(c.dmg), c.dmg[1]);
     if (!s.alive) continue;
-    disMast(s, c);
+    if (Math.random() < c.fire) disFire(s, ev, c); else disMast(s, c);   // fire or a snapped mast
     if (!(s.isPlayer && (wx.t < dis.protectUntil || disSafeSpot(s)))) { s.disStunT = c.stunT; disText(s, "dis_struck", "#fff2a0"); }
   }
 }
