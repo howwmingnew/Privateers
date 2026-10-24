@@ -135,7 +135,10 @@ function loadSave() {
   return sanitizeSave(defaultSave());
 }
 let saveFailWarned = false;
+// A daily or seeded run (js/run.js) plays on a throwaway copy of the save: while it lasts, nothing reaches storage.
+let saveLocked = false;
 function persist() {
+  if (saveLocked) return;
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }
   catch (e) { if (!saveFailWarned) { saveFailWarned = true; console.error("Could not save progress:", e); warnSaveFailed(); } }
 }

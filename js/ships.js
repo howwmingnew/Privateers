@@ -2,7 +2,7 @@
 // ---------- Ships ----------
 function makeShip(sc, tex, x, y) {
   const spr = sc.add.image(x, y, tex).setDepth(5);
-  return { spr, x, y, rot: rand(0, TAU), speed: 0, vx: 0, vy: 0, alive: true, burnT: 0, burnDps: 0, burnFx: 0, wakeT: 0, turnRate: 2.2 };
+  return { spr, x, y, rot: grand(0, TAU), speed: 0, vx: 0, vy: 0, alive: true, burnT: 0, burnDps: 0, burnFx: 0, wakeT: 0, turnRate: 2.2 };
 }
 function playerGuns() {
   // pi / pn: the gun's port and the port count, so a muzzle sits at its port even with empty ports beside it
@@ -37,7 +37,7 @@ function spawnEnemy(sc, at) {
   let x, y, ok = false;
   const ring = at ? 0 : spawnRing();
   for (let tries = 0; tries < 40 && !ok; tries++) {
-    ({ x, y } = at ? { x: at.x + rand(-60, 60), y: at.y + rand(-60, 60) } : spawnPoint(ring));
+    ({ x, y } = at ? { x: at.x + grand(-60, 60), y: at.y + grand(-60, 60) } : spawnPoint(ring));
     ok = x > 150 && x < W - 150 && y > 150 && y < H - 150 &&
          (!player || (at && at.near) || Math.hypot(x - player.x, y - player.y) > 750) &&
          !islands.some(i => Math.hypot(i.x - x, i.y - y) < i.r * 1.3 + 40);

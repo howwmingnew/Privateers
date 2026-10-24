@@ -49,7 +49,8 @@ const lootMul = () => NG_LOOT ** ngCycles();
 const ISLAND_COUNT = 85;   // ~1.3 per million px², the old map's density
 let islandSeed = null, islandImgs = [];
 function clearSpots() {
-  return [...BOUNTIES.map(b => ({ ...lairOf(b), r: 330 })), { ...OUTPOST, r: 320 }, ...save.wrecks.map(w => ({ x: w.x, y: w.y, r: 70 }))];
+  return [...BOUNTIES.map(b => ({ ...lairOf(b), r: 330 })), { ...OUTPOST, r: 320 }, ...save.wrecks.map(w => ({ x: w.x, y: w.y, r: 70 })),
+    ...(runActive() && runBounty() ? [{ ...lairOf(runBounty()), r: 330 }] : [])];   // the daily captain's lair (js/run.js)
 }
 function genIslands(seed = save.seed) {
   const r = mulberry32(seed), keep = clearSpots(), legacy = seed === LEGACY_SEED;
@@ -125,10 +126,10 @@ function spawnRing() {
 // A point in ring L: anywhere for a far ring, toward the player for a near one. spawnEnemy() rejects bad points.
 function spawnPoint(L) {
   const r0 = Math.max(SPAWN_R_MIN, ringEdge(L)), r1 = L >= MAX_RING ? SPAWN_R_MAX : ringEdge(L + 1);
-  const r = Math.sqrt(rand(r0 * r0, r1 * r1));   // uniform over the ring's area
-  if (!nearRings().includes(L) || dist(player, PORT) < SAFE_R) return polarPt(rand(0, TAU), r);
+  const r = Math.sqrt(grand(r0 * r0, r1 * r1));   // uniform over the ring's area
+  if (!nearRings().includes(L) || dist(player, PORT) < SAFE_R) return polarPt(grand(0, TAU), r);
   const pa = Math.atan2(player.y - PORT.y, player.x - PORT.x), span = Math.min(Math.PI, NEAR_REACH / r);
-  return polarPt(pa + rand(-span, span), r);
+  return polarPt(pa + grand(-span, span), r);
 }
 // Called from step(): clear sunk ships, retire ships the quotas no longer want, top the sea back up.
 function managePopulation(dt) {

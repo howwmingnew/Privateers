@@ -116,7 +116,7 @@ onHook("sunk", (s, killer) => {
   if (!s.boss) return;
   const paid = killer === player || (typeof bossHitAt === "number" && typeof ASSIST_MS === "number" && S.time.now - bossHitAt < ASSIST_MS);
   if (!paid) return;
-  const b = typeof BOUNTIES !== "undefined" ? BOUNTIES.find(x => x.id === s.boss) : null, sec = b && b.final ? BOSS_SLOW_FINAL_S : BOSS_SLOW_S;
+  const b = typeof findBounty === "function" ? findBounty(s.boss) : null, sec = b && b.final ? BOSS_SLOW_FINAL_S : BOSS_SLOW_S;
   slowMo(sec, BOSS_SLOW);
   if (SETTINGS.shake) { vfxPunch(0.09); leanToward(s, sec); }
   bossCard(b ? bossName(b) : "");   // js/juice-ui.js
