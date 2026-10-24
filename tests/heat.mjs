@@ -37,7 +37,7 @@ await ev(() => {
   window.fixT = 0;
   window.stepN = n => { const g = S.game; g.loop.sleep(); for (let i = 0; i < n; i++) { fixT += 16.667; g.step(fixT, 16.667); } };
   window.openAt = (ring, near = 420, skip = 0) => {
-    for (let a = 0, n = 0; a < 200; a++) { const p = polarPt(a * 0.37, ringMid(ring)); if (!islands.some(i => Math.hypot(i.x - p.x, i.y - p.y) < i.r + near) && n++ >= skip) return p; }
+    for (let a = 0, n = 0; a < 200; a++) { const p = polarPt(a * 0.37, ringMid(ring)); if (!islands.some(i => Math.hypot(i.x - p.x, i.y - p.y) < i.r + near) && !inSafe(p) && n++ >= skip) return p; }
     return polarPt(0, ringMid(ring));
   };
   window.clearSea = () => { for (const e of enemies) { e.alive = false; e.spr.destroy(); e.badge?.destroy(); } enemies.length = 0; fleets = []; spawnT = 1e9; };
