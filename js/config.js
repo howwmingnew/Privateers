@@ -41,4 +41,10 @@ const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,
   bow: ["long12"], left: ["six", "carronade", "six"], right: ["six", "carronade", "six"] };
 const REMATCH_PCT = 0.25;                     // a rematch sinking pays this share of the bounty's Captain's Chest (js/rematch.js)
 const REMATCH_MAX = 2;                        // beaten captains that sail again at once; the farthest lairs first
-const CHAIN_GAP = 20;                        // seconds between sinkings that still count as one kill chain (js/hall.js)
+// Ship name and flag (js/flags.js). Name width counts a CJK character as 2, so 10 Chinese or 20 Latin characters fit.
+const FLAG_NAME_UNITS = 20;
+const FLAG_COLORS = ["red", "blue", "green", "black", "gold", "purple", "teal", "orange", "white", "grey"];   // main and second colour ids
+const FLAG_HEX = { red: "#b02626", blue: "#2f8ad6", green: "#3d8b4a", black: "#1a1618", gold: "#e0b44a", purple: "#7a3f98", teal: "#1f9aa0", orange: "#e07b2c", white: "#f4efe2", grey: "#6b6f78" };
+const FLAG_EMBLEMS = ["diag", "skull", "anchor", "swords", "star", "cross"];
+const DEFAULT_FLAG = { main: "blue", alt: "white", emblem: "diag" };   // what the player's ensign always looked like
+const CHAIN_GAP = 20;                       // seconds between sinkings that still count as one kill chain (js/hall.js)
