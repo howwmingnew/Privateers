@@ -99,6 +99,36 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
   await ctx.close();
 }
 
+// Hold-to-fire: after the hold delay, only guns whose aim line is red (would hit now) fire; the setting turns it off.
+{
+  const { ctx, page } = await open(D, { tag: "autofire" });
+  await toLedger(page);
+  const run = async on => page.evaluate(async on => {
+    for (const { key } of MOUNTS) save[key] = save[key].map(() => gunItem("six"));
+    applyPlayerStats(true); document.getElementById("port").hidden = true; docked = false; paused = false; canDock = false; resetEnemies(S);
+    document.querySelector(`[data-set="auto"][data-v="${on ? "on" : "off"}"]`).click();
+    Object.assign(player, { x: PORT.x + 1700, y: PORT.y + 300, rot: 0, speed: 0, maxHp: 1e9, hp: 1e9 });
+    const game = S.game; game.loop.sleep(); let now = performance.now(); const step = () => { now += 16.667; game.step(now, 16.667); };
+    const e = spawnEnemy(S), place = () => Object.assign(e, { x: player.x + 30, y: player.y - 150, speed: 0, maxHp: 1e9, hp: 1e9 });   // off the larboard beam, a bit aft of centre
+    for (let i = 0; i < 30; i++) { place(); S.cameras.main.centerOn(player.x, player.y); step(); }
+    spaceDownAt = performance.now() - 40;   // not held long enough yet
+    for (let i = 0; i < 5; i++) { place(); step(); }
+    const early = Object.values(player.guns).flat().filter(g => g.cd > 0).length;
+    spaceDownAt = performance.now() - 1000;
+    for (let i = 0; i < 6; i++) { place(); step(); }
+    const fired = Object.values(player.guns).flat().filter(g => g.cd > 0).length, redNow = (() => { let n = 0;
+      for (const m of MOUNTS) for (const g of player.guns[m.key]) { const mz = muzzle(player, m, g.pi, g.pn); if (lineHits(mz.x, mz.y, mz.a, g.range)) n++; } return n; })();
+    spaceDownAt = 0; game.loop.wake();
+    return { early, fired, redNow, setting: SETTINGS.autoFire };
+  }, on);
+  const onRes = await run(true);
+  ok("auto-fire: a short hold fires nothing; a long hold fires some guns but not the whole side", onRes.early === 0 && onRes.fired > 0 && onRes.fired < 12, onRes);
+  await page.reload({ waitUntil: "load" }); await page.waitForFunction(() => typeof player !== "undefined" && player && titleOpen); await toLedger(page);
+  const offRes = await run(false);
+  ok("auto-fire: switched off in settings, holding fires nothing", offRes.setting === false && offRes.fired === 0, offRes);
+  await ctx.close();
+}
+
 // An old save (five guns a side on the ship of the line) loads onto the new twelve-port rows, centred, nothing lost.
 {
   const { ctx, page } = await open(D, { tag: "oldsave", save: OLD_LINE });

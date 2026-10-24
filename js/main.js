@@ -29,7 +29,9 @@ class Main extends Phaser.Scene {
     makePlayer(this);
     cam.startFollow(player.spr, true, 0.15, 0.15);
     this.keys = this.input.keyboard.addKeys("W,A,S,D,UP,DOWN,LEFT,RIGHT");
-    this.input.keyboard.on("keydown-SPACE", () => playerFire());
+    this.input.keyboard.on("keydown-SPACE", e => { if (!e.repeat) { spaceDownAt = performance.now(); playerFire(); } });
+    this.input.keyboard.on("keyup-SPACE", () => { spaceDownAt = 0; });
+    window.addEventListener("blur", () => { spaceDownAt = 0; });
     this.input.keyboard.on("keydown-M", () => toast(t(Snd.toggleMute() ? "muted" : "unmuted"), true));
     for (let i = 0; i < ENEMY_COUNT; i++) spawnEnemy(this);
     for (const w of save.wrecks) addCrate(w.x, w.y, w.value, w);
@@ -84,6 +86,7 @@ function step(dt) {
   // --- firing ---
   const living = enemies.filter(e => e.alive);
   for (const g of Object.values(player.guns).flat()) g.cd = Math.max(0, g.cd - dt);   // reload
+  autoFire();   // js/combat.js
   const engaged = player.alive && MOUNTS.some(mountEngaged);
   const coach = typeof coachUp === "function" && coachUp();   // the coach card already says how to fire (js/onboard.js)
   const tip = engaged && !engagedPrev && releaseTips < 3 && !coach && fireTipKey();

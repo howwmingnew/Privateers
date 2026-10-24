@@ -8,7 +8,7 @@ function fire(s, targets, dt) { enemyFire(s, targets, dt); }
 // stern guns aft. No auto-aim and no lead: the ball flies exactly along the line that was shown,
 // so the player aims by turning the ship.
 const AIM_SHOW_PAD = 1.15;   // aim lines appear when an enemy is within (range x this) of a mount's firing arc
-let engagedPrev = false, releaseTips = 0;
+let engagedPrev = false, releaseTips = 0, spaceDownAt = 0;   // spaceDownAt: when Space went down, 0 when up
 function muzzle(s, m, i, n) {
   const g = (s.mounts && s.mounts[m.key]) || m;   // per-hull out/span from applyShipArt, else the MOUNTS defaults
   const a = s.rot + m.ang, p = s.rot + m.perp, off = n === 1 ? 0 : -g.span / 2 + g.span * i / (n - 1);
@@ -37,12 +37,13 @@ function lineHits(x, y, a, len) {
 }
 // Fire every loaded cannon on each engaged mount: Space, letting go of the stick or mouse, a click, pad A / RT.
 // `only`: mount keys to fire (Q / E fire one broadside); all of them when omitted.
-function playerFire(only) {
+// `pick(mount, gun)`: when given, only the guns it accepts fire (auto-fire: those whose aim line is red).
+function playerFire(only, pick) {
   if (paused || docked || !player.alive) return;
   let shots = 0, rx = 0, ry = 0;
   for (const mount of MOUNTS) {
     if ((only && !only.includes(mount.key)) || !mountEngaged(mount)) continue;
-    const ready = player.guns[mount.key].filter(g => g.cd <= 0), plan = rollPlan(ready.length);   // a rolling broadside (js/gundeck.js)
+    const ready = player.guns[mount.key].filter(g => g.cd <= 0 && (!pick || pick(mount, g))), plan = rollPlan(ready.length);   // a rolling broadside (js/gundeck.js)
     ready.forEach((g, k) => {
       const { delay, loud } = plan[k];
       g.cd = g.interval; shots++; rx -= Math.cos(player.rot + mount.ang); ry -= Math.sin(player.rot + mount.ang);
@@ -56,9 +57,15 @@ function playerFire(only) {
       });
     });
   }
-  if (shots) { camShake(70, Math.min(0.004, 0.0015 + 0.0002 * shots)); playerRecoil(rx, ry); }   // a bigger broadside kicks harder (js/juice.js)
+  if (shots && !(pick && shots < 3)) { camShake(70, Math.min(0.004, 0.0015 + 0.0002 * shots)); playerRecoil(rx, ry); }   // a bigger broadside kicks harder (js/juice.js)
 }
 
+// Hold-to-fire (keyboard): once Space has been held AUTOFIRE_HOLD_MS, every frame fires the reloaded guns whose aim line
+// is red, i.e. would hit an enemy right now. A quick tap still fires the whole engaged broadside as before. Off in settings.
+function autoFire() {
+  if (!SETTINGS.autoFire || !spaceDownAt || performance.now() - spaceDownAt < AUTOFIRE_HOLD_MS || paused || docked || !player.alive) return;
+  playerFire(null, (mount, g) => { const m = muzzle(player, mount, g.pi, g.pn); return !!lineHits(m.x, m.y, m.a, g.range); });
+}
 // ship hit test: capsule along the hull axis, sized to the drawn hull by applyShipArt (s.hl / s.hw)
 function hitShip(s, x, y) {
   const dx = x - s.x, dy = y - s.y, hl = s.hl ?? 28, hw = s.hw ?? 13;
