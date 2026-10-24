@@ -3,12 +3,13 @@
   "private": true,
   "description": "Top-down pirate naval battle browser game (Phaser 3). No build step: open index.html.",
   "scripts": {
+    "og": "node tools/og-build.mjs",
     "serve": "python -m http.server 8765 --bind 127.0.0.1",
     "test": "npm run test:unit && npm run test:smoke",
-    "test:unit": "node --test tests/unit.mjs tests/unit-tech.mjs",
+    "test:unit": "node --test tests/unit.mjs tests/unit-tech.mjs tests/unit-phase1.mjs",
     "test:smoke": "node tests/smoke.mjs",
     "test:audio": "node tests/audio.mjs",
-    "test:all": "npm test && node tests/shell.mjs && node tests/harbor.mjs && node tests/campaign.mjs && node tests/polish.mjs && node tests/platform.mjs && node tests/audio.mjs && node tests/art-hits.mjs"
+    "test:all": "npm test && node tests/shell.mjs && node tests/harbor.mjs && node tests/campaign.mjs && node tests/polish.mjs && node tests/phase1.mjs && node tests/platform.mjs && node tests/audio.mjs && node tests/art-hits.mjs"
   },
   "devDependencies": {
     "playwright": "1.56.1"

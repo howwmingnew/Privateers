@@ -78,6 +78,7 @@ function renderVictory() {
       <button class="sail" type="button" data-v="ng">${t(vicNgArmed ? "vNgArm" : "vNg")}<small>${t("vNgDs")}</small></button>
     </footer>`;
   drawRose(vicEl.querySelector(".v-rose"));
+  vicEl.querySelector(".v-choices").appendChild(postcardButton("btn v-card"));   // the finale as a postcard (js/postcard.js)
 }
 function showVictory() {
   if (!vicEl.hidden) return;

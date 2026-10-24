@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1200">
+<title>Privateers link-preview image</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Barlow+Semi+Condensed:wght@500;600;700&family=Noto+Serif+TC:wght@600&display=swap">
+<style>
+  html, body { margin: 0; background: #0b2530; overflow: hidden; }
+  #stage { position: relative; width: 1200px; height: 630px; overflow: hidden; }
+  #game canvas { display: block; }
+  #shade { position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(90deg, rgba(6,24,32,.82) 0%, rgba(6,24,32,.55) 34%, rgba(6,24,32,0) 62%),
+                radial-gradient(ellipse at 62% 46%, rgba(0,0,0,0) 45%, rgba(4,16,22,.55) 100%); }
+  #copy { position: absolute; left: 68px; top: 168px; width: 560px; color: #f6f1e3; text-shadow: 0 3px 14px rgba(0,0,0,.65); }
+  #copy h1 { margin: 0; font: 400 112px/0.95 "IM Fell English SC", Georgia, serif; letter-spacing: .01em; color: #f6e7bd; }
+  #copy .zh { margin: 10px 0 0; font: 600 54px/1.1 "Noto Serif TC", serif; letter-spacing: .28em; color: #e2b94b; }
+  #copy .tag { margin: 34px 0 0; font: 600 27px/1.35 "Barlow Semi Condensed", system-ui, sans-serif; letter-spacing: .03em; color: #f6f1e3; }
+  #copy .url { margin: 18px 0 0; font: 500 22px "Barlow Semi Condensed", system-ui, sans-serif; letter-spacing: .08em; color: #bcd3da; }
+  #copy hr { width: 96px; height: 4px; margin: 28px 0 0; border: 0; background: #b02626; }
+</style>
+</head>
+<body>
+<!-- The link-preview picture (og.png, 1200x630), drawn by the game's own art and effects code. Crawlers do not run
+     JavaScript, so it is saved as a file: `node tools/og-build.mjs` opens this page in Chrome and screenshots it.
+     HMS Sovereign fires a starboard broadside at a burning pirate brig; the title sits on the left. -->
+<div id="stage">
+  <div id="game"></div>
+  <div id="shade"></div>
+  <div id="copy">
+    <h1>Privateers</h1>
+    <p class="zh">私掠者</p>
+    <hr>
+    <p class="tag">Steer to aim. Fire rolling broadsides.<br>Free in your browser · English / 繁體中文</p>
+    <p class="url">howwmingnew.github.io/Privateers</p>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/util.js"></script>
+<script src="../js/view.js"></script>
+<script src="../js/settings.js"></script>
+<script src="../js/i18n.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/save.js"></script>
+<script src="../js/state.js"></script>
+<script src="../js/world.js"></script>
+<script src="../js/art.js"></script>
+<script src="../js/art-draw.js"></script>
+<script src="../js/scenery.js"></script>
+<script src="../js/harbor-art.js"></script>
+<script src="../js/vfx.js"></script>
+<script src="../js/ships.js"></script>
+<script src="../js/combat.js"></script>
+<script>
+"use strict";
+const T = +((location.search.match(/t=(\d+)/) || [])[1] || 720);   // when the frame freezes (ms)
+const DPR = 2, K = 3.1, PW = 1200, PH = 630;   // baked and drawn at 2x, then shown at 1x: the screenshot is supersampled
+VIEW = { ...VIEW, dpr: DPR };
+const world = (px, py) => ({ x: px / K, y: py / K });   // page pixel -> world
+class OgScene extends Phaser.Scene {
+  constructor() { super("og"); }
+  create() {
+    S = this; islands = [];
+    makeTextures(this);
+    for (const key of Object.keys(this.textures.list)) this.textures.list[key].setFilter(Phaser.Textures.FilterMode.LINEAR);   // smooth when enlarged
+    // Phaser zooms about the view centre: scroll so the world rectangle (0,0)-(PW/K, PH/K) fills the canvas (and worldView, which onScreen() reads, agrees)
+    const z = DPR * K, cw = PW * DPR, ch = PH * DPR;
+    this.cameras.main.setZoom(z).setScroll(-(cw - cw / z) / 2, -(ch - ch / z) / 2).setBackgroundColor("#155a73");
+    this.fx = {
+      wake:   this.add.particles(0, 0, "puff", { lifespan: 1500, speed: 0, scale: { start: 0.6, end: 1.8 }, alpha: { start: 0.45, end: 0 }, emitting: false }).setDepth(3),
+      smoke:  this.add.particles(0, 0, "puff", { lifespan: 800, speed: { min: 10, max: 45 }, scale: { start: 0.8, end: 2.2 }, alpha: { start: 0.8, end: 0 }, tint: 0xdedad0, emitting: false }).setDepth(8),
+      spark:  this.add.particles(0, 0, "dot", { lifespan: 450, speed: { min: 60, max: 200 }, scale: { start: 1, end: 0 }, tint: [0xffd27a, 0xff8a3a, 0xff5a2a], blendMode: "ADD", emitting: false }).setDepth(8),
+      splash: this.add.particles(0, 0, "dot", { lifespan: 550, speed: { min: 30, max: 90 }, scale: { start: 0.9, end: 0.2 }, alpha: { start: 0.9, end: 0 }, tint: 0xe9f7fa, emitting: false }).setDepth(3),
+    };
+    vfxInit(this);
+    const w = PW / K, h = PH / K;
+    this.add.tileSprite(0, 0, w, h, "wave").setOrigin(0).setDepth(0).setAlpha(0.36).setTilePosition(37, 11);
+    this.add.tileSprite(0, 0, w, h, "wave").setOrigin(0).setDepth(0).setAlpha(0.18).setTileScale(1.7).setTilePosition(120, 60);
+    const mk = (cls, liv, px, py, rot, extra) => {
+      const p = world(px, py), s = makeShip(this, "dot", p.x, p.y);
+      Object.assign(s, { rot, maxHp: 100, hp: 100, maxSpeed: 120, speed: 60, faction: liv, alive: true }, extra);
+      if (this.textures.exists(`ship:${cls}:${liv}`)) this.textures.remove(`ship:${cls}:${liv}`);
+      shipArt(cls, liv, { res: 5 });   // baked finer than the game does: the hull is shown at 3x here
+      applyShipArt(s, cls, liv); s.spr.setPosition(s.x, s.y).setRotation(rot);
+      return s;
+    };
+    // the flagship, heading east and a little north so her starboard side (the south) faces us; the brig burns below her
+    const sov = mk("manowar", "admiral", 868, 235, -0.08, {});
+    const brig = mk("brig", "pirate", 935, 495, 0.2, { hp: 32, burnT: 99, burnDps: 0, speed: 20 });
+    player = sov;
+    this.ships = [sov, brig];
+    for (const s of this.ships) vfxShip(s, 0.016);
+    this.time.delayedCall(250, () => this.broadside(sov, brig));
+    this.time.delayedCall(T, () => { window.ogReady = true; this.game.loop.sleep(); });   // freeze the frame for the screenshot
+    this.events.on("update", (_, dms) => { const dt = Math.min(dms / 1000, 0.05); for (const s of this.ships) { s.burnT = 99; vfxShip(s, dt); } });
+  }
+  broadside(sov, brig) {
+    const m = MOUNTS.find(x => x.key === "right"), n = sov.art.guns * sov.art.rows;
+    for (let i = 0; i < n; i++) this.time.delayedCall(i * 55, () => {
+      const p = muzzle(sov, m, i, n); vfxMuzzle(p.x, p.y, p.a);
+      const d = rand(0.35, 0.8), tx = brig.x + rand(-30, 30), ty = brig.y + rand(-8, 8);   // balls in flight toward the brig
+      this.add.image(p.x + (tx - p.x) * d, p.y + (ty - p.y) * d, "ball").setDepth(7).setScale(0.9);
+      this.time.delayedCall(260 + i * 25, () => { if (i % 3 === 0) { vfxHit(brig.x + rand(-26, 26), brig.y + rand(-6, 6)); vfxFlash(brig); } else vfxSplash(tx + rand(-14, 14), ty + rand(14, 30), false); });
+    });
+  }
+}
+new Phaser.Game({ type: Phaser.AUTO, parent: "game", backgroundColor: "#0b2530", render: { antialias: true }, audio: { noAudio: true },
+  scale: { mode: Phaser.Scale.NONE, width: PW * DPR, height: PH * DPR, zoom: 1 / DPR }, scene: [OgScene] });
+</script>
+</body>
+</html>
