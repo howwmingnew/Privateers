@@ -5,13 +5,13 @@
 .lcol { display: contents; }
 @media (min-width: 1100px) {
   /* left: ship stats and the bounty; right: the shop, so it starts at the top instead of below the poster */
-  #port .sheet { width: min(100%, calc(1100px * var(--ts))); grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); column-gap: 32px; }
+  #port .sheet { width: min(100%, max(calc(1100px * var(--ts) + 40px), 1140px)); grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); column-gap: 32px; }
   #port .sheet > header, #port .sheet > .msg, #port .sheet > #coach, #port .sheet > footer { grid-column: 1 / -1; }
   #port .lcol { display: grid; gap: 18px; align-content: start; min-width: 0; }
   #port .lcol-r { grid-column: 2; }
   /* the Hulk Outpost has no shop: back to the single sheet */
   #port .lcol-r:not(:has(> section:not([hidden]))) { display: none; }
-  #port .sheet:not(:has(.lcol-r > section:not([hidden]))) { width: min(100%, calc(560px * var(--ts))); grid-template-columns: minmax(0, 1fr); }
+  #port .sheet:not(:has(.lcol-r > section:not([hidden]))) { width: min(100%, max(calc(560px * var(--ts) + 40px), 600px)); grid-template-columns: minmax(0, 1fr); }
   #port .sheet:not(:has(.lcol-r > section:not([hidden]))) .lcol-l { grid-column: 1; }
 }
 /* pad: Y jumps to Set sail, so say so on the button */

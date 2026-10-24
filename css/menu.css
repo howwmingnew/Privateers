@@ -3,12 +3,13 @@
 
 /* ---- screen states: the title owns the whole screen, pause hides the transient sea hints ---- */
 body.on-title #hud, body.on-title #hint, body.on-title #joy, body.on-title #coach { display: none !important; }
+body.on-title.scale-preview #hud { display: flex !important; }   /* size sliders: the HUD shows behind the settings panel */
 body.on-title #toast { z-index: 25; top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); }
 body.on-pause #hint, body.on-pause #joy { display: none !important; }
 #port .sheet { scroll-padding: 16px 0 96px; }   /* focus moves never land behind the sticky footer */
 #port .sheet:focus { outline: none; }            /* the sheet only holds focus so stray fire keys press nothing */
 
-.shell { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow: hidden;
+.shell { position: fixed; inset: 0; z-index: 20; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; overflow: hidden;   /* the track never grows past the screen, so a wide child cannot push a panel off it */
   padding-block: calc(env(safe-area-inset-top, 0px) + 12px) calc(env(safe-area-inset-bottom, 0px) + 12px);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .shell.dim { background: rgba(4,18,24,.6); }
@@ -16,7 +17,8 @@ body.on-pause #hint, body.on-pause #joy { display: none !important; }
 
 /* ---- title ---- */
 .title { background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(4,18,24,.12), rgba(4,18,24,.82) 100%); }
-.title-card { width: min(100%, 680px); max-height: 100%; overflow-y: auto; text-align: center; display: grid; justify-items: center; gap: 10px; padding: 8px 0; }
+.title-card { width: min(100%, calc(680px * var(--ts, 1)));   /* grows with the UI size, so the logo never needs a sideways scroll */
+   max-height: 100%; overflow-y: auto; text-align: center; display: grid; justify-items: center; gap: 10px; padding: 8px 0; }
 .crest { width: calc(84px * var(--ts)); height: calc(84px * var(--ts)); filter: drop-shadow(0 4px 10px rgba(0,0,0,.5)); }
 .logo { margin: 0; display: grid; gap: 4px; font-weight: 400; line-height: 1; }
 .logo-en { font-family: var(--f-display); font-size: min(calc(clamp(42px, 12vw, 78px) * var(--ts)), 12.5vw);   /* the larger text sizes must still fit a phone */ letter-spacing: .07em; color: var(--foam);
@@ -40,10 +42,10 @@ body.on-pause #hint, body.on-pause #joy { display: none !important; }
 .confirm .menu { width: 100%; margin: 0; }
 
 /* ---- parchment panels (pause, settings, how to play, credits) ---- */
-.panel { width: min(100%, calc(480px * var(--ts))); max-height: 100%; background: var(--parch); color: var(--ink); border-radius: 4px;
+.panel { box-sizing: border-box; width: min(100%, calc(480px * var(--ts) + 40px)); max-height: 100%;   /* border-box: padding counts inside the 100%, so a phone panel never pokes past the screen */ background: var(--parch); color: var(--ink); border-radius: 4px;
   box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 0 60px rgba(150,110,50,.25); padding: 20px 20px 0; display: grid; gap: 14px; align-content: start; }
-.panel.small { width: min(100%, calc(360px * var(--ts))); padding-bottom: 18px; }
-.panel.wide { width: min(100%, calc(600px * var(--ts))); }
+.panel.small { width: min(100%, calc(360px * var(--ts) + 40px)); padding-bottom: 18px; }
+.panel.wide { width: min(100%, calc(600px * var(--ts) + 40px)); }
 .panel.scroll { overflow-y: auto; overscroll-behavior: contain; scroll-padding: 16px 0 90px; }
 .panel.small.scroll { padding-bottom: 0; }
 .panel h2 { font-family: var(--f-display); font-weight: 400; font-size: calc(30px * var(--ts)); line-height: 1; margin: 0; padding-bottom: 10px; border-bottom: 2px solid var(--ink); }
@@ -74,6 +76,16 @@ label.srow { grid-template-columns: minmax(0, 1fr) minmax(120px, 46%) 3.2em; }
 .seg button + button { border-left: 1.5px solid var(--ink); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--parch); }
 #setReset { justify-self: start; }
+/* While a size slider is held the panel goes fully transparent (it keeps its place, so the drag carries on) to show the
+   game behind it; only a small readout of the value stays (#scaleBadge, js/options.js). */
+#p-settings { transition: background .15s; }
+#p-settings .panel { transition: opacity .15s; }
+#p-settings.previewing { background: transparent; }
+#p-settings.previewing .panel { opacity: 0; }
+body.scale-preview #title, body.scale-preview #pause { opacity: 0; pointer-events: none; }   /* the title / pause menu behind settings goes too */
+#scaleBadge { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); transform: translateX(-50%); z-index: 60;
+  padding: 8px 16px; border-radius: 999px; background: rgba(16, 24, 32, .82); color: #f6d27a; font-weight: 700; font-size: calc(16px * var(--ts, 1)); line-height: 1.2;
+  pointer-events: none; white-space: nowrap; }
 
 /* how to play */
 .ht { font-size: calc(15px * var(--ts)); line-height: 1.5; }
@@ -99,13 +111,13 @@ label.srow { grid-template-columns: minmax(0, 1fr) minmax(120px, 46%) 3.2em; }
 .sw-x::after { transform: rotate(-45deg); }
 
 /* ---- first-voyage coach card: floats over the sea, sits in the ledger while docked ---- */
-#coach { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); z-index: 7;
+#coach { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + max(64px, 28px + 36px * var(--ts)));   /* above the hint line, which grows with the UI size */ z-index: 7;
   width: max-content; max-width: min(calc(100vw - 32px), calc(440px * var(--ts))); pointer-events: none;
   background: rgba(8,34,45,.9); color: var(--foam); border: 1px solid rgba(240,199,102,.5); border-left: 4px solid #f0c766; border-radius: 3px;
   padding: 8px 14px 10px; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
-#coach .coach-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-#coach .eyebrow { color: #f0c766; }
-#coach p { margin: 2px 0 0; font-size: calc(15px * var(--ts)); line-height: 1.4; }
+#coach .coach-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
+#coach .eyebrow { color: #f0c766; font-size: min(calc(12px * var(--ts)), 4.6vh); }
+#coach p { margin: 2px 0 0; font-size: min(calc(15px * var(--ts)), 6vh); line-height: 1.4; }   /* short screens: the card must not climb into the bars */
 #coach .textbtn { pointer-events: auto; color: rgba(246,241,227,.75); min-height: 32px; }
 #coach.in-sheet { position: static; transform: none; width: auto; max-width: none; background: rgba(240,199,102,.22); color: var(--ink);
   border-color: rgba(138,93,12,.45); border-left-color: #8a5d0c; box-shadow: none; }
@@ -138,5 +150,5 @@ body.pad-nav button:focus, body.pad-nav input:focus { outline: 3px solid var(--b
 @media (prefers-reduced-motion: reduce) { .mbtn { transition: none; } }
 
 /* ---- roadmap panel (js/roadmap-panel.js): the roadmap page framed in a tall parchment panel ---- */
-.panel.roadmap { width: min(100%, 1280px); height: 100%; padding-bottom: 0; grid-template-rows: auto minmax(0, 1fr) auto; }
+.panel.roadmap { width: min(100%, 1320px); height: 100%; padding-bottom: 0; grid-template-rows: auto minmax(0, 1fr) auto; }
 #rmFrame { display: block; width: 100%; height: 100%; min-height: 0; border: 0; border-radius: 3px; background: #08222d; }

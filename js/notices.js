@@ -133,10 +133,10 @@ onHook("frame", dt => {
 // labels made once (the harbor and outpost names, wreck markers) are refreshed here when the zoom or the setting changes.
 let labelKey = "";
 onHook("frame", () => {
-  const key = S.cameras.main.zoom + "|" + SETTINGS.textScale;
+  const key = S.cameras.main.zoom + "|" + uiScale();
   if (key === labelKey) return;
   labelKey = key;
-  if (harborLabel) { harborLabel.setScale(SETTINGS.textScale); crispText(harborLabel, viewTextRes(S.cameras.main.zoom * SETTINGS.textScale)); }
+  if (harborLabel) { harborLabel.setScale(uiScale()); crispText(harborLabel, viewTextRes(S.cameras.main.zoom * uiScale())); }
   if (typeof outpostLabel !== "undefined" && outpostLabel) labelText(outpostLabel);
   for (const c of crates) if (c.label) labelText(c.label);
 });

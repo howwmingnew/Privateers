@@ -155,7 +155,7 @@ function shipTop(s) {
 // the camera zoom by the canvas dpr), so HiDPI screens get the same on-screen size. The text-size setting multiplies in.
 function labelScale() {
   const dpr = typeof VIEW !== "undefined" ? VIEW.dpr : 1;
-  return clamp(dpr / S.cameras.main.zoom, 1, 2.4) * SETTINGS.textScale;
+  return clamp(dpr / S.cameras.main.zoom, 1, 2.4) * uiScale();
 }
 function labelText(txt) {
   if (typeof crispText === "function" && typeof viewTextRes === "function") crispText(txt, viewTextRes(S.cameras.main.zoom * labelScale()));

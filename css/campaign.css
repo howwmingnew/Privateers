@@ -1,9 +1,9 @@
 /* Campaign, seas, captain's log, achievements, victory. Same night-sea + parchment theme as css/style.css. */
 
 /* Chart: the whole square map (the Maelstrom fills the corners), a little larger where there is room.
-   --mini is the chart-size setting (js/options.js); on the narrowest phones it stops at 44vw so the bars keep their room. */
-#mini { --mini-w: min(calc(124px * var(--mini, 1)), 44vw); width: var(--mini-w); height: var(--mini-w); border-radius: 8px; }
-@media (min-width: 760px) and (min-height: 560px) { #mini { --mini-w: calc(156px * var(--mini, 1)); } }
+   --mini-w is the chart's width in CSS px, worked out by js/options.js from the screen size and the chart-size slider
+   (miniSizePx in js/settings.js, capped at 44vw); the 124px only shows until that script has run. */
+#mini { box-sizing: border-box; width: var(--mini-w, 124px); height: var(--mini-w, 124px); border-radius: 8px; }
 
 /* Sea banner */
 #seaBanner { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + min(24vh, 120px)); transform: translateX(-50%); z-index: 6; pointer-events: none;
@@ -82,7 +82,7 @@
 @media (hover: hover) { .logbtn:hover { background: rgba(42,29,16,.08); } }
 
 /* Captain's log and victory sheets: over the ledger, same parchment */
-#logbook, #victory { position: fixed; inset: 0; z-index: 11; display: grid; place-items: center; background: rgba(4,18,24,.62);
+#logbook, #victory { position: fixed; inset: 0; z-index: 11; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; background: rgba(4,18,24,.62);
   padding-block: calc(env(safe-area-inset-top, 0px) + 12px) calc(env(safe-area-inset-bottom, 0px) + 12px);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 #victory { z-index: 12; background: rgba(4,18,24,.78); }
@@ -111,7 +111,7 @@
 .achs li span { font-size: 13px; color: var(--ink-soft); }
 .achs li.off { opacity: .62; }
 
-.sheet.victory { width: min(100%, 620px); text-align: left; }
+.sheet.victory { width: min(100%, 660px); text-align: left; }
 .sheet.victory .v-rose { width: 120px; height: 120px; justify-self: center; margin-top: 4px; }
 .sheet.victory > .eyebrow, .sheet.victory > h1 { text-align: center; }
 .sheet.victory h1 { font-size: 40px; }

@@ -259,10 +259,10 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
   // text size reaches the world labels
   const ts = await ev(page, async () => {
     const e = enemies.find(x => x.alive && x.badge), k1 = labelScale(), b1 = e.badge.scaleX, h1 = harborLabel.scaleX;
-    saveSettings({ textScale: 1.3 }); applyTextScale();
+    saveSettings({ uiPct: 130 }); applyUiScale();
     await new Promise(r => setTimeout(r, 200));
     const k2 = labelScale(), b2 = e.badge.scaleX, h2 = harborLabel.scaleX;
-    saveSettings({ textScale: 1 }); applyTextScale();
+    saveSettings({ uiPct: 100 }); applyUiScale();
     return { k: +(k2 / k1).toFixed(3), badge: +(b2 / b1).toFixed(3), harbor: +(h2 / h1).toFixed(3) };
   });
   ok("text size 130% scales level badges, floating numbers (labelScale) and the harbor name", ts.k === 1.3 && ts.badge === 1.3 && ts.harbor === 1.3, ts);
