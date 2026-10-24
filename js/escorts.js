@@ -67,8 +67,8 @@ function escortBattery(ship, type, lv) {
 // What the flagship's own guns of the same make deal per second (no uptime), the 100% an escort is measured against.
 const mainGunDps = (ship, type, lv) => { const sh = SHIPS[ship], g = GUNS[type], n = Object.values(sh.slots).reduce((a, b) => a + b, 0); return n * g.dmg * gunLvMul(lv) * (sh.gunK || 1) * g.rpm / 60; };
 // The class plan an escort's hull fights by (js/archetypes.js archTactic).
-const ESCORT_PLAN = { sloop: "circle", schooner: "circle", brig: "circle", frigate: "orbit", line: "line" };
-const ESCORT_TURN = { sloop: 1.2, schooner: 1.15, brig: 1, frigate: 0.9, line: 0.6 };   // x the AI's 1.7 rad/s, like the enemy classes
+const ESCORT_PLAN = { sloop: "circle", schooner: "circle", gunboat: "circle", brigantine: "circle", brig: "circle", cruiser: "orbit", frigate: "orbit", corsair: "orbit", line: "line" };
+const ESCORT_TURN = { sloop: 1.2, schooner: 1.15, gunboat: 1, brigantine: 1.1, brig: 1, cruiser: 1.05, frigate: 0.9, corsair: 1.05, line: 0.6 };   // x the AI's 1.7 rad/s, like the enemy classes
 
 // ---------- Save edits (pure: each returns a new save, or null when it cannot be done) ----------
 function buyEscortSlot(s) {
