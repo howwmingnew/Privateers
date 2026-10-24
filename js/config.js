@@ -49,8 +49,22 @@ const DAILY_LOADOUT = { ship: "brig", hull: 3, sails: 2, hold: 1, gunLv: 3,
 const REMATCH_PCT = 0.25;                     // a rematch sinking pays this share of the bounty's Captain's Chest (js/rematch.js)
 const REMATCH_MAX = 2;                        // beaten captains that sail again at once; the farthest lairs first
 const CHAIN_GAP = 20;                        // seconds between sinkings that still count as one kill chain (js/hall.js)
+// Wind, weather and the hour of day (js/weather-core.js is the maths, js/weather.js the sea). Every number here is gameplay:
+// the same for every player whatever the weather-effects setting says, so a daily sea plays the same everywhere.
+const WIND = { tail: 0.20, head: 0.25, full: 0.6 };   // speed gained running before the wind, lost beating into it, at wind strength >= full (a calm gives less)
+const WEATHER = {
+  seg: [75, 150], blend: 12,                          // a spell of weather lasts seg[0]..seg[1] s and fades into the next over `blend` s
+  first: { clear: 0.5, rain: 0.3, storm: 0.2 },       // the opening weather of a sortie
+  next: { clear: { clear: 0.55, rain: 0.38, storm: 0.07 }, rain: { clear: 0.35, rain: 0.35, storm: 0.3 }, storm: { clear: 0.1, rain: 0.55, storm: 0.35 } },
+  hour: { day: 0.55, dusk: 0.2, night: 0.25 },        // the hour a sortie sails in
+  windMin: 0.05, windRain: 0.15, windStorm: 0.35,     // strength 0..1: the wind's own wander, plus what rain and storm add
+  knots: [4, 40],                                     // strength 0 .. 1 as the dial's number
+  yaw: 0.32, leeway: 26, calmRadius: 230,             // storm: rad/s the hull is slewed beam-on at full gale, px/s pushed downwind, px from a coast inside which neither acts
+  ballDrift: 45,                                      // storm: px/s a cannonball is blown downwind
+};
 
-// Highlight replay (js/replay.js): clips are cut REPLAY_TAIL_S after a big moment from the older of two staggered recorders.
+// Highlight replay (js/replay.js): two recorders, staggered by half a clip, each lives exactly REPLAY_SEG_S; the first one that ends
+// at least REPLAY_TAIL_S after a big moment is the clip, so a clip is always REPLAY_SEG_S long.
 const REPLAY_FPS = 30, REPLAY_MAX_W = 960, REPLAY_BITRATE = 2000000;   // recording rate, widest picture, bits per second
-const REPLAY_SEG_S = 8, REPLAY_MIN_S = 3;   // a recorder restarts at this age, once the other one holds at least REPLAY_MIN_S
+const REPLAY_SEG_S = 6, REPLAY_MIN_S = 3;   // clip length; the second recorder starts this long after the first
 const REPLAY_TAIL_S = 1.5, REPLAY_COOL_S = 6, REPLAY_OFFER_MS = 10000;   // footage after the moment, quiet time between clips, how long the chip stays

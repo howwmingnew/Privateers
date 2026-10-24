@@ -1,15 +1,15 @@
 "use strict";
 // ---------- Highlight replay: the last few seconds of a big moment, saved as a video ----------
 // A boss going down, a Broadside Massacre or a powder-magazine crit that takes a crowd with it marks a moment (the "moment"
-// hook; a boss through "sunk"). REPLAY_TAIL_S later the clip is cut and a chip offers it ("Save video"; the victory screen
+// hook; a boss through "sunk"). The next finished recording (at most a few seconds on) is the clip and a chip offers it ("Save video"; the victory screen
 // carries the button too). It goes out through the postcard pipeline (deliverImage, js/postcard.js): the share sheet on a phone
 // that takes a video file, a download everywhere else, with the same wordmark burned into the corner.
 // Cost: nothing unless recording is on (settings; the default is on for a desktop with 4+ cores, off on a phone) and the sea is
 // being sailed: the title, the ledger and a hidden tab record nothing. While it records, every REPLAY_FPS-th frame the sea is
 // drawn once, scaled to at most REPLAY_MAX_W wide, onto a small 2D canvas (with the wordmark) and that canvas is what
 // MediaRecorder encodes: the encoder never sees the full-size canvas. A WebM file cannot be cut from the middle, so two
-// recorders run staggered, each restarted when it is REPLAY_SEG_S old (and the other holds REPLAY_MIN_S): the older one is
-// the clip, so it shows 3 to about 8 seconds before the moment. No sound: the sea's Web Audio graph is not tapped (that
+// recorders run staggered by half a clip, each lives exactly REPLAY_SEG_S (6 s) and is kept as the clip when it ends after a
+// moment: the clip is always 6 s, with the moment 1.5 to 4.5 s from its end. No sound: the sea's Web Audio graph is not tapped (that
 // would route the mix through a second node chain on every device), so the video is silent.
 // Where MediaRecorder or canvas.captureStream is missing (old Safari) the setting row and the buttons do not appear.
 Object.assign(STR.en, {
@@ -50,7 +50,7 @@ function replayPlan(slots, seg, min) {
 }
 
 // ---------- recording ----------
-const RP = { slots: [null, null], stream: null, cv: null, ctx: null, mime: "", sup: null, running: false, last: 0, pending: null, coolUntil: 0, tailTimer: 0, chip: null };
+const RP = { slots: [null, null], stream: null, cv: null, ctx: null, mime: "", sup: null, running: false, last: 0, pending: null, coolUntil: 0, armed: null, chip: null };
 function replayEnv() { return replaySupport({ MediaRecorder: typeof MediaRecorder === "undefined" ? undefined : MediaRecorder, canvas: RP.cv || document.createElement("canvas") }); }
 const replaySupported = () => (RP.sup ||= replayEnv()).ok;
 const replayWanted = () => replaySupported() && (typeof SETTINGS.replay === "boolean" ? SETTINGS.replay : replayDefault(device === "touch", navigator.hardwareConcurrency));
@@ -88,7 +88,7 @@ function replayStart() {
   } catch (e) { console.error("Replay could not start:", e); replayStop(); RP.sup = { ok: false, reason: "start" }; replayRefresh(); }
 }
 function replayStop() {
-  clearTimeout(RP.tailTimer); RP.tailTimer = 0;
+  RP.armed = null;
   if (S && S.game && S.game.events) S.game.events.off("postrender", replayDraw);
   for (const s of RP.slots) replayDrop(s);
   RP.slots = [null, null];
@@ -101,32 +101,34 @@ onHook("frame", () => {
   if (want !== RP.running) { want ? replayStart() : replayStop(); return; }
   if (!RP.running) return;
   const plan = replayPlan(RP.slots.map(s => (s ? { age: slotAge(s) } : null)), REPLAY_SEG_S, REPLAY_MIN_S);
-  if (plan.act === "rotate") replayDrop(RP.slots[plan.i]);
+  if (plan.act === "rotate") replayFinish(plan.i);
   if (plan.act) try { replayStartSlot(plan.i); } catch (e) { console.error("Replay stopped:", e); replayStop(); }
 });
 document.addEventListener("visibilitychange", () => { if (document.hidden && RP.running) replayStop(); });
 
-// ---------- a moment: cut the older recorder REPLAY_TAIL_S later ----------
+// ---------- a moment: the next recorder to reach REPLAY_SEG_S, at least REPLAY_TAIL_S on, is the clip ----------
+// A recorder is never trimmed (a WebM cannot be cut from the middle): it simply lives REPLAY_SEG_S and is kept instead of dropped
+// when it ends after an armed moment. Recorders end every REPLAY_SEG_S / 2 seconds, so the clip lands at most 4.5 s after the
+// moment, holds it with between REPLAY_TAIL_S and REPLAY_SEG_S / 2 + REPLAY_TAIL_S of aftermath, and is REPLAY_SEG_S long.
 function replayMoment(kind) {
-  if (!RP.running || RP.tailTimer || performance.now() < RP.coolUntil) return false;
-  RP.coolUntil = performance.now() + REPLAY_COOL_S * 1000;
-  RP.tailTimer = setTimeout(() => { RP.tailTimer = 0; replayCut(kind); }, REPLAY_TAIL_S * 1000);
+  if (!RP.running || RP.armed || performance.now() < RP.coolUntil) return false;
+  RP.armed = { kind, at: performance.now() };
+  RP.coolUntil = RP.armed.at + REPLAY_COOL_S * 1000;
   return true;
 }
-function replayCut(kind) {
-  if (!RP.running) return;
-  const i = slotAge(RP.slots[0]) >= slotAge(RP.slots[1]) ? 0 : 1, old = RP.slots[i];
-  if (!old || slotAge(old) < 1) return;
-  const secs = slotAge(old), mime = RP.mime;
-  old.rec.onstop = () => {
-    const blob = new Blob(old.chunks, { type: mime.split(";")[0] });
-    old.chunks = [];
+function replayFinish(i) {
+  const s = RP.slots[i], arm = RP.armed;
+  if (!arm || performance.now() - arm.at < REPLAY_TAIL_S * 1000) return replayDrop(s);
+  RP.armed = null;
+  const secs = slotAge(s), mime = RP.mime;
+  s.rec.onstop = () => {
+    const blob = new Blob(s.chunks, { type: mime.split(";")[0] });
+    s.chunks = [];
     if (blob.size < 1000) return;
-    RP.pending = { blob, secs: +secs.toFixed(1), kind, at: Date.now(), mime };
+    RP.pending = { blob, secs: +secs.toFixed(2), kind: arm.kind, at: Date.now(), mime };
     replayRefresh(); replayOffer();
   };
-  try { old.rec.stop(); } catch (e) { console.error("Replay cut failed:", e); }
-  try { replayStartSlot(i); } catch (e) { replayStop(); }
+  try { s.rec.stop(); } catch (e) { console.error("Replay cut failed:", e); }
 }
 onHook("moment", kind => replayMoment(kind));
 onHook("sunk", (s, killer) => { if (s.boss && killer === player) replayMoment("boss"); });

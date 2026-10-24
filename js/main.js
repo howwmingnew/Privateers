@@ -102,9 +102,10 @@ function step(dt) {
     reloadWas[m.key] = ready;
   }
   // --- cannonballs ---
+  const wd = typeof wxDrift === "function" ? wxDrift() : { x: 0, y: 0 };   // a storm blows them off line a little (js/weather.js)
   for (let i = balls.length - 1; i >= 0; i--) {
     const b = balls[i];
-    b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+    b.x += (b.vx + wd.x) * dt; b.y += (b.vy + wd.y) * dt; b.life -= dt;
     const p = 1 - b.life / b.life0;
     b.spr.setPosition(b.x, b.y).setScale(1 + Math.sin(Math.PI * clamp(p, 0, 1)) * 0.6);
     let hit = null;

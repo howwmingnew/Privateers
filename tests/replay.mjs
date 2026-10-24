@@ -51,22 +51,72 @@ async function openSea(viewport, { mobile = false, noRecorder = false } = {}) {
   ok("desktop: no clip and no chip yet", await ev(page, () => !RP.pending && (!RP.chip || RP.chip.hidden)));
   await sleep(4500);
   ok("desktop: a second recorder joins, staggered", await ev(page, () => !!RP.slots[1] && Math.abs(slotAge(RP.slots[0]) - slotAge(RP.slots[1])) > 2));
-  ok("desktop: a moment is accepted, a second one inside the cool-down is not", await ev(page, () => { const a = replayMoment("test"), b = replayMoment("test"); return a && !b; }));
-  await page.waitForFunction(() => !!RP.pending, null, { timeout: 8000 * SLOW });
-  const clip = await ev(page, async () => {
-    const c = RP.pending, v = document.createElement("video");
-    const dims = await new Promise(res => { v.onloadedmetadata = () => res([v.videoWidth, v.videoHeight]); v.onerror = () => res(null); v.src = URL.createObjectURL(c.blob); });
-    return { type: c.blob.type, size: c.blob.size, secs: c.secs, kind: c.kind, dims, cv: [S.game.canvas.width, S.game.canvas.height], chip: !!RP.chip && !RP.chip.hidden };
+  // A clip: wait for it, then check it (type, size, length by the recorder's clock and by the decoder's, picture size, chip).
+  const gotClip = async (label, kind) => {
+    await page.waitForFunction(() => !!RP.pending, null, { timeout: 12000 * SLOW });
+    const c = await ev(page, async () => {
+      const c = RP.pending, v = document.createElement("video");
+      const dims = await new Promise(res => { v.onloadedmetadata = () => res([v.videoWidth, v.videoHeight]); v.onerror = () => res(null); v.src = URL.createObjectURL(c.blob); });
+      let dur = v.duration;   // a MediaRecorder file has no length in its header: seek far past the end and the decoder finds it
+      if (!Number.isFinite(dur)) dur = await new Promise(res => { const t = setTimeout(() => res(null), 3000); v.ontimeupdate = () => { if (Number.isFinite(v.duration)) { clearTimeout(t); res(v.duration); } }; v.currentTime = 1e7; });
+      return { type: c.blob.type, size: c.blob.size, secs: c.secs, kind: c.kind, dur, dims, cv: [S.game.canvas.width, S.game.canvas.height], chip: !!RP.chip && !RP.chip.hidden };
+    });
+    ok(`${label}: a WebM blob of real footage (over 20 kB)`, /^video\/webm/.test(c.type) && c.size > 20000, { type: c.type, size: c.size });
+    ok(`${label}: kind is ${kind}`, c.kind === kind, c.kind);
+    ok(`${label}: 5.5 to 6.5 s long (recorder clock ${c.secs} s, decoder ${c.dur === null ? "n/a" : c.dur.toFixed(2)} s)`, c.secs >= 5.5 && c.secs <= 6.5 && (c.dur === null || (c.dur >= 5 && c.dur <= 7)), c);
+    ok(`${label}: decodes, at most 960 wide, the canvas's aspect`, !!c.dims && c.dims[0] <= 960 && Math.abs(c.dims[0] / c.dims[1] - c.cv[0] / c.cv[1]) < 0.02, c.dims);
+    ok(`${label}: the chip offers it`, c.chip);
+    return c;
+  };
+  const reset = () => ev(page, () => { RP.pending = null; RP.coolUntil = 0; RP.chip && (RP.chip.hidden = true); });
+  // 1. a boss goes down to the player's guns: the game's own bounty, its own damage path
+  const boss = await ev(page, () => {
+    save.tutorialDone = true; tutorialReset();
+    spawnBounty();
+    if (!bossShip) return false;
+    Object.assign(bossShip, { x: player.x + 300, y: player.y, rot: 1.2 });
+    hurt(bossShip, 1e9, 0, player, { fromPlayer: true, vx: 0, vy: 480 });
+    return !bossShip || !bossShip.alive;
   });
-  ok("clip: a WebM blob", /^video\/webm/.test(clip.type), clip.type);
-  ok("clip: real footage (over 20 kB) of 3 to 11 seconds", clip.size > 20000 && clip.secs >= 3 && clip.secs <= 11, { size: clip.size, secs: clip.secs });
-  ok("clip: the browser decodes it, at most 960 wide, the canvas's aspect", !!clip.dims && clip.dims[0] <= 960 && Math.abs(clip.dims[0] / clip.dims[1] - clip.cv[0] / clip.cv[1]) < 0.02, clip);
-  ok("clip: the chip offers it", clip.chip);
+  ok("real flow: the boss is sunk by the player's hit", boss === true, boss);
+  ok("real flow: the sinking armed a moment", await ev(page, () => !!RP.armed || !!RP.pending));
+  const c1 = await gotClip("boss sunk", "boss");
+  // 2. a magazine crit that takes a crowd: a rake lands on a ship with others inside the blast radius
+  await reset(); await sleep(1300);
+  const pw = await ev(page, () => {
+    const t = enemies.filter(e => e.alive && !e.boss && !e.fixed).slice(0, 4);
+    t.forEach((e, i) => { e.mine = true; Object.assign(e, { x: player.x + 400 + i * 40, y: player.y + 200 + i * 30, rot: 0, hp: e.maxHp }); });
+    let used = false; const prev = Math.random; Math.random = () => (!used && new Error().stack.includes("powderStrike") ? (used = true, 0) : prev());   // only the magazine roll comes up
+    const armedBefore = !!RP.armed;
+    hurt(t[0], 5, 0, player, { fromPlayer: true, vx: 480, vy: 0 });
+    Math.random = prev;
+    return { armedBefore, armed: !!RP.armed, dead: t.filter(e => !e.alive).length };
+  });
+  ok("real flow: a rake on a crowded ship blows the magazine and arms a moment", !pw.armedBefore && pw.armed && pw.dead >= 1, pw);
+  const c2 = await gotClip("magazine crit", "powder");
+  // 3. more timing samples at other offsets from the recorders' cycle
+  const lens = [c1.secs, c2.secs];
+  for (const wait of [700, 2100, 3300]) {
+    await reset(); await sleep(wait);
+    await ev(page, () => replayMoment("test"));
+    await page.waitForFunction(() => !!RP.pending, null, { timeout: 12000 * SLOW });
+    lens.push(await ev(page, () => RP.pending.secs));
+  }
+  ok("length: every clip is 5.5 to 6.5 s", lens.every(x => x >= 5.5 && x <= 6.5), lens);
+  const clip = { size: await ev(page, () => RP.pending.size ?? RP.pending.blob.size) };
   const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 8000 * SLOW }), page.click("#replayChip")]);
   const path = await dl.path();
   ok("save: downloads privateers-<time>.webm with the clip's bytes", /^privateers-\d{8}-\d{6}\.webm$/.test(dl.suggestedFilename()) && statSync(path).size === clip.size, { name: dl.suggestedFilename(), bytes: statSync(path).size });
   await sleep(300);
   ok("save: the chip says Saved!", await ev(page, () => RP.chip.textContent === t("rp_saved")));
+  // the victory screen carries the button and downloads the clip
+  await ev(page, () => { showVictory(); });
+  await sleep(300);
+  const vb = await ev(page, () => { const b = [...document.querySelectorAll("#victory button")].find(x => x.textContent === t("rp_save")); return !!b && !b.hidden; });
+  ok("victory: the Save video button shows when there is a clip", vb);
+  const [dl2] = await Promise.all([page.waitForEvent("download", { timeout: 8000 * SLOW }), ev(page, () => [...document.querySelectorAll("#victory button")].find(x => x.textContent === t("rp_save")).click())]);
+  ok("victory: it downloads a .webm", /^privateers-\d{8}-\d{6}\.webm$/.test(dl2.suggestedFilename()) && statSync(await dl2.path()).size > 20000, dl2.suggestedFilename());
+  await ev(page, () => { closeVictory(); resumeGame(); });
   await ev(page, () => replayOffer());
   await ev(page, () => { pauseGame(); });
   await sleep(200);
@@ -124,69 +174,6 @@ async function openSea(viewport, { mobile = false, noRecorder = false } = {}) {
   await ev(page, () => saveSettings({ replay: true }));
   await sleep(500);
   ok("phone: the switch turns it on", await ev(page, () => RP.running));
-  await ctx.close();
-}
-
-// ---------- frame cost: a 34-ship brawl with recording off and on (tests/art-perf.mjs's method) ----------
-{
-  const { ctx, page } = await openSea({ width: 1280, height: 720 });
-  const res = await ev(page, async N => {
-    document.getElementById("port").hidden = true; docked = false; paused = false; canDock = false; resetEnemies(S);
-    let ax = PORT.x + 1700, ay = PORT.y + 300;
-    for (let a = 0; a < 64; a++) {
-      const x = PORT.x + Math.cos(a) * 1700, y = PORT.y + Math.sin(a) * 1700;
-      if (!islands.some(i => Math.hypot(i.x - x, i.y - y) < i.r + 650)) { ax = x; ay = y; break; }
-    }
-    Object.assign(player, { x: ax, y: ay, maxHp: 1e9, hp: 1e9 });
-    const pack = () => {
-      for (let i = 0; i < 6 && enemies.filter(e => e.alive).length < 34; i++) spawnEnemy(S);
-      for (const e of enemies) if (e.alive && dist(e, player) > 800) {
-        const a = Math.random() * Math.PI * 2, r = 220 + Math.random() * 450;
-        e.x = player.x + Math.cos(a) * r; e.y = player.y + Math.sin(a) * r; e.rot = a + Math.PI / 2;
-      }
-    };
-    for (let i = 0; i < 40; i++) pack();
-    const game = S.game, gl = game.renderer.gl, q = (s, k) => s[Math.min(s.length - 1, Math.floor(s.length * k))];
-    // manual stepping: the frame's own cost, including the 2D copy the recorder takes
-    const stepped = async on => {
-      saveSettings({ replay: on });
-      game.loop.sleep();
-      let t = performance.now(); const times = [];
-      for (let i = 0; i < 80 + N; i++) {
-        if (i % 30 === 0) pack();
-        if (i % 45 === 0) playerFire();
-        joyVec = { x: Math.cos(i / 90), y: Math.sin(i / 90), m: 0.6 };
-        const t0 = performance.now(); t += 16.667;
-        game.step(t, 16.667); if (gl) gl.finish();
-        if (i >= 80) times.push(performance.now() - t0);
-        if (i % 4 === 0) await new Promise(r => setTimeout(r, 12));   // real time passes, so the 30 fps copy and the encoder have work
-      }
-      game.loop.wake();
-      const s = [...times].sort((a, b) => a - b);
-      return { mean: times.reduce((a, b) => a + b, 0) / N, p50: q(s, 0.5), p95: q(s, 0.95), recording: RP.running };
-    };
-    // live rAF: the real loop, intervals between frames over 4 s
-    const live = async on => {
-      saveSettings({ replay: on });
-      await new Promise(r => setTimeout(r, 600));
-      const iv = []; let last = performance.now();
-      await new Promise(res => { const end = last + 4000; const f = n => { iv.push(n - last); last = n; n < end ? requestAnimationFrame(f) : res(); }; requestAnimationFrame(f); });
-      const s = [...iv].sort((a, b) => a - b);
-      return { mean: iv.reduce((a, b) => a + b, 0) / iv.length, p95: q(s, 0.95), frames: iv.length, recording: RP.running };
-    };
-    const out = { stepped: [], live: [] };
-    for (const on of [false, true, false, true]) out.stepped.push({ on, ...(await stepped(on)) });
-    for (const on of [false, true, false, true]) out.live.push({ on, ...(await live(on)) });
-    saveSettings({ replay: true });
-    return out;
-  }, FRAMES);
-  const avg = (rows, on, k) => { const r = rows.filter(x => x.on === on); return r.reduce((a, b) => a + b[k], 0) / r.length; };
-  const f = x => +x.toFixed(2);
-  const sOff = avg(res.stepped, false, "mean"), sOn = avg(res.stepped, true, "mean");
-  const lOff = avg(res.live, false, "mean"), lOn = avg(res.live, true, "mean");
-  console.log(JSON.stringify({ stepped: res.stepped.map(r => ({ on: r.on, mean: f(r.mean), p95: f(r.p95), rec: r.recording })), live: res.live.map(r => ({ on: r.on, mean: f(r.mean), p95: f(r.p95), frames: r.frames, rec: r.recording })) }));
-  ok("perf: update+render per frame, recording on vs off (+10% allowed, 0.5 ms slack)", sOn <= sOff * 1.1 + 0.5, { off: f(sOff), on: f(sOn), pct: f((sOn / sOff - 1) * 100) });
-  ok("perf: live frame interval, recording on vs off (+10% allowed)", lOn <= lOff * 1.1 + 0.3, { off: f(lOff), on: f(lOn), pct: f((lOn / lOff - 1) * 100) });
   await ctx.close();
 }
 

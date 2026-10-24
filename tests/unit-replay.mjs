@@ -57,7 +57,7 @@ test("recording is on by default on a desktop with 4+ cores, off on a phone or a
   assert.equal(g.run("replayDefault(false, undefined)"), true, "unknown core count: assume enough");
 });
 
-test("two recorders stay staggered: start one, start the other once the first is old enough, restart the older at the cap", () => {
+test("two recorders stay staggered: start one, start the other once the first is old enough, restart the older at the clip length", () => {
   const g = boot(), plan = (a, b) => g.json(`replayPlan([${a === null ? "null" : `{ age: ${a} }`}, ${b === null ? "null" : `{ age: ${b} }`}], 8, 3)`);
   assert.deepEqual(plan(null, null), { act: "start", i: 0 });
   assert.deepEqual(plan(1, null), { act: "" }, "too young to share the work");
@@ -71,9 +71,9 @@ test("two recorders stay staggered: start one, start the other once the first is
   let s = [{ age: 0 }, null], min = Infinity;
   for (let t = 0; t < 600; t += 0.016) {
     s = s.map(x => x && { age: x.age + 0.016 });
-    const p = g.json(`replayPlan(${JSON.stringify(s)}, 8, 3)`);
+    const p = g.json(`replayPlan(${JSON.stringify(s)}, 6, 3)`);
     if (p.act) s[p.i] = { age: 0 };
-    if (t > 4) min = Math.min(min, Math.max(...s.map(x => (x ? x.age : 0))));
+    if (t > 7 && s[0] && s[1]) min = Math.min(min, Math.abs(s[0].age - s[1].age));
   }
-  assert.ok(min >= 3 - 0.1, `the older recorder always holds ${min.toFixed(2)} s`);
+  assert.ok(min >= 3 - 0.05, `the stagger never drops under ${min.toFixed(2)} s`);
 });

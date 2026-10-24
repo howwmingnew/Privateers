@@ -1,0 +1,28 @@
+/* The wind dial (js/weather.js): a round compass under the hull and cargo bars. It lives inside #hud, so the UI size slider (--ts),
+   the big-screen zoom and photo mode (which hides #hud) all apply to it. The arrow points where the wind blows; its length and the
+   speed of the flow marks follow the strength; green = a tailwind for the hull, red = a headwind, and the signed percentage says it in words. */
+#windDial { --wd-d: min(calc(46px * var(--ts)), 13vw, 11vh); display: flex; align-items: center; gap: calc(6px * var(--ts)); width: max-content; max-width: 100%; box-sizing: border-box; pointer-events: none;
+  padding: calc(3px * var(--ts)) calc(10px * var(--ts)) calc(3px * var(--ts)) calc(3px * var(--ts)); border-radius: 999px; background: rgba(8,34,45,.72); border: 1px solid rgba(246,241,227,.25);
+  --wd-c: #f6f1e3; --wd-spd: 1.8s; }
+#windDial[hidden] { display: none; }
+#windDial svg { flex: none; width: var(--wd-d); height: var(--wd-d); }
+#windDial .wd-ring { fill: rgba(8,34,45,.55); stroke: rgba(246,241,227,.55); stroke-width: 1.4; }
+#windDial .wd-ticks { stroke: rgba(246,241,227,.45); stroke-width: 1.2; fill: none; }
+#windDial .wd-hd path { fill: #f0c766; }
+#windDial .wd-shaft { stroke: var(--wd-c); stroke-width: 2.6; stroke-linecap: round; fill: none; opacity: .55; }
+#windDial .wd-flow { stroke: #fff; stroke-width: 2.6; stroke-linecap: round; fill: none; stroke-dasharray: 3 7; animation: wdFlow var(--wd-spd) linear infinite; }
+#windDial .wd-head { fill: var(--wd-c); stroke: rgba(8,34,45,.8); stroke-width: 1; stroke-linejoin: round; }
+@keyframes wdFlow { to { stroke-dashoffset: -20; } }
+#windDial.tail { --wd-c: #8fd67a; }
+#windDial.head { --wd-c: #ff7b63; }
+.wd-txt { min-width: 0; overflow: hidden; display: grid; line-height: 1.12; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+.wd-kn { font-size: calc(var(--wd-d) * 0.3); font-weight: 700; letter-spacing: .04em; }
+.wd-fx { font-size: calc(var(--wd-d) * 0.28); font-weight: 700; color: var(--wd-c); }
+.wd-wx { overflow: hidden; text-overflow: ellipsis; font-size: calc(var(--wd-d) * 0.235); opacity: .8; letter-spacing: .04em; }
+@media (prefers-reduced-motion: reduce) { #windDial .wd-flow { animation: none; } }
+
+/* The dial makes the bars column taller, so the toast under it sits lower by the dial's height (the same formulas as css/style.css, plus the dial). */
+:root { --wd-d: min(calc(46px * var(--ts)), 13vw, 11vh); --wd-pad: calc(var(--wd-d) + 12px); }
+#hud .bars { min-width: 0; }
+#toast { top: calc(env(safe-area-inset-top, 0px) + max(92px, 28px + 64px * var(--ts)) + var(--wd-pad)); }
+@media (max-width: 560px) { #toast { top: calc(env(safe-area-inset-top, 0px) + 32px + 50px * var(--ts) + var(--mini-w, 124px) + var(--wd-pad) * 0.5); } }
