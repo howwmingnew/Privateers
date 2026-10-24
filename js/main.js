@@ -74,7 +74,7 @@ function step(dt) {
     const dx = b.x - a.x, dy = b.y - a.y;
     if (dx > 120 || dx < -120 || dy > 120 || dy < -120) continue;   // wider than any two hulls' radii: no shove
     const d = Math.hypot(dx, dy), r = shipRadius(a) + shipRadius(b);   // sized per hull
-    if (d < r && d > 0.01) { const p = (r - d) / 2; a.x -= dx / d * p; a.y -= dy / d * p; b.x += dx / d * p; b.y += dy / d * p; }
+    if (d < r && d > 0.01) { crashShips(a, b, dx / d, dy / d); const p = (r - d) / 2; a.x -= dx / d * p; a.y -= dy / d * p; b.x += dx / d * p; b.y += dy / d * p; }
   }
   for (const s of ships) {
     s.spr.setPosition(s.x, s.y).setRotation(s.rot);
