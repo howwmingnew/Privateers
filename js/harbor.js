@@ -74,7 +74,7 @@ function renderPort() {
     return `<div class="item"><div class="nm">${nm}</div>${btn}<div class="ds">${shipDs(sh, e.hull, e.sails, e.hold)}${t("shipLvs", { h: e.hull, s: e.sails, o: e.hold })}</div></div>`;
   }).join("");
   const full = owned.length >= FLEET_MAX;
-  const sale = SHIP_ORDER.map(id => {
+  const sale = SHIP_ORDER.filter(forSale).map(id => {
     const sh = SHIPS[id], lock = shipLock(id);   // Letters of Marque gate (js/campaign.js): null, or why not yet
     const btn = lock ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("locked")}</button>`
       : full ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("yardFull")}</button>`

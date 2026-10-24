@@ -66,11 +66,13 @@ test("switching is free and buying fails without the gold or past the yard's lim
   assert.equal(g.run(`buyShip(save, "frigate")`), null, "not enough gold");
   assert.equal(g.run(`buyShip(save, "galleon")`), null, "no such model");
   assert.equal(g.run(`switchShip(save, "s9")`), null, "no such ship");
-  g.run(`save = { ...save, gold: 1e9 }; for (let i = 0; i < FLEET_MAX - 1; i++) save = buyShip(save, "sloop")`);
+  g.run(`save = { ...save, gold: 1e9 }; for (let i = 0; i < FLEET_MAX - 1; i++) save = buyShip(save, "schooner")`);
   assert.equal(g.run("ownedShips().length"), g.run("FLEET_MAX"));
-  assert.equal(g.run(`buyShip(save, "sloop")`), null, "yard full");
-  const gold = g.run("save.gold");
+  assert.equal(g.run(`buyShip(save, "schooner")`), null, "yard full");
   g.run(`save = switchShip(save, "s1")`);
+  assert.equal(g.run(`buyShip({ ...save, fleet: [], gold: 1e9 }, "sloop")`), null, "the free sloop is not for sale");
+  const gold = g.run("save.gold");
+  g.run(`save = switchShip(save, "s2")`);
   assert.equal(g.run("save.gold"), gold, "switching costs nothing");
 });
 
@@ -78,10 +80,10 @@ test("cannons move aboard on a switch; the ones with no port go back to the stor
   const g = boot();
   g.run(`save = fitMounts({ ...defaultSave(), gold: 99999, ship: "frigate", bow: [G("long12", 2), G("six")], left: [G("six"), G("six"), G("carronade", 3), G("six"), G("six")] })`.replace(/G\(/g, "gunItem("));
   const total = g.run("allGuns().length");
-  g.run(`save = buyShip(save, "sloop")`);   // the sloop has fewer ports: the frigate's extra guns spill
+  g.run(`save = buyShip(save, "schooner")`);   // the schooner has fewer ports: the frigate's extra guns spill
   assert.equal(g.run("allGuns().length"), total, "no gun lost");
   assert.ok(g.run("save.store.length") > 0, "extras are in the store");
-  assert.equal(g.run("save.left.length"), g.run("SHIPS.sloop.slots.left"));
+  assert.equal(g.run("save.left.length"), g.run("SHIPS.schooner.slots.left"));
   g.run(`save = switchShip(save, "s1")`);   // back on the frigate: more ports than guns, new ports empty
   assert.equal(g.run("allGuns().length"), total, "no gun lost on the way back either");
   assert.equal(g.run("save.left.length"), g.run("SHIPS.frigate.slots.left"));

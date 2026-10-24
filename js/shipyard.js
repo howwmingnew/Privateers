@@ -24,7 +24,9 @@ const idNum = id => Number(id.slice(1));
 const activeShip = (s = save) => ({ id: s.shipId, ship: s.ship, hull: s.hull, sails: s.sails, hold: s.hold });
 // Every ship owned, the one you sail included, in the order bought.
 const ownedShips = (s = save) => [activeShip(s), ...s.fleet].sort((a, b) => idNum(a.id) - idNum(b.id));
-const canBuyShip = (s, type) => Object.hasOwn(SHIPS, type) && s.gold >= SHIPS[type].cost && s.fleet.length + 1 < FLEET_MAX;
+// The starter sloop is free, so the yard does not sell it (it would be an endless supply of ships).
+const forSale = type => Object.hasOwn(SHIPS, type) && SHIPS[type].cost > 0;
+const canBuyShip = (s, type) => forSale(type) && s.gold >= SHIPS[type].cost && s.fleet.length + 1 < FLEET_MAX;
 
 // Pure: a new save aboard `ship` (or `entry`), with the ship you left parked in the yard.
 function boardShip(s, entry, patch = {}) {

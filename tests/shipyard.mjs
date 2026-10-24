@@ -52,6 +52,7 @@ const buy = async (page, id) => {   // two taps: arm, then confirm
   const hint = await page.evaluate(() => document.querySelector("#ships").closest("section").querySelector(".hint-s").textContent);
   check(!/60%|Lv 1 again|start again/i.test(hint), "the trade-in / reset text is gone from the hint");
 
+  check(await page.evaluate(() => !document.querySelector('#ships [data-act="ship"][data-id="sloop"]')), "the free sloop is not for sale");
   await page.click('#yard [data-act="yard"][data-k="hull"]'); await page.waitForTimeout(200 * SLOW);   // sloop hull Lv 2
   let s = await snap(page);
   check(s.hull === 2 && s.fleet.length === 0, "sloop hull upgraded to Lv 2, yard has no parked ships");
