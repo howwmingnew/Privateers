@@ -16,10 +16,28 @@ function hud(force) {
   }
 }
 const mini = document.getElementById("mini"), mctx = mini.getContext("2d");
-let miniBase;
+let miniBase, miniKey = "", miniFitQueued = false, miniWantPx = 0;
+// One chart unit u = a pixel of the original 224-px chart: marks scale with the chart, times the icon-size setting.
+const miniUnit = M => M / 224 * SETTINGS.markPct / 100;
+// Give the chart canvas a drawing size to match its width on screen (device pixels, so it stays sharp on HiDPI) and redraw it.
+// Called by js/options.js whenever the screen or a size slider changes; many calls in a frame make one redraw.
+function fitMini(screenPx) {
+  miniWantPx = screenPx;
+  if (miniFitQueued) return;
+  miniFitQueued = true;
+  requestAnimationFrame(() => {
+    miniFitQueued = false;
+    const M = miniCanvasPx(miniWantPx, window.devicePixelRatio || 1), key = M + "/" + SETTINGS.markPct;
+    if (key === miniKey) return;
+    miniKey = key;
+    if (mini.width !== M) mini.width = mini.height = M;
+    if (typeof S !== "undefined" && S && typeof player !== "undefined" && player) { buildMiniBase(); drawMini(); }   // not before the scene exists
+  });
+}
+applyMiniSize();   // js/options.js ran first and found no fitMini yet
 // The chart covers the whole square map (the Maelstrom fills the corners). Sizes scale from the original 224-px chart.
 function buildMiniBase() {
-  const M = mini.width, k = M / W, u = M / 224;
+  const M = mini.width, k = M / W, u = miniUnit(M);
   miniBase = document.createElement("canvas"); miniBase.width = miniBase.height = M;
   const c = miniBase.getContext("2d");
   drawSeaChart(c, M);   // tinted seas and the real level rings (js/world-seas.js)
@@ -28,7 +46,7 @@ function buildMiniBase() {
   miniHarbor(c, PORT.x * k, PORT.y * k, u);   // marks: js/mini-marks.js
 }
 function drawMini() {
-  const M = mini.width, k = M / W, u = M / 224;
+  const M = mini.width, k = M / W, u = miniUnit(M);
   mctx.save();
   if (typeof chartLite === "function" && chartLite()) {   // first voyage: harbor, player, the gold-ringed mark, wrecks (js/onboard.js)
     mctx.drawImage(miniLiteBase(), 0, 0);

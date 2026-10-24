@@ -381,15 +381,15 @@ for (const dpr of [1, 2]) {
   await page.waitForTimeout(200 * SLOW);
   ok("legacy save with progress: Continue is primary, no tutorial", lg.done && lg.cont && lg.smoke === "tContinue" && await ev(page, () => !tut.active), lg);
   // New game confirm keeps settings
-  await ev(page, () => saveSettings({ textScale: 1.15 }));
+  await ev(page, () => saveSettings({ uiPct: 115 }));
   await page.keyboard.press("Escape"); await page.click("#pQuit");
   await page.click("#tNew");
   const cf = await ev(page, () => ({ vis: !document.getElementById("tConfirm").hidden, focus: document.activeElement.dataset.menu }));
   await page.click('[data-menu="new-no"]');
   const kept = await ev(page, () => save.gold);
   await page.click("#tNew"); await page.click('[data-menu="new-yes"]');
-  const ng = await ev(page, () => ({ gold: save.gold, sunk: save.sunk, docked, ts: JSON.parse(localStorage.getItem("privateers-settings")).textScale }));
-  ok("New game with a save asks first (Cancel focused, Cancel keeps it), then wipes progress but not settings and sails out", cf.vis && cf.focus === "new-no" && kept === 300 && ng.gold === 0 && ng.sunk === 0 && !ng.docked && ng.ts === 1.15, { cf, ng });
+  const ng = await ev(page, () => ({ gold: save.gold, sunk: save.sunk, docked, ts: JSON.parse(localStorage.getItem("privateers-settings")).uiPct }));
+  ok("New game with a save asks first (Cancel focused, Cancel keeps it), then wipes progress but not settings and sails out", cf.vis && cf.focus === "new-no" && kept === 300 && ng.gold === 0 && ng.sunk === 0 && !ng.docked && ng.ts === 115, { cf, ng });
   await ctx.close();
 }
 
@@ -408,17 +408,17 @@ for (const dpr of [1, 2]) {
     await page.screenshot({ path: join(out, "d-settings-audio-en.png") });
   }
   await page.click('[data-set="shake"][data-v="off"]');
-  await page.click('[data-set="ts"][data-v="1.3"]');
-  await page.click('[data-set="mini"][data-v="1.25"]');
+  await page.fill('[data-scale="uiPct"]', "130");
+  await page.fill('[data-scale="miniPct"]', "125");
   await page.click('[data-set="lang"][data-v="zh"]');
   await page.screenshot({ path: join(out, "d-settings-zh.png") });
   await page.reload({ waitUntil: "load" }); await booted(page);
-  const s = await ev(page, () => ({ shake: SETTINGS.shake, ts: SETTINGS.textScale, css: getComputedStyle(document.documentElement).getPropertyValue("--ts").trim(), lang, html: document.documentElement.lang,
-    font: parseFloat(getComputedStyle(document.querySelector(".mbtn")).fontSize), mini: SETTINGS.miniScale,
-    miniCss: getComputedStyle(document.documentElement).getPropertyValue("--mini").trim(), miniLbl: document.querySelector('[data-set="mini"][data-v="1.25"]').textContent }));
+  const s = await ev(page, () => ({ shake: SETTINGS.shake, ts: SETTINGS.uiPct, css: getComputedStyle(document.documentElement).getPropertyValue("--ts").trim(), lang, html: document.documentElement.lang,
+    font: parseFloat(getComputedStyle(document.querySelector(".mbtn")).fontSize), mini: SETTINGS.miniPct,
+    miniCss: getComputedStyle(document.documentElement).getPropertyValue("--mini-w").trim(), miniLbl: document.querySelector(".srow [data-i18n=set_mini]").textContent }));
   await ev(page, () => camShake(200, 0.01));
-  ok("settings persist across reload (shake off, text 130%, zh) and text size scales the UI", audioHidden && s.shake === false && s.ts === 1.3 && s.css === "1.3" && s.lang === "zh" && s.html === "zh-Hant" && Math.abs(s.font - 22 * 1.3) < 0.6, s);
-  ok("settings: chart size Large persists (--mini 1.25) and its label is translated", s.mini === 1.25 && s.miniCss === "1.25" && s.miniLbl === "大", s);
+  ok("settings persist across reload (shake off, text 130%, zh) and text size scales the UI", audioHidden && s.shake === false && s.ts === 130 && s.css === "1.3" && s.lang === "zh" && s.html === "zh-Hant" && Math.abs(s.font - 22 * 1.3) < 0.6, s);
+  ok("settings: chart size 125% persists (--mini-w px) and its label is translated", s.mini === 125 && /^[\d.]+px$/.test(s.miniCss) && s.miniLbl === "海圖大小", s);
   ok("screen shake off is honoured", await ev(page, () => !S.cameras.main.shakeEffect.isRunning));
   await page.screenshot({ path: join(out, "d-title-zh-130.png") });
   await page.click("#title [data-menu=settings]");
@@ -427,8 +427,8 @@ for (const dpr of [1, 2]) {
   const armed = await ev(page, () => ({ t: document.getElementById("setReset").textContent, g: save.gold }));
   await page.waitForTimeout(500 * SLOW);
   await page.click("#setReset");
-  const rs = await ev(page, () => ({ gold: save.gold, titleOpen, panel: !document.getElementById("p-settings").hidden, ts: SETTINGS.textScale }));
-  ok("Reset progress: first press arms, second wipes and returns to the title, settings kept", armed.g === 999 && /再按一次/.test(armed.t) && rs.gold === 0 && rs.titleOpen && !rs.panel && rs.ts === 1.3, { armed, rs });
+  const rs = await ev(page, () => ({ gold: save.gold, titleOpen, panel: !document.getElementById("p-settings").hidden, ts: SETTINGS.uiPct }));
+  ok("Reset progress: first press arms, second wipes and returns to the title, settings kept", armed.g === 999 && /再按一次/.test(armed.t) && rs.gold === 0 && rs.titleOpen && !rs.panel && rs.ts === 130, { armed, rs });
   await ctx.close();
 }
 

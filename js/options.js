@@ -3,27 +3,37 @@
 // Values live in js/settings.js (SETTINGS / saveSettings); volume belongs to Snd, which stores its own fields.
 Object.assign(STR.en, {
   set_title: "Settings", set_audio: "Sound", set_sound: "All sound", set_master: "Master volume", set_music: "Music", set_sfx: "Sound effects", set_ambient: "Ambience",
-  set_game: "Game", set_lang: "Language", set_shake: "Screen shake", set_on: "On", set_off: "Off", set_text: "Text size",
-  set_mini: "Chart size", set_small: "Small", set_medium: "Medium", set_large: "Large",
+  set_game: "Game", set_lang: "Language", set_shake: "Screen shake", set_on: "On", set_off: "Off", set_ui: "UI size", set_marks: "Chart icon size", set_scaleReset: "Reset sizes", set_scaleNote: "Drag a slider and the panel fades, so you can see the change behind it.",
+  set_mini: "Chart size",
   set_full: "Fullscreen", set_fullOn: "Leave fullscreen", set_fullOff: "Go fullscreen", set_fullFail: "This browser blocked fullscreen.",
   set_progress: "Progress", set_resetNote: "Wipes your gold, ships, upgrades and wrecks. Settings are kept.",
   set_resetBusy: "Wait until you are back in harbor", m_wiped: "Progress wiped. A fresh start awaits.",
 });
 Object.assign(STR.zh, {
   set_title: "設定", set_audio: "聲音", set_sound: "所有聲音", set_master: "主音量", set_music: "音樂", set_sfx: "效果音", set_ambient: "環境音",
-  set_game: "遊戲", set_lang: "語言", set_shake: "畫面震動", set_on: "開", set_off: "關", set_text: "文字大小",
-  set_mini: "海圖大小", set_small: "小", set_medium: "中", set_large: "大",
+  set_game: "遊戲", set_lang: "語言", set_shake: "畫面震動", set_on: "開", set_off: "關", set_ui: "介面大小", set_marks: "海圖圖示大小", set_scaleReset: "恢復預設", set_scaleNote: "拖動滑桿時面板會淡出，讓你看到背後的變化。",
+  set_mini: "海圖大小",
   set_full: "全螢幕", set_fullOn: "離開全螢幕", set_fullOff: "進入全螢幕", set_fullFail: "瀏覽器擋下了全螢幕。",
   set_progress: "進度", set_resetNote: "會清除金幣、船隻、升級和殘骸，設定會保留。",
   set_resetBusy: "等回到港口再重置", m_wiped: "進度已清除，重新出發吧。",
 });
 
-// Text size scales every HUD, ledger and menu font through one custom property (see css/style.css).
-function applyTextScale() { document.documentElement.style.setProperty("--ts", String(SETTINGS.textScale)); }
-applyTextScale();
-// The chart's size is one custom property too (css/campaign.css); the toast below it follows on narrow screens.
-function applyMiniScale() { document.documentElement.style.setProperty("--mini", String(SETTINGS.miniScale)); }
-applyMiniScale();
+// UI size scales every HUD, ledger and menu font through one custom property (css/style.css); world labels read uiScale().
+function applyUiScale() { document.documentElement.style.setProperty("--ts", String(uiScale())); }
+applyUiScale();
+// The chart's width is a custom property (css/campaign.css), worked out from the screen, so a resize redoes it; the toast
+// and the achievement card below the chart follow it. Big screens zoom the whole HUD box (css/style.css, 1.25 or 1.5), so
+// the property is the target on screen divided by that zoom. fitMini (js/hud.js, loaded later and calling this once)
+// redraws the canvas at the target size. The icon slider only changes how the marks are drawn, so it takes the same path.
+function applyMiniSize() {
+  const w = miniSizePx(innerWidth, innerHeight, SETTINGS.miniPct), hud = document.getElementById("hud");
+  const zoom = (hud && parseFloat(getComputedStyle(hud).zoom)) || 1;
+  document.documentElement.style.setProperty("--mini-w", w / zoom + "px");
+  if (typeof fitMini === "function") fitMini(w);
+}
+applyMiniSize();
+addEventListener("resize", applyMiniSize);
+const SCALE_APPLY = { uiPct: applyUiScale, miniPct: applyMiniSize, markPct: applyMiniSize };
 
 const setEl = id => document.getElementById(id);
 let resetArmedAt = 0, resetTimer;
@@ -37,7 +47,9 @@ function renderSettings() {
   });
   const seg = (name, val) => document.querySelectorAll(`[data-set="${name}"]`).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === val)));
   if (audio && typeof Snd.isMuted === "function") seg("sound", Snd.isMuted() ? "off" : "on");
-  seg("lang", lang); seg("shake", SETTINGS.shake ? "on" : "off"); seg("ts", String(SETTINGS.textScale)); seg("mini", String(SETTINGS.miniScale));
+  seg("lang", lang); seg("shake", SETTINGS.shake ? "on" : "off");
+  document.querySelectorAll("[data-scale]").forEach(inp => { inp.value = SETTINGS[inp.dataset.scale]; inp.nextElementSibling.textContent = inp.value + "%"; });
+  if (!scaleDrag) setPreview(false);
   setEl("setFullRow").hidden = !document.fullscreenEnabled;
   setEl("setFull").textContent = t(document.fullscreenElement ? "set_fullOn" : "set_fullOff");
   // a sinking ship is about to dock on a timer, so a wipe now would race it
@@ -48,7 +60,30 @@ function renderSettings() {
 document.addEventListener("langchange", () => { if (!setEl("p-settings").hidden) renderSettings(); });
 document.addEventListener("fullscreenchange", () => { if (!setEl("p-settings").hidden) renderSettings(); });
 
+// Live preview: while a size slider is held (or just nudged with the keys) the panel fades out so the HUD shows through.
+// On the title the HUD is hidden, so the body class brings it back for the duration (css/menu.css).
+let scaleDrag = false, previewTimer;
+function setPreview(on) {
+  clearTimeout(previewTimer);
+  setEl("p-settings").classList.toggle("previewing", on);
+  document.body.classList.toggle("scale-preview", on);
+}
+setEl("p-settings").addEventListener("pointerdown", e => { if (e.target.closest("[data-scale]")) { scaleDrag = true; setPreview(true); } });
+for (const ev of ["pointerup", "pointercancel"]) addEventListener(ev, () => {
+  if (!scaleDrag) return;
+  scaleDrag = false; clearTimeout(previewTimer); previewTimer = setTimeout(() => setPreview(false), 250);
+});
+function scaleInput(inp) {
+  const key = inp.dataset.scale, v = scalePct(Number(inp.value));
+  if (v === null || !(key in SCALE_APPLY)) return;
+  saveSettings({ [key]: v }); SCALE_APPLY[key]();
+  inp.nextElementSibling.textContent = v + "%";
+  setPreview(true);
+  if (!scaleDrag) previewTimer = setTimeout(() => setPreview(false), 800);   // keys and the gamepad send no release
+}
 setEl("p-settings").addEventListener("input", e => {
+  const sc = e.target.closest("[data-scale]");
+  if (sc) return scaleInput(sc);
   const inp = e.target.closest("[data-vol]");
   if (!inp || typeof Snd === "undefined") return;
   Snd.setVolume(inp.dataset.vol, inp.value / 100);
@@ -65,8 +100,7 @@ setEl("p-settings").addEventListener("click", e => {
       if (lang !== v) { lang = v; try { localStorage.setItem(LANG_KEY, lang); } catch (err) {} applyLang(); }
       break;
     case "shake": saveSettings({ shake: v === "on" }); break;
-    case "ts": saveSettings({ textScale: Number(v) }); applyTextScale(); break;
-    case "mini": saveSettings({ miniScale: Number(v) }); applyMiniScale(); break;
+    case "scale-reset": saveSettings({ uiPct: SCALE_DEFAULT, miniPct: SCALE_DEFAULT, markPct: SCALE_DEFAULT }); applyUiScale(); applyMiniSize(); break;
     case "full": toggleFullscreen(); break;
     case "reset": pressReset(); return;
   }

@@ -15,6 +15,6 @@ input, textarea, [contenteditable="true"] { -webkit-user-select: text; user-sele
 /* Portrait phones: the hint under the ship wraps to two or three lines, so the achievement card goes up under the chart
    and the one-line toast there (css/style.css #toast), instead of sitting on the hint. */
 @media (orientation: portrait) and (max-width: 600px) {
-  #achToast { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + 146px + min(124px * var(--mini, 1), 44vw)); left: 50%; transform: translate(-50%, -12px); }
+  #achToast { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + 96px + 50px * var(--ts) + var(--mini-w, 124px)); left: 50%; transform: translate(-50%, -12px); }
   #achToast.on { transform: translate(-50%, 0); }
 }

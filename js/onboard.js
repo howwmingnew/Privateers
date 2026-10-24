@@ -53,10 +53,10 @@ const chartLite = () => !save.tutorialDone && typeof tut !== "undefined" && tut.
 let miniLiteCv = null;
 // Plain sea, the safe water and the harbor: no islands (dozens of dots at this scale), ring lines, labels or forts.
 function miniLiteBase() {
-  const M = mini.width;
-  if (miniLiteCv && miniLiteCv.width === M) return miniLiteCv;
-  const k = M / W, u = M / 224, c = (miniLiteCv = document.createElement("canvas")).getContext("2d");
-  miniLiteCv.width = miniLiteCv.height = M;
+  const M = mini.width, key = M + "/" + SETTINGS.markPct;
+  if (miniLiteCv && miniLiteCv.key === key) return miniLiteCv;
+  const k = M / W, u = miniUnit(M), c = (miniLiteCv = document.createElement("canvas")).getContext("2d");
+  miniLiteCv.width = miniLiteCv.height = M; miniLiteCv.key = key;
   c.fillStyle = SEAS[0].tint; c.fillRect(0, 0, M, M);
   c.fillStyle = "#3a9aab"; c.beginPath(); c.arc(PORT.x * k, PORT.y * k, SAFE_R * k, 0, TAU); c.fill();
   miniHarbor(c, PORT.x * k, PORT.y * k, u);

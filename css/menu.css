@@ -3,6 +3,7 @@
 
 /* ---- screen states: the title owns the whole screen, pause hides the transient sea hints ---- */
 body.on-title #hud, body.on-title #hint, body.on-title #joy, body.on-title #coach { display: none !important; }
+body.on-title.scale-preview #hud { display: flex !important; }   /* size sliders: the HUD shows behind the settings panel */
 body.on-title #toast { z-index: 25; top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); }
 body.on-pause #hint, body.on-pause #joy { display: none !important; }
 #port .sheet { scroll-padding: 16px 0 96px; }   /* focus moves never land behind the sticky footer */
@@ -74,6 +75,11 @@ label.srow { grid-template-columns: minmax(0, 1fr) minmax(120px, 46%) 3.2em; }
 .seg button + button { border-left: 1.5px solid var(--ink); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--parch); }
 #setReset { justify-self: start; }
+/* While a size slider is held the panel fades out (it keeps its place, so the drag carries on) to show the HUD behind it. */
+#p-settings { transition: background .15s; }
+#p-settings .panel { transition: opacity .15s; }
+#p-settings.previewing { background: transparent; }
+#p-settings.previewing .panel { opacity: .2; }
 
 /* how to play */
 .ht { font-size: calc(15px * var(--ts)); line-height: 1.5; }
