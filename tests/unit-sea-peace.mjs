@@ -34,6 +34,17 @@ test("sea ahead: warns once within the edge distance, for a dangerous sea only",
   assert.equal(g.run("seaAheadDue(100, true, true)"), false, "once per approach");
 });
 
+test("#105: until the first bounty the Navy spares the captain anywhere; pirates and boss ships are not spared", () => {
+  const g = boot(["js/novice.js"]);
+  g.run("spare = { bounty: false, shallows: false, navy: true, cap: 2 }");
+  assert.equal(g.run("noviceSpare({ faction: 'navy', L: 8 })"), true, "a Lv 8 Navy ship leaves a newcomer alone, in any sea");
+  assert.equal(g.run("noviceSpare({ faction: 'pirate', L: 8 })"), false, "pirates still attack");
+  assert.equal(g.run("noviceSpare({ faction: 'navy', L: 8, boss: 'hale' })"), false);
+  assert.equal(g.run("noviceSpare({ faction: 'navy', L: 8, fixed: true })"), false, "a shore battery is not a patrol");
+  g.run("spare = { bounty: false, shallows: false, navy: false, cap: 2 }");
+  assert.equal(g.run("noviceSpare({ faction: 'navy', L: 8 })"), false, "after the first bounty the Navy hunts as usual");
+});
+
 test("noviceSpare: bosses and escorts are never spared; ordinary ships follow the zone", () => {
   const g = boot(["js/novice.js"]);
   g.run("spare = { bounty: true, shallows: false, cap: 2 }");
