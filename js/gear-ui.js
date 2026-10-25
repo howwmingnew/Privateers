@@ -7,7 +7,7 @@
 // gun deck above: guns keep their own picking, and their cards use gearExtraHtml() below for affixes, re-roll, lock and break down.
 Object.assign(STR.en, {
   gEmpty: "Empty", gGuns: "{n} mounted", gSlotAria: "{part}: {item}", gBag: "Spares {n} / {max} · Fittings {m}", gBagEmpty: "No spare parts yet. Sunk ships may drop gear.",
-  gEquip: "Wear", gUnequip: "Take off", gLock: "Lock", gUnlock: "Unlock", gLocked: "Locked", gScrap: "Break down · +{n} fittings", gScrapTip: "Scrap this item into fittings. Fittings pay for re-rolling an affix (a bonus line on gear). It cannot be undone.",
+  gEquip: "Wear", gEquipTo: "Wear on {part}", gWear: "After wearing", gUnequip: "Take off", gLock: "Lock", gUnlock: "Unlock", gLocked: "Locked", gScrap: "Break down · +{n} fittings", gScrapTip: "Scrap this item into fittings. Fittings pay for re-rolling an affix (a bonus line on gear). It cannot be undone.",
   gNeedTier: "Needs a hull of tier {n} or better", gBagFull: "The bag is full ({n}): break something down first.", gNeedMats: "Needs {m} fittings and {g} gold",
   gReroll: "Re-roll · {m} fittings + {g} gold", gLvLine: "Lv {n}", gBase: "Base: ",
   gLockHint: "Lock keeps this from being broken down by mistake, batch buttons included.", gFitHint: "Fittings come from breaking down spare gear or guns. Re-rolling an affix (a bonus line on the item) spends them.",
@@ -19,7 +19,7 @@ Object.assign(STR.en, {
 });
 Object.assign(STR.zh, {
   gEmpty: "空", gGuns: "已裝 {n} 門", gSlotAria: "{part}：{item}", gBag: "備用 {n} / {max} · 零件 {m}", gBagEmpty: "還沒有備用裝備。擊沉的船可能掉裝備。",
-  gEquip: "穿上", gUnequip: "卸下", gLock: "鎖定", gUnlock: "解鎖", gLocked: "已鎖定", gScrap: "拆解 · +{n} 零件", gScrapTip: "把這件拆成零件。零件用來重洗詞綴（裝備上的加成）。拆了就回不來。",
+  gEquip: "穿上", gEquipTo: "穿上到「{part}」", gWear: "穿上後的數值", gUnequip: "卸下", gLock: "鎖定", gUnlock: "解鎖", gLocked: "已鎖定", gScrap: "拆解 · +{n} 零件", gScrapTip: "把這件拆成零件。零件用來重洗詞綴（裝備上的加成）。拆了就回不來。",
   gNeedTier: "需要船級 {n} 以上的船", gBagFull: "背包已滿（{n}）：先拆解一些。", gNeedMats: "需要 {m} 零件與 {g} 金幣",
   gReroll: "重洗 · {m} 零件 + {g} 金幣", gLvLine: "Lv {n}", gBase: "基礎：",
   gLockHint: "鎖定後這件不會被誤拆解，批次拆解也會跳過它。", gFitHint: "零件來自拆解用不到的備用裝備或火砲，重洗詞綴（裝備上的加成）時會用掉。",
@@ -54,6 +54,11 @@ function gunRef(s, gun) {
   return (same.length ? same : mounted).slice().sort((a, b) => gunEff(a).dmg - gunEff(b).dmg)[0] || null;
 }
 const arrow = d => (d > 0 ? `<b class="up" aria-hidden="true">▲</b> ` : d < 0 ? `<b class="dn" aria-hidden="true">▼</b> ` : "");
+// "After wearing": the ship's own numbers, before and after (the % lines under it say where they come from).
+function wearHtml(it) {
+  const rows = gearWearStats(save.gear.worn, it, { hull: yardVal("hull"), sails: yardVal("sails"), hold: yardVal("hold") });
+  return rows.length ? `<div class="cmp wear"><div class="lbl">${t("gWear")}</div><ul>${rows.map(r => `<li>${arrow(r.next > r.now ? 1 : -1)}${YARD[r.k].show(r.now)} → <b>${YARD[r.k].show(r.next)}</b></li>`).join("")}</ul></div>` : "";
+}
 function compareHtml(rows, head, legend) {
   const li = rows.map(r => `<li>${arrow(r.dir)}${r.now > 0 ? t("ga_" + r.k, { n: gearPct(r.now) }) + ` <small>(${t("gCmpWas", { n: gearPct(r.was) })})</small>` : t("gCmpLost", { text: t("ga_" + r.k, { n: gearPct(r.was) }) })}</li>`);
   if (legend) li.push(`<li>${arrow(legend)}${t("gCmpLeg")}</li>`);
@@ -84,6 +89,7 @@ function gearExtraHtml(it, w, at = "") {   // at: extra attributes on its button
 
 // ---------- actions: each returns the sound to play, or null when nothing happened ----------
 const gearSnap = () => ({ gear: save.gear, shipId: save.shipId });
+const gearUp5Key = () => `gpup5:${gearSel.w}${gearSel.i ?? gearSel.p ?? ""}`;   // the armed state of the picked piece's "upgrade N levels" button
 const itemAt = () => (gearSel ? gearAt(save, gearSel) : null);
 function gearAct(act, d) {
   const cand = d.side !== undefined && (d.w || "gear") === "gun";   // a button of the ledger's candidate card: the gun it names, not the picked port's
@@ -132,6 +138,7 @@ function gearAct(act, d) {
   }
   if (act === "greroll") { const next = gearRerollAt(save, l, +d.k); if (!next) return null; save = next; return "upgrade"; }
   if (act === "gpup" || act === "gpup5") {
+    if (act === "gpup5" && !confirmed(`gpup5:${l.w}${l.i ?? l.p ?? ""}`)) return null;   // a big spend: the first tap arms the button (js/escort-ui.js twoTap)
     const next = gearUpAt(save, l, act === "gpup5" ? GUN_UP_BATCH : 1);
     if (!next) return null;
     save = next; gearNote = null; return "upgrade";
@@ -157,9 +164,9 @@ function cardHtml() {
   const spare = gearSel.w === "bag", tier = gearTierOf(save.ship), x = gearExtraHtml(it, "gear"), ok = gearWearable(it, tier);
   const max = gearLv(it) >= GEAR_LV_MAX, cost = gearUpCost(it), short = cost - save.gold, plan = gearUpPlan(it, save.gold), worn = save.gear.worn[it.p];
   const up = max ? `<button class="btn max" type="button" disabled>${t("max")}</button>` : `<button class="btn" type="button" data-act="gpup" ${short > 0 ? "disabled" : ""}>${upgradeLabel(gearLv(it) + 1, cost, short, t("gainFx", { p: pctUp(gearLvMul(it), gearLvMul({ ...it, lv: gearLv(it) + 1 })) }))}</button>`;
-  const up5 = plan.n >= 2 ? `<button class="btn" type="button" data-act="gpup5" ${plan.short > 0 ? "disabled" : ""}>${t(plan.short > 0 ? "upNShort" : "upN", { n: plan.n, cost: fmt(plan.cost), d: fmt(plan.short) })}${gainLine(t("gainFx", { p: pctUp(gearLvMul(it), gearLvMul({ ...it, lv: gearLv(it) + plan.n })) }))}</button>` : "";
-  const wear = spare ? `<button class="btn" type="button" data-act="gequip" data-w="gear" ${ok ? "" : "disabled"}>${t("gEquip")}</button>` : `<button class="btn ghost" type="button" data-act="gunequip" data-w="gear">${t("gUnequip")}</button>`;
-  const cmp = spare ? compareHtml(gearCompare(save.gear.worn, it), worn ? t("gCmp") : t("gCmpNone"), it.lg && !(worn && worn.lg) ? 1 : !it.lg && worn && worn.lg ? -1 : 0) : "";
+  const up5 = plan.n >= 2 ? `<button class="btn" type="button" data-act="gpup5" ${plan.short > 0 ? "disabled" : ""}${armedNow(gearUp5Key()) ? armAttrs() : ""}>${t(plan.short > 0 ? "upNShort" : armedNow(gearUp5Key()) ? "upNArm" : "upN", { n: plan.n, cost: fmt(plan.cost), d: fmt(plan.short) })}${gainLine(t("gainFx", { p: pctUp(gearLvMul(it), gearLvMul({ ...it, lv: gearLv(it) + plan.n })) }))}</button>` : "";
+  const wear = spare ? `<button class="btn" type="button" data-act="gequip" data-w="gear" ${ok ? "" : "disabled"}>${t("gEquipTo", { part: t("gp_" + it.p) })}</button>` : `<button class="btn ghost" type="button" data-act="gunequip" data-w="gear">${t("gUnequip")}</button>`;
+  const cmp = spare ? wearHtml(it) + compareHtml(gearCompare(save.gear.worn, it), worn ? t("gCmp") : t("gCmpNone"), it.lg && !(worn && worn.lg) ? 1 : !it.lg && worn && worn.lg ? -1 : 0) : "";
   return `<div class="gcard gear${rarClass(it)}"><div class="nm">${gearTitle(it)}<small>${rarLine(it)}</small></div>
     <div class="gacts">${wear}${up}${up5}${x.lockBtn}${spare ? x.scrapBtn : ""}</div>${x.list}${cmp}
     <p class="hint-s">${!ok ? t("gNeedTier", { n: gearIl(it) }) + ". " : ""}${t(spare ? "gPickHint" : "gWornHint")}</p></div>`;

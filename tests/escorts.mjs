@@ -76,12 +76,12 @@ check(await ev(() => save.escortGift === "given" && save.escorts.length === 1 &&
 check(await ev(() => { const before = JSON.stringify(save.escorts); claimEscortGift(); return before === JSON.stringify(save.escorts) && save.escorts.length === 1; }), "claiming again does not give a second one");
 await boot(saveWith({ campaign: { bounty: 1 }, escortGift: "", escorts: [], gold: 100 }));
 check(await ev(() => save.escortGift === "given" && save.escorts.length === 1 && readStored("privateers-save-v2") && JSON.parse(localStorage.getItem("privateers-save-v2")).escortGift === "given"), "an old save past bounty 1 with no escort gets it once on load, and it is saved");
-check(await ev(() => /first escort/.test(document.querySelector("#wanted .story.gift")?.innerText || "")), "the ledger shows the next-step card");
-await page.click('#wanted [data-camp="gift"]');
+check(await ev(() => /first escort/.test(document.querySelector("#giftCard")?.innerText || "")), "the ledger shows the next-step card");
+await page.click('#giftCard [data-act="escGift"]');
 check(await ev(() => document.querySelector('#tabs .tab.sel')?.dataset.i === "1" && /Estimated fire: about [\d.]+ damage\/s, \d+% of the flagship/.test(document.getElementById("shead").innerText)), "its button opens Escort 1, which shows the estimated output against the flagship");
 await page.screenshot({ path: `${out}/gift.png` });
 await boot(saveWith({ campaign: { bounty: 1 }, escortGift: "", escorts: [], gold: 100 }), "zh");
-check(await ev(() => /第一艘隨從已在船位 1 就位/.test(document.querySelector("#wanted .story.gift")?.innerText || "")), "the card is in Chinese too");
+check(await ev(() => /第一艘隨從已在船位 1 就位/.test(document.querySelector("#giftCard")?.innerText || "")), "the card is in Chinese too");
 await boot(saveWith({ campaign: { bounty: 1 }, escortGift: "had", escorts: [], gold: 100 }));
 await page.click('#tabs [data-act="tab"][data-i="1"]');
 check(/Slot 200 gold, plus a ship/.test(await ev(() => document.getElementById("stage").innerText)), "an unbought slot spells out the total (slot, a ship, guns)");

@@ -3,8 +3,8 @@
 // Values live in js/settings.js (SETTINGS / saveSettings); volume belongs to Snd, which stores its own fields.
 Object.assign(STR.en, {
   set_title: "Settings", set_audio: "Sound", set_sound: "All sound", set_master: "Master volume", set_music: "Music", set_sfx: "Sound effects", set_ambient: "Ambience",
-  set_game: "Game", set_homeArrow: "Arrow to Safe Harbor when far away", set_lang: "Language", set_shake: "Screen shake", set_auto: "Hold Space to auto-fire (red aim lines only)", set_on: "On", set_off: "Off", set_ui: "UI size", set_marks: "Chart icon size", set_scaleReset: "Reset sizes", set_scaleNote: "Drag a slider and the panel fades, so you can see the change behind it.",
-  set_mini: "Chart size",
+  set_game: "Game", set_homeArrow: "Arrow to Safe Harbor when far away", set_lang: "Language", set_shake: "Screen shake", set_auto: "Hold Space to auto-fire (red aim lines only)", set_on: "On", set_off: "Off", set_ui: "UI size", set_marks: "Map icon size", set_scaleReset: "Reset sizes", set_scaleNote: "Drag a slider and the panel fades, so you can see the change behind it.",
+  set_mini: "Map size",
   set_fxq: "Effects quality", set_fxqAuto: "Auto", set_fxqLow: "Low", set_fxqMid: "Medium", set_fxqHigh: "High", set_fxqNote: "Explosions, smoke, fire and sea disasters. Auto picks by your device and steps down by itself if the game runs slowly. Warnings and fog sight are the same at every level.", set_wxfx: "Weather effects", set_wxfxNote: "Rain, lightning, sky tint and weather sounds. The wind and storm still push ships when this is off, so every sea plays the same.",
   set_full: "Fullscreen", set_fullOn: "Leave fullscreen", set_fullOff: "Go fullscreen", set_fullFail: "This browser blocked fullscreen.",
   set_progress: "Progress", set_resetNote: "Wipes your gold, ships, upgrades and wrecks. Settings are kept.",

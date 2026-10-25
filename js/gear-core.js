@@ -78,6 +78,13 @@ function gearTotals(worn) {
   }
   return Object.fromEntries(Object.entries(by).map(([k, v]) => [k, round3(gearStack(v, GEAR_CAP[k]))]));
 }
+// Pure: what wearing `it` makes of the ship's hull, sails and hold, as [{ k, now, next }] for the ones that change. `base` is { hull, sails, hold }, the yard values
+// before gear; the rounding is what applyPlayerStats does (js/ships.js), so the preview is the number the ship will really have.
+const GEAR_WEAR_KEY = { hull: "hp", sails: "spd", hold: "cargo" };
+function gearWearStats(worn, it, base) {
+  const before = gearTotals(worn), after = gearTotals({ ...worn, [it.p]: it }), val = (k, tot) => { const v = base[k] * (1 + (tot[GEAR_WEAR_KEY[k]] || 0)); return k === "sails" ? v : Math.round(v); };
+  return Object.keys(GEAR_WEAR_KEY).map(k => ({ k, now: val(k, before), next: val(k, after) })).filter(r => Math.abs(r.next - r.now) > 0.0001);
+}
 // One gun's own effects: { gdmg, grange, greload, gtype } (0 when it has none).
 function gunMods(gun) {
   const m = { gdmg: 0, grange: 0, greload: 0, gtype: 0 };

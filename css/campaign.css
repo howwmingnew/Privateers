@@ -78,8 +78,9 @@
 
 /* Wanted poster (a section of the harbor ledger) */
 #wanted { display: grid; gap: 12px; }
-#wanted .story { margin: 0; font-size: 16px; line-height: 1.45; padding: 10px 12px; border-left: 3px solid var(--brass); background: rgba(192,143,46,.12); }
-#wanted .story em { font-style: normal; font-weight: 700; color: #8a5d0c; }
+#wanted .story, #giftCard { margin: 0; font-size: 16px; line-height: 1.45; padding: 10px 12px; border-left: 3px solid var(--brass); background: rgba(192,143,46,.12); }
+#giftCard { margin-bottom: 10px; }
+#wanted .story em, #giftCard em { font-style: normal; font-weight: 700; color: #8a5d0c; }
 #wanted .hint-s { margin: 0; }
 .poster { position: relative; background: #ead9ad; border: 1px solid rgba(42,29,16,.35); border-radius: 2px; padding: 16px 18px 14px; transform: rotate(-.5deg);
   box-shadow: 0 3px 10px rgba(60,40,10,.25), inset 0 0 40px rgba(150,110,50,.28); }
