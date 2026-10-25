@@ -98,9 +98,8 @@ onHook("frame", () => {
     e.alive = false; e.spr.destroy(); e.badge?.destroy(); enemies.splice(i, 1);
   }
 });
-// The chart: a dashed ring round each runner.
+// The chart: a thin pale ring round each runner (solid: the chart draws no dashed line, tests/phase1b.mjs).
 onHook("mini", (c, k, u) => {
-  c.strokeStyle = "rgba(246,241,227,.85)"; c.lineWidth = 1.2 * u; c.setLineDash([2 * u, 2 * u]);
+  c.strokeStyle = "rgba(246,241,227,.85)"; c.lineWidth = 1.2 * u;
   for (const e of enemies) if (e.alive && e.flee) { c.beginPath(); c.arc(e.x * k, e.y * k, 7.5 * u, 0, TAU); c.stroke(); }
-  c.setLineDash([]);
 });
