@@ -22,7 +22,7 @@ function onHit(s, dmg, burn, src, ball) {
   }
   if (typeof powderStrike === "function") dmg = powderStrike(s, dmg, ball, src);   // a rake may blow the magazine (js/powder.js)
   if (typeof gxHurt === "function") dmg = gxHurt(s, dmg, src, ball);   // armor, long-range aim, marks, a legendary's tricks (js/gear-fx.js)
-  if (burn) addBurn(s, burn, src);
+  if (burn) { addBurn(s, burn, src); if (ball && typeof vnSpill === "function") vnSpill(ball.x, ball.y); }   // the oil burning on the water (js/vfx-new.js)
   if (ball && ball.chain) {
     if (!(s.chainT > 0) && seen) floatText(s.x, s.y - 54, t("fChain"), "#d8e4e8", 14);
     s.chainT = ball.chainT || CHAIN_T;   // a gun's own affixes may lengthen it (js/gear-fx.js)

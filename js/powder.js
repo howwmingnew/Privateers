@@ -45,10 +45,8 @@ function powderFx(s) {
   if (!onScreen(s.x, s.y, POWDER_R)) return;
   if (s.boss && typeof magazineBurst === "function") magazineBurst(s);   // a lethal one gets its own at the sink
   const lk = labelScale(), x = s.x, y = s.y;
-  J.burst && J.burst.explode(vfxCap(24), x, y);
-  FX.flame.explode(vfxCap(12), x, y);
-  const flash = S.add.image(x, y, "fx-soft").setDepth(8.9).setBlendMode(Phaser.BlendModes.ADD).setTint(0xffb050).setDisplaySize(POWDER_R * 1.4, POWDER_R * 1.4);
-  S.tweens.add({ targets: flash, scale: flash.scale * 1.6, alpha: 0, duration: 260, ease: "Quad.easeOut", onComplete: () => flash.destroy() });
+  // drawing only: the chain blast itself is magazineBurst's (js/vfx-new.js vnBlast), played when the hull sinks (an ordinary ship always does
+  // from this crit; a surviving boss got its own above). Here: the shock ring, the screen flash and the word. No damage rule is touched.
   const ring = S.add.image(x, y, "fx-ring").setDepth(8.7).setBlendMode(Phaser.BlendModes.ADD).setTint(0xffd08a).setScale(0.2).setAlpha(0.9);
   S.tweens.add({ targets: ring, scale: POWDER_R / (ring.width * 26 / 64), alpha: 0, duration: 420, ease: "Cubic.easeOut", onComplete: () => ring.destroy() });
   screenFlash();

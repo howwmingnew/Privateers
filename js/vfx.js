@@ -17,6 +17,27 @@
 const VFX_LOW = (() => { try { return matchMedia("(pointer: coarse)").matches; } catch (e) { return false; } })();
 let PERF_LOW = false;   // set by js/tech.js while frames run long: thinner smoke, flames, sparks and off-screen wakes
 const vfxCap = n => Math.round(n * (VFX_LOW ? 0.55 : 1));
+// ---------- Effects quality: 0 low, 1 mid, 2 high (settings "fxq"; the table is FXQ in js/config.js) ----------
+// auto = what the device suggests, minus the steps the frame-time watch has taken off; reduced motion caps it at mid. VFX_LOW (a touch screen) stays
+// the old emitters' cap and is the "low" device here. js/vfx-new.js reads fxLevel() for every new effect.
+const FXQ_REDUCED = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } })();
+const FXQ_DEVICE = VFX_LOW ? 0 : ((typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 4) <= 4 ? 0 : ((typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 4) <= 8 ? 1 : 2;
+let fxqDrop = 0, fxqEma = 16.7, fxqSlow = 0, fxqCool = 0, fxqLast = 0;
+function fxLevel() {
+  const q = SETTINGS.fxq;
+  let lv = q === "low" ? 0 : q === "mid" ? 1 : q === "high" ? 2 : Math.max(0, FXQ_DEVICE - fxqDrop);
+  return FXQ_REDUCED ? Math.min(lv, 1) : lv;
+}
+// The frame-time watch (auto only): gap = ms since the last frame. Slow for FXQ_SLOW_S s in a row -> one level down, at most once per FXQ_COOL_S s.
+function fxqTick(gap, nowMs) {
+  if (!(gap > 0 && gap < 100)) return;
+  fxqEma += (gap - fxqEma) * 0.08;
+  const dt = (nowMs - fxqLast) / 1000; fxqLast = nowMs;
+  fxqCool = Math.max(0, fxqCool - dt);
+  if (SETTINGS.fxq !== "auto") { fxqSlow = 0; return; }
+  fxqSlow = fxqEma > FXQ_SLOW_MS ? fxqSlow + dt : 0;
+  if (fxqSlow >= FXQ_SLOW_S && fxqCool <= 0 && FXQ_DEVICE - fxqDrop > 0) { fxqDrop++; fxqSlow = 0; fxqCool = FXQ_COOL_S; }
+}
 const FX = { deg: 0, tint: 0xffffff, sTint: 0xe9e5dc };
 const SINK_TINT = 0x1d4e60;   // the hull fades toward the sea colour, so it goes under rather than into thin air
 const DEBRIS_MAX = 60;
@@ -104,13 +125,14 @@ function vfxShip(s, dt) {
   if (vis && s.maxHp) {   // damage states: grey smoke under half hull, black smoke and flames under a quarter
     const f = s.hp / s.maxHp;
     if (f < 0.5 && (s.smokeT = (s.smokeT || 0) - dt) <= 0) {
-      s.smokeT = (f < 0.25 ? 0.1 : 0.22) * (PERF_LOW ? 2 : 1); FX.tint = f < 0.25 ? 0x1e1a17 : 0x9a958e;
-      const k = rand(-0.35, 0.35) * a.len; FX.dmg.emitParticleAt(s.x + c * k, s.y + sn * k, 1);
+      s.smokeT = (f < 0.25 ? 0.1 : 0.22) * (PERF_LOW ? 2 : 1) * (f < 0.25 && typeof vnSmoke === "function" ? 1.6 : 1); FX.tint = f < 0.25 ? 0x1e1a17 : 0x9a958e;
+      const k = rand(-0.35, 0.35) * a.len;
+      if (!(f < 0.25 && typeof vnSmoke === "function" && vnSmoke(s.x + c * k, s.y + sn * k))) FX.dmg.emitParticleAt(s.x + c * k, s.y + sn * k, 1);   // a burning hull: the new smoke column (js/vfx-new.js)
     }
     if ((f < 0.25 || s.burnT > 0) && (s.flameT = (s.flameT || 0) - dt) <= 0) {
-      s.flameT = (s.burnT > 0 ? 0.04 : 0.06) * (PERF_LOW ? 2 : 1);
+      s.flameT = (s.burnT > 0 ? 0.04 : 0.06) * (PERF_LOW ? 2 : 1) * (typeof vnFlame === "function" ? 2 : 1);
       const k = rand(-0.3, 0.3) * a.len, w = rand(-0.3, 0.3) * a.beam;
-      FX.flame.emitParticleAt(s.x + c * k - sn * w, s.y + sn * k + c * w, 1);
+      if (!(typeof vnFlame === "function" && vnFlame(s.x + c * k - sn * w, s.y + sn * k + c * w))) FX.flame.emitParticleAt(s.x + c * k - sn * w, s.y + sn * k + c * w, 1);   // flame tongues (js/vfx-new.js)
     }
     if (a.smoulder && f >= 0.5 && (s.smokeT = (s.smokeT || 0) - dt) <= 0) { s.smokeT = 0.35; FX.tint = 0x5a524a; FX.dmg.emitParticleAt(s.x + rand(-8, 8), s.y + rand(-5, 5), 1); }
   }
@@ -127,15 +149,16 @@ function vfxMuzzle(x, y, a, lite) {   // lite: one gun of a big broadside, flash
   const c = Math.cos(a), s = Math.sin(a);
   FX.deg = toDeg(a);
   FX.flash.emitParticleAt(x + c * 12, y + s * 12, 1);   // the teardrop's base sits on the muzzle
-  if (lite) { FX.smoke.emitParticleAt(x + c * 10, y + s * 10, 1); return; }
+  if (lite) { if (!(typeof vnMuzzle === "function" && vnMuzzle(x, y, a, true))) FX.smoke.emitParticleAt(x + c * 10, y + s * 10, 1); return; }   // js/vfx-new.js: powder smoke + haze bank
   FX.bloom.emitParticleAt(x + c * 10, y + s * 10, 1);
-  // smoke strung out along the barrel line, the outer puffs dirtier: a plume, not a white disc on the muzzle
-  for (let i = PERF_LOW ? 2 : 0; i < 5; i++) {   // frames running long: the three outer puffs only
-    const d = 4 + i * 6.5 + rand(-2, 2), w = rand(-2.5, 2.5);
-    FX.sTint = i >= 3 ? 0xb3a998 : 0xe9e5dc;
-    FX.smoke.emitParticleAt(x + c * d - s * w, y + s * d + c * w, 1);
+  if (!(typeof vnMuzzle === "function" && vnMuzzle(x, y, a, false))) {   // (the old plume, when the new pool is not up: art-test)
+    for (let i = PERF_LOW ? 2 : 0; i < 5; i++) {   // smoke strung out along the barrel line, the outer puffs dirtier
+      const d = 4 + i * 6.5 + rand(-2, 2), w = rand(-2.5, 2.5);
+      FX.sTint = i >= 3 ? 0xb3a998 : 0xe9e5dc;
+      FX.smoke.emitParticleAt(x + c * d - s * w, y + s * d + c * w, 1);
+    }
+    FX.sTint = 0xe9e5dc;
   }
-  FX.sTint = 0xe9e5dc;
   S.fx.spark.emitParticleAt(x + c * 8, y + s * 8, 2);
   FX.ember.emitParticleAt(x + c * 10, y + s * 10, 2);
 }

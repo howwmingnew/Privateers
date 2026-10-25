@@ -26,6 +26,28 @@ const REPAIR_STILL = 0.08;       // "stopped": below this share of top speed (th
 const POWDER_CHANCE = 1 / 12, POWDER_R = 230;   // blast radius, px
 const POWDER_BOSS_FRAC = 0.25;     // a boss takes this share of its max hull and never dies of the crit itself
 const POWDER_SPLASH = { ai: 0.3, player: 0.15, boss: 0.08 };   // share of max hull at the centre of the blast; fades to 40% at the rim
+// VFX upgrade (#76): the effects the owner picked in tools/vfx-lab.html, with the sliders' values (size, count = particle share, dur = duration x).
+// blast: powder-magazine C chain blast · muzzle: C powder smoke and haze bank · fire: A flame tongues + smoke column (and the fire patch an incendiary
+// leaves on the water) · spout: A spiral column · vortex: A funnel · wave: A foam wall · storm: B pre-flash strike with violet ball, and swirling fog.
+const VFX_NEW = {
+  blast: { size: 0.8, count: 1, dur: 0.5 }, muzzle: { size: 0.8, count: 0.75, dur: 1.2 }, fire: { size: 1, count: 1, dur: 1 },
+  spout: { size: 1, count: 1, dur: 1 }, vortex: { size: 1, count: 1, dur: 1 }, wave: { size: 1, count: 1, dur: 1 }, storm: { size: 1, count: 1, dur: 1 },
+};
+const VFX_POOL_MAX = 240;      // live sprites of the new effects, all kinds together (x0.55 on phones)
+const VFX_MUZZLE_LOUD = 5;     // loud muzzle plumes per 300 ms; past this a shot only gets a small puff (30-gun rolling broadsides, fleets firing together)
+const VFX_HAZE_MAX = 16;       // the long drifting haze puffs alive at once
+const VFX_SPILL_MAX = 4;       // fire patches on the water at once (an incendiary's burning oil)
+const VFX_FOG_PUFFS = 6;      // (at the high level)
+// Effects quality (settings "fxq": auto / low / mid / high; js/vfx.js fxLevel). k: share of every effect's particles; cull: px past the screen edge where
+// particles are not made (and ones that drift there are not drawn); haze: the lingering muzzle-smoke bank; embers: ember rain; flotsam: burning wreckage;
+// steam: the steam after a bolt; forks: lightning forks; fog: fog puffs at the edge of sight; rings, arms: the funnel's drawn rings and foam arms. Warnings and the fog's sight rule never depend on these.
+// "auto" starts from the device (FXQ_DEVICE) and, while frames run slow (a smoothed frame gap above FXQ_SLOW_MS for FXQ_SLOW_S s), steps one level down.
+const FXQ = [
+  { k: 0.4, cull: 30, haze: 0, embers: 0, flotsam: 0, steam: 0, forks: 0, fog: 0, lite: 0.35, rings: 3, arms: 2 },    // low
+  { k: 0.7, cull: 80, haze: 0.5, embers: 0.5, flotsam: 0, steam: 1, forks: 2, fog: 0.5, lite: 0.6, rings: 4, arms: 3 },   // mid
+  { k: 1, cull: 140, haze: 1, embers: 1, flotsam: 1, steam: 1, forks: 3, fog: 1, lite: 0.8, rings: 5, arms: 4 },     // high: the owner's picked look
+];
+const FXQ_SLOW_MS = 22, FXQ_SLOW_S = 2.5, FXQ_COOL_S = 5;      // fog puffs circling at the edge of sight
 // Size sliders in the settings panel (js/settings.js, js/options.js): percentages of a base, 50-250 in steps of 5.
 const SCALE_MIN = 50, SCALE_MAX = 250, SCALE_STEP = 5, SCALE_DEFAULT = 100;
 // The chart (the HUD radar) at 100%: 18% of the shorter screen side, kept between these CSS pixels so a phone still has
