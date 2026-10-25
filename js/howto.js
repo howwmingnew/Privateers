@@ -29,12 +29,16 @@ Object.assign(STR.en, {
     <li><b>Gun Lv</b>: how many times you upgraded that gun with gold. Each level adds damage.</li>
     <li><b>Grade</b> (gear): the hull tier needed to wear it. A higher grade means stronger effects.</li>
     <li><b>Fittings</b>: material from breaking down spare gear or guns. Re-rolling an affix spends it.</li>
+    <li><b>Affix</b>: a bonus line on a piece of gear, like "+8% speed". Rarer gear (Common, Magic, Rare, Epic, Legendary) has more of them. Re-rolling picks a new value.</li>
+    <li><b>Break down</b>: scrap a spare gear piece or gun into fittings.</li>
     <li><b>Lock</b>: keeps an item from being broken down by mistake.</li>
+    <li><b>Broadside</b>: all the guns on one side of the ship (<b>larboard</b> = left, <b>starboard</b> = right). A <b>volley</b> is a broadside firing at once; the red glow warns you of an enemy's.</li>
+    <li><b>Wanted</b> (stars at the top): how much the Navy wants you. More stars mean richer warship bounties and stronger hunters. It cools off when you dock.</li>
     <li><b>Plunder streak</b>: every ship you sink in a row raises what the hold sells for. Losing your ship ends it.</li>
     <li><b>Wind dial</b>: the arrow points where the wind blows to. The ±% is how much it speeds you up or slows you down on your present heading.</li></ul>`,
-  ht_chart: `<h3>The chart</h3><p>The chart in the corner shows the whole sea. Deeper, darker water is more dangerous, and the numbers are the ship levels you meet there. A ship's <b>shape</b> says whether you can beat it; its <b>fill and inner mark</b> say who it is, so you never need colour alone.</p>
+  ht_chart: `<h3>The chart</h3><p>The chart in the corner shows the whole sea. Deeper, darker water is more dangerous, and the numbers are the ship levels you meet there. A ship's <b>shape</b> says whether you can beat it; its <b>fill and inner mark</b> say who it is, so you never need color alone.</p>
     <ul class="legend"><li><canvas class="sw-mark" data-mark="threat" aria-hidden="true"></canvas><span>Shape = strength: weaker, even, stronger, much stronger than you</span></li>
-    <li><canvas class="sw-mark" data-mark="pirate" aria-hidden="true"></canvas><span><b>Pirate</b>: plain shape in its strength colour</span></li>
+    <li><canvas class="sw-mark" data-mark="pirate" aria-hidden="true"></canvas><span><b>Pirate</b>: plain shape in its strength color</span></li>
     <li><canvas class="sw-mark" data-mark="navy" aria-hidden="true"></canvas><span><b>Navy</b>: solid blue, a bar across</span></li>
     <li><canvas class="sw-mark" data-mark="trade" aria-hidden="true"></canvas><span><b>Merchant</b>: gold, a dot inside</span></li>
     <li><canvas class="sw-mark" data-mark="ally" aria-hidden="true"></canvas><span><b>Your escort</b>: mint, a cream rim and an arrowhead</span></li>
@@ -85,8 +89,12 @@ Object.assign(STR.zh, {
     <li><b>敵船上的 Lv 標籤</b>：那艘船的戰力，和你的船艦 Lv 用同一套標準。</li>
     <li><b>砲 Lv</b>：這門砲花金幣升了幾次，每升一級傷害更高。</li>
     <li><b>品階</b>（裝備）：穿這件裝備需要的船級，品階越高效果越強。</li>
-    <li><b>零件</b>：拆解用不到的備用裝備或火砲得到的材料，重洗詞綴時會用掉。</li>
+    <li><b>零件</b>（英文 Fittings）：拆解用不到的備用裝備或火砲得到的材料，重洗詞綴時會用掉。</li>
+    <li><b>詞綴</b>（英文 affix）：裝備上的加成，例如「航速 +8%」。越稀有的裝備（普通、魔法、稀有、史詩、傳說）詞綴越多；重洗會換一個新數值。</li>
+    <li><b>拆解</b>（Break down）：把用不到的備用裝備或火砲拆成零件。</li>
     <li><b>鎖定</b>：防止一件東西被誤拆解。</li>
+    <li><b>舷</b>：船的左側或右側（<b>左舷</b> larboard、<b>右舷</b> starboard），一舷的所有砲合稱「一舷砲」。<b>齊射</b>是一舷的砲同時開火；紅光就是在警告敵艦要齊射。</li>
+    <li><b>通緝</b>（上方的星星）：海軍有多想抓你。星越多，戰艦賞金越高，追捕的敵人也越強；回港靠岸就會降溫。</li>
     <li><b>連續劫掠</b>：連續擊沉的船越多，貨艙賣出的價錢就越高；船沉了就中斷。</li>
     <li><b>風向盤</b>：箭頭指向風吹去的方向；±% 是風讓你目前航向加速或減速的幅度。</li></ul>`,
   ht_chart: `<h3>海圖</h3><p>右上角的海圖顯示整片海域。水越深、越暗就越危險，數字是那一帶會遇到的船艦等級。船的<b>形狀</b>告訴你打不打得過；<b>填色和形狀裡的小記號</b>告訴你它是誰，不必只靠顏色分辨。</p>

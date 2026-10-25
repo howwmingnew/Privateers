@@ -8,6 +8,9 @@ Object.assign(STR.zh, { escOrder: "先購買船位 {n}", escDown: "沒有指派�
 const ESC_ACTS = ["escBuy", "escOn", "escStance", "escPay", "escAssign", "escBuyShip", "escEvict"];
 
 // A second tap within a few seconds confirms a big spend (a slot, a ship): the first tap arms the key and shows the button as "Press again".
+// The armed button shows how long is left: a bar that drains over ARM_MS (css/ledger.css [data-armed]), already part-way when the page re-renders.
+const ARM_MS = 6000;
+const armAttrs = at => ` data-armed="1" style="animation-duration:${ARM_MS}ms;animation-delay:-${Math.min(ARM_MS, Math.max(0, performance.now() - at)).toFixed(0)}ms"`;
 let armKey = null, armAt = 0, armTimer;
 const armedTap = key => armKey === key;
 function twoTap(key) {   // true on the confirming second tap
@@ -15,7 +18,7 @@ function twoTap(key) {   // true on the confirming second tap
   clearTimeout(armTimer);
   if (armKey !== key) {
     armKey = key; armAt = performance.now();
-    armTimer = setTimeout(() => { armKey = null; if (!portEl.hidden) renderPort(); }, 3000);
+    armTimer = setTimeout(() => { armKey = null; if (!portEl.hidden) renderPort(); }, ARM_MS);
     renderPort(); Snd.play("uiClick");   // the page re-renders with the button relabelled (focus follows, js/ledger-nav.js)
     return false;
   }

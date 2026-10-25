@@ -133,7 +133,7 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 /* a replace-list candidate: the tile mounts it, the small (i) opens its card (js/ledger-panel.js) */
 .cand { position: relative; min-width: 0; }
 .cand .slot { width: 100%; }
-.cand .cinfo { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 1.5px solid var(--ink-soft); background: var(--parch); color: var(--ink); font: italic 700 13px/1 var(--f-display, serif); cursor: pointer; }
+.cand .cinfo { position: absolute; top: 2px; right: 2px; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; border: 1.5px solid var(--ink-soft); background: var(--parch); color: var(--ink); font: 700 11px/1 var(--f-ui); cursor: pointer; }
 .cand .cinfo[aria-pressed="true"], .cand.prev .slot { box-shadow: 0 0 0 3px var(--brass); }
 .candcard { margin: 6px 0 4px; }
 .candcard .gcard { margin-top: 0; }
@@ -175,3 +175,7 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
   #port #fleet + section { order: -1; }
   #port .sheet > footer { order: 99; }
 }
+/* a purchase waiting for its second tap: a bar under the label drains over the time left (js/escort-ui.js armAttrs) */
+.btn[data-armed] { position: relative; overflow: hidden; }
+.btn[data-armed]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: currentColor; opacity: .7; transform-origin: left; animation: armdrain linear forwards; }
+@keyframes armdrain { to { transform: scaleX(0); } }

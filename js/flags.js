@@ -5,9 +5,9 @@
 // older save always loads with the classic blue-and-cream ensign and the default name.
 // The flag reaches the sea through a livery (flagLivery, js/art.js liveryFor), the ledger card, the chart mark and the share card.
 Object.assign(STR.en, {
-  flTitle: "Colours", flHint: "Name your ship and pick the flag she flies: it shows at sea, on the chart and on share cards.",
+  flTitle: "Colors", flHint: "Name your ship and pick the flag she flies: it shows at sea, on the chart and on share cards.",
   flName: "Ship name", flNamePh: "Sea Wolf", flDefName: "Sea Wolf", flReset: "Default name", flRude: "That name is not allowed. Try another.",
-  flMain: "Main colour", flAlt: "Second colour", flEmblem: "Emblem", flShip: "Ship",
+  flMain: "Main color", flAlt: "Second color", flEmblem: "Emblem", flShip: "Ship",
   fc_red: "Red", fc_blue: "Blue", fc_green: "Green", fc_black: "Black", fc_gold: "Gold", fc_purple: "Purple", fc_teal: "Teal", fc_orange: "Orange", fc_white: "White", fc_grey: "Grey",
   fe_diag: "Sash", fe_skull: "Skull", fe_anchor: "Anchor", fe_swords: "Swords", fe_star: "Star", fe_cross: "Cross",
 });

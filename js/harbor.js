@@ -97,8 +97,8 @@ document.getElementById("port").addEventListener("click", ev => {
       shipArmTimer = setTimeout(() => {
         shipArmed = null;   // relabel in place rather than re-render, so keyboard focus stays put
         const el = document.querySelector(`[data-act="ship"][data-id="${id}"]`);
-        if (el) el.textContent = buyLabel(id);
-      }, 3000);
+        if (el) { el.textContent = buyLabel(id); el.removeAttribute("data-armed"); el.removeAttribute("style"); }
+      }, ARM_MS);
       renderPort(); document.querySelector(`[data-act="ship"][data-id="${id}"]`)?.focus();
       Snd.play("uiClick");
       return;

@@ -88,7 +88,7 @@ function slotBodyHtml(i) {
   if (i > save.escorts.length) return `<div class="berth"><p class="role">${head}</p><p class="lock">${t("escOrder", { n: i })}</p></div>`;
   const lbl = armedTap("escBuy" + i) ? t("escBuyArm") : t(save.gold < price ? "escBuyShort" : "escBuy", { n: fmt(price), d: fmt(price - save.gold) });
   return `<div class="berth"><p class="role">${head}</p><div class="card"><h3>${t("escSlot", { n: i + 1 })}</h3><p class="sub">${t("escHint")}</p>` +
-    `<button class="btn" type="button" data-act="escBuy" data-id="${i}" ${save.gold < price ? "disabled" : ""}>${lbl}</button></div></div>`;
+    `<button class="btn" type="button" data-act="escBuy" data-id="${i}" ${save.gold < price ? "disabled" : ""}${armedTap("escBuy" + i) ? armAttrs(armAt) : ""}>${lbl}</button></div></div>`;
 }
 function deckView(n, ship) {
   if (n === 0) return { ship: save.ship, mounts: save, e: undefined, hull: hullOpen, livery: null };

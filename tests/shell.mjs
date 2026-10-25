@@ -406,10 +406,22 @@ for (const dpr of [1, 2]) {
   await page.click("#sail");
   await until(page, () => !docked && !paused);
   const back = await ev(page, () => ({ step: tut.step, mark: !!(tut.target && tut.target.alive && tut.target.tutMark), txt: document.getElementById("coachTxt").textContent }));
-  ok("tutorial: sunk on the 'keep firing' step, the next sortie starts at 'find the ship' with a fresh mark (no empty dead end)", back.step === 1 && back.mark, back);
+  ok("tutorial: sunk on the 'keep firing' step, the card keeps its step (no step back) and a fresh mark is there to point at", back.step === 3 && back.mark, back);
   await ev(page, () => { sink(tut.target, player); });
   await until(page, () => tut.step >= 4);
   ok("tutorial: sinking the mark is a counted kill (the lesson never ends on 0 sunk)", await ev(page, () => save.sunk >= 1));
+  // #103: dying on the 'sell' step (hold lost) keeps the step, and the card asks for new plunder with the arrow on a ship
+  await ev(page, () => { for (const c of [...crates]) { c.spr.destroy(); c.label?.destroy(); crates.splice(crates.indexOf(c), 1); } cargo = 0; enterStep(5); player.x = PORT.x + DOCK_R + 220; player.y = PORT.y; });
+  await page.waitForTimeout(400 * SLOW);
+  const rf = await ev(page, () => ({ step: tut.step, txt: document.getElementById("coachTxt").textContent, tg: !!guideTarget(0) }));
+  ok("tutorial: empty hold on 'sell' stays on the step, says plunder is gone and still points at a ship", rf.step === 5 && /plunder is gone/i.test(rf.txt) && rf.tg, rf);
+  // a crate picked up from a ship the player did not sink, or a full hold, moves 'keep firing' on to 'sell'
+  await ev(page, () => { enterStep(3); save.sunk = 0; tut.sunk0 = 0; cargo = player.cap; });
+  await page.waitForTimeout(300 * SLOW);
+  ok("tutorial: a full hold on 'keep firing' (kill was not the player's) advances to 'sell'", await ev(page, () => tut.step === 5));
+  await ev(page, () => { enterStep(3); save.sunk = 0; cargo = 0; runHook("pickup", { wreck: null, value: 10 }, 10); cargo = 10; });
+  await page.waitForTimeout(300 * SLOW);
+  ok("tutorial: a picked-up crate on 'keep firing' advances to 'sell' without a kill of its own", await ev(page, () => tut.step >= 5));
   await ctx.close();
 }
 {   // docking mid-card never sends the captain back to step 1 of the card ("sail out"): the sea gets a fresh mark and the chase restarts at "find the ship" or later (also on a replay, where a kill is already on the books)

@@ -87,7 +87,7 @@ await tabTo(4); t = await stage();
 check(/Sink bounty 4 to unlock · 5,000 gold/.test(t), "slot 4 says what unlocks it and for how much");
 await tabTo(1);
 await page.click('#stage [data-act="escBuy"][data-id="0"]');
-check(await ev(() => save.gold === 500 && save.escorts.length === 0) && /Press again to buy/.test(await stage()), "the first tap on a slot only arms the button");
+check(await ev(() => save.gold === 500 && save.escorts.length === 0) && /Press again.*to buy/.test(await stage()), "the first tap on a slot only arms the button");
 await page.waitForTimeout(500);
 await page.click('#stage [data-act="escBuy"][data-id="0"]');
 check(await ev(() => save.gold === 300 && save.escorts.length === 1 && save.escorts[0].id === "" && save.escorts[0].stance === "normal"), "the second tap buys slot 1 for 200 (stance Normal by default)");
