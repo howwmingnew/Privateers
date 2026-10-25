@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privateers 特效試看頁</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --bg: #0f2a35; --panel: #163947; --line: #2a5566; --ink: #f6f1e3; --dim: #a9c3cb; --gold: #f0c766; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 0 12px 60px; }
+  h1 { font-size: 20px; margin: 10px 0 2px; }
+  h2 { font-size: 17px; color: var(--gold); margin: 0 0 2px; }
+  .credit { color: var(--dim); font-size: 13px; margin: 0 0 8px; }
+  .top { position: sticky; top: 0; z-index: 10; background: var(--bg); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  #stage { width: min(100%, calc(38vh * 1.8)); aspect-ratio: 1.8; margin: 0 auto; background: #155a73; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  #stage canvas { display: block; }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 6px; font-size: 14px; }
+  .seg { display: inline-flex; } .seg button { border-radius: 0; margin-left: -1px; padding: 5px 10px; }
+  .seg button:first-child { border-radius: 8px 0 0 8px; margin-left: 0; } .seg button:last-child { border-radius: 0 8px 8px 0; }
+  button { font: inherit; color: var(--ink); background: #1f4b5c; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button:hover { background: #276076; } button.on { background: var(--gold); color: #1b1410; border-color: var(--gold); }
+  .stats { font-variant-numeric: tabular-nums; color: var(--gold); font-size: 14px; }
+  section { margin-top: 18px; }
+  .ref { color: var(--dim); font-size: 13px; margin: 0 0 8px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(235px, 1fr)); gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .card.cur { border-style: dashed; }
+  .card .name { font-weight: 700; } .card .desc { color: var(--dim); font-size: 13px; flex: 1; }
+  .play { font-size: 18px; padding: 12px; background: #2b6b4f; border-color: #3f8f6d; }
+  .play:hover { background: #348260; }
+  .sl { display: grid; grid-template-columns: 56px 1fr 40px; gap: 6px; align-items: center; font-size: 12px; color: var(--dim); }
+  .sl input { width: 100%; accent-color: var(--gold); }
+  .fixed { font-size: 12px; color: var(--dim); }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>特效試看頁 · VFX Lab（#76 第一步）</h1>
+    <p class="credit">外觀參考 00GameDevs 特效庫（@00vchannel），程式為本專案自行實作。頁面已靜音。尚未接進遊戲：請挑每類最喜歡的版本。</p>
+    <div id="stage"></div>
+    <div class="bar">
+      <span class="seg" id="bg"><button data-v="day" class="on">白天</button><button data-v="night">月夜</button><button data-v="storm">暴風雨</button></span>
+      <button id="low" aria-pressed="false">手機省電版：關</button>
+      <button id="stop">清除</button>
+      <span class="stats" id="stats">粒子 0 · 峰值 0 · 每幀 0.0 ms</span>
+    </div>
+  </div>
+  <div id="list"></div>
+</main>
+<script>
+  // muted before any game code reads its settings (the lab never loads the audio system, but the settings key is shared)
+  try { const k = "privateers-settings", o = JSON.parse(localStorage.getItem(k) || "{}"); o.muted = true; localStorage.setItem(k, JSON.stringify(o)); } catch (e) {}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/util.js"></script>
+<script src="../js/view.js"></script>
+<script src="../js/settings.js"></script>
+<script src="../js/i18n.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/save.js"></script>
+<script src="../js/state.js"></script>
+<script src="../js/world.js"></script>
+<script src="../js/art.js"></script>
+<script src="../js/art-draw.js"></script>
+<script src="../js/scenery.js"></script>
+<script src="../js/harbor-art.js"></script>
+<script src="../js/vfx.js"></script>
+<script src="../js/ships.js"></script>
+<script src="../js/combat.js"></script>
+<script src="../js/vfx-lab-effects.js"></script>
+<script>
+"use strict";
+(() => {
+const W = 720, H = 400, SHIP = { x: 240, y: 215 };
+VIEW = { ...VIEW, dpr: 1 };
+const BGS = {   // sea colour, wave-tile alpha / tint, night-or-storm overlay
+  day:   { sea: 0x1d7a96, wave: 0.35, tint: 0xffffff, over: 0, shipTint: 0xffffff },
+  night: { sea: 0x0b2a45, wave: 0.2, tint: 0x6f8fc0, over: 0.38, shipTint: 0xa9bad8 },
+  storm: { sea: 0x2c4a52, wave: 0.3, tint: 0x9db0b4, over: 0.28, shipTint: 0xc4cdd0 },
+};
+let lab = null, bgMode = "day", low = false, cur = null;
+class Lab extends Phaser.Scene {
+  constructor() { super("lab"); }
+  create() {
+    S = this; islands = [];
+    makeTextures(this); VFXLAB.bake(this);
+    this.fx = {
+      wake:   this.add.particles(0, 0, "puff", { lifespan: 1500, speed: 0, scale: { start: 0.6, end: 1.8 }, alpha: { start: 0.45, end: 0 }, emitting: false }).setDepth(3),
+      smoke:  this.add.particles(0, 0, "puff", { lifespan: 800, speed: { min: 10, max: 45 }, scale: { start: 0.8, end: 2.2 }, alpha: { start: 0.8, end: 0 }, tint: 0xdedad0, emitting: false }).setDepth(8),
+      spark:  this.add.particles(0, 0, "dot", { lifespan: 450, speed: { min: 60, max: 200 }, scale: { start: 1, end: 0 }, tint: [0xffd27a, 0xff8a3a, 0xff5a2a], blendMode: "ADD", emitting: false }).setDepth(8),
+      splash: this.add.particles(0, 0, "dot", { lifespan: 550, speed: { min: 30, max: 90 }, scale: { start: 0.9, end: 0.2 }, alpha: { start: 0.9, end: 0 }, tint: 0xe9f7fa, emitting: false }).setDepth(3),
+    };
+    vfxInit(this);
+    this.cameras.main.setBackgroundColor("#155a73");
+    this.seaBase = this.add.rectangle(0, 0, W, H, 0x1d7a96).setOrigin(0).setDepth(-2);
+    this.seaTile = this.add.tileSprite(0, 0, W, H, "wave").setOrigin(0).setDepth(-1);
+    this.over = this.add.rectangle(0, 0, W, H, 0x050c1c).setOrigin(0).setDepth(4.5).setAlpha(0);
+    this.moon = this.add.image(620, 60, "fx-soft").setDisplaySize(160, 160).setTint(0xcfe0ff).setAlpha(0).setDepth(4.4).setBlendMode(Phaser.BlendModes.ADD);
+    this.rain = this.add.graphics().setDepth(9.7); this.rainOn = false;
+    this.cur = { burst: this.add.particles(0, 0, "fx-soft", { emitting: false, lifespan: { min: 300, max: 620 }, speed: { min: 120, max: 260 }, scale: { start: 0.95, end: 0.15 },
+      alpha: { start: 1, end: 0 }, tint: [0xfff0b0, 0xffb040, 0xff6a2a], blendMode: "ADD", maxAliveParticles: vfxCap(70) }).setDepth(8.5) };
+    const s = makeShip(this, "dot", SHIP.x, SHIP.y);
+    Object.assign(s, { rot: 0, maxHp: 100, hp: 100, maxSpeed: 120, speed: 0, faction: "player", isPlayer: true });
+    applyShipArt(s, "frigate", "player"); s.spr.setPosition(s.x, s.y).setDepth(5);
+    this.ship = s; player = s; docked = false; paused = false;
+    this.pool = new VFXLAB.Pool(this);
+    this.frames = []; this.t0 = 0;
+    this.game.events.on("prestep", () => { this.fs = performance.now(); });
+    this.game.events.on("postrender", () => { if (this.fs) { this.frames.push(performance.now() - this.fs); if (this.frames.length > 40) this.frames.shift(); } });
+    this.events.on("update", (_, ms) => this.tick(Math.min(ms / 1000, 0.05)));
+    setBg(bgMode);
+  }
+  emitters() { return [...Object.values(FX).filter(e => e && e.getAliveParticleCount), ...Object.values(this.fx), this.cur.burst]; }
+  aliveCount() { return this.pool.count + this.emitters().reduce((a, e) => a + e.getAliveParticleCount(), 0); }
+  tick(dt) {
+    const s = this.ship, now = this.time.now / 1000;
+    this.seaTile.tilePositionX += dt * 6; this.seaTile.tilePositionY += dt * 2;
+    s.spr.setPosition(s.x, s.y + Math.sin(now * 1.6) * 1.5).setRotation(s.rot + Math.sin(now * 1.1) * 0.012);
+    if (this.rainOn) { const g = this.rain; g.clear(); g.lineStyle(1, 0xbfd8e4, 0.35); for (let i = 0; i < 70; i++) { const x = ((i * 97 + now * 420) % (W + 60)) - 30, y = ((i * 53 + now * 780) % (H + 40)) - 20; g.lineBetween(x, y, x - 5, y + 14); } }
+    this.pool.update(dt);
+    if (cur) {
+      cur.n = this.aliveCount(); cur.peak = Math.max(cur.peak, cur.n);
+      if (!cur.done && this.time.now - cur.t0 > 300 && !this.pool.busy() && this.emittersIdle()) { cur.done = true; cur.endAt = this.time.now; }
+    }
+  }
+  emittersIdle() { return this.emitters().every(e => e.getAliveParticleCount() === 0); }
+  clearAll() {
+    this.pool.clear(); for (const e of this.emitters()) e.killAll();
+    this.ship.hp = this.ship.maxHp; this.ship.burnT = 0; this.ship.x = SHIP.x; this.ship.y = SHIP.y;
+  }
+}
+function setBg(mode) {
+  bgMode = mode; const b = BGS[mode], S0 = S;
+  if (!S0 || !S0.seaBase) return;
+  S0.seaBase.setFillStyle(b.sea); S0.seaTile.setAlpha(b.wave).setTint(b.tint); S0.over.setAlpha(b.over); S0.moon.setAlpha(mode === "night" ? 0.55 : 0);
+  S0.ship.spr.setTint(b.shipTint === 0xffffff ? 0xffffff : b.shipTint); if (b.shipTint === 0xffffff) S0.ship.spr.clearTint();
+  S0.rainOn = mode === "storm"; if (!S0.rainOn) S0.rain.clear();
+  document.querySelectorAll("#bg button").forEach(x => x.classList.toggle("on", x.dataset.v === mode));
+}
+// ---------- playing ----------
+const paramsOf = id => { const el = document.querySelector(`[data-card="${id}"]`); const v = k => el ? +el.querySelector(`[data-k="${k}"]`)?.value || 0 : 0;
+  return el && el.querySelector("[data-k]") ? { size: v("size"), count: v("count"), dur: v("dur"), hue: +el.querySelector('[data-k="hue"]').value } : { size: 1, count: 1, dur: 1, hue: 0 }; };
+function play(id) {
+  const sc = S, e = VFXLAB.EFFECTS.find(x => x.id === id);
+  if (!sc || !e) throw new Error("no effect " + id);
+  sc.clearAll();
+  const p = e.fixed ? { size: 1, count: 1, dur: 1, hue: 0 } : paramsOf(id);
+  const c = { pool: sc.pool, sc, x: SHIP.x, y: SHIP.y, ship: sc.ship, W, H, p, low, cur: sc.cur };
+  if (e.cat === 4 || e.cat === 5) { c.x = 480; c.y = 215; }   // the whirl sits ahead of the ship
+  cur = { id, t0: sc.time.now, peak: 0, n: 0, done: false };
+  e.play(c);
+  const b = document.querySelector(`[data-card="${id}"] .play`); if (b) b.textContent = "↻ 重播";
+  return cur;
+}
+function stats() {
+  const f = lab_scene().frames, avg = f.length ? f.reduce((a, b) => a + b, 0) / f.length : 0;
+  return { n: cur ? cur.n : 0, peak: cur ? cur.peak : 0, ms: avg, done: cur ? cur.done : true, id: cur ? cur.id : null };
+}
+const lab_scene = () => S;
+setInterval(() => { const s = stats(); document.getElementById("stats").textContent = `粒子 ${s.n} · 峰值 ${s.peak} · 每幀 ${s.ms.toFixed(1)} ms`; }, 200);
+// ---------- UI ----------
+const SL = [["size", "大小", 0.5, 2, 0.1, 1], ["count", "粒子數", 0.25, 2, 0.05, 1], ["dur", "持續", 0.5, 2, 0.1, 1], ["hue", "色調", -180, 180, 5, 0]];
+const list = document.getElementById("list");
+VFXLAB.CATS.forEach((name, cat) => {
+  if (!cat) return;
+  const sec = document.createElement("section");
+  sec.innerHTML = `<h2>${cat}. ${name}</h2><p class="ref">外觀參考：${VFXLAB.REF[cat]}</p><div class="cards"></div>`;
+  for (const e of VFXLAB.EFFECTS.filter(x => x.cat === cat)) {
+    const d = document.createElement("div"); d.className = "card" + (e.fixed ? " cur" : ""); d.dataset.card = e.id;
+    d.innerHTML = `<div class="name">${e.name}</div><div class="desc">${e.desc}</div><button class="play" type="button" data-id="${e.id}">▶ 播放</button>` +
+      (e.fixed ? `<div class="fixed">遊戲現況，參數不可調（粒子數隨遊戲自己的手機分級）</div>` :
+        SL.map(([k, label, lo, hi, st, v]) => `<label class="sl">${label}<input type="range" data-k="${k}" min="${lo}" max="${hi}" step="${st}" value="${v}"><output>${v}</output></label>`).join(""));
+    sec.querySelector(".cards").appendChild(d);
+  }
+  list.appendChild(sec);
+});
+list.addEventListener("input", ev => { const o = ev.target.nextElementSibling; if (o && o.tagName === "OUTPUT") o.textContent = ev.target.value; });
+list.addEventListener("click", ev => { const b = ev.target.closest(".play"); if (b) play(b.dataset.id); });
+document.getElementById("bg").addEventListener("click", ev => { if (ev.target.dataset.v) setBg(ev.target.dataset.v); });
+document.getElementById("low").addEventListener("click", ev => { low = !low; ev.target.setAttribute("aria-pressed", low); ev.target.classList.toggle("on", low); ev.target.textContent = "手機省電版：" + (low ? "開（粒子減半）" : "關"); });
+document.getElementById("stop").addEventListener("click", () => { S.clearAll(); cur = null; });
+window.vfxLab = { ready: () => !!(S && S.pool), play, stats, setBg, setLow: v => { low = !!v; }, ids: () => VFXLAB.EFFECTS.map(e => e.id), secs: id => VFXLAB.SECS[+id[0]], clear: () => { S.clearAll(); cur = null; } };
+lab = new Phaser.Game({ type: Phaser.AUTO, parent: "stage", width: W, height: H, backgroundColor: "#155a73", render: { antialias: true }, audio: { noAudio: true },
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: [Lab] });
+})();
+</script>
+</body>
+</html>
