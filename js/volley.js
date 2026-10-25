@@ -80,7 +80,7 @@ function releaseVolley(s, key, v, guns) {
     if (m.a != null) ang = m.a + clamp(angDiff(ang, m.a), -ARC_FIRE, ARC_FIRE);   // a gun only trains so far
     const p = s.fixed ? fortMuzzle(s, ang) : m, life = g.range * 1.08 / g.speed;
     balls.push({ spr: S.add.image(p.x, p.y, "ball").setDepth(7), x: p.x, y: p.y, vx: Math.cos(ang) * g.speed, vy: Math.sin(ang) * g.speed,
-      life, life0: life, dmg: g.dmg, burn: g.burn || 0, chain: !!g.chain, fromPlayer: false, friendly: !!s.ally, owner: s });   // an escort's guns may burn or tear rigging
+      life, life0: life, dmg: g.dmg * (s.ally && typeof gxRally === "function" ? gxRally() : 1), burn: g.burn || 0, chain: !!g.chain, fromPlayer: false, friendly: !!s.ally, owner: s });   // an escort's guns may burn or tear rigging
     vfxMuzzle(p.x, p.y, ang, !plan[i].loud);
     if (!s.fixed) gunFired(s, key, i, n);
   });

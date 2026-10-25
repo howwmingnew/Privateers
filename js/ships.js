@@ -7,15 +7,16 @@ function makeShip(sc, tex, x, y) {
 function playerGuns() {
   // pi / pn: the gun's port and the port count, so a muzzle sits at its port even with empty ports beside it
   const mk = (gun, pi, pn) => { const id = gun.g, g = GUNS[id], m = gunLvMul(gun.lv) * shipGunK();
-    return { id, pi, pn, dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, chain: !!g.chain, range: g.range, speed: g.speed || BALL_SPEED, interval: 60 / g.rpm, cd: 0 }; };
+    return typeof gxGun === "function" ? { ...gxGun(gun, g, m), id, pi, pn }   // rarity and affixes shape the gun (js/gear-fx.js)
+      : { id, pi, pn, dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, chain: !!g.chain, range: g.range, speed: g.speed || BALL_SPEED, interval: 60 / g.rpm, cd: 0 }; };
   return Object.fromEntries(MOUNTS.map(({ key }) => [key, save[key].flatMap((gun, i, ports) => gun ? [mk(gun, i, ports.length)] : [])]));
 }
 function applyPlayerStats(full) {
-  player.maxHp = yardVal("hull");
+  player.maxHp = Math.round(yardVal("hull") * gearMul("hp"));   // the worn gear's share (js/gear-fx.js) is 1 + 0 with none
   if (full) player.hp = player.maxHp;
-  player.maxSpeed = yardVal("sails");
-  player.turnRate = PLAYER_TURN * shipTurn();   // the fast line turns tighter, the gunboat wider (js/data.js)
-  player.cap = yardVal("hold");
+  player.maxSpeed = yardVal("sails") * gearMul("spd");
+  player.turnRate = PLAYER_TURN * shipTurn() * gearMul("turn");   // the fast line turns tighter, the gunboat wider (js/data.js)
+  player.cap = Math.round(yardVal("hold") * gearMul("cargo"));
   player.guns = playerGuns();
   applyShipArt(player, save.ship, liveryFor(player));   // hull art, hitbox, muzzles and view follow the ship in the save
 }
@@ -95,7 +96,7 @@ function steer(s, desired, thr, dt) {
   const turn = s.turnRate * (torn ? CHAIN_TURN : 1) * (typeof disTurn === "function" ? disTurn(s) : 1) * dt * (0.45 + 0.55 * Math.min(1, s.speed / Math.max(1, s.maxSpeed) + 0.2));
   if (desired != null) s.rot += clamp(angDiff(desired, s.rot), -turn, turn);
   else if (typeof wxYaw === "function") s.rot += wxYaw(s) * dt;   // a storm slews a hull whose helm is let go (js/weather.js)
-  const target = thr * s.maxSpeed * (torn ? CHAIN_SPEED : 1);
+  const target = thr * s.maxSpeed * (torn ? CHAIN_SPEED : 1) * (typeof gxSpeedK === "function" ? gxSpeedK(s) : 1);   // a legendary gun drags its target, a legendary sail speeds a hard turn (js/gear-fx.js)
   s.speed += clamp(target - s.speed, -s.maxSpeed * 1.1 * dt, s.maxSpeed * 0.7 * dt);
 }
 function avoidIslands(s, desired) {

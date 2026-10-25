@@ -64,10 +64,10 @@ function syncPorts() {
 const stationAt = (s, r = STATION_TRUCE_R) => portsOff() ? null : STATIONS.find(p => Math.hypot(s.x - p.x, s.y - p.y) < r) || null;
 // Pure: one step of a paid repair. Heals up to SUPPLY_HEAL of max hull per second, never more than the hull is missing, and
 // never more than the gold on hand pays for. Returns the new hp and the (fractional) gold it cost.
-function supplyStep(hp, maxHp, dt, gold, ring) {
+function supplyStep(hp, maxHp, dt, gold, ring, k = 1) {   // k: a legendary supply hold mends faster (js/gear-fx.js)
   const missing = maxHp - hp;
   if (missing <= 0 || gold <= 0 || dt <= 0) return { hp, cost: 0 };
-  let heal = Math.min(missing, maxHp * SUPPLY_HEAL * dt), cost = heal / maxHp * supplyFee(ring);
+  let heal = Math.min(missing, maxHp * SUPPLY_HEAL * k * dt), cost = heal / maxHp * supplyFee(ring);
   if (cost > gold) { heal *= gold / cost; cost = gold; }
   return { hp: hp + heal, cost };
 }
@@ -75,7 +75,7 @@ function supplyStep(hp, maxHp, dt, gold, ring) {
 // ---------- At sea: the ring's service (called from js/mooring.js) ----------
 let feeCarry = 0, brokeShown = false;
 function stationHeal(hb, dt) {
-  const r = supplyStep(player.hp, player.maxHp, dt, save.gold, hb.ring);
+  const r = supplyStep(player.hp, player.maxHp, dt, save.gold, hb.ring, typeof gxDockK === "function" ? gxDockK() : 1);
   player.hp = r.hp;
   feeCarry += r.cost;
   const whole = Math.min(Math.floor(feeCarry), save.gold);

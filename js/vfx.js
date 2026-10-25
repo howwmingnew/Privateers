@@ -115,7 +115,7 @@ function vfxShip(s, dt) {
     if (a.smoulder && f >= 0.5 && (s.smokeT = (s.smokeT || 0) - dt) <= 0) { s.smokeT = 0.35; FX.tint = 0x5a524a; FX.dmg.emitParticleAt(s.x + rand(-8, 8), s.y + rand(-5, 5), 1); }
   }
   if (s.badge) {
-    const seen = dist(s, player) < LOOT_SEEN_R;
+    const seen = dist(s, player) < LOOT_SEEN_R * gearMul("view");   // a better spyglass (js/gear-core.js)
     if (seen !== !!s.lootSeen) { s.lootSeen = seen; refreshBadge(s); }
     labelText(s.badge); s.badge.setPosition(s.x, shipTop(s) - 20 * labelScale());
   }

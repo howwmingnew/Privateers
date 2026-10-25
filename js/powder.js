@@ -9,7 +9,7 @@ Object.assign(STR.zh, { fPowder: "火藥庫爆炸！" });
 const POWDER_STOP = 0.12;   // hit-stop (s), longer than an ordinary kill's
 
 // Does this hit blow the magazine? roll: a number in [0, 1).
-const powderTrigger = ({ rake, byPlayer, fixed, tutorial, roll }) => !!(rake && byPlayer && !fixed && !tutorial && roll < POWDER_CHANCE);
+const powderTrigger = ({ rake, byPlayer, fixed, tutorial, roll, chance = POWDER_CHANCE }) => !!(rake && byPlayer && !fixed && !tutorial && roll < chance);   // chance: the supply hold's powder affix raises it (js/gear-core.js)
 // Damage the crit does to its own target: a boss is hurt hard but left on 1 hp, anything else is finished.
 const powderSelfDmg = (s, dmg) => s.boss ? Math.max(dmg, Math.min(s.maxHp * POWDER_BOSS_FRAC, s.hp - 1)) : Math.max(dmg, s.hp);
 // Damage the blast does to a bystander `d` px from it: the kind's share of max hull, fading to 40% at the rim.
@@ -24,7 +24,7 @@ function powderSplash(t, d) {
 function powderStrike(s, dmg, ball, src) {
   if (!ball || !ball.fromPlayer || src !== player || s.isPlayer) return dmg;
   const rake = Math.abs(Math.cos(Math.atan2(ball.vy, ball.vx) - s.rot)) > RAKE_COS;
-  if (!powderTrigger({ rake, byPlayer: true, fixed: s.fixed, tutorial: !save.tutorialDone, roll: Math.random() })) return dmg;
+  if (!powderTrigger({ rake, byPlayer: true, fixed: s.fixed, tutorial: !save.tutorialDone, roll: Math.random(), chance: POWDER_CHANCE * gearMul("powder") })) return dmg;
   powderBlast(s);
   return powderSelfDmg(s, dmg);
 }

@@ -6,14 +6,14 @@
 // quick fix. The HUD hull bar glows while the crew works.
 let repairOn = false;   // is the hull mending this frame
 // Pure step: hp after dt.
-function repairStep(hp, maxHp, dt, still) {
+function repairStep(hp, maxHp, dt, still, k = 1) {   // k: the supply hold's repair affix (js/gear-core.js), 1 without
   if (hp >= maxHp) return hp;
-  return Math.min(maxHp, hp + maxHp * (still ? REPAIR_RATE_STILL : REPAIR_RATE) * dt);
+  return Math.min(maxHp, hp + maxHp * (still ? REPAIR_RATE_STILL : REPAIR_RATE) * k * dt);
 }
 onHook("frame", dt => {
   let on = false;
   if (player && player.alive && !paused && !docked && !titleOpen) {
-    const hp = repairStep(player.hp, player.maxHp, dt, player.speed < player.maxSpeed * REPAIR_STILL);
+    const hp = repairStep(player.hp, player.maxHp, dt, player.speed < player.maxSpeed * REPAIR_STILL, gearMul("repair"));
     on = hp > player.hp; player.hp = hp;
   }
   if (on !== repairOn) { repairOn = on; const bar = document.querySelector(".bar.hp"); if (bar) bar.classList.toggle("mend", on); }

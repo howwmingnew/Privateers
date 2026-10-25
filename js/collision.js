@@ -9,6 +9,9 @@
 Object.assign(STR.en, { fCrash: "Crash!" });
 Object.assign(STR.zh, { fCrash: "撞擊！" });
 
+// The gear's say (js/gear-fx.js): damage taken by `s` from `o`, and the share of speed `s` keeps after a blow.
+const hitOf = (s, o) => (typeof gxHitK === "function" ? gxHitK(s, o) : 1);
+const shedOf = (s, o) => (typeof gxShed === "function" ? gxShed(s, o) : CRASH_SHED);
 // Share of max hull a blow at closing speed vn takes, before hull-size weighting; 0 under the threshold.
 function crashFrac(vn, k) {
   if (!(vn > CRASH_MIN_V)) return 0;
@@ -63,7 +66,7 @@ function crashLand(s, dmg, src, x, y, nx, ny) {
 function crashIsland(s, isl, nx, ny) {
   if (!s.alive || s.fixed || s.ally || crashSafe(s, isl)) return;   // an escort scrapes a rock harmlessly: it must not be bled for its flagship's course
   const now = S.time.now / 1000, book = s.crashBook || (s.crashBook = new Map());
-  const fresh = crashContact(book, isl, now), frac = crashFrac(s.vx * nx + s.vy * ny, CRASH_ISLAND_K);
+  const fresh = crashContact(book, isl, now), frac = crashFrac(s.vx * nx + s.vy * ny, CRASH_ISLAND_K) * hitOf(s, null);
   if (!frac || !fresh || !crashDue(book, isl, now)) return;
   crashLand(s, crashDamage(frac, s.maxHp, s.hp, !!s.isPlayer), null, s.x + nx * ((s.hw ?? 13) + 2), s.y + ny * ((s.hw ?? 13) + 2), nx, ny);
   if (!s.isPlayer) s.shoreAway = { x: isl.x, y: isl.y, until: now + 2 };   // an AI turns away from the rock for a moment
@@ -78,8 +81,9 @@ function crashShips(a, b, nx, ny) {
   const now = S.time.now / 1000, book = a.crashBook || (a.crashBook = new Map());
   const fresh = crashContact(book, b, now), base = shipFrac((a.vx - b.vx) * nx + (a.vy - b.vy) * ny);
   if (!fresh || !crashDue(book, b, now)) return;
-  a.speed *= CRASH_SHED; b.speed *= CRASH_SHED;   // the blow takes the way off both hulls: two AI ships don't grind on each other
+  a.speed *= shedOf(a, b); b.speed *= shedOf(b, a);   // the blow takes the way off both hulls: two AI ships don't grind on each other
   const mayKill = !!(a.isPlayer || b.isPlayer), ma = hullMass(a), mb = hullMass(b), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
-  crashLand(a, crashDamage(base * massShare(ma, mb), a.maxHp, a.hp, mayKill), b, cx, cy, -nx, -ny);
-  crashLand(b, crashDamage(base * massShare(mb, ma), b.maxHp, b.hp, mayKill), a, cx, cy, nx, ny);
+  if (typeof gxRam === "function") gxRam(a, b, (a.vx - b.vx) * nx + (a.vy - b.vy) * ny);   // a legendary prow tears the other ship's rigging
+  crashLand(a, crashDamage(base * massShare(ma, mb) * hitOf(a, b), a.maxHp, a.hp, mayKill), b, cx, cy, -nx, -ny);
+  crashLand(b, crashDamage(base * massShare(mb, ma) * hitOf(b, a), b.maxHp, b.hp, mayKill), a, cx, cy, nx, ny);
 }

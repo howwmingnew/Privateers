@@ -29,7 +29,7 @@ function lootDrop(s, killer) {
   s.killedBy = killer;
   if (s.A && s.A.boom) fireshipBoom(s);
   const dry = portsOff();   // the daily sea pays no gold and drops no cargo (js/ports.js); the sinking itself still counts
-  let value = dry ? 0 : s.loot || 0;
+  let value = dry ? 0 : Math.round((s.loot || 0) * (killer === player ? gearMul("loot") : 1));   // the flag's loot affix (js/gear-core.js)
   if (killer === player && player.alive) {
     streak++;
     const warship = (s.faction === "pirate" || s.faction === "navy") && !s.boss;   // a bounty target pays its Captain's Chest instead (js/campaign.js)

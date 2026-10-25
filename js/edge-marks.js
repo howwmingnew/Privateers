@@ -35,7 +35,7 @@ function edgeBox(it) {
 }
 // Every target that could get a box right now, with its screen position (css px) and distance (world px).
 function edgeCandidates(v, kx, ky) {
-  const out = [], reach = EDGE_RANGE * v.width, me = shipRating();
+  const out = [], reach = EDGE_RANGE * gearMul("view") * v.width, me = shipRating();
   const add = (o, it) => {
     const px = Math.hypot(o.x - player.x, o.y - player.y);
     if (px > reach || px < 1) return;

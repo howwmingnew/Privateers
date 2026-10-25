@@ -21,10 +21,11 @@ function onHit(s, dmg, burn, src, ball) {
     if (seen) floatText(s.x, s.y - 54, t("fRaked"), "#ffd36a", 15);
   }
   if (typeof powderStrike === "function") dmg = powderStrike(s, dmg, ball, src);   // a rake may blow the magazine (js/powder.js)
+  if (typeof gxHurt === "function") dmg = gxHurt(s, dmg, src, ball);   // armor, long-range aim, marks, a legendary's tricks (js/gear-fx.js)
   if (burn) addBurn(s, burn, src);
   if (ball && ball.chain) {
     if (!(s.chainT > 0) && seen) floatText(s.x, s.y - 54, t("fChain"), "#d8e4e8", 14);
-    s.chainT = CHAIN_T;
+    s.chainT = ball.chainT || CHAIN_T;   // a gun's own affixes may lengthen it (js/gear-fx.js)
   }
   if (!s.isPlayer && src && src !== s && src.alive !== false) {
     if (s.merchant && src.faction !== "merchant") panic(s, src);
@@ -35,6 +36,7 @@ function onHit(s, dmg, burn, src, ball) {
 // Fires stack: each one burns `dps` for BURN_T s; past BURN_MAX the oldest goes out. Setting s.burnT = 0 (docking,
 // respawning) puts them all out.
 function addBurn(s, dps, src) {
+  if (s.isPlayer) dps *= gearCut("fire");   // fire-resistant planking and stores (js/gear-core.js)
   const b = s.burns || (s.burns = []);
   if (!(s.burnT > 0)) b.length = 0;
   if (b.length >= BURN_MAX) b.shift();
@@ -43,6 +45,7 @@ function addBurn(s, dps, src) {
 }
 function tickStatus(s, dt) {
   if (s.chainT > 0) s.chainT -= dt;
+  if (s.dragT > 0) s.dragT -= dt;
   const b = s.burns;
   if (!b || !b.length) return;
   if (!(s.burnT > 0)) { b.length = 0; s.burnDps = 0; return; }
