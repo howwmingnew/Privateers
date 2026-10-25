@@ -102,3 +102,22 @@ function watchView(game) {
   game.events.on("prestep", () => { if (window.devicePixelRatio !== seenDpr) { seenDpr = window.devicePixelRatio; apply(); } });
   apply();
 }
+
+// ---------- circles cut for the device pixels they cover ----------
+// Phaser's WebGL Graphics cuts every arc into 100 segments whatever its size (a new Point each, and a fill goes through
+// earcut), so a 3-px aim dot cost ~100 vertices and ~98 triangles. These draw the same shapes from as many segments as
+// the on-screen radius (r x camera zoom, which carries the dpr) needs to keep each chord's sag under ARC_ERR device px,
+// never more than Phaser's 100. The corners sit half a sag outside the circle and the chords' middles half a sag inside,
+// so a small dot keeps its size (corners on the circle cost a 4-px dot 6.5% of its area). Angles run from a0 up to a1,
+// as Graphics.arc's do.
+const ARC_ERR = 0.2;
+const arcSegs = (span, rs) => clamp(Math.ceil(span * Math.sqrt(Math.max(rs, 8 * ARC_ERR) / (8 * ARC_ERR))), 1, 100);   // a chord over angle d sags r(1 - cos(d/2)) ~ r d^2 / 8
+function arcPts(g, x, y, r, a0, span, full) {   // a new path round the arc; a full circle leaves its last point off, as closePath adds it
+  const n = arcSegs(span, r * g.scene.cameras.main.zoom), d = span / n, R = r * 2 / (1 + Math.cos(d / 2));
+  g.beginPath(); g.moveTo(x + Math.cos(a0) * R, y + Math.sin(a0) * R);
+  for (let i = 1, m = full ? n - 1 : n; i <= m; i++) g.lineTo(x + Math.cos(a0 + d * i) * R, y + Math.sin(a0 + d * i) * R);
+  return g;
+}
+const fillDisc = (g, x, y, r) => arcPts(g, x, y, r, 0, TAU, true).fillPath();   // g.fillCircle
+const strokeRing = (g, x, y, r) => arcPts(g, x, y, r, 0, TAU, true).closePath().strokePath();   // g.strokeCircle, its ends joined
+const strokeArc = (g, x, y, r, a0, a1) => arcPts(g, x, y, r, a0, a1 - a0, false).strokePath();   // beginPath, arc, strokePath

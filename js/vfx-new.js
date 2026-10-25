@@ -108,7 +108,7 @@ onHook("dock", () => VN.pool && VN.pool.clear());
 
 // ---------- building blocks ----------
 function vnRing(c, x, y, r0, r1, ms, col, w, a = 1) {   // an expanding shock ring
-  c.pool.draw((g, ga, k) => { const e = 1 - (1 - k) * (1 - k), r = r0 + (r1 - r0) * e; ga.lineStyle(w * (1 - k * 0.7), col, a * (1 - k)); ga.strokeCircle(x, y, r); }, ms);
+  c.pool.draw((g, ga, k) => { const e = 1 - (1 - k) * (1 - k), r = r0 + (r1 - r0) * e; ga.lineStyle(w * (1 - k * 0.7), col, a * (1 - k)); strokeRing(ga, x, y, r); }, ms);
 }
 const vnGlow = (c, x, y, size, ms, tint, a = 1) => c.pool.add({ x, y, s0: size * 0.5, s1: size, a0: a, a1: 0, life: ms / 1000, tint, depth: 8.95 });
 const vnPuff = (c, x, y, o) => c.pool.add({ tex: "vn-puff" + ((Math.random() * 3) | 0), x, y, rot: vnRnd(0, VN_TAU), vr: vnRnd(-0.6, 0.6), add: false, ...o });
@@ -199,10 +199,10 @@ function vnSwirl(g, ev, c, dt) {
   const t = wx.t, spout = ev.kind === "spout", o = VFX_NEW[spout ? "spout" : "vortex"], f = Math.max(0, Math.min(1, (t - ev.t0) / 1.2, (ev.end - t) / 1.5)), R = c.R * o.size;
   const m = R / (spout ? 78 : 95), tt = t - ev.t0;
   if (spout) {   // a grey cloud heart, white spray arms spun up and out
-    g.fillStyle(0x37454d, 0.5 * f); g.fillCircle(ev.x, ev.y, 65 * m); g.fillStyle(0x1f2b31, 0.5 * f); g.fillCircle(ev.x, ev.y, 20 * m);
+    g.fillStyle(0x37454d, 0.5 * f); fillDisc(g, ev.x, ev.y, 65 * m); g.fillStyle(0x1f2b31, 0.5 * f); fillDisc(g, ev.x, ev.y, 20 * m);
   } else {   // rings that darken toward the middle, foam arms running inward
     const rn = vnQ().rings, an4 = vnQ().arms;
-    for (let i = 0; i < rn; i++) { g.fillStyle(vnMix(0x2a8ab0, 0x020c14, i / (rn - 1)), 0.34 * f); g.fillCircle(ev.x, ev.y, (95 - i * 80 / rn) * m * f); }
+    for (let i = 0; i < rn; i++) { g.fillStyle(vnMix(0x2a8ab0, 0x020c14, i / (rn - 1)), 0.34 * f); fillDisc(g, ev.x, ev.y, (95 - i * 80 / rn) * m * f); }
     g.lineStyle(3, 0xdff6ff, 0.65 * f);
     for (let a = 0; a < an4; a++) { g.beginPath(); for (let i = 0; i <= 20; i += an4 < 4 ? 2 : 1) { const u = i / 20, r = (92 - u * 80) * m * f, an = a * VN_TAU / an4 + tt * 2.4 + u * 5, px = ev.x + Math.cos(an) * r, py = ev.y + Math.sin(an) * r; i ? g.lineTo(px, py) : g.moveTo(px, py); } g.strokePath(); }
   }

@@ -35,7 +35,7 @@ function disFog() {
 function disDashRing(g, x, y, R, col, a, w = 3) {   // a dashed ring
   g.lineStyle(w, col, a);
   const n = 28, off = performance.now() / 900;
-  for (let i = 0; i < n; i += 2) { const a0 = (i + off) / n * TAU, a1 = (i + 1 + off) / n * TAU; g.beginPath(); g.arc(x, y, R, a0, a1); g.strokePath(); }
+  for (let i = 0; i < n; i += 2) { const a0 = (i + off) / n * TAU, a1 = (i + 1 + off) / n * TAU; strokeArc(g, x, y, R, a0, a1); }
 }
 function disArrow(g, x, y, dir, len, col, a) {
   const cx = Math.cos(dir), sy = Math.sin(dir), ex = x + cx * len, ey = y + sy * len;
@@ -44,8 +44,8 @@ function disArrow(g, x, y, dir, len, col, a) {
 }
 function disSwirl(g, ev, c, t, pal) {   // arms of a spiral, turning the way the water turns
   const arms = ev.kind === "spout" ? 3 : 4, spin = t * 1.6, grow = Math.min(1, (t - ev.t0 + 2) / 2.5);
-  g.fillStyle(pal.deep, 0.5 * grow); g.fillCircle(ev.x, ev.y, c.R * 0.55 * grow);
-  g.fillStyle(pal.deep, 0.55 * grow); g.fillCircle(ev.x, ev.y, c.core * 1.15);
+  g.fillStyle(pal.deep, 0.5 * grow); fillDisc(g, ev.x, ev.y, c.R * 0.55 * grow);
+  g.fillStyle(pal.deep, 0.55 * grow); fillDisc(g, ev.x, ev.y, c.core * 1.15);
   for (let k = 0; k < arms; k++) for (let pass = 0; pass < 2; pass++) {
     g.lineStyle(pass ? 3 : 9, pass ? pal.crest : pal.arm, (pass ? 0.8 : 0.4) * grow);
     g.beginPath();
@@ -56,7 +56,7 @@ function disSwirl(g, ev, c, t, pal) {   // arms of a spiral, turning the way the
     }
     g.strokePath();
   }
-  g.lineStyle(3, DIS_AMBER, 0.5); g.strokeCircle(ev.x, ev.y, c.core);   // the part that hurts
+  g.lineStyle(3, DIS_AMBER, 0.5); strokeRing(g, ev.x, ev.y, c.core);   // the part that hurts
 }
 function disWallDraw(g, ev, t, dt) {
   const c = DISASTER.tsunami, cx = Math.cos(ev.dir), sy = Math.sin(ev.dir), nx = -sy, ny = cx, h = c.len / 2, f = ev.front, a = Math.min(1, (t - ev.t0) / 1.2);
@@ -93,7 +93,7 @@ function disDraw(dt) {
       } else disWallDraw(g, ev, t, dt);
     } else if (ev.kind === "rogue") {
       if (disCull(ev.x, ev.y, c.R + 80)) continue;
-      if (warn) { disDashRing(g, ev.x, ev.y, c.R, DIS_AMBER, 0.45 + 0.4 * pulse, 4); g.fillStyle(DIS_AMBER, 0.08 + 0.1 * pulse); g.fillCircle(ev.x, ev.y, c.R); disArrow(g, ev.x - Math.cos(ev.dir) * c.R * 0.5, ev.y - Math.sin(ev.dir) * c.R * 0.5, ev.dir, 70, DIS_AMBER, 0.8); }
+      if (warn) { disDashRing(g, ev.x, ev.y, c.R, DIS_AMBER, 0.45 + 0.4 * pulse, 4); g.fillStyle(DIS_AMBER, 0.08 + 0.1 * pulse); fillDisc(g, ev.x, ev.y, c.R); disArrow(g, ev.x - Math.cos(ev.dir) * c.R * 0.5, ev.y - Math.sin(ev.dir) * c.R * 0.5, ev.dir, 70, DIS_AMBER, 0.8); }
       else {   // the crest sweeping across the circle
         const u = clamp((t - ev.t0) / 1.0, 0, 1), cx = Math.cos(ev.dir), sy = Math.sin(ev.dir), f = -c.R * 1.1 + u * c.R * 2.2;
         if (typeof vnCrest === "function") vnCrest(ev, c, f, dt);   // foam puffs along the crest (js/vfx-new.js)
@@ -107,21 +107,21 @@ function disDraw(dt) {
       if (disCull(ev.x, ev.y, 300)) continue;
       if (warn) {
         const k = clamp((ev.t0 - t) / c.warn[1], 0, 1);   // the ring closes in as the stroke nears; it flashes once it has locked
-        g.lineStyle(4, 0xfff2a0, 0.5 + 0.5 * pulse); g.strokeCircle(ev.x, ev.y, c.R * (1 + k)); g.fillStyle(0xfff2a0, 0.1 + 0.12 * pulse); g.fillCircle(ev.x, ev.y, c.R);
+        g.lineStyle(4, 0xfff2a0, 0.5 + 0.5 * pulse); strokeRing(g, ev.x, ev.y, c.R * (1 + k)); g.fillStyle(0xfff2a0, 0.1 + 0.12 * pulse); fillDisc(g, ev.x, ev.y, c.R);
         for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + t * 2; g.lineBetween(ev.x + Math.cos(a) * c.R * 0.6, ev.y + Math.sin(a) * c.R * 0.6, ev.x + Math.cos(a + 0.3) * c.R * 1.05, ev.y + Math.sin(a + 0.3) * c.R * 1.05); }
         if (typeof vnBoltFlicker === "function") vnBoltFlicker(top, ev, ev.t0 - t);   // two faint flickers of the coming bolt (js/vfx-new.js)
       } else if (t - ev.t0 < 0.35) {
         const a = 1 - (t - ev.t0) / 0.35;
         vnBoltDraw(top, ev, t - ev.t0);   // forked bolt, violet ball, steam (js/vfx-new.js)
-        top.fillStyle(0xffffff, a * 0.5); top.fillCircle(ev.x, ev.y, c.R * (1.3 - a * 0.3));
+        top.fillStyle(0xffffff, a * 0.5); fillDisc(top, ev.x, ev.y, c.R * (1.3 - a * 0.3));
       }
     } else {   // spout, whirlpool
       if (disCull(ev.x, ev.y, c.R + 60)) continue;
       if (warn) {
         disDashRing(g, ev.x, ev.y, c.R, DIS_AMBER, 0.4 + 0.4 * pulse, 4);
-        g.fillStyle(0xff5a3a, 0.1 + 0.12 * pulse); g.fillCircle(ev.x, ev.y, c.core);
+        g.fillStyle(0xff5a3a, 0.1 + 0.12 * pulse); fillDisc(g, ev.x, ev.y, c.core);
         if (ev.kind === "spout") disArrow(g, ev.x + Math.cos(ev.h) * c.R, ev.y + Math.sin(ev.h) * c.R, ev.h, 60, DIS_AMBER, 0.5 + 0.3 * pulse);   // the way it wanders
-      } else if (typeof vnSwirl === "function" && vnSwirl(g, ev, c, dt)) { g.lineStyle(3, DIS_AMBER, 0.5); g.strokeCircle(ev.x, ev.y, c.core); }   // spiral column / funnel (js/vfx-new.js); the amber ring is the part that hurts
+      } else if (typeof vnSwirl === "function" && vnSwirl(g, ev, c, dt)) { g.lineStyle(3, DIS_AMBER, 0.5); strokeRing(g, ev.x, ev.y, c.core); }   // spiral column / funnel (js/vfx-new.js); the amber ring is the part that hurts
       else disSwirl(g, ev, c, t, ev.kind === "spout" ? { deep: 0x37454d, arm: 0x8a9aa2, crest: 0xe6f0f2 } : { deep: 0x04121f, arm: 0x1b4f78, crest: 0xbfe8f5 });
     }
   }
