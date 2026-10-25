@@ -139,6 +139,7 @@ function isHostile(e, o) {
   if (bossFeud(e, o)) return false;   // bosses, rematch captains and their guards stay out of the other AI's fights (js/archetypes.js)
   if (e.ally) return !o.isPlayer && !o.fixed && !o.ally && (o.faction === "pirate" || o.faction === "navy");   // an escort fights pirates and the Navy, not batteries or merchants (js/escort-ai.js)
   if (e.attacker === o && e.angry > 0) return true;
+  if (o.isPlayer && typeof practiceShip === "function" && practiceShip(e)) return false;   // a practice target never fires first (js/novice.js)
   if (o.isPlayer && typeof noviceSpare === "function" && noviceSpare(e)) return false;   // a newcomer's first bounty is a duel; the Shallows are not hunted (js/novice.js)
   const g = o.isPlayer ? "player" : o.faction;
   if (e.faction === "pirate") return g !== "pirate";
@@ -201,7 +202,7 @@ function think(e, dt) {
   if (typeof fleeSteer === "function") { const c = fleeSteer(e, now); if (c) ({ desired, thr } = c); }   // outmatched or beaten: run, downwind if it helps (js/flee.js)
   if (typeof bossTether === "function") { const c = bossTether(e, desired, thr); if (c) ({ desired, thr } = c); }   // a boss keeps to its own waters (js/campaign.js)
   if (typeof disDodge === "function") { const c = disDodge(e); if (c) ({ desired, thr } = c); }   // clear of a disaster that has been noticed (js/disasters.js)
-  if (desired == null && e.merchant && !e.tutMark) {   // (the tutorial's mark holds its course: js/tutorial.js)
+  if (desired == null && e.merchant && !e.tutMark && !(typeof practiceShip === "function" && practiceShip(e))) {   // (the tutorial's mark holds its course: js/tutorial.js)
     // merchants run from any pirate or the player that comes close, even before a shot is fired
     let threat = null, td = 480;
     for (const o of enemies.concat([player])) {

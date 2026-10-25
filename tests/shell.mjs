@@ -496,7 +496,8 @@ for (const dpr of [1, 2]) {
   ok("tutorial: the gold ring skips a warship and a ship in a higher sea, and a fresh mark goes in the shallows", !pick.navySafe && !pick.reefSafe && pick.faction === "merchant" && pick.tutMark && pick.sea === "shallows" && pick.hasTg, pick);
 
   // dying on step 3 (shot by an enemy, with an old kill on the books and a hold) then scooping the own wreck: no skip, no "Sunk!"
-  await ev(page, () => { save.sunk = 3; enterStep(2); cargo = 120; const k = makeEnemy(S, player.x + 200, player.y, 4, "pirate", "brig"); window.__killer = k; sink(player, k); });
+  // (placed = true: a quota ship made this close to the harbor is a Lv 1 practice target now, #113; the killer is a chosen Lv 4 brig)
+  await ev(page, () => { save.sunk = 3; enterStep(2); cargo = 120; const k = makeEnemy(S, player.x + 200, player.y, 4, "pirate", "brig", true); window.__killer = k; sink(player, k); });
   await until(page, () => docked);
   const sunkTxt = await ev(page, () => document.getElementById("pMsg").textContent);
   ok("sinking: the ledger and toast say who (class, faction, Lv) and where (sea)", /Sunk by a pirate \w+ \(Lv 4\) in The Shallows/.test(sunkTxt), sunkTxt);
