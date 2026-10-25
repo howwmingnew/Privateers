@@ -4,7 +4,7 @@
 // with its id in save.shipId. Every other ship waits in save.fleet [{ id, ship, hull, sails, hold }], one entry per ship
 // bought (so the same model can be owned twice, each with its own upgrades). shipSeq is the next id number.
 // Cannons are not tied to a ship: they move aboard whichever ship you switch to; ports that don't exist there send
-// their guns back to the store (fitMounts, js/save.js).
+// their guns back to the store (fitMounts, js/save.js). The other gear parts (#38) stay worn too (fitGear, js/gear-save.js).
 Object.assign(STR.en, {
   shipsOwned: "Your ships", shipsBuy: "Buy a ship", switchTo: "Switch", yardFull: "Yard full", shipNo: "{ship} #{n}",
   shipLvs: " · hull Lv {h}, sails Lv {s}, hold Lv {o}",
@@ -34,8 +34,9 @@ const canBuyShip = (s, type) => forSale(type) && s.gold >= SHIPS[type].cost && s
 // Pure: a new save aboard `ship` (or `entry`), with the ship you left parked in the yard.
 function boardShip(s, entry, patch = {}) {
   const parked = activeShip(s);
-  return fitMounts({ ...s, ...patch, shipId: entry.id, ship: entry.ship, hull: entry.hull, sails: entry.sails, hold: entry.hold, shipName: entry.name || "",
+  const next = fitMounts({ ...s, ...patch, shipId: entry.id, ship: entry.ship, hull: entry.hull, sails: entry.sails, hold: entry.hold, shipName: entry.name || "",
     fleet: s.fleet.filter(e => e.id !== entry.id).concat(parked) });
+  return typeof fitGear === "function" ? fitGear(next) : next;   // the gear follows you: parts the new hull cannot wear go back to the bag (js/gear-save.js)
 }
 // Buy a new ship of `type` at full price and sail it (hull, sails and hold at Lv 1). Returns the save, or null if it can't.
 function buyShip(s, type) {

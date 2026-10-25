@@ -21,10 +21,11 @@ const wxLive = () => wx.on && !docked && !titleOpen;
 const WX_ZERO = { x: 0, y: 0 }, wxLeeV = { x: 0, y: 0 }, wxDriftV = { x: 0, y: 0 };
 
 // ---------- what the hull feels (called per ship from js/ships.js move / steer and js/main.js) ----------
-const wxMul = s => (wx.on && !docked ? windFactor(s.rot, wx.wind) : 1);
+const wxFactor = (rot, own) => windFactor(rot, wx.wind, own ? gearMul("tail") : 1, own ? gearCut("head") : 1);   // the player's sails may be geared (js/gear-core.js)
+const wxMul = s => (wx.on && !docked ? wxFactor(s.rot, s.isPlayer) : 1);
 function wxYaw(s) {
   if (!wxLive() || wx.w.storm < 0.02 || (s.isPlayer && wx.calm)) return 0;
-  return stormYaw(s.rot, wx.wind, wx.w.storm, wx.sway);
+  return stormYaw(s.rot, wx.wind, wx.w.storm, wx.sway) * (s.isPlayer ? gearCut("storm") : 1);   // navigation instruments hold her head up
 }
 function wxLee(s) {
   if (!wxLive() || wx.w.storm < 0.02 || (s.isPlayer && wx.calm)) return WX_ZERO;
@@ -131,7 +132,7 @@ function wxBuildDial() {
 }
 function wxDial() {
   if (!wxDialEl) return;
-  const w = wx.wind, kn = windKnots(w), f = windFactor(player.rot, w), pct = Math.round((f - 1) * 100);
+  const w = wx.wind, kn = windKnots(w), f = wxFactor(player.rot, true), pct = Math.round((f - 1) * 100);
   const fx = pct === 0 ? "0%" : (pct > 0 ? "+" : "−") + Math.abs(pct) + "%", cls = f > 1.03 ? "tail" : f < 0.97 ? "head" : "beam";
   const wxName = t("wx_" + wx.w.kind), hrName = t("hr_" + wx.w.hour), sig = [kn, fx, cls, wxName, hrName, Math.round(w.dir * 20), Math.round(player.rot * 20)].join("|");
   if (sig === wxDialEl.sig) return;

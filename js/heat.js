@@ -46,7 +46,7 @@ function heatReset() {
 function heatAdd(n) {
   if (!heatOn() || !player || !player.alive) return;
   const before = heatStars(heat);
-  heat = heatGain(heat, n); heatQuiet = 0;
+  heat = heatGain(heat, n * gearCut("heat")); heatQuiet = 0;   // a flag that draws less attention (js/gear-core.js)
   const st = heatStars(heat);
   if (st > before) {
     if (before < HEAT_HUNT_FROM && st >= HEAT_HUNT_FROM) huntT = HEAT_HUNT_FIRST;

@@ -16,7 +16,7 @@ function deckMuzzle(a, side, i, n) {   // ship-local point: bow +x, larboard -y 
 }
 function deckHtml() {
   const a = SHIP_ART[save.ship] || SHIP_ART.sloop, { w, h } = texSize(a);
-  const btn = (side, label, i) => { const gun = save[side][i], cls = (gun ? "slot" : "slot empty") + (isPicked(side, i) ? " sel" : "") + (isDest(side, i) ? " dest" : "");   // js/gunbay.js
+  const btn = (side, label, i) => { const gun = save[side][i], cls = (gun ? "slot" + gunRar(gun) : "slot empty") + (isPicked(side, i) ? " sel" : "") + (isDest(side, i) ? " dest" : "");   // js/gunbay.js
     const name = gun ? `${t("gf_" + gun.g)} Lv ${gun.lv}` : t("emptyPort");
     return `<button class="${cls}" type="button" data-act="slot" data-side="${side}" data-i="${i}" data-k="${side}${i}" aria-pressed="${isPicked(side, i)}" aria-label="${t("slotAria", { side: label, n: i + 1, gun: name })}">` +
       (gun ? `${t("g_" + gun.g)}<small>Lv ${gun.lv}</small>` : `${t("emptyPort")}<small>&nbsp;</small>`) + `</button>`; };   // .deck.dense css: one line per port
@@ -46,7 +46,7 @@ function paintGunDeck(el = document.getElementById("deck")) {
   if (!box.width || !r.height) return;   // ledger still hidden: the ResizeObserver calls again once it shows
   const cls = SHIP_ART[save.ship] ? save.ship : "sloop", a = SHIP_ART[cls], k = r.height / texSize(a).w, dpr = window.devicePixelRatio || 1;
   const cx = r.left - box.left + r.width / 2, cy = r.top - box.top + r.height / 2;
-  const liv = liveryFor(player), key = [cls, liv, box.width, box.height, cx, cy, k, dpr, MOUNTS.map(m => gunSig(save[m.key].map(g => g && g.g))).join("/")].join("|");   // a swapped gun repaints the ship
+  const liv = liveryFor(player), key = [cls, liv, box.width, box.height, cx, cy, k, dpr, MOUNTS.map(m => gunSig(save[m.key].map(g => g && g.g + (g.lg ? "!" : "")))).join("/")].join("|");   // a swapped gun repaints the ship
   if (cv.dataset.key !== key) {
     cv.dataset.key = key;
     cv.width = Math.round(box.width * dpr); cv.height = Math.round(box.height * dpr);
@@ -55,7 +55,7 @@ function paintGunDeck(el = document.getElementById("deck")) {
     BLURK = k * dpr;   // shadowBlur ignores the transform (js/art.js)
     try {
       drawShip(c, a, LIVERY[liv], 0, 0, false, mulberry32(artSeed(`ship:${cls}:${liv}`)), true);   // bare hull, then the guns the save really holds (js/gun-art.js)
-      for (const m of MOUNTS) drawGunsOn(c, cls, 0, 0, m.key, save[m.key].map(g => g && g.g));
+      for (const m of MOUNTS) drawGunsOn(c, cls, 0, 0, m.key, save[m.key].map(g => g && g.g + (g.lg ? "!" : "")));
     } finally { BLURK = 1; }
   }
   // leader lines: from the button's edge facing the ship to its muzzle (rotated bow-up: local +x is screen up)

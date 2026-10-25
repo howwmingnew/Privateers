@@ -214,3 +214,46 @@ const DISASTER = {
   dodge: { aware: 0.85, busy: 0.55, look: 1300, margin: 1.2 },   // an AI notices a hazard it is in the way of with this chance (busy: it has a target), then answers after disReact() s; margin: how far past the radius it sails to be clear
   mastK: 0.8, stunK: 0.4,               // a snapped mast leaves 80% of the speed; a lightning stun 40%
 };
+
+// Gear (#38; js/gear-core.js is the rules, js/gear-save.js the save edits, js/gear-fx.js the sea, js/gear-ui.js the ledger page). Seven parts: the
+// gun part is each gun in the mounts and the gun store (js/data.js), the other six are worn one apiece (save.gear). Every figure here is a
+// proposal for the owner [PLACEHOLDER] until playtested; the PR lists them.
+const GEAR_PARTS = ["prow", "body", "sail", "gun", "supply", "instr", "flag"];
+const GEAR_RARITY = [   // af: how many affixes a roll gets (a legendary gets its own effect on top)
+  { id: "common", af: [0, 0] }, { id: "magic", af: [1, 2] }, { id: "rare", af: [2, 3] }, { id: "epic", af: [3, 4] }, { id: "legend", af: [2, 3] },
+];
+// Item level 1-5 follows the ship tier: a kill drops min(the ring's level, the tier of the ship you sail), and an item only wears on a hull of
+// at least its level, so the early sea can never hand out late gear. Rings 1-10 give item levels 1,1,2,2,3,3,4,4,5,5 (the Shallows 1, the Reef 2-3, the Lanes 3-4, the Maelstrom 5).
+const GEAR_ILV_RING = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5];
+const GEAR_ILV_K = [0.6, 0.8, 1, 1.25, 1.5];   // every affix value rolled for an item level is scaled by this
+const GEAR_LV_MAX = 10, GEAR_LV_STEP = 0.04, GEAR_UP_BASE = 40;   // a worn part (not a gun) levels with gold like a gun does: values x (1 + step x (Lv - 1)); price = base x item level x 1.5^(Lv - 1)
+const GEAR_REST = 0.5;   // the same effect on several parts: the best counts in full, the rest at this share (then the cap below)
+const GEAR_DROP = {
+  chance: { pirate: 0.22, navy: 0.3, merchant: 0.14 },   // a drop per sinking you make, by faction (a fort counts as a warship; a boarded prize drops its gun instead)
+  weights: [62, 28, 10, 0, 0],                           // rarity weights of an ordinary drop: common to rare
+  boss: [0, 0, 60, 32, 8], bossExtra: true,              // a bounty captain always drops one (rare or better) and an ordinary roll too
+  board: { merchant: [30, 45, 20, 5, 0], pirate: [20, 40, 28, 10, 2], navy: [20, 40, 28, 10, 2] },   // rarity weights of a prize gun
+  part: { prow: 1, body: 1, sail: 1, gun: 2, supply: 1, instr: 1, flag: 1 },   // which part drops
+  gun: { six: 4, long12: 3, carronade: 2, chain: 1.5, fire: 1 },               // which gun, for a gun drop
+};
+const GEAR_BAG_MAX = 60;   // worn-part spares; guns keep the gun store's own limit (MAX_STORE, js/save.js). Past it a drop is broken down at once, so nothing blocks play
+const GEAR_SCRAP = [1, 3, 8, 18, 45];   // fittings (the one material) from breaking an item down, by rarity, x (1 + 0.25 x (item level - 1))
+const GEAR_REROLL = { mats: [0, 2, 5, 12, 25], gold: 30, step: 0.6 };   // one affix re-rolled: fittings by rarity x (1 + step x earlier re-rolls) and gold x item level x (1 + re-rolls)
+// Affixes by part: [lowest, highest] roll at item level 3 (before GEAR_ILV_K). Percent as a fraction. Four per part, so an epic always has a pool.
+const GEAR_AFFIX = {
+  prow:   { ram: [0.08, 0.18], keep: [0.10, 0.25], brace: [0.06, 0.14], jolt: [0.10, 0.25] },   // ram: damage a collision deals; keep: speed kept after one; brace: damage it does you (also body); jolt: the other ship's extra lost speed
+  body:   { hp: [0.06, 0.14], brace: [0.06, 0.14], fire: [0.10, 0.25], armor: [0.04, 0.09] },   // fire: burning damage you take (also supply); armor: cannon damage you take
+  sail:   { spd: [0.04, 0.08], turn: [0.05, 0.12], tail: [0.15, 0.35], head: [0.15, 0.35] },    // tail: more of the following wind's speed; head: less of the head wind's loss
+  gun:    { gdmg: [0.06, 0.14], grange: [0.05, 0.12], greload: [0.06, 0.14], gtype: [0.10, 0.25] },   // gtype: burn x, chain slow time x, ball speed x for the plain guns
+  supply: { repair: [0.15, 0.35], fire: [0.10, 0.25], cargo: [0.08, 0.20], powder: [0.20, 0.50] },   // powder: more magazine blasts from your rakes
+  instr:  { view: [0.08, 0.20], aim: [0.06, 0.15], storm: [0.15, 0.35], reach: [0.04, 0.10] },  // view: plunder seen and ships marked farther; aim: damage rises up to this at full range; storm: storm yaw; reach: every gun's range
+  flag:   { escDef: [0.08, 0.20], loot: [0.06, 0.16], heat: [0.10, 0.25], luck: [0.10, 0.25] },   // escDef: escorts take less; heat: Navy heat gained; luck: drop chance
+};
+const GEAR_BASE = { prow: ["ram", 0.04], body: ["hp", 0.03], sail: ["spd", 0.015], supply: ["cargo", 0.04], instr: ["view", 0.04], flag: ["loot", 0.025], gun: ["gdmg", 0.02] };   // every piece's own effect, x item level (a gun: x (level - 1), so an old Lv 1 gun is unchanged)
+const GEAR_CAP = { ram: 0.6, keep: 0.3, brace: 0.4, jolt: 0.4, hp: 0.5, fire: 0.6, armor: 0.3, spd: 0.25, turn: 0.3, tail: 0.8, head: 0.6, repair: 1, cargo: 0.6, powder: 1.5,
+  view: 0.5, aim: 0.4, storm: 0.7, reach: 0.25, escDef: 0.5, loot: 0.5, heat: 0.6, luck: 0.5 };
+const GEAR_LEG = { prow: "scatter", body: "lastStand", sail: "swift", gun: "drag", supply: "dock", instr: "mark", flag: "rally" };   // the legendary effect of each part
+const GEAR_LEGX = {   // closing: px/s of closing speed; t: seconds; cut / k: share; cd: seconds between; r: px
+  scatter: { closing: 120, t: 4 }, lastStand: { below: 0.25, t: 5, cut: 0.5 }, swift: { turn: 1.5, within: 1, t: 2.5, k: 0.15, cd: 6 },
+  drag: { t: 1.5, k: 0.25 }, dock: { k: 2 }, mark: { r: 420, t: 8, k: 0.15, cd: 12 }, rally: { t: 4, k: 0.3, gap: 10 },
+};

@@ -22,7 +22,9 @@ const GUN_CODE = { six: "s", long12: "l", carronade: "c", chain: "k", fire: "f" 
 const GUN_LOOK = {   // top view at 1x: len = barrel length, w = barrel width at the breech
   six: { len: 6.2, w: 2.6 }, long12: { len: 9, w: 2.1 }, carronade: { len: 4.4, w: 4 }, chain: { len: 6.4, w: 2.6 }, fire: { len: 6.4, w: 2.8 },
 };
-const gunSig = ports => ports.map(p => (p ? GUN_CODE[p] || "s" : "-")).join("");
+// A legendary gun (#38, js/gear-core.js) is its type id plus "!": the same barrel with gold inlay and a glowing mouth (legendTop, legendSide).
+const gunBase = p => p.replace("!", "");
+const gunSig = ports => ports.map(p => (p ? (GUN_CODE[gunBase(p)] || "s") + (p.endsWith("!") ? "!" : "") : "-")).join("");
 const artNameOf = a => Object.keys(SHIP_ART).find(k => SHIP_ART[k] === a) || "sloop";
 
 // ---------- layout: where each gun's muzzle sits, matching s.mounts (js/art.js) and muzzle() (js/combat.js) ----------
@@ -83,13 +85,19 @@ function drawGunTop(c, id) {
   }
   c.fillStyle = "#17171a"; c.beginPath(); c.arc(-len - 0.3, 0, 0.7, 0, TAU); c.fill();   // cascabel
 }
+function legendTop(c, id) {   // gold bands and a glowing mouth over the top view
+  const { len, w } = GUN_LOOK[id] || GUN_LOOK.six;
+  c.fillStyle = "#ffd36a"; c.fillRect(-len * 0.72, -w * 0.5 - 0.3, 0.9, w + 0.6); c.fillRect(-len * 0.34, -w * 0.5 - 0.3, 0.9, w + 0.6);
+  const g = c.createRadialGradient(0.6, 0, 0, 0.6, 0, 3); g.addColorStop(0, "rgba(255,230,150,.95)"); g.addColorStop(1, "rgba(255,120,30,0)");
+  c.fillStyle = g; c.fillRect(-2.4, -3, 6, 6);
+}
 // One mount's guns, merged: `ports` = a gun id or null per port, in port order. Hull centre at (cx, cy).
 function drawGunsOn(c, an, cx, cy, key, ports) {
   const lay = gunLayout(an, key, ports.length);
-  ports.forEach((id, i) => {
-    if (!id) return;
-    const p = lay[i], L = GUN_LOOK[id] || GUN_LOOK.six, sc = ports.length > 1 ? clamp(p.pitch / (L.w * 1.3), 0.6, 1) : 1;   // crowded decks squeeze the guns, not the gaps
-    c.save(); c.translate(cx + p.x, cy + p.y); c.rotate(p.ang); c.scale(sc, sc); drawGunTop(c, id); c.restore();
+  ports.forEach((tag, i) => {
+    if (!tag) return;
+    const id = gunBase(tag), p = lay[i], L = GUN_LOOK[id] || GUN_LOOK.six, sc = ports.length > 1 ? clamp(p.pitch / (L.w * 1.3), 0.6, 1) : 1;   // crowded decks squeeze the guns, not the gaps
+    c.save(); c.translate(cx + p.x, cy + p.y); c.rotate(p.ang); c.scale(sc, sc); drawGunTop(c, id); if (tag.endsWith("!")) legendTop(c, id); c.restore();
   });
 }
 
@@ -129,11 +137,18 @@ function drawGunSide(c, id) {
   }
   c.fillStyle = "#17171a"; c.beginPath(); c.arc(4, 15, 2.2, 0, TAU); c.fill();   // cascabel
 }
+function legendSide(c) {   // gold inlay bands across the barrel, a glint at the mouth, a gilt cascabel
+  c.fillStyle = "#ffd36a"; c.strokeStyle = "#14100c"; c.lineWidth = 0.8;
+  for (const x of [16, 30, 44]) { c.fillRect(x, 9, 2.6, 12); c.strokeRect(x + 0.4, 9.4, 1.8, 11.2); }
+  c.beginPath(); c.arc(4, 15, 2.2, 0, TAU); c.fill(); c.stroke();
+  const g = c.createRadialGradient(70, 15, 0, 70, 15, 9); g.addColorStop(0, "rgba(255,236,160,.95)"); g.addColorStop(1, "rgba(255,130,40,0)");
+  c.fillStyle = g; c.fillRect(60, 5, 16, 20);
+}
 const gunSideCache = {};
 function gunSideUrl(id) {
   if (gunSideCache[id]) return gunSideCache[id];
   const cv = document.createElement("canvas"), res = 2; cv.width = 76 * res; cv.height = 36 * res;
-  const c = cv.getContext("2d"); c.scale(res, res); drawGunSide(c, GUN_LOOK[id] ? id : "six");
+  const c = cv.getContext("2d"), base = gunBase(id); c.scale(res, res); drawGunSide(c, GUN_LOOK[base] ? base : "six"); if (id.endsWith("!")) legendSide(c);
   return (gunSideCache[id] = cv.toDataURL("image/png"));
 }
 const gunSideImg = (id, cls = "") => `<img class="gsv ${cls}" alt="" aria-hidden="true" width="76" height="36" src="${gunSideUrl(id)}">`;
@@ -147,7 +162,7 @@ const GA_MOUNTS = ["bow", "left", "right", "stern"];
 const gaAng = { bow: 0, left: -Math.PI / 2, right: Math.PI / 2, stern: Math.PI };
 // what each port of a mount holds: the player's from the save (so a swap shows at once), an AI ship's from its guns (js/archetypes.js)
 function gaPorts(s, key) {
-  if (s.isPlayer) return (save[key] || []).map(g => (g ? g.g : null));
+  if (s.isPlayer) return (save[key] || []).map(g => (g ? g.g + (g.lg ? "!" : "") : null));
   return ((s.guns && s.guns[key]) || []).map(g => g.gt || "six");
 }
 const gaSize = an => { const a = SHIP_ART[an] || SHIP_ART.sloop; return { w: Math.ceil(a.len + 16), h: Math.ceil(a.beam + 16) }; };

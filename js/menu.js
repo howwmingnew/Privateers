@@ -241,6 +241,7 @@ function goBack() {
   if (pauseOpen) return resumeGame();
   if (titleOpen && !$m("tConfirm").hidden) return menuAction("new-no");
   if (docked && typeof cancelGunPick === "function" && cancelGunPick()) return;   // a gun picked up in the ledger is put down first (js/gunbay.js)
+  if (docked && typeof cancelGearPick === "function" && cancelGearPick()) return;   // so is a gear part (js/gear-ui.js)
   if (docked) $m("sail").focus({ preventScroll: true });   // from the ledger, "back" heads for Set sail
 }
 
