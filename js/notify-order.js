@@ -69,12 +69,15 @@ onHook("frame", () => {
   if (el) { const q = streakQuiet(); if (el.classList.contains("quiet") !== q) el.classList.toggle("quiet", q); }
 });
 
-// ---------- a quiet Shallows on the first voyage ----------
-// Until the first voyage is done, a ship made in the Shallows (js/ships.js makeEnemy) fights at most one level above
-// the captain's Ship Lv: no ▲▲ ship waits by the harbor mouth. Re-roll its class, then drop its level.
+// ---------- a quiet Shallows for a new captain ----------
+// On the first voyage, and after it while the captain's Ship Lv is still under NOVICE_LV (js/novice.js), a ship made in
+// the Shallows (js/ships.js makeEnemy) fights at most one level above that Ship Lv: no ▲▲ ship waits by the harbor
+// mouth. Re-roll its class, then drop its level.
 function tameFirstVoyage(e) {
-  if (save.tutorialDone || e.fixed || typeof seaOfRing !== "function" || seaOfRing(e.ring).id !== "shallows") return;
-  const cap = shipRating() + 1, over = () => (e.threatL ?? e.L) > cap;
+  if (e.fixed || typeof seaOfRing !== "function" || seaOfRing(e.ring).id !== "shallows") return;
+  const me = shipRating();
+  if (save.tutorialDone && me >= NOVICE_LV) return;
+  const cap = noviceCap(me), over = () => (e.threatL ?? e.L) > cap;
   for (let i = 0; i < 4 && over(); i++) outfitEnemy(e, i < 2 ? pickArch(e.L, e.faction) : e.merchant ? "fluyt" : "cutter");
   while (over() && e.L > 1) { e.L--; outfitEnemy(e, e.arch); }
 }

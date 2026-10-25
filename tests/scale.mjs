@@ -54,7 +54,7 @@ for (const [name, vp, dpr, mobile, want] of [
   ["1920x1080", { width: 1920, height: 1080 }, 1, false, 194],
   ["3840x2160", { width: 3840, height: 2160 }, 1, false, 389],
   ["3840x2160@2x", { width: 1920, height: 1080 }, 2, false, 194],
-  ["390x844", { width: 390, height: 844 }, 3, true, 124],
+  ["390x844", { width: 390, height: 844 }, 3, true, 172],   // a touch screen starts at MINI_COARSE_PCT (150%), which the 44vw cap then holds to 172
 ]) {
   const { ctx, page, errors } = await open(browser, { viewport: vp, dpr, mobile });
   await sail(page); await settle(page);

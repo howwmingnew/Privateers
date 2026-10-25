@@ -70,7 +70,7 @@ function updateEdgeMarks(dt) {
   const away = it => it.sx < 0 || it.sx > w || it.sy < 0 || it.sy > h;
   const inside = it => it.sx > EDGE_HYST && it.sx < w - EDGE_HYST && it.sy > EDGE_HYST && it.sy < h - EDGE_HYST;
   const cands = edgeCandidates(v, kx, ky).filter(it => (edgeEls.has(it.o) ? !inside(it) : away(it)));   // a shown box stays until the target is well inside
-  const picked = edgePick(cands);
+  const picked = edgePick(cands, edgeMax(EDGE_MQ_COARSE.matches, w));
   edgeShowsBoss = picked.some(it => it.boss);
   const keep = readEdgeKeepouts(dt), pad = 16 * z, boxH = 30 * z,   // pad: room for a box's pointer between it and the screen edge
      inset = { l: pad, r: w - pad, t: Math.max(keep.top + pad, 56 * z), b: h - pad - (EDGE_MQ_COARSE.matches ? 24 * z : 0) };
@@ -79,6 +79,7 @@ function updateEdgeMarks(dt) {
     let m = edgeEls.get(it.o);
     if (!m) { m = edgeBox(it); edgeEls.set(it.o, m); requestAnimationFrame(() => m.el.classList.add("on")); }
     m.el.classList.remove("gone"); m.it = it;
+    if (it.kind === "ship" && !it.boss && !it.ally) { const th = String(edgeThreat(it.d)); if (m.el.dataset.th !== th) m.el.dataset.th = th; }   // the box's border and pointer take the threat colour (css/campaign.css)
     const key = (it.boss ? "b" : it.place || (it.hz ? "h" + it.hz.kind : "s")) + (it.e ? it.d + (it.e.faction || "") + (it.e.arch || "") : "");
     if (key !== m.key || it.e?.arch === "fireship") { m.key = key; edgeIcon(m.ic, it); }   // a fireship's flicker needs a fresh paint
     const text = edgeLabel(it.px), sk = m.look + z + "|" + text;

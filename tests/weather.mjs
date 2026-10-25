@@ -69,7 +69,7 @@ console.log("Wind dial");
   });
   const a = await info();
   check(a && a.inHud && a.shown, "the dial is in the HUD and visible at sea", a);
-  check(a && /^\d+ kn$/.test(a.kn) && /^[+−]?\d+%$/.test(a.fx) && a.wx === "Clear · Day", "it shows knots, the speed effect and the weather", a);
+  check(a && /^Wind \d+ kn$/.test(a.kn) && /^[+−]?\d+%$/.test(a.fx) && a.wx === "Clear · Day", "it shows knots, the speed effect and the weather", a);
   check(a && a.aria && a.aria.includes("Wind"), "it has an accessible label", a && a.aria);
   await page.evaluate(() => { paused = true; });   // hold the sea, then move the clock by hand
   const seen = new Set([a.arrow]), strengths = [];
