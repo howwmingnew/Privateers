@@ -36,3 +36,66 @@ test("#71 bossFeud: the player, the player's escorts and the boss's own side sta
   assert.equal(run("bossFeud({ faction: 'navy' }, { faction: 'pirate' })"), false, "ordinary AI feuds are untouched");
   assert.equal(run("bossFeud(null, { boss: 'ned' })"), false);
 });
+
+// ---------- #72: every ship ever owned, the starter sloop included, is in the yard and switched to for free ----------
+const KEY = "privateers-save-v2";
+function bootYard(seed = {}) {
+  const store = new Map(Object.entries(seed)), domReady = [];
+  const c = vm.createContext({
+    localStorage: { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) },
+    navigator: { language: "en-US" }, document: { addEventListener: (type, fn) => { if (type === "DOMContentLoaded") domReady.push(fn); } },
+    console: { log() {}, warn() {}, error() {} }, setTimeout, clearTimeout,
+  });
+  for (const f of ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/data.js", "js/save.js", "js/shipyard.js"])
+    vm.runInContext(readFileSync(new URL("../" + f, import.meta.url), "utf8"), c, { filename: f });
+  domReady.forEach(fn => fn());   // late sanitizers run once every script has loaded, as on the page
+  return { run: code => vm.runInContext(code, c), json: code => JSON.parse(vm.runInContext(`JSON.stringify(${code})`, c)) };
+}
+const oldSave = o => JSON.stringify({ v: 2, gold: 0, ship: "sloop", hull: 1, sails: 1, hold: 1, bow: [{ g: "six", lv: 1 }], left: [], right: [], stern: [], store: [], sunk: 0, wrecks: [], salvage: [], ...o });
+
+test("#72 the starter sloop swaps back free after every kind of ship is bought", () => {
+  const g = bootYard();
+  const models = g.json("SHIP_ORDER.filter(forSale)");
+  assert.ok(models.length >= 8, "the whole line-up (#64) is for sale: " + models);
+  g.run("save = fitMounts({ ...defaultSave(), gold: 9999999 })");
+  for (const m of models) g.run(`save = buyShip(save, ${JSON.stringify(m)})`);
+  assert.equal(g.json("ownedShips().length"), models.length + 1);
+  assert.ok(g.json("ownedShips().some(e => e.ship === 'sloop' && e.id === 's1')"), "the sloop is in the owned list");
+  const gold = g.run("save.gold");
+  for (const id of g.json("ownedShips().map(e => e.id)")) {   // every ship ever owned: one free switch each, the pay-nothing rule holds
+    g.run(`save = switchShip(save, ${JSON.stringify(id)})`);
+    assert.equal(g.run("save.shipId"), id);
+    assert.equal(g.run("save.gold"), gold, "switching to " + id + " costs nothing");
+  }
+  assert.equal(g.json("save.ship"), g.json("ownedShips().at(-1).ship"));
+});
+
+test("#72 a sloop that was upgraded keeps its levels on the round trip", () => {
+  const g = bootYard();
+  g.run(`save = fitMounts({ ...defaultSave(), gold: 99999, hull: 5, sails: 4, hold: 3 }); save = buyShip(save, "schooner"); save = switchShip(save, "s1")`);
+  assert.deepEqual(g.json("[save.ship, save.hull, save.sails, save.hold]"), ["sloop", 5, 4, 3]);
+});
+
+test("#72 an old save that lost its starter gets a free sloop in the yard, once", () => {
+  const g = bootYard({ [KEY]: oldSave({ ship: "brig", hull: 4, sails: 3, hold: 2 }) });
+  assert.deepEqual(g.json("ownedShips().map(e => [e.id, e.ship])"), [["s1", "brig"], ["s2", "sloop"]]);
+  assert.equal(g.run("save.gold"), 0);
+  g.run(`save = switchShip(save, "s2")`);
+  assert.deepEqual(g.json("[save.ship, save.shipId, save.gold]"), ["sloop", "s2", 0], "free, with no gold in the purse");
+  assert.deepEqual(g.json("sanitizeSave(save)"), g.json("save"), "idempotent: reloading adds no second sloop");
+  assert.equal(g.json("ownedShips().filter(e => e.ship === 'sloop').length"), 1);
+});
+
+test("#72 a save whose yard is full still gets its sloop back; a sloop already owned is never duplicated", () => {
+  const fleet = Array.from({ length: 30 }, (_, i) => ({ id: "s" + (i + 2), ship: "brig", hull: 1, sails: 1, hold: 1 }));
+  const g = bootYard({ [KEY]: oldSave({ ship: "frigate", fleet }) });
+  assert.ok(g.json("ownedShips().some(e => e.ship === 'sloop')"));
+  const h = bootYard({ [KEY]: oldSave({ ship: "brig", fleet: [{ id: "s2", ship: "sloop", hull: 3, sails: 1, hold: 1 }], shipSeq: 3 }) });
+  assert.deepEqual(h.json("ownedShips().map(e => [e.id, e.ship, e.hull])"), [["s1", "brig", 1], ["s2", "sloop", 3]]);
+});
+
+test("#72 the sloop is not for sale, and the owned-model strings exist in both languages", () => {
+  const g = bootYard();
+  assert.equal(g.run("forSale('sloop')"), false);
+  for (const k of ["ownedHint", "buyAnother"]) assert.ok(g.run(`STR.en.${k} && STR.zh.${k}`), k);
+});

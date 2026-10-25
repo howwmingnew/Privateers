@@ -50,6 +50,7 @@ function resetEnemies(sc) {
 let portMsg = ["welcome"];
 // Buying a ship costs its full price, so the button needs a second tap within a few seconds.
 let shipArmed = null, shipArmedAt = 0, shipArmTimer;
+const buyLabel = id => t(ownedShips().some(e => e.ship === id) ? "buyAnother" : "buy", { n: fmt(SHIPS[id].cost), cost: fmt(SHIPS[id].cost) });
 function renderPort() {
   const $ = id => document.getElementById(id);
   $("pMsg").innerHTML = t(...portMsg);
@@ -82,12 +83,13 @@ function renderPort() {
     return `<div class="item"><div class="nm">${label}</div>${btn}<div class="ds">${shipDs(sh, e.hull, e.sails, e.hold)}${t("shipLvs", { h: e.hull, s: e.sails, o: e.hold })}</div></div>`;
   }).join("");
   const full = owned.length >= FLEET_MAX;
+  // a model already in the yard is switched to above for nothing; buying it again is a second hull, so the button says "another" (#72)
   const saleRow = id => {
     const sh = SHIPS[id], lock = shipLock(id);   // Letters of Marque gate (js/campaign.js): null, or why not yet
     const btn = lock ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("locked")}</button>`
       : full ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("yardFull")}</button>`
-      : `<button class="btn" type="button" data-act="ship" data-id="${id}" ${save.gold < sh.cost ? "disabled" : ""}>${shipArmed === id ? t("shipArm") : t("buy", { n: fmt(sh.cost) })}</button>`;
-    return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${shipDs(sh, 1, 1, 1)}${lock ? `<span class="lock">${lock}</span>` : ""}</div>${shipCmpHtml(sh, SHIPS[save.ship], save.ship)}</div>`;
+      : `<button class="btn" type="button" data-act="ship" data-id="${id}" ${save.gold < sh.cost ? "disabled" : ""}>${shipArmed === id ? t("shipArm") : buyLabel(id)}</button>`;
+    return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${shipDs(sh, 1, 1, 1)}${lock ? `<span class="lock">${lock}</span>` : count[id] ? `<span class="up">${t("ownedHint", { n: count[id] })}</span>` : ""}</div>${shipCmpHtml(sh, SHIPS[save.ship], save.ship)}</div>`;
   };
   // two lines side by side in tiers: fast, then heavy (js/ship-lines.js)
   const sale = SHIP_LINE_KEYS.map(line => `<p class="hint-s line-${line}">${t("line_" + line)}</p>` +
@@ -118,7 +120,7 @@ document.getElementById("port").addEventListener("click", ev => {
       shipArmTimer = setTimeout(() => {
         shipArmed = null;   // relabel in place rather than re-render, so keyboard focus stays put
         const el = document.querySelector(`[data-act="ship"][data-id="${id}"]`);
-        if (el) el.textContent = t("buy", { n: fmt(SHIPS[id].cost) });
+        if (el) el.textContent = buyLabel(id);
       }, 3000);
       renderPort(); document.querySelector(`[data-act="ship"][data-id="${id}"]`)?.focus();
       Snd.play("uiClick");

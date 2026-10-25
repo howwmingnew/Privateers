@@ -72,6 +72,32 @@ check(r.vsPlayer && r.plr, "the boss and its guard stay hostile to the flagship"
 r = await ev(() => { const { boss } = __q; const ally = makeEnemy(S, boss.x + 200, boss.y, 3, "ally", "brig"); ally.ally = true; return { b: isHostile(boss, ally), a: isHostile(ally, boss) }; });
 check(r.b && r.a, "and to the player's own escorts (and the escorts to the boss)");
 
+// ---------- #72: the starter and every bought ship swap back free ----------
+console.log("#72 owned ships switch back free");
+const tap = sel => page.click(sel);
+const yardInfo = () => ev(() => ({ ship: save.ship, id: save.shipId, gold: save.gold, owned: ownedShips().map(e => e.ship), switches: [...document.querySelectorAll('#ships [data-act="switch"]')].map(b => b.dataset.id),
+  labels: Object.fromEntries([...document.querySelectorAll('#ships [data-act="ship"]')].map(b => [b.dataset.id, b.textContent.trim()])), hints: document.querySelectorAll("#ships .up").length }));
+await boot(saveWith({ gold: 90000 }));
+let y = await yardInfo();
+check(y.ship === "sloop" && y.switches.length === 0 && !("sloop" in y.labels), "the starter is aboard, nothing to switch to, and the yard does not sell a sloop");
+await tap('[data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(500); await tap('[data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(300);
+y = await yardInfo();
+check(y.ship === "schooner" && y.switches.includes("s1"), "bought a schooner: the sloop waits in the yard with a Switch button");
+const goldAfterBuy = y.gold;
+await tap('[data-act="switch"][data-id="s1"]'); await page.waitForTimeout(300);
+y = await yardInfo();
+check(y.ship === "sloop" && y.id === "s1" && y.gold === goldAfterBuy, "switched back to the starter sloop: no gold spent");
+check(/another|再買/i.test(y.labels.schooner || "") && y.hints >= 1, `an owned model's sale button says "another" and a hint points at the free switch ("${y.labels.schooner}")`);
+await tap('[data-act="switch"][data-id="s2"]'); await page.waitForTimeout(300);
+y = await yardInfo();
+check(y.ship === "schooner" && y.gold === goldAfterBuy, "and over to the schooner and back again is free as well");
+await boot(saveWith({ gold: 0, ship: "brig", hull: 4 }));   // an old save: the starter was replaced long ago
+y = await yardInfo();
+check(y.ship === "brig" && y.owned.includes("sloop") && y.switches.length === 1, "an old save with no starter gets a sloop in the yard");
+await tap('[data-act="switch"]'); await page.waitForTimeout(300);
+y = await yardInfo();
+check(y.ship === "sloop" && y.gold === 0, "which switches on with an empty purse");
+
 // ---- END OF SECTIONS ----
 check(errors.length === 0, `0 page errors${errors.length ? " -> " + errors.join(" | ") : ""}`);
 await browser.close();

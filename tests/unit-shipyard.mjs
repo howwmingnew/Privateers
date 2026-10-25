@@ -28,8 +28,8 @@ const oldSave = o => JSON.stringify({ v: 2, gold: 0, ship: "sloop", hull: 1, sai
 
 test("an old save's ship and upgrades become the yard's first ship", () => {
   const g = boot({ [KEY]: oldSave({ ship: "brig", hull: 4, sails: 3, hold: 2, gold: 50 }) });
-  assert.deepEqual(g.json("[save.shipId, save.ship, save.hull, save.sails, save.hold, save.fleet, save.shipSeq]"), ["s1", "brig", 4, 3, 2, [], 2]);
-  assert.deepEqual(g.json("ownedShips()"), [{ id: "s1", ship: "brig", hull: 4, sails: 3, hold: 2 }]);
+  assert.deepEqual(g.json("[save.shipId, save.ship, save.hull, save.sails, save.hold, save.fleet, save.shipSeq]"), ["s1", "brig", 4, 3, 2, [{ id: "s2", ship: "sloop", hull: 1, sails: 1, hold: 1 }], 3]);   // the lost starter sloop is parked in the yard (#72)
+  assert.deepEqual(g.json("ownedShips()"), [{ id: "s1", ship: "brig", hull: 4, sails: 3, hold: 2 }, { id: "s2", ship: "sloop", hull: 1, sails: 1, hold: 1 }]);
 });
 
 test("a fresh game starts with one sloop and an empty yard", () => {
@@ -94,9 +94,9 @@ test("a damaged yard in the save is cleaned: bad ids, duplicates, unknown models
   const g = boot({ [KEY]: oldSave({ ship: "brig", shipId: "s4", shipSeq: 1, fleet: [
     { id: "s4", ship: "sloop", hull: 2 }, { id: "s2", ship: "frigate", hull: 99, sails: -5, hold: "3" }, { id: "s2", ship: "sloop" },
     { id: "bad", ship: "sloop" }, { id: "s3", ship: "galleon" }, null, "x", { id: "__proto__", ship: "sloop" }] }) });
-  assert.deepEqual(g.json("save.fleet"), [{ id: "s2", ship: "frigate", hull: 15, sails: 1, hold: 3 }]);
+  assert.deepEqual(g.json("save.fleet"), [{ id: "s2", ship: "frigate", hull: 15, sails: 1, hold: 3 }, { id: "s5", ship: "sloop", hull: 1, sails: 1, hold: 1 }]);   // s5: the lost starter (#72)
   assert.equal(g.run("save.shipId"), "s4");
-  assert.equal(g.run("save.shipSeq"), 5, "the next id is past every id in use");
+  assert.equal(g.run("save.shipSeq"), 6, "the next id is past every id in use");
   assert.deepEqual(g.json("sanitizeSave(save)"), g.json("save"), "idempotent");
 });
 
