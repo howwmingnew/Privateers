@@ -95,7 +95,10 @@ console.log("Fresh campaign (desktop, en)");
   // (spawns come every 1.2 s); the rings around the player never may.
   check(rows.every(r => r.count.filter(n => n < 1).length <= 1 && r.nearMin >= 1),
     "the player's ring and its neighbours are always populated; at most one far ring is briefly empty");
-  check(rows.every(r => r.total <= 30 && r.nearShare >= 0.45), "near rings hold most of the ships (~60%)");
+  // a new captain (Ship Lv under NOVICE_LV) in the Shallows gets a thinner crowd around them: rings 1-2 only, ~25% of the sea (js/novice.js)
+  const calm = r => r.ring <= 2;
+  check(rows.every(r => r.total <= 30 && r.nearShare >= (calm(r) ? 0.2 : 0.45)), "near rings hold most of the ships (~60%; a new captain in the Shallows: ~25%)");
+  check(rows.filter(calm).every(r => r.count[0] + r.count[1] <= 9 && r.count[0] >= 3 && r.count[1] >= 3), "the Shallows hold a few ships each for a new captain, not the full crowd");
   await page.evaluate(() => { player.maxHp = yardVal("hull"); player.hp = player.maxHp; sendHome(), dock("return"); });
 
   // banner: sail from the Shallows into the Reef Straits

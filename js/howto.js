@@ -6,7 +6,7 @@ Object.assign(STR.en, {
   ht_controls: `<h3>Controls</h3><dl class="ctl">
     <dt>Keyboard</dt><dd><kbd>A</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>→</kbd> turn. <kbd>W</kbd> <kbd>S</kbd> or <kbd>↑</kbd> <kbd>↓</kbd> raise and lower the sail (stopped, slow, half, full); the ship holds that speed. <kbd>Space</kbd> fires every loaded gun that bears; <kbd>Q</kbd> / <kbd>E</kbd> fire only the larboard / starboard broadside. <kbd>M</kbd> mutes. <kbd>Esc</kbd> or <kbd>P</kbd> pauses.</dd>
     <dt>Mouse</dt><dd>Hold the right button to steer toward the cursor (the farther the cursor, the more sail) and left-click to fire. Or use the left button alone: hold to steer, let go to fire. The wheel zooms.</dd>
-    <dt>Touch</dt><dd>Drag anywhere to steer with the floating stick, and let go to fire. The <b>❚❚</b> button pauses.</dd>
+    <dt>Touch</dt><dd>Drag anywhere to steer with the floating stick, and let go to fire. The <b>−</b> / <b>+</b> buttons lower or raise the sail: at <b>Stopped</b> the stick still turns the ship, so you can aim without sailing past. The <b>❚❚</b> button pauses.</dd>
     <dt>Controller</dt><dd>Left stick steers. D-pad <kbd>↑</kbd> <kbd>↓</kbd> sets the sail. <kbd>A</kbd> or <kbd>RT</kbd> fires. <kbd>Start</kbd> pauses. In menus the D-pad or stick moves, <kbd>A</kbd> selects and <kbd>B</kbd> goes back.</dd><dt>Photo mode</dt><dd><kbd>H</kbd> (or Photo mode in the pause menu) freezes the sea and hides the interface. Drag to move the camera, wheel or pinch to zoom, and save the shot as a postcard. <kbd>H</kbd> or <kbd>Esc</kbd> returns to the game exactly as it was.</dd>
   </dl>`,
   ht_aim: `<h3>Aim lines</h3><p>When an enemy comes near your bow, stern or a broadside, that side shows one line per cannon. Each ball flies straight along its line, so you aim by turning the ship.</p>
@@ -50,7 +50,7 @@ Object.assign(STR.zh, {
   ht_controls: `<h3>操作方式</h3><dl class="ctl">
     <dt>鍵盤</dt><dd><kbd>A</kbd> <kbd>D</kbd> 或 <kbd>←</kbd> <kbd>→</kbd> 轉向。<kbd>W</kbd> <kbd>S</kbd> 或 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆（收帆、慢速、半帆、滿帆），船會維持這個速度。<kbd>空白鍵</kbd>讓所有對準目標且已裝填的火砲開火；<kbd>Q</kbd> / <kbd>E</kbd> 只開左舷／右舷。<kbd>M</kbd> 靜音。<kbd>Esc</kbd> 或 <kbd>P</kbd> 暫停。</dd>
     <dt>滑鼠</dt><dd>按住右鍵，船會朝游標駛去（游標離船越遠，帆張得越滿），點左鍵開火。也可以只用左鍵：按住轉向，放開開火。滾輪可以縮放。</dd>
-    <dt>觸控</dt><dd>在任意位置拖曳，用浮動搖桿轉向，放開就開火。按 <b>❚❚</b> 暫停。</dd>
+    <dt>觸控</dt><dd>在任意位置拖曳，用浮動搖桿轉向，放開就開火。<b>−</b>／<b>+</b> 鈕降帆或升帆：收帆時搖桿仍能轉船，可以停著瞄準不衝過頭。按 <b>❚❚</b> 暫停。</dd>
     <dt>控制器</dt><dd>左搖桿轉向。十字鍵 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆。<kbd>A</kbd> 或 <kbd>RT</kbd> 開火。<kbd>Start</kbd> 暫停。在選單中用十字鍵或搖桿移動，<kbd>A</kbd> 確認，<kbd>B</kbd> 返回。</dd><dt>拍照模式</dt><dd>按 <kbd>H</kbd>（或在暫停選單選「拍照模式」）會凍結海面並隱藏介面。拖曳移動鏡頭、滾輪或兩指縮放，再把畫面存成明信片。按 <kbd>H</kbd> 或 <kbd>Esc</kbd> 回到遊戲，一切都和離開時一樣。</dd>
   </dl>`,
   ht_aim: `<h3>瞄準線</h3><p>敵船靠近船首、船尾或舷側時，那一側的每門火砲都會顯示一條瞄準線。砲彈會沿著線直直飛出去，所以要靠轉動船身來瞄準。</p>

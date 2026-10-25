@@ -102,11 +102,14 @@ const NEAR_LOST = 3000;    // ...and are moved up again once they fall this far 
 const SPARE_GONE = 1500;   // an over-quota ship this far off, out of sight, makes room for a ring that is short
 const isOrdinary = e => !e.boss && !e.escortOf && !e.fixed && !e.ally;   // an escort is the player's (js/escort-ai.js)   // shore batteries (js/forts.js) keep to their own rules
 const playerRing = () => ringAt(dist(player, PORT));
-function nearRings() { const c = clamp(playerRing(), 2, MAX_RING - 1); return [c - 1, c, c + 1]; }
+function nearRings() {
+  if (noviceAt(curRating(), playerRing())) return [1, NOVICE_RINGS];   // a low-level captain in the Shallows: the sea's crowd stays out of the deeper rings (js/novice.js)
+  const c = clamp(playerRing(), 2, MAX_RING - 1); return [c - 1, c, c + 1];
+}
 function ringQuotas(near) {
   const q = new Array(MAX_RING + 1).fill(0), here = playerRing(), byCloseness = (a, b) => Math.abs(a - here) - Math.abs(b - here);
   const share = (rings, n) => [...rings].sort(byCloseness).forEach((L, i) => { q[L] = Math.floor(n / rings.length) + (i < n % rings.length ? 1 : 0); });
-  const nNear = Math.round(ENEMY_COUNT * NEAR_SHARE), far = [];
+  const nNear = Math.round(ENEMY_COUNT * (near.length < 3 ? NOVICE_NEAR_SHARE : NEAR_SHARE)), far = [];
   for (let L = 1; L <= MAX_RING; L++) if (!near.includes(L)) far.push(L);
   share(near, nNear); share(far, ENEMY_COUNT - nNear);
   return q;
@@ -159,16 +162,23 @@ let seaNow = null, seaPend = null, seaPendT = 0, seaShown = null, seaBannerT, se
 function seaHere() { const d = dist(player, PORT); return d < SAFE_R ? null : seaOfRing(ringAt(d)).id; }
 const SEA_LINES = () => [SAFE_R, ...SEAS.slice(1).map(s => ringEdge(s.L0))];
 const seaDepth = d => Math.min(...SEA_LINES().map(r => Math.abs(d - r)));   // px to the nearest sea border
+// A sea far above the captain's rating (SEA_WARN_GAP, js/novice.js) is announced in red, with what to do about it.
+const seaIsDanger = id => { const s = SEAS.find(x => x.id === id); return seaWarnGap(s.L0 + levelBonus() + warLevels(s.L0), shipRating()); };
+const SEA_BANNER_MS = 3800, SEA_WARN_MS = 6500;
 function renderSeaBanner(id) {
-  const s = SEAS.find(x => x.id === id), b = levelBonus();
+  const s = SEAS.find(x => x.id === id), b = levelBonus(), danger = seaIsDanger(id);
   seaBanner.dataset.sea = id;
-  seaBanner.innerHTML = `<small>${t("seaLv", { a: s.L0 + b + warLevels(s.L0), b: s.L1 + b + warLevels(s.L1) })}</small><b>${t("sea_" + id)}</b><span>${t("seaLine_" + id)}</span>`;
+  if (danger) seaBanner.dataset.danger = "1"; else delete seaBanner.dataset.danger;
+  seaBanner.innerHTML = `<small>${danger ? t("seaWarnTag") + " · " : ""}${t("seaLv", { a: s.L0 + b + warLevels(s.L0), b: s.L1 + b + warLevels(s.L1) })}</small><b>${t("sea_" + id)}</b>` +
+    `<span>${danger ? t("seaWarn", { n: shipRating() }) : t("seaLine_" + id)}</span>`;
 }
 function showSeaBanner(id) {
   if (typeof bannerGate === "function" && !bannerGate("seaBanner", () => showSeaBanner(id), id)) return;   // one banner at a time (js/notify-order.js)
   seaShown = id; renderSeaBanner(id);
+  const ms = seaBanner.dataset.danger ? SEA_WARN_MS : SEA_BANNER_MS;
+  seaBanner.style.setProperty("--sea-ms", ms + "ms");
   seaBanner.classList.remove("on"); void seaBanner.offsetWidth; seaBanner.classList.add("on");   // restart the fade
-  clearTimeout(seaBannerT); seaBannerT = setTimeout(hideSeaBanner, 3800);
+  clearTimeout(seaBannerT); seaBannerT = setTimeout(hideSeaBanner, ms);
 }
 function hideSeaBanner() { seaBanner.classList.remove("on"); seaShown = null; }
 onHook("frame", dt => {
@@ -181,9 +191,11 @@ onHook("frame", dt => {
   seaNow = here; seaPend = null;
   if (!here) return;
   runHook("sea", here);
-  const fresh = !seaSortie.has(here) && !(now - (seaLastIn[here] ?? -Infinity) < SEA_AGAIN_MS);
+  const recent = now - (seaLastIn[here] ?? -Infinity) < SEA_AGAIN_MS, danger = seaIsDanger(here);
+  const fresh = !seaSortie.has(here) && !recent;
   seaSortie = new Set([...seaSortie, here]);
-  if (fresh && !(typeof firstVoyage === "function" && firstVoyage())) showSeaBanner(here);   // the coach has the floor
+  // a warning shows on every real crossing (not once a sortie) and even over the coach card: a new captain must not drift into the deep unwarned
+  if (danger ? !recent : fresh && !(typeof firstVoyage === "function" && firstVoyage())) showSeaBanner(here);   // otherwise the coach has the floor
 });
 onHook("sail", () => { seaNow = seaHere(); seaPend = null; seaSortie = new Set(); hideSeaBanner(); });
 onHook("dock", hideSeaBanner);

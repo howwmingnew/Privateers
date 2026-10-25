@@ -7,11 +7,11 @@
 // Nothing here is saved. A sortie draws a seed when it sails; a daily or seeded run uses its own seed and run clock (js/run.js).
 Object.assign(STR.en, {
   wx_clear: "Clear", wx_rain: "Rain", wx_storm: "Storm", hr_day: "Day", hr_dusk: "Dusk", hr_night: "Moonlit",
-  wx_kn: "kn", wx_label: "Wind {kn} knots. {fx} speed on this heading. {wx}, {hr}.", wx_toastStorm: "A storm is rolling in!",
+  wx_kn: "kn", wx_windPfx: "Wind", wx_label: "Wind {kn} knots. {fx} speed on this heading. {wx}, {hr}.", wx_toastStorm: "A storm is rolling in!",
 });
 Object.assign(STR.zh, {
   wx_clear: "晴", wx_rain: "雨", wx_storm: "暴風雨", hr_day: "白天", hr_dusk: "黃昏", hr_night: "月夜",
-  wx_kn: "節", wx_label: "風速 {kn} 節。這個航向的速度 {fx}。{wx}，{hr}。", wx_toastStorm: "暴風雨來了！",
+  wx_kn: "節", wx_windPfx: "風", wx_label: "風速 {kn} 節。這個航向的速度 {fx}。{wx}，{hr}。", wx_toastStorm: "暴風雨來了！",
 });
 
 const wx = { on: false, seed: 1, t: 0, easy: false, w: { kind: "clear", rain: 0, storm: 0, hour: "day", spell: 0 }, wind: { dir: 0, strength: 0.3 },
@@ -142,7 +142,7 @@ function wxDial() {
   q.hd.setAttribute("transform", `rotate(${(player.rot * 180 / Math.PI + 90).toFixed(1)})`);   // the ring's notch is the bow: wind ahead of it is a headwind
   wxDialEl.style.setProperty("--wd-spd", (2.4 - 1.8 * w.strength).toFixed(2) + "s");
   wxDialEl.className = cls;
-  q.kn.textContent = kn + " " + t("wx_kn"); q.fx.textContent = fx; q.wx.textContent = wxName + " · " + hrName;
+  q.kn.textContent = t("wx_windPfx") + " " + kn + " " + t("wx_kn"); q.fx.textContent = fx; q.wx.textContent = wxName + " · " + hrName;   // "Wind N kn": the wind, not the ship; the ship's own speed is the HUD's Speed (js/aground.js)
   wxDialEl.setAttribute("aria-label", t("wx_label", { kn, fx, wx: wxName, hr: hrName }));
 }
 

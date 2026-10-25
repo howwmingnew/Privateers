@@ -7,7 +7,7 @@ export const CORE = ["shell", "harbor", "phase1", "campaign", "polish", "collisi
 export const MAP = [
   [/^js\/(gun|deck-art|volley|powder|arsenal)/, ["gundeck", "phase1b"]],
   [/^js\/gear/, ["gear", "gundeck", "boarding", "harbor"]],
-  [/^js\/(heat|ports|world-seas|forts)/, ["heat", "ports", "daily-ports"]],
+  [/^js\/(heat|ports|world-seas|forts|novice)/, ["heat", "ports", "daily-ports"]],
   [/^js\/(escort|fleet)/, ["escorts", "fleet"]],
   [/^js\/ledger-(tabs|panel)/, ["harbor", "shipyard", "escorts", "gundeck", "gear"]],   // the fleet tabs, the context panel and everything they hold
   [/^js\/flee/, ["flee"]],
@@ -22,7 +22,8 @@ export const MAP = [
   [/^js\/flags/, ["flags"]],
   [/^js\/(rematch|run|daily)/, ["rematch", "daily-ports"]],
   [/^js\/(harbor|mooring|repair)/, ["harbor"]],
-  [/^js\/(view|input|hud|options|settings)/, ["scale", "platform", "shell"]],
+  [/^js\/(view|input|hud|options|settings|touch-sail|aground|hit-glow)/, ["scale", "platform", "shell"]],
+  [/^js\/(novice|aground|hit-glow|touch-sail|notify-order|world-seas|mooring|input)|^css\/safety/, ["safety"]],   // the new-captain safety net
   [/^js\/(tutorial|onboard|howto|menu|title-attract|hall|logbook|achievements|ledger|notices|notify|chart-legend|roadmap)/, ["shell", "polish"]],
   [/^js\/(art|scenery|vfx|mini-marks|poster|harbor-art|disasters-art|gun-art)/, ["art-hits", "polish"]],
   [/^js\/(hooks|boot-guard|fonts-link)/, ["shell"]],

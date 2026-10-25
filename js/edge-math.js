@@ -42,4 +42,9 @@ function edgeRank(it) {   // it: { boss, kind: "ship" | "place", d: threat step 
   const base = it.boss ? 1000 : it.ally ? 45 : it.kind === "place" ? 60 : it.d >= 1 ? 100 + it.d * 20 : 50;   // an escort out of sight ranks below the sea's own ships
   return base - it.px / (EDGE_RANGE * EDGE_REF_W) * 40;   // up to 40 points off for distance
 }
-const edgePick = items => items.slice().sort((a, b) => edgeRank(b) - edgeRank(a)).slice(0, EDGE_MAX);
+// How many boxes the screen can carry: a touch screen or a narrow window gets the few that matter (EDGE_MAX_SMALL).
+const edgeMax = (coarse, width) => (coarse || width < EDGE_SMALL_W ? EDGE_MAX_SMALL : EDGE_MAX);
+const edgePick = (items, max = EDGE_MAX) => items.slice().sort((a, b) => edgeRank(b) - edgeRank(a)).slice(0, max);
+// A ship box is tinted by how hard that ship fights next to you (the chart's own threat colours, threatTier in js/art.js):
+// 2 = two or more levels above you, 1 = one above, 0 = level, -1 = weaker. Anything that is not a ship has no step.
+const edgeThreat = d => (d >= 2 ? 2 : d === 1 ? 1 : d === 0 ? 0 : -1);

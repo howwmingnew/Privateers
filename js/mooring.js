@@ -6,17 +6,17 @@
 // (no new bounty spawn, no sortie count, no wiped enemies). Those still happen when the ledger opens and closes.
 Object.assign(STR.en, {
   moor_hold: "Hold still to open the ledger", moor_open: "Opening the ledger…",
-  moor_go_touch: "Let go of the stick to stop and open the ledger", moor_go_desk: "Drop sail (S) to stop and open the ledger",
-  moor_go_keys: "Drop sail (S) to stop and open the ledger", moor_go_mouse: "Let go of the mouse to stop and open the ledger",
-  moor_go_pad: "D-pad down to stop and open the ledger",
+  moor_go_touch: "Let go of the stick (or lower the sail) and hold still: the ledger opens", moor_go_desk: "Drop sail (S) and hold still: the ledger opens",
+  moor_go_keys: "Drop sail (S) and hold still: the ledger opens", moor_go_mouse: "Let go of the mouse and hold still: the ledger opens",
+  moor_go_pad: "D-pad down to drop sail and hold still: the ledger opens",
   fRepair: "Repairing",
   moor_arm: "Sail out of the ring to arm docking",
 });
 Object.assign(STR.zh, {
   moor_hold: "保持靜止，即可打開帳簿", moor_open: "正在打開帳簿…",
-  moor_go_touch: "放開搖桿停船，即可打開帳簿", moor_go_desk: "收帆（S）停船，即可打開帳簿",
-  moor_go_keys: "收帆（S）停船，即可打開帳簿", moor_go_mouse: "放開滑鼠停船，即可打開帳簿",
-  moor_go_pad: "按十字鍵下停船，即可打開帳簿",
+  moor_go_touch: "放開搖桿（或按降帆鈕）收帆停穩，就會打開帳簿", moor_go_desk: "收帆（S）停穩，就會打開帳簿",
+  moor_go_keys: "收帆（S）停穩，就會打開帳簿", moor_go_mouse: "放開滑鼠、收帆停穩，就會打開帳簿",
+  moor_go_pad: "按十字鍵下收帆停穩，就會打開帳簿",
   fRepair: "修理中",
   moor_arm: "先駛出圓圈，回來才能靠港",
 });
