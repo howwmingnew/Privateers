@@ -151,8 +151,10 @@ onHook("frame", () => {
   if (!S || typeof crates === "undefined") return;
   for (const c of crates) if (!c.wreck && !glints.has(c) && c.spr.active) {
     c.spr.setScale(1.6);
-    glints.set(c, { g: S.add.image(c.x, c.y, "fx-soft").setDepth(2.05).setBlendMode(Phaser.BlendModes.ADD).setTint(0xffd36a),
-      r: S.add.image(c.x, c.y, "fx-ring").setDepth(1.95).setTint(0xf0c766), ph: rand(0, TAU) });
+    const o = { g: S.add.image(c.x, c.y, "fx-soft").setDepth(2.05).setBlendMode(Phaser.BlendModes.ADD).setTint(0xffd36a),
+      r: S.add.image(c.x, c.y, "fx-ring").setDepth(1.95).setTint(0xf0c766), ph: rand(0, TAU) };
+    glints.set(c, o);
+    if (typeof cullTrack === "function") cullTrack(o.g, o.r);   // not drawn while off screen (js/cull.js)
   }
   const now = S.time.now / 1000;
   for (const [c, o] of glints) {
