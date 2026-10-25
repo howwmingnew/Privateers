@@ -69,6 +69,7 @@ function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
 }
 const LOOT_SEEN_R = 450;   // px from the player inside which an enemy's badge shows its plunder (about gun range)
 function refreshBadge(e) {
+  if (e.ally) { e.badge.setText("◆ " + e.allyName).setBackgroundColor(ALLY_COLOR).setColor("#0d2a1f"); return; }   // an escort's plate is its name (js/escort-ai.js)
   const tier = threatTier(e.threatL ?? e.L), c = tier.color;   // glyph + colour (by how hard it fights, js/archetypes.js), readable without colour vision
   // the plunder aboard only reads through the spyglass, so a distant fleet is a tidy row of levels, not a price list
   // the number is how hard it fights (threatL), the same figure its colour and glyph compare with your Ship Lv
@@ -122,10 +123,11 @@ const inSafe = s => Math.hypot(s.x - PORT.x, s.y - PORT.y) < SAFE_R * 0.6 || inT
 function isHostile(e, o) {
   if (!o || o === e || !o.alive || e.struck) return false;   // a ship that struck her colours fights no more (js/strike.js)
   if (o.isPlayer && (docked || inSafe(o))) return false;
+  if (e.ally) return !o.isPlayer && !o.fixed && !o.ally && (o.faction === "pirate" || o.faction === "navy");   // an escort fights pirates and the Navy, not batteries or merchants (js/escort-ai.js)
   if (e.attacker === o && e.angry > 0) return true;
   const g = o.isPlayer ? "player" : o.faction;
   if (e.faction === "pirate") return g !== "pirate";
-  if (e.faction === "navy") return g === "pirate" || g === "player";
+  if (e.faction === "navy") return g === "pirate" || g === "player" || g === "ally";
   if (e.escort) return g === "pirate";   // a convoy's escort brig keeps pirates off its fluyts
   return false;
 }
@@ -158,8 +160,11 @@ function think(e, dt) {
   e.retarget -= dt;
   if (e.retarget <= 0) {
     e.retarget = 0.5;
-    const nt = (e.backOffT || 0) > now ? null : pickTarget(e, now);   // turning back out of the Shallows (js/sea-guard.js)
-    if (nt && nt !== e.target) { e.target = nt; e.chaseFrom = { x: e.x, y: e.y }; }
+    if (e.ally) escortRetarget(e, now);   // the escort's stance picks (js/escort-ai.js)
+    else {
+      const nt = (e.backOffT || 0) > now ? null : pickTarget(e, now);   // turning back out of the Shallows (js/sea-guard.js)
+      if (nt && nt !== e.target) { e.target = nt; e.chaseFrom = { x: e.x, y: e.y }; }
+    }
   }
   if (typeof disFogLose === "function") disFogLose(e);   // a target lost in the fog is chased to where it was last seen
   let desired = null, thr = 0.55, fd = 0, fToT = 0;
@@ -202,7 +207,7 @@ function think(e, dt) {
   }
   // stay out of the harbor's safe waters
   const dPort = Math.hypot(e.x - PORT.x, e.y - PORT.y);
-  if (dPort < SAFE_R + 60) { desired = Math.atan2(e.y - PORT.y, e.x - PORT.x); thr = 0.8; }
+  if (dPort < SAFE_R + 60 && !e.ally) { desired = Math.atan2(e.y - PORT.y, e.x - PORT.x); thr = 0.8; }
   desired = avoidIslands(e, desired);
   steer(e, desired, thr, dt);
 }

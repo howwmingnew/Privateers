@@ -103,6 +103,9 @@ document.getElementById("port").addEventListener("click", ev => {
   if (GUN_ACTS.includes(act)) {   // picking, swapping, buying and upgrading guns (js/gunbay.js)
     snd = gunAct(act, b.dataset);
     if (!snd) return;
+  } else if (ESC_ACTS.includes(act)) {   // escort slots, ships, guns and stance (js/escort-ui.js)
+    snd = escortAct(act, b.dataset);
+    if (!snd) return;
   } else if (act === "yard") {
     const k = b.dataset.k; save.gold -= YARD[k].cost(save[k]); save[k]++;
   } else if (act === "ship") {

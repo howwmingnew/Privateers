@@ -49,4 +49,13 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 #hitDirs .hd.pop b { animation: hdPop .35s ease-out; }
 @keyframes hdPop { 0% { transform: scale(1.55); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { #hitDirs .hd.pop b { animation: none; } #hitDirs .hd { transition: none; } }
+
+/* ---- Escorts page of the ledger (js/escort-ui.js) ---- */
+.item.esc .esc-row { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: calc(14px * var(--ts)); }
+.item.esc .esc-l { min-width: 5.2em; font-weight: 700; color: var(--ink-soft); }
+.item.esc .esc-v { flex: 1 1 8em; min-width: 0; }
+.item.esc .esc-v small { font-weight: 600; font-size: calc(12px * var(--ts)); color: var(--ink-soft); margin-left: 6px; }
+.item.esc .esc-row .btn { grid-row: auto; grid-column: auto; min-width: 0; padding: 5px 11px; font-size: calc(13px * var(--ts)); }
+.item.esc .esc-row .btn.on { background: var(--ink); color: var(--parch); box-shadow: 0 0 0 2px var(--brass); }
+.item.esc .esc-note { grid-column: 1 / -1; }
 .poster .p-rec .speed { display: block; margin-top: 2px; color: var(--ink-soft); font-style: italic; }

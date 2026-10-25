@@ -63,6 +63,8 @@
 #edgeMarks .ptr { position: absolute; left: 50%; top: 50%; width: 0; height: 0; border-left: calc(9px * var(--es)) solid rgba(246,241,227,.92);
   border-block: calc(6px * var(--es)) solid transparent; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
 #edgeMarks .em.boss .ptr { border-left-color: #f0c766; }
+#edgeMarks .em.ally { border-color: #4cf0a8; }   /* an escort out of sight (js/escort-ai.js) */
+#edgeMarks .em.ally .ptr { border-left-color: #4cf0a8; }
 @media (prefers-reduced-motion: reduce) { #edgeMarks .em { transition: none; } }
 
 /* Ship gate in the "New ships" list */

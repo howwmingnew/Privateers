@@ -76,7 +76,11 @@ function step(dt) {
     const dx = b.x - a.x, dy = b.y - a.y;
     if (dx > 120 || dx < -120 || dy > 120 || dy < -120) continue;   // wider than any two hulls' radii: no shove
     const d = Math.hypot(dx, dy), r = shipRadius(a) + shipRadius(b);   // sized per hull
-    if (d < r && d > 0.01) { crashShips(a, b, dx / d, dy / d); const p = (r - d) / 2; a.x -= dx / d * p; a.y -= dy / d * p; b.x += dx / d * p; b.y += dy / d * p; }
+    if (d < r && d > 0.01) {
+      crashShips(a, b, dx / d, dy / d);
+      const p = (r - d) / 2, wa = b.isPlayer && a.ally ? 2 : a.isPlayer && b.ally ? 0 : 1, wb = 2 - wa;   // an escort gives way to the flagship, never the other way round
+      a.x -= dx / d * p * wa; a.y -= dy / d * p * wa; b.x += dx / d * p * wb; b.y += dy / d * p * wb;
+    }
   }
   for (const s of ships) {
     s.spr.setPosition(s.x, s.y).setRotation(s.rot);
@@ -112,8 +116,9 @@ function step(dt) {
     const p = 1 - b.life / b.life0;
     b.spr.setPosition(b.x, b.y).setScale(1 + Math.sin(Math.PI * clamp(p, 0, 1)) * 0.6);
     let hit = null;
-    if (!b.fromPlayer && player.alive && hitShip(player, b.x, b.y)) hit = player;
-    if (!hit) for (const e of living) if (e !== b.owner && e.alive && !sameFleet(b.owner, e) && hitShip(e, b.x, b.y)) { hit = e; break; }
+    const friend = b.fromPlayer || b.friendly;   // the flagship's and the escorts' shot pass through their own side
+    if (!friend && player.alive && hitShip(player, b.x, b.y)) hit = player;
+    if (!hit) for (const e of living) if (e !== b.owner && e.alive && !sameFleet(b.owner, e) && !(friend && e.ally) && hitShip(e, b.x, b.y)) { hit = e; break; }
     const onRock = !hit && islands.some(isl => Math.hypot(isl.x - b.x, isl.y - b.y) < isl.r * 0.9);
     if (hit) { vfxHit(b.x, b.y); hurt(hit, b.dmg, b.burn, b.owner, b); }
     if (hit || onRock || b.life <= 0) {
@@ -199,7 +204,7 @@ function drawOverlays() {
     if (e.badge && e.badge.alpha < 0.5) continue;   // its plate is faded under the HUD corner (js/sea-guard.js): the bar too
     const w = 46 * lk, h = 4 * lk, x = e.x - w / 2, y = shipTop(e) - 8 * lk;
     bg.fillStyle(0x08222d, 0.8); bg.fillRect(x - lk, y - lk, w + 2 * lk, h + 2 * lk);
-    bg.fillStyle(e.burnT > 0 ? 0xff8a3a : 0x86c46f, 1); bg.fillRect(x, y, w * clamp(e.hp / e.maxHp, 0, 1), h);
+    bg.fillStyle(e.burnT > 0 ? 0xff8a3a : e.ally ? 0x4cf0a8 : 0x86c46f, 1); bg.fillRect(x, y, w * clamp(e.hp / e.maxHp, 0, 1), h);
   }
   if (player.alive && !docked && player.hp < player.maxHp) {
     const w = 50 * lk, h = 4 * lk, x = player.x - w / 2, y = shipTop(player) - 8 * lk;

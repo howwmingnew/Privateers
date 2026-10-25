@@ -75,7 +75,7 @@ function disDodge(e) {
     if (ev.kind === "fog" || ev.st === "done") continue;
     const to = disClear(ev, e);
     if (to === null) continue;
-    const m = memo[ev.uid] || (memo[ev.uid] = { at: now + disReact(e.L), aware: Math.random() < (e.target ? d.busy : d.aware) });
+    const m = memo[ev.uid] || (memo[ev.uid] = { at: now + disReact(e.L), aware: !!e.ally || Math.random() < (e.target ? d.busy : d.aware) });   // an escort always sees it coming: saving the ship comes before the fight (js/escort-ai.js)
     if (m.aware && now >= m.at) return { desired: to, thr: ev.kind === "rogue" ? 0.5 : 1 };
   }
   return null;

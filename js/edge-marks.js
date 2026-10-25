@@ -28,7 +28,7 @@ function edgeIcon(ic, it) {
 }
 function edgeBox(it) {
   const el = document.createElement("div");
-  el.className = "em" + (it.boss ? " boss" : ""); el.dataset.kind = it.boss ? "boss" : it.place || (it.hz ? "hazard" : "ship");
+  el.className = "em" + (it.boss ? " boss" : it.ally ? " ally" : ""); el.dataset.kind = it.boss ? "boss" : it.ally ? "ally" : it.place || (it.hz ? "hazard" : "ship");
   el.innerHTML = `<canvas width="44" height="44"></canvas><span></span><i class="ptr"></i>`;
   edgeLayer.append(el);
   return { el, ic: el.firstElementChild, txt: el.children[1], ptr: el.lastElementChild, key: "", label: "", w: 0, h: 0 };
@@ -41,7 +41,7 @@ function edgeCandidates(v, kx, ky) {
     if (px > reach || px < 1) return;
     out.push({ ...it, o, px, sx: (o.x - v.x) * kx, sy: (o.y - v.y) * ky });
   };
-  for (const e of enemies) if (e.alive && !e.fixed && !(typeof disFogHides === "function" && disFogHides(e))) add(e, { kind: "ship", e, boss: !!e.boss, d: threatTier(e.threatL ?? e.L).d });
+  for (const e of enemies) if (e.alive && !e.fixed && (e.ally || !(typeof disFogHides === "function" && disFogHides(e)))) add(e, { kind: "ship", e, boss: !!e.boss, ally: !!e.ally, d: e.ally ? 0 : threatTier(e.threatL ?? e.L).d });   // an escort that has dropped out of sight keeps a mint box, fog or not
   if (typeof disMarks === "function") for (const h of disMarks()) add(h, { kind: "hazard", hz: h, d: 2 });   // warning or running disasters (js/disasters.js)
   if (portsOff()) return out;   // the daily sea has no harbor or stations (js/ports.js)
   add(PORT, { kind: "place", place: "harbor", d: 0 });
