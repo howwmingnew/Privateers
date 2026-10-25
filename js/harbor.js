@@ -100,13 +100,16 @@ function renderPort() {
 
 document.getElementById("port").addEventListener("click", ev => {
   const b = ev.target.closest("[data-act]");
-  if (!b && typeof cancelGunPick === "function" && !ev.target.closest("#gunSel, button, a, input, select, label")) { cancelGunPick(); return; }   // a blank spot puts the picked gun down (js/gunbay.js)
+  if (!b && typeof cancelGunPick === "function" && !ev.target.closest("#gunSel, .gcard, button, a, input, select, label")) { cancelGunPick(); if (typeof cancelGearPick === "function") cancelGearPick(); return; }   // a blank spot puts the picked gun or part down (js/gunbay.js, js/gear-ui.js)
   if (!b || b.disabled) return;
   const act = b.dataset.act;
   let snd = act === "ship" || act === "switch" ? "buy" : act === "yard" ? "upgrade" : "uiClick";
   if (GUN_ACTS.includes(act)) {   // picking, swapping, buying and upgrading guns (js/gunbay.js)
     snd = gunAct(act, b.dataset);
     if (!snd) return;
+  } else if (GEAR_ACTS.includes(act)) {   // worn parts, spares, compare, re-roll, lock, break down (js/gear-ui.js)
+    snd = gearAct(act, b.dataset);
+    if (!snd) { if (gearNote && gearNote.tip) { renderPort(); Snd.play("denied"); } return; }
   } else if (ESC_ACTS.includes(act)) {   // escort slots, ships, guns and stance (js/escort-ui.js)
     snd = escortAct(act, b.dataset);
     if (!snd) return;

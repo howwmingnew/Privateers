@@ -279,8 +279,10 @@ onHook("lang", () => outpostLabel?.setText(t("outpostMap")));
 function startNewGamePlus() {
   flushTime();   // js/logbook.js
   const keep = { bow: save.bow, left: save.left, right: save.right, stern: save.stern, store: save.store,   // guns past the sloop's ports go to the store
-    sunk: save.sunk, stats: save.stats, ach: save.ach, hall: save.hall, ngPlus: save.ngPlus + 1, tutorialDone: true };   // a returning captain needs no first-voyage coaching
+    sunk: save.sunk, stats: save.stats, ach: save.ach, hall: save.hall, ngPlus: save.ngPlus + 1, tutorialDone: true,   // a returning captain needs no first-voyage coaching
+    gear: save.gear };   // the gear follows the captain (js/gear-save.js): what the sloop cannot wear goes to the bag
   save = fitMounts({ ...defaultSave(), ...keep });
+  if (typeof fitGear === "function") save = fitGear(save);
   for (const c of crates) { c.spr.destroy(); c.label?.destroy(); }
   crates.length = 0; cargo = 0;
   persist();

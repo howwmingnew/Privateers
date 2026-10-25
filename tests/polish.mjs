@@ -98,11 +98,13 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
     const p3 = await ev(page, desc);
     await ev(page, () => document.querySelector('#deck [data-act="slot"]').focus());
     await tap(5);
-    const p4 = await ev(page, () => document.activeElement.closest("#armory") ? "armory" : desc());
+    const p4g = await ev(page, () => document.activeElement.closest("#gear") ? "gear" : document.activeElement.tagName);   // the Gear page (#38) sits between the gun deck and the armory
     await tap(5);
-    const p5 = await ev(page, () => document.activeElement.closest("#yard") ? "yard" : desc());
-    ok("pad: D-pad from the sheet enters the shop, Y = Set sail, up leaves the footer, RB jumps Gun deck > Armory > Shipwright",
-      !p1.startsWith("#sail") && p1 !== "BODY" && p2 === "#sail" && p3 !== "#sail" && p3 !== "BODY" && !/textbtn|lang/.test(p3) && p4 === "armory" && p5 === "yard", { p1, p2, p3, p4, p5 });
+    const p4 = await ev(page, () => document.activeElement.closest("#armory") ? "armory" : document.activeElement.tagName);
+    await tap(5);
+    const p5 = await ev(page, () => document.activeElement.closest("#yard") ? "yard" : document.activeElement.tagName);
+    ok("pad: D-pad from the sheet enters the shop, Y = Set sail, up leaves the footer, RB jumps Gun deck > Gear > Armory > Shipwright",
+      !p1.startsWith("#sail") && p1 !== "BODY" && p2 === "#sail" && p3 !== "#sail" && p3 !== "BODY" && !/textbtn|lang/.test(p3) && p4g === "gear" && p4 === "armory" && p5 === "yard", { p1, p2, p3, p4g, p4, p5 });
     await ev(page, () => document.querySelector('#yard [data-k="hull"]').focus());
     const g0 = await ev(page, () => save.gold);
     await tap(0);

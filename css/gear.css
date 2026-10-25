@@ -1,0 +1,45 @@
+/* Gear page of the harbor ledger: part slots, rarity edges, compare, affix lists (js/gear-ui.js, js/gunbay.js). Same parchment theme as css/style.css. */
+:root { --r0: #8a7f6a; --r1: #2f6fd0; --r2: #b07d0c; --r3: #8a45c8; --r4: #d4571a; }   /* common, magic, rare, epic, legendary; the rarity is always written out too, never colour alone */
+
+/* ---- rarity edges: a gun slot, a spare, a worn part, a card ---- */
+.slot.r1, .gslot.r1, .gcard.r1 { border-color: var(--r1); }
+.slot.r2, .gslot.r2, .gcard.r2 { border-color: var(--r2); }
+.slot.r3, .gslot.r3, .gcard.r3 { border-color: var(--r3); }
+.slot.r4, .gslot.r4, .gcard.r4 { border-color: var(--r4); }
+.slot.r1:not(.sel), .gslot.r1:not(.sel) { box-shadow: inset 0 0 0 1px var(--r1); }
+.slot.r2:not(.sel), .gslot.r2:not(.sel) { box-shadow: inset 0 0 0 1px var(--r2); }
+.slot.r3:not(.sel), .gslot.r3:not(.sel) { box-shadow: inset 0 0 0 1px var(--r3); }
+.slot.r4:not(.sel), .gslot.r4:not(.sel) { box-shadow: inset 0 0 0 2px var(--r4), 0 0 8px rgba(212,87,26,.45); }   /* a legendary glows */
+.gcard.r4 { box-shadow: 0 0 10px rgba(212,87,26,.35); }
+.slot.over { opacity: .55; }   /* a spare this hull is too small to wear */
+
+/* ---- the seven part slots ---- */
+#gear .gslots { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(104px * var(--ts)), 1fr)); gap: 6px; }
+.gslot { font: inherit; font-size: calc(13px * var(--ts)); font-weight: 700; padding: 6px 4px; border-radius: 3px; border: 1.5px solid var(--ink); background: var(--parch-2); color: var(--ink);
+  cursor: pointer; line-height: 1.15; min-height: calc(56px * var(--ts)); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow-wrap: anywhere; min-width: 0; }
+.gslot:hover { background: #ead8aa; }
+.gslot .pn { font-size: calc(11px * var(--ts)); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); }
+.gslot small { font-weight: 500; font-size: calc(11px * var(--ts)); color: var(--ink-soft); }
+.gslot.empty { border-style: dashed; border-color: rgba(42,29,16,.5); background: rgba(224,204,156,.35); color: var(--ink-soft); font-weight: 600; }
+.gslot.sel { background: var(--ink); color: var(--parch); box-shadow: 0 0 0 3px var(--brass); }
+.gslot.sel small, .gslot.sel .pn { color: rgba(239,227,196,.75); }
+.gpicking .gslot.dest { outline: 2px dashed var(--brass); outline-offset: 2px; background: #f3e4b8; }   /* where the picked spare goes */
+
+/* ---- the picked piece's card, its affixes and the compare block ---- */
+#gear .gnote, #gear .gcard, #gear .gbag { margin-top: 10px; }
+.gcard .afx { grid-column: 1 / -1; margin: 4px 0 0; padding: 0; list-style: none; font-size: calc(13px * var(--ts)); }
+.gcard .afx li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 2px 0; }
+.gcard .afx li.base { color: var(--ink-soft); }
+.gcard .afx li.leg { font-weight: 700; color: var(--r4); }
+.gcard .cmp { grid-column: 1 / -1; margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(42,29,16,.35); font-size: calc(13px * var(--ts)); }
+.gcard .cmp ul { margin: 2px 0 0; padding: 0; list-style: none; }
+.gcard .cmp small { color: var(--ink-soft); }
+.gcard .up { color: #2f6b2b; } .gcard .dn { color: #a3281b; }   /* ▲ green better, ▼ red worse: the arrow says it without the colour */
+.btn.sm { padding: 3px 9px; font-size: calc(12px * var(--ts)); min-width: 0; }
+.gbatch { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+#gear .gbag .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(84px * var(--ts)), 1fr)); gap: 6px; }
+#gear .gbag .slot { overflow-wrap: anywhere; }
+
+/* a card with several buttons: the name on its own row, the buttons under it (the gun card too, now that it carries lock and break down) */
+.gcard .nm, .gcard .gacts { grid-column: 1 / -1; }
+.gcard .gacts { justify-content: flex-start; }

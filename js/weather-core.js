@@ -49,9 +49,10 @@ function windAt(seed, t, wx = weatherAt(seed, t)) {
 }
 const windKnots = w => Math.round(WEATHER.knots[0] + w.strength * (WEATHER.knots[1] - WEATHER.knots[0]));
 // Speed factor for a hull on heading rot: 1 + gain for running before the wind, 1 - loss for beating into it, 1 across it.
-function windFactor(rot, w) {
+// tailK / headK: the sails' gear scales the gain and the loss (js/gear-core.js), 1 for every other hull.
+function windFactor(rot, w, tailK = 1, headK = 1) {
   const a = Math.cos(rot - w.dir), k = clamp(w.strength / WIND.full, 0, 1);
-  return 1 + (a >= 0 ? WIND.tail : WIND.head) * a * k;
+  return 1 + (a >= 0 ? WIND.tail * tailK : WIND.head * headK) * a * k;
 }
 // Storm yaw (rad/s) with the helm let go: the hull broaches, slowly slewing beam-on to the wind (a wind dead ahead or astern
 // is an unstable balance, so `sway` -1..1, a slow wave from the sea, tips it one way). 0 in fair weather.

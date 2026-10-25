@@ -21,7 +21,7 @@ const MAX_STORE_SAVED = MAX_STORE * 2;
 // A gun item from untrusted data, or null. A bare type name (an old save's port) becomes a gun at level `lv`.
 function cleanGun(v, lv = 1) {
   if (typeof v === "string") return Object.hasOwn(GUNS, v) ? gunItem(v, lv) : null;
-  return isObj(v) && typeof v.g === "string" && Object.hasOwn(GUNS, v.g) ? gunItem(v.g, toInt(v.lv, 1, GUN_MAX, 1)) : null;
+  return isObj(v) && typeof v.g === "string" && Object.hasOwn(GUNS, v.g) ? { ...gunItem(v.g, toInt(v.lv, 1, GUN_MAX, 1)), ...(typeof cleanGearX === "function" ? cleanGearX(v, "gun") : {}) } : null;   // + rarity, item level, affixes (js/gear-core.js)
 }
 // Give every mount exactly as many ports as the ship has. Ports past the end (a smaller ship: New Game+) send their
 // guns to the store; new ports start empty.

@@ -6,6 +6,7 @@ export const CORE = ["shell", "harbor", "phase1", "campaign", "polish", "collisi
 // [pattern on the repo-relative path, tests]
 export const MAP = [
   [/^js\/(gun|deck-art|volley|powder|arsenal)/, ["gundeck", "phase1b"]],
+  [/^js\/gear/, ["gear", "gundeck", "boarding", "harbor"]],
   [/^js\/(heat|ports|world-seas|forts)/, ["heat", "ports", "daily-ports"]],
   [/^js\/(escort|fleet)/, ["escorts", "fleet"]],
   [/^js\/flee/, ["flee"]],

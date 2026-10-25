@@ -110,15 +110,19 @@ function enemyPower(L) {
   const s = enemyStats(L, false);
   return Math.sqrt(s.hp * s.per * s.dmg / (s.interval + VOLLEY_WARN) * ENEMY_FIRE_K);
 }
+// The gear's share (js/gear-fx.js): 1 + the effect, or 1 where no gear module is loaded (the older files' unit tests).
+const gearMul = k => (typeof gx === "function" ? 1 + gx(k) : 1), gearCut = k => (typeof gx === "function" ? 1 - gx(k) : 1);
+const gunBoost = gun => (typeof gunMods === "function" ? 1 + gunMods(gun).gdmg : 1);
+const gunReload = gun => (typeof gunMods === "function" ? 1 + gunMods(gun).greload : 1);
 function playerPower() {
   let dps = 0, fireRate = 0, fireDps = 0;
   for (const { key } of MOUNTS) for (const gun of save[key]) {
     if (!gun) continue;   // an empty port
-    const g = GUNS[gun.g], m = gunLvMul(gun.lv), rate = g.rpm / 60 * MOUNT_UPTIME;
+    const g = GUNS[gun.g], m = gunLvMul(gun.lv) * gunBoost(gun), rate = g.rpm / 60 * MOUNT_UPTIME * gunReload(gun);
     dps += g.dmg * m * rate * shipGunK();
     if (g.burn) { fireRate += rate; fireDps = Math.max(fireDps, g.burn * m * shipGunK()); }
   }
   dps += Math.min(BURN_MAX, fireRate * BURN_T) * fireDps;
-  return Math.sqrt(yardVal("hull") * shipEvade() * dps);
+  return Math.sqrt(yardVal("hull") * gearMul("hp") * shipEvade() * dps);
 }
 function shipRating() { const p = playerPower(); let L = 1; while (L < 40 && enemyPower(L + 1) <= p) L++; return L; }
