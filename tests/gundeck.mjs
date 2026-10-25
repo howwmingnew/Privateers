@@ -76,13 +76,17 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
   const { ctx, page } = await open(D, { tag: "volley" });
   await toLedger(page);
   const res = await page.evaluate(async () => {
+    // Seeded dice: gun spread and the ring ships' headings decide how many balls hit a hull (and vanish) before the peak is counted.
+    let sd = 1234567; Math.random = () => { sd = (sd + 0x6D2B79F5) | 0; let t = Math.imul(sd ^ (sd >>> 15), 1 | sd); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    wx.on = false; dis.live = []; dis.plan = [];
     for (const { key } of MOUNTS) save[key] = save[key].map(() => gunItem("six"));
     applyPlayerStats(true); document.getElementById("port").hidden = true; docked = false; paused = false; canDock = false; resetEnemies(S);
     Object.assign(player, { x: PORT.x + 1700, y: PORT.y + 300, rot: 0, speed: 0, maxHp: 1e9, hp: 1e9 });
+    islands = islands.filter(i => Math.hypot(i.x - player.x, i.y - player.y) > i.r + 500);   // islands are rolled per game: a rock under the player would shove it off the test line
     const game = S.game; game.loop.sleep(); let now = performance.now();   // stepped by hand: 16.667 ms frames, the camera follows
     const step = () => { now += 16.667; game.step(now, 16.667); };
-    const ring = [0, 1, 2, 3].map(() => spawnEnemy(S));
-    const place = () => ring.forEach((e, k) => { const a = k * Math.PI / 2; Object.assign(e, { x: player.x + Math.cos(a) * 150, y: player.y + Math.sin(a) * 150, speed: 0, maxHp: 1e9, hp: 1e9 }); });
+    const ring = [0, 1, 2, 3].map(() => spawnEnemy(S));   // untouchable (negative hit box): they only give the guns something to see, a ball that hit one would leave the count early
+    const place = () => ring.forEach((e, k) => { const a = k * Math.PI / 2; Object.assign(e, { x: player.x + Math.cos(a) * 150, y: player.y + Math.sin(a) * 150, rot: a + Math.PI / 2, hl: -1e3, hw: -1e3, speed: 0, maxHp: 1e9, hp: 1e9 }); });
     for (let i = 0; i < 30; i++) { place(); S.cameras.main.centerOn(player.x, player.y); step(); }
     place();
     const ready = Object.values(player.guns).reduce((n, a) => n + a.length, 0), samples = [];
@@ -108,18 +112,22 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
     applyPlayerStats(true); document.getElementById("port").hidden = true; docked = false; paused = false; canDock = false; resetEnemies(S);
     document.querySelector(`[data-set="auto"][data-v="${on ? "on" : "off"}"]`).click();
     Object.assign(player, { x: PORT.x + 1700, y: PORT.y + 300, rot: 0, speed: 0, maxHp: 1e9, hp: 1e9 });
+    islands = islands.filter(i => Math.hypot(i.x - player.x, i.y - player.y) > i.r + 500);   // islands are rolled per game: a rock under the player would shove it off the test line
     const game = S.game; game.loop.sleep(); let now = performance.now(); const step = () => { now += 16.667; game.step(now, 16.667); };
-    const e = spawnEnemy(S), place = () => Object.assign(e, { x: player.x + 30, y: player.y - 150, speed: 0, maxHp: 1e9, hp: 1e9 });   // off the larboard beam, a bit aft of centre
+    // Fixed target: same class (hull size), same heading, seeded dice; which aim lines are red depends on all three.
+    let sd = 7654321; Math.random = () => { sd = (sd + 0x6D2B79F5) | 0; let t = Math.imul(sd ^ (sd >>> 15), 1 | sd); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    wx.on = false; dis.live = []; dis.plan = [];
+    const e = spawnEnemy(S); applyShipArt(e, "brig", "pirate");
+    const place = () => Object.assign(e, { x: player.x + 30, y: player.y - 150, rot: 0, turnRate: 0, maxSpeed: 1e-6, speed: 0, maxHp: 1e9, hp: 1e9 });   // off the larboard beam, a bit aft of centre
     for (let i = 0; i < 30; i++) { place(); S.cameras.main.centerOn(player.x, player.y); step(); }
-    spaceDownAt = performance.now() - 40;   // not held long enough yet
-    for (let i = 0; i < 5; i++) { place(); step(); }
+    // The hold length is re-armed before every step: stepped by hand, a busy machine could stretch the real clock past the hold delay.
+    for (let i = 0; i < 5; i++) { spaceDownAt = performance.now() - 40; place(); step(); }   // not held long enough yet
     const early = Object.values(player.guns).flat().filter(g => g.cd > 0).length;
-    spaceDownAt = performance.now() - 1000;
-    for (let i = 0; i < 6; i++) { place(); step(); }
+    for (let i = 0; i < 6; i++) { spaceDownAt = performance.now() - 1000; place(); step(); }
     const fired = Object.values(player.guns).flat().filter(g => g.cd > 0).length, redNow = (() => { let n = 0;
       for (const m of MOUNTS) for (const g of player.guns[m.key]) { const mz = muzzle(player, m, g.pi, g.pn); if (lineHits(mz.x, mz.y, mz.a, g.range)) n++; } return n; })();
     spaceDownAt = 0; game.loop.wake();
-    return { early, fired, redNow, setting: SETTINGS.autoFire };
+    return { early, fired, redNow, setting: SETTINGS.autoFire, rot: +player.rot.toFixed(3), spd: player.speed, dx: Math.round(e.x - player.x), dy: Math.round(e.y - player.y), erot: +e.rot.toFixed(2), hl: e.hl, hw: e.hw, zoom: S.cameras.main.zoom };
   }, on);
   const onRes = await run(true);
   ok("auto-fire: a short hold fires nothing; a long hold fires some guns but not the whole side", onRes.early === 0 && onRes.fired > 0 && onRes.fired < 12, onRes);
