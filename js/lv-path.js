@@ -6,12 +6,18 @@
 Object.assign(STR.en, {
   shipLvP: "Ship Lv {n} · next {p}%", shipLvN: "Ship Lv {n}", lvNext: " · next {p}%", statLvP: "Ship <b>Lv {n}</b> · next {p}%",
   lvGainUp: "Ship Lv → {n}", lvGainPct: "Ship Lv progress +{p}%",
+  lvGainDown: "Ship Lv falls to {n} (fresh hull)", lvLossPct: "Ship Lv progress −{p}%", lvSame: "Ship Lv unchanged",
+  lvGainStore: "Goes to the store: no Ship Lv change until mounted", lvGainEsc: "Escort: flagship Ship Lv unchanged, ports start empty",
+  emptyFirst: "This ship has {n} empty port(s): filling empty ports first is the best value.",
   pRecGap: "About {x} levels to go.", pRecPath: "Cheapest way up: upgrade {what} first; about {gold} gold of upgrades in all.",
   pRecPathBig: "Upgrades alone will not get there: look at a bigger ship.", pRecWhatHull: "the hull",
 });
 Object.assign(STR.zh, {
   shipLvP: "船艦 Lv {n} · 下一級 {p}%", shipLvN: "船艦 Lv {n}", lvNext: " · 下一級 {p}%", statLvP: "船艦 <b>Lv {n}</b> · 下一級 {p}%",
   lvGainUp: "船艦 Lv → {n}", lvGainPct: "船艦 Lv 進度 +{p}%",
+  lvGainDown: "船艦 Lv 降到 {n}（新船體從 Lv 1 起算）", lvLossPct: "船艦 Lv 進度 −{p}%", lvSame: "船艦 Lv 不變",
+  lvGainStore: "放進庫存：裝上砲位前不影響船艦 Lv", lvGainEsc: "隨從：不影響旗艦船艦 Lv，砲位一開始是空的",
+  emptyFirst: "這艘船還有 {n} 個空砲位：先補滿空砲位最划算。",
   pRecGap: "還差約 {x} 級。", pRecPath: "最省的補法：先升級{what}，全部補齊約再花 {gold} 金幣。",
   pRecPathBig: "光靠升級補不到：考慮換更大的船。", pRecWhatHull: "船體",
 });
@@ -30,6 +36,32 @@ function lvGainText(what) {
 const lvGainGun = (gun, n) => (gun && MOUNTS.some(({ key }) => save[key].includes(gun)) ? lvGainText({ gun: g => (g === gun ? { ...g, lv: g.lv + n } : g) }) : "");
 // The flagship's hull one level up. Sails and hold are not part of the rating.
 const lvGainHull = () => lvGainText({ hull: save.hull + 1 });
+// A new gun `id` (Lv 1) bought for the flagship: into the picked port `into` (a place of the flagship: it replaces the gun there, or fills an empty port)
+// or, with no flagship port picked, into the store, where it adds nothing until it is mounted.
+function lvGainNewGun(id, into) {
+  if (!into) return t("lvGainStore");
+  const old = typeof gunAt === "function" ? gunAt(into) : null;
+  return lvGainText(old ? { gun: g => (g === old ? gunItem(id) : g) } : { extra: [gunItem(id)] }) || t("lvSame");
+}
+// Boarding a ship bought at the yard, with the guns that fit it carried over (buyShip, js/shipyard.js): Ship Lv before -> after, which can fall (a new hull
+// is Lv 1 all round). Worked on a preview save swapped in for the length of the call; the real one is put back whatever happens.
+function lvGainShip(type) {
+  if (typeof buyShip !== "function" || !Object.hasOwn(SHIPS, type)) return "";
+  const real = save, next = buyShip({ ...real, gold: Math.max(real.gold, SHIPS[type].cost) }, type);   // the price is shown by the button: the preview ignores it
+  if (!next) return "";
+  const a = lvProgress();
+  let b; save = next; try { b = lvProgress(); } finally { save = real; }
+  if (b.lv > a.lv) return t("lvGainUp", { n: b.lv });
+  if (b.lv < a.lv) return t("lvGainDown", { n: b.lv });
+  const d = Math.round((b.frac - a.frac) * 100);
+  return d >= 1 ? t("lvGainPct", { p: d }) : d <= -1 ? t("lvLossPct", { p: -d }) : t("lvSame");
+}
+// How many ports of the picked tab's ship are empty (n = 0 the flagship, else the escort in slot n - 1; an escort with no ship has no ports).
+function emptyPortsOf(n) {
+  if (n > 0 && !(save.escorts[n - 1] && save.escorts[n - 1].id)) return 0;
+  const mounts = n === 0 ? save : save.escorts[n - 1].guns || {}, ship = SHIPS[n === 0 ? save.ship : (save.fleet.find(x => x.id === save.escorts[n - 1].id) || {}).ship];
+  return ship ? MOUNTS.reduce((c, { key }) => c + Array.from({ length: ship.slots[key] }, (_, i) => (mounts[key] || [])[i]).filter(g => !g).length, 0) : 0;
+}
 
 // The upgrades (guns on the flagship, then the hull) bought one at a time, always the one that adds the most rating power per gold,
 // until the power of level `want` is reached: { gold, first: the first purchase ({ kind: "gun", gun } or { kind: "hull" }) or null if
