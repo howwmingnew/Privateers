@@ -185,14 +185,23 @@ test("gun bay (#68): an empty port with nothing to mount changes nothing and say
   assert.equal(tap(g, "left", 0), "denied");   // nothing picked
   assert.equal(g.run("deckSel"), null);
   assert.equal(g.json("gunNote.tip"), "emptyTip");
-  tap(g, "bow", 0);   // a mounted gun picked: it does not walk to an empty port either
-  assert.equal(tap(g, "left", 0), "denied");
-  assert.deepEqual(g.json("deckSel"), { side: "bow", i: 0 }, "the pick stays");
   assert.deepEqual(bowIds(g), ["six", "long12"]);
   g.run("deckSel = null");
   tap(g, "store", 0); tap(g, "store", 1);   // the second stored gun only moves the pick
   assert.deepEqual(g.json("deckSel"), { side: "store", i: 1 });
   assert.deepEqual(g.json("save.store.map(x => x.g)"), ["chain", "six"]);
+});
+
+test("gun bay (#68): a mounted gun picked, then an empty port: it moves there, the old port is left empty, and Undo puts it back", () => {
+  const g = bay();
+  g.run(`save = { ...save, left: [null] }`);
+  tap(g, "bow", 1);
+  assert.equal(tap(g, "left", 0), "reload");
+  assert.deepEqual(g.json("[save.bow.map(x => x && x.g), save.left.map(x => x && x.g), save.store.map(x => x.g)]"), [["six", null], ["long12"], ["chain"]]);
+  assert.equal(g.json("gunNote.text[0]"), "movedShift");
+  assert.equal(g.run("deckSel"), null);
+  g.run(`gunAct("gundo", {})`);
+  assert.deepEqual(g.json("[save.bow.map(x => x && x.g), save.left.map(x => x && x.g)]"), [["six", "long12"], [null]]);
 });
 
 test("gun bay (#68): Unload sends the gun to the store; a full store refuses and loses nothing", () => {
@@ -253,8 +262,8 @@ test("gun bay (#68): the places a picked gun can go are exactly the outlined one
   assert.deepEqual(dest(), all.filter(([s]) => s !== "store"), "stored gun: every port, empty or not, and no stored gun");
   tap(g, "store", 0); tap(g, "bow", 0);
   const empty = g.json(`${places}.filter(([s, i]) => s !== 'store' && !save[s][i])`);
-  assert.deepEqual(dest(), all.filter(([s, i]) => !(s === "bow" && i === 0) && !empty.some(([es, ei]) => es === s && ei === i)),
-    "a mounted gun: the other loaded ports and every stored gun, never an empty port");
+  assert.deepEqual(dest(), all.filter(([s, i]) => !(s === "bow" && i === 0)), "a mounted gun: every other port, empty ones too, and every stored gun");
+  assert.ok(empty.length >= 1, "(the save has an empty port to test with)");
 });
 
 test("gun bay (#68): the picked gun's card has no Swap position button, only upgrade, upgrade x5 and Unload", () => {
@@ -305,7 +314,7 @@ test("gun bay (#68): too little gold disables Upgrade x5 and shows the shortfall
 
 test("gun bay (#68): the guns' strings exist in both languages and the old swap strings are gone", () => {
   const g = bay();
-  for (const k of ["toStoreDest", "pickHintPort", "pickHintStore", "emptyTip", "storeFullWhy", "movedMount", "movedSwap", "movedUnload", "gunUndo", "gunUndone", "upN", "upNShort", "toStore"])
+  for (const k of ["toStoreDest", "pickHintPort", "pickHintStore", "emptyTip", "storeFullWhy", "movedMount", "movedShift", "movedSwap", "movedUnload", "gunUndo", "gunUndone", "upN", "upNShort", "toStore"])
     assert.ok(g.run(`STR.en.${k} && STR.zh.${k}`), k);
   for (const k of ["swapGun", "swapCancel", "swapHint", "selHint", "selEmpty"]) assert.equal(g.run(`STR.en.${k} === undefined && STR.zh.${k} === undefined`), true, k);
   assert.equal(g.run("STR.zh.toStore"), "卸下");

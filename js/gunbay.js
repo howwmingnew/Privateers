@@ -3,9 +3,10 @@
 // Guns are items { g, lv } (js/data.js). Moving one is "tap the source, then tap the destination", with no mode button:
 //   - a stored gun or a mounted one: tap it to pick it up (deckSel) and every place it can go is outlined; tap it again to put it down.
 //   - with a stored gun picked: an empty port mounts it (the store closes up); a mounted gun trades places with it.
-//   - with a mounted gun picked: another mounted gun swaps with it; a stored gun trades places with it (the port's gun goes to the
-//     store); "Unload" (or the store's "Put in store" tile) sends it to the store, unless the store is full: nothing is ever dropped.
-//   - tapping an empty port with nothing useful picked changes nothing and says what to do; two stored guns never trade.
+//   - with a mounted gun picked: an empty port takes it (the old port is left empty); another mounted gun swaps with it; a stored
+//     gun trades places with it (the port's gun goes to the store); "Unload" (or the store's "Put in store" tile) sends it to the
+//     store, unless the store is full: nothing is ever dropped.
+//   - tapping an empty port with nothing picked changes nothing and says what to do; two stored guns never trade.
 // Esc, the pad's back button, tapping the source again, or tapping a blank spot in the ledger drops the pick. Every move says what
 // happened ("Swapped", "Mounted", "Unloaded") with an Undo button for the latest one only (gunNote). The picked gun's card offers
 // its upgrade (named with the next level and its price), the same upgrade five levels at a time (total price; fewer levels near
@@ -16,11 +17,11 @@ Object.assign(STR.en, {
   bay: "Gun store", bayEmpty: "Nothing in store. Guns bought in the armory wait here until you mount them.",
   emptyPort: "Empty", toStore: "Unload", owned: "{n} owned", storeAria: "Stored gun {n}: {gun}, Lv {lv}",
   toStoreDest: "Put in store",
-  pickHintPort: "Now tap where it goes: another gun port to swap, or a stored gun to trade places. Tap it again, press Esc or tap a blank spot to cancel.",
+  pickHintPort: "Now tap where it goes: an empty port to move it there, another gun port to swap, or a stored gun to trade places. Tap it again, press Esc or tap a blank spot to cancel.",
   pickHintStore: "Now tap where it goes: an empty port to mount it, or a mounted gun to trade places. Tap it again, press Esc or tap a blank spot to cancel.",
   emptyTip: "Empty port: tap a stored gun first, then tap here to mount it.",
   storeFullWhy: "The gun store is full ({n}): free a place before unloading.",
-  movedMount: "Mounted {gun}.", movedSwap: "Swapped {a} and {b}.", movedUnload: "Unloaded {gun} to the store.", gunUndo: "Undo", gunUndone: "Undone.",
+  movedMount: "Mounted {gun}.", movedShift: "Moved {gun} to another port.", movedSwap: "Swapped {a} and {b}.", movedUnload: "Unloaded {gun} to the store.", gunUndo: "Undo", gunUndone: "Undone.",
   upTo: "Upgrade to Lv {n} ({cost} gold)", upShort: "Upgrade to Lv {n} ({cost} gold, {d} short)",
   upN: "Upgrade {n} levels ({cost} gold total)", upNShort: "Upgrade {n} levels ({cost} gold total, {d} short)",
 });
@@ -28,11 +29,11 @@ Object.assign(STR.zh, {
   bay: "火砲庫存", bayEmpty: "庫存是空的。在軍械庫買的砲會先放在這裡，等你裝上船。",
   emptyPort: "空砲位", toStore: "卸下", owned: "持有 {n} 門", storeAria: "庫存第 {n} 門：{gun}，Lv {lv}",
   toStoreDest: "放入庫存",
-  pickHintPort: "再點目的地：另一個砲位會互換，庫存裡的砲會對調。再點一次、按 Esc 或點空白處可取消。",
+  pickHintPort: "再點目的地：空砲位會直接移過去，另一個砲位會互換，庫存裡的砲會對調。再點一次、按 Esc 或點空白處可取消。",
   pickHintStore: "再點目的地：空砲位會裝上，船上的砲會對調。再點一次、按 Esc 或點空白處可取消。",
   emptyTip: "空砲位：先點庫存裡的砲，再點這裡裝上。",
   storeFullWhy: "庫存已滿（{n} 門）：先騰出位置才能卸下。",
-  movedMount: "已裝上{gun}。", movedSwap: "已交換{a}與{b}。", movedUnload: "已把{gun}卸下到庫存。", gunUndo: "復原", gunUndone: "已復原。",
+  movedMount: "已裝上{gun}。", movedShift: "已把{gun}移到另一個砲位。", movedSwap: "已交換{a}與{b}。", movedUnload: "已把{gun}卸下到庫存。", gunUndo: "復原", gunUndone: "已復原。",
   upTo: "升級到 Lv {n}（{cost} 金幣）", upShort: "升級到 Lv {n}（{cost} 金幣，還差 {d}）",
   upN: "升級 {n} 級（總價 {cost} 金幣）", upNShort: "升級 {n} 級（總價 {cost} 金幣，還差 {d}）",
 });
@@ -59,7 +60,7 @@ function gunTap(s, src, side, i) {
   const at = { side, i }, gun = (s[side] || [])[i] || null, from = src && (s[src.side] || [])[src.i] ? src : null;
   if (from && from.side === side && from.i === i) return { kind: "drop" };
   if (!from) return gun ? { kind: "pick" } : { kind: "tip" };   // an empty port with nothing picked: say what to do
-  if (!gun) return from.side === "store" ? { kind: "move", how: "mount", from, to: at } : { kind: "tip" };   // a mounted gun never walks to an empty port
+  if (!gun) return { kind: "move", how: from.side === "store" ? "mount" : "shift", from, to: at };   // a stored gun is mounted, a mounted one is moved
   if (from.side === "store" && side === "store") return { kind: "repick" };   // two stored guns do not trade
   return { kind: "move", how: "swap", from, to: at };
 }
@@ -84,7 +85,7 @@ function cancelGunPick() {   // Esc (js/menu.js goBack) or a tap on a blank spot
 function doMove(m) {
   const a = gunAt(m.from), b = gunAt(m.to), before = gunSnap(save);
   save = swapGuns(m.from, m.to);
-  const text = m.how === "mount" ? ["movedMount", { gun: gunName(a) }] : ["movedSwap", { a: gunName(a), b: gunName(b) }];
+  const text = m.how === "mount" ? ["movedMount", { gun: gunName(a) }] : m.how === "shift" ? ["movedShift", { gun: gunName(a) }] : ["movedSwap", { a: gunName(a), b: gunName(b) }];
   gunNote = { text, before }; deckSel = null;
   return "reload";   // a gun run into its port
 }
