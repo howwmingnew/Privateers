@@ -33,9 +33,9 @@ function miniAlly(c, x, y, rot, u, speed = 0) {
   c.save(); c.translate(x, y); c.rotate(rot || 0); c.fillStyle = MINI_INK;
   c.beginPath(); c.moveTo(2.6 * u, 0); c.lineTo(-1.6 * u, -1.9 * u); c.lineTo(-0.6 * u, 0); c.lineTo(-1.6 * u, 1.9 * u); c.closePath(); c.fill(); c.restore();
 }
-function miniShip(c, e, x, y, u) {
+function miniShip(c, e, x, y, u, tierIn) {   // tierIn: its threatTier, when the caller has already worked it out
   if (e.ally) return miniAlly(c, x, y, e.rot, u, e.speed);
-  const tier = threatTier(e.threatL ?? e.L), kind = shipKind(e), r = 4 * u;
+  const tier = tierIn || threatTier(e.threatL ?? e.L), kind = shipKind(e), r = 4 * u;
   if (e.speed > 5) miniWake(c, x, y, e.rot, u);
   const fill = kind === "fire" ? `rgba(255,140,40,${0.68 + 0.32 * Math.sin(performance.now() / 90 + x)})` : MARK_FILL[kind] || tier.color;
   threatMark(c, x, y, { ...tier, color: fill }, r);
@@ -58,11 +58,12 @@ function clusterMarks(items, cell) {
 const isNearThreat = (e, tier) => tier.d >= 1 && dist(e, player) < MINI_NEAR_R;   // stronger than you and close: never buried
 // Every ship, in priority order: ordinary ones first (merged where they pile up), then the near threats on top.
 // `between` runs after the ordinary ships, so places (harbor, outpost) land above them and below the threats.
-function drawMiniShips(c, k, u, between) {
-  const ships = enemies.filter(e => e.alive && !e.boss && !e.fixed && !e.ally && !(typeof disFogHides === "function" && disFogHides(e))).map(e => ({ e, tier: threatTier(e.threatL ?? e.L) }));
+// me: the player's rating, worked out once for the whole chart.
+function drawMiniShips(c, k, u, between, me = shipRating()) {
+  const ships = enemies.filter(e => e.alive && !e.boss && !e.fixed && !e.ally && !(typeof disFogHides === "function" && disFogHides(e))).map(e => ({ e, tier: threatTier(e.threatL ?? e.L, me) }));
   const rows = ships.filter(s => !isNearThreat(s.e, s.tier)).map(s => ({ ...s, x: s.e.x * k, y: s.e.y * k, rank: s.tier.d }));
   for (const m of clusterMarks(rows, MINI_MERGE * u)) {
-    miniShip(c, m.e, m.x, m.y, u);
+    miniShip(c, m.e, m.x, m.y, u, m.tier);
     if (m.n > 1) {   // a small count beside the mark
       c.font = `700 ${Math.round(6 * u)}px ${UI_FONT}`; c.textAlign = "left"; c.textBaseline = "alphabetic"; c.lineJoin = "round";
       c.lineWidth = 2 * u; c.strokeStyle = MINI_INK; c.fillStyle = MINI_CREAM;
@@ -70,11 +71,11 @@ function drawMiniShips(c, k, u, between) {
     }
   }
   between();
-  for (const s of ships.filter(s => isNearThreat(s.e, s.tier)).sort((a, b) => dist(b.e, player) - dist(a.e, player))) miniShip(c, s.e, s.e.x * k, s.e.y * k, u);
+  for (const s of ships.filter(s => isNearThreat(s.e, s.tier)).sort((a, b) => dist(b.e, player) - dist(a.e, player))) miniShip(c, s.e, s.e.x * k, s.e.y * k, u, s.tier);
 }
 // A shore battery: a crenellated stone keep with its threat shape on the wall. Shown from the start, so the
-// player can see which islands are armed before sailing into range.
-function miniFort(c, x, y, L, u) {
+// player can see which islands are armed before sailing into range. me: the player's rating, if the chart already has it.
+function miniFort(c, x, y, L, u, me) {
   const w = 6.5 * u, h = 5 * u, m = 2.6 * u, top = y - h + m;
   c.beginPath(); c.moveTo(x - w, y + h); c.lineTo(x - w, y - h);
   for (const [a, b] of [[-w + m, -w + 2 * m - 0.4 * u], [w - 2 * m + 0.4 * u, w - m]]) {   // two gaps between three merlons
@@ -82,7 +83,7 @@ function miniFort(c, x, y, L, u) {
   }
   c.lineTo(x + w, y - h); c.lineTo(x + w, y + h); c.closePath();
   c.fillStyle = "#8f8a7e"; c.fill(); c.lineWidth = 1.5 * u; c.strokeStyle = MINI_INK; c.stroke();
-  threatMark(c, x, y + 1.2 * u, threatTier(L), 2.8 * u);
+  threatMark(c, x, y + 1.2 * u, threatTier(L, me), 2.8 * u);
 }
 // Plunder: a small chest outline, a domed lid over a box with its lock (a fort's treasure is a bigger one), so it never
 // reads as a ship. The player's own lost cargo is a red X in a pulsing ring (miniWreck).

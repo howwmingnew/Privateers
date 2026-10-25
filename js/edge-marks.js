@@ -11,9 +11,14 @@ const EDGE_TICK = 0.05, EDGE_FADE_MS = 280, EDGE_HYST = 24;   // s between updat
 const edgeLayer = document.createElement("div");
 edgeLayer.id = "edgeMarks"; edgeLayer.setAttribute("aria-hidden", "true"); edgeLayer.hidden = true;
 document.body.append(edgeLayer);
-const edgeEls = new Map();   // target -> { el, ic, d, key, w, h }
+const edgeEls = new Map();   // target -> { el, ic, d, key, w, h, sk (its edgeSize key), look }
 let edgeT = 0, edgeShowsBoss = false;
-const edgeScale = () => uiScale() * (matchMedia("(min-width: 2400px) and (min-height: 1300px)").matches ? 1.5 : matchMedia("(min-width: 1500px) and (min-height: 900px)").matches ? 1.25 : 1);
+// made once and read live (.matches); the first two are css/campaign.css's --ez breakpoints, word for word
+const EDGE_MQ_XL = matchMedia("(min-width: 2400px) and (min-height: 1300px)"), EDGE_MQ_L = matchMedia("(min-width: 1500px) and (min-height: 900px)"), EDGE_MQ_COARSE = matchMedia("(pointer: coarse)");
+const edgeScale = () => uiScale() * (EDGE_MQ_XL.matches ? 1.5 : EDGE_MQ_L.matches ? 1.25 : 1);
+// A box's size follows only its style (boss or not), the scale and its text, so each one is measured once: reading
+// offsetWidth after a write makes the browser lay out the page there and then. Cleared when the language or a font changes.
+const edgeSize = new Map();   // style + z + "|" + text -> { w, h }
 
 function edgeIcon(ic, it) {
   const c = ic.getContext("2d"), u = 2.3;
@@ -31,17 +36,17 @@ function edgeBox(it) {
   el.className = "em" + (it.boss ? " boss" : it.ally ? " ally" : ""); el.dataset.kind = it.boss ? "boss" : it.ally ? "ally" : it.place || (it.hz ? "hazard" : "ship");
   el.innerHTML = `<canvas width="44" height="44"></canvas><span></span><i class="ptr"></i>`;
   edgeLayer.append(el);
-  return { el, ic: el.firstElementChild, txt: el.children[1], ptr: el.lastElementChild, key: "", label: "", w: 0, h: 0 };
+  return { el, ic: el.firstElementChild, txt: el.children[1], ptr: el.lastElementChild, key: "", label: "", w: 0, h: 0, sk: "", look: it.boss ? "b" : "s" };
 }
 // Every target that could get a box right now, with its screen position (css px) and distance (world px).
 function edgeCandidates(v, kx, ky) {
-  const out = [], reach = EDGE_RANGE * gearMul("view") * v.width, me = shipRating();
+  const out = [], reach = EDGE_RANGE * gearMul("view") * v.width, me = shipRating();   // one rating for every ship's threat
   const add = (o, it) => {
     const px = Math.hypot(o.x - player.x, o.y - player.y);
     if (px > reach || px < 1) return;
     out.push({ ...it, o, px, sx: (o.x - v.x) * kx, sy: (o.y - v.y) * ky });
   };
-  for (const e of enemies) if (e.alive && !e.fixed && (e.ally || !(typeof disFogHides === "function" && disFogHides(e)))) add(e, { kind: "ship", e, boss: !!e.boss, ally: !!e.ally, d: e.ally ? 0 : threatTier(e.threatL ?? e.L).d });   // an escort that has dropped out of sight keeps a mint box, fog or not
+  for (const e of enemies) if (e.alive && !e.fixed && (e.ally || !(typeof disFogHides === "function" && disFogHides(e)))) add(e, { kind: "ship", e, boss: !!e.boss, ally: !!e.ally, d: e.ally ? 0 : threatTier(e.threatL ?? e.L, me).d });   // an escort that has dropped out of sight keeps a mint box, fog or not
   if (typeof disMarks === "function") for (const h of disMarks()) add(h, { kind: "hazard", hz: h, d: 2 });   // warning or running disasters (js/disasters.js)
   if (portsOff()) return out;   // the daily sea has no harbor or stations (js/ports.js)
   add(PORT, { kind: "place", place: "harbor", d: 0 });
@@ -68,19 +73,22 @@ function updateEdgeMarks(dt) {
   const picked = edgePick(cands);
   edgeShowsBoss = picked.some(it => it.boss);
   const keep = readEdgeKeepouts(dt), pad = 16 * z, boxH = 30 * z,   // pad: room for a box's pointer between it and the screen edge
-     inset = { l: pad, r: w - pad, t: Math.max(keep.top + pad, 56 * z), b: h - pad - (matchMedia("(pointer: coarse)").matches ? 24 * z : 0) };
-  const cx = (inset.l + inset.r) / 2, cy = (inset.t + inset.b) / 2, spots = new Map();
+     inset = { l: pad, r: w - pad, t: Math.max(keep.top + pad, 56 * z), b: h - pad - (EDGE_MQ_COARSE.matches ? 24 * z : 0) };
+  const cx = (inset.l + inset.r) / 2, cy = (inset.t + inset.b) / 2, spots = new Map(), unsized = [];
   for (const it of picked) {
     let m = edgeEls.get(it.o);
     if (!m) { m = edgeBox(it); edgeEls.set(it.o, m); requestAnimationFrame(() => m.el.classList.add("on")); }
     m.el.classList.remove("gone"); m.it = it;
     const key = (it.boss ? "b" : it.place || (it.hz ? "h" + it.hz.kind : "s")) + (it.e ? it.d + (it.e.faction || "") + (it.e.arch || "") : "");
     if (key !== m.key || it.e?.arch === "fireship") { m.key = key; edgeIcon(m.ic, it); }   // a fireship's flicker needs a fresh paint
-    const text = edgeLabel(it.px);
-    if (text !== m.label) { m.label = text; m.txt.textContent = text; m.w = m.el.offsetWidth; m.h = m.el.offsetHeight; }
-    // the box's centre travels on the rectangle shrunk by half the box, so the whole box stays on screen
-    spots.set(it.o, edgePoint({ l: inset.l + m.w / 2, r: inset.r - m.w / 2, t: inset.t + m.h / 2, b: inset.b - m.h / 2 }, it.sx - cx, it.sy - cy));
+    const text = edgeLabel(it.px), sk = m.look + z + "|" + text;
+    if (text !== m.label) { m.label = text; m.txt.textContent = text; }
+    if (sk !== m.sk) { m.sk = sk; const sz = edgeSize.get(sk); if (sz) { m.w = sz.w; m.h = sz.h; } else unsized.push(m); }
   }
+  // measured only after every box is written, so a tick lays the page out once at most, and only for a size not seen before
+  for (const m of unsized) { m.w = m.el.offsetWidth; m.h = m.el.offsetHeight; if (m.w > 0 && m.h > 0) edgeSize.set(m.sk, { w: m.w, h: m.h }); }   // a hidden layer reads 0 x 0: never keep that
+  // the box's centre travels on the rectangle shrunk by half the box, so the whole box stays on screen
+  for (const it of picked) { const m = edgeEls.get(it.o); spots.set(it.o, edgePoint({ l: inset.l + m.w / 2, r: inset.r - m.w / 2, t: inset.t + m.h / 2, b: inset.b - m.h / 2 }, it.sx - cx, it.sy - cy)); }
   // one edge at a time: keep each box's own spot, spread them on that edge, slide clear of the boss bar and the hint
   for (const side of ["left", "right", "top", "bottom"]) {
     const group = picked.filter(it => spots.get(it.o).side === side);
@@ -105,4 +113,6 @@ function updateEdgeMarks(dt) {
   }
 }
 onHook("frame", dt => { if ((edgeT -= dt) <= 0) { updateEdgeMarks(EDGE_TICK + -edgeT); edgeT = EDGE_TICK; } });
-onHook("lang", () => { for (const [, m] of edgeEls) m.label = ""; });
+onHook("lang", () => { edgeSize.clear(); for (const [, m] of edgeEls) m.label = m.sk = ""; });
+// boot waits for the fonts 1.5 s at most (js/main.js), so a box measured in a fallback font is measured again once the real one is in
+document.fonts?.addEventListener?.("loadingdone", () => { edgeSize.clear(); for (const [, m] of edgeEls) m.sk = ""; });
