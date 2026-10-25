@@ -7,7 +7,7 @@
 // eats the gun: it is paid in gold instead. Not boardable, struck or not: bosses (rematch captains too), a campaign
 // captain's escorts, a convoy's escort brig, the tutorial's target, fireships, shore batteries. Warships may strike too
 // (js/strike.js). Rolls use Math.random, the same in a daily run as in an ordinary sortie.
-// The prize is an ordinary gun item from prizeGun(); the rarity of #38 joins there.
+// The prize is an ordinary gun item from prizeGun(); with a third roll it carries a rarity, item level and affixes (#38, js/gear-core.js gearPrize).
 // A struck prize within reach is grappled (#69, the spring in js/grapple.js): the rope reels the flagship alongside and a full-speed
 // run straight away parts it; boarding finished, or the prize sunk, ends the grapple.
 Object.assign(STR.en, {
@@ -31,14 +31,15 @@ const boardTick = (t, isAlongside, dt) => clamp(t + (isAlongside ? dt : -dt * BO
 const alongside = (p, e, pv) => dist(p, e) < shipRadius(p) + shipRadius(e) + BOARD_GAP
   && Math.hypot((p.vx || 0) + (pv ? pv.x : 0) - (e.vx || 0), (p.vy || 0) + (pv ? pv.y : 0) - (e.vy || 0)) < BOARD_REL_V;
 
-// The gun she yields, or null. r1 decides whether, r2 which gun (both 0..1). `s` needs faction and L.
-function prizeGun(s, r1, r2) {
+// The gun she yields, or null. r1 decides whether, r2 which gun, r3 its rarity (all 0..1). `s` needs faction and L (and ring, for the item level).
+function prizeGun(s, r1, r2, r3) {
   const f = Object.hasOwn(BOARD_GUN_CHANCE, s.faction) ? s.faction : "merchant";
   if (!(r1 < BOARD_GUN_CHANCE[f])) return null;
   const w = BOARD_GUNS[f], ids = Object.keys(w).filter(id => Object.hasOwn(GUNS, id));
   let r = r2 * ids.reduce((a, id) => a + w[id], 0), pick = ids[0];
   for (const id of ids) { pick = id; if ((r -= w[id]) < 0) break; }
-  return gunItem(pick, clamp(1 + Math.floor((Math.max(1, s.L || 1) - 1) / BOARD_LV_EVERY), 1, BOARD_LV_MAX));
+  const gun = gunItem(pick, clamp(1 + Math.floor((Math.max(1, s.L || 1) - 1) / BOARD_LV_EVERY), 1, BOARD_LV_MAX));
+  return r3 == null || typeof gearPrize !== "function" ? gun : gearPrize(gun, f, s.ring || 1, gearTierOf(save.ship), r3);
 }
 const boardGold = s => Math.round((s.lootWas || 0) * BOARD_GOLD_K);
 // Put a prize in a save: the gun store takes it, unless it is full, then it turns into gold. Returns { save, kind, gold }.
@@ -66,7 +67,7 @@ function boardCandidate() {
 function boardRoll() { return Math.random(); }   // a function so the browser test can fix the rolls
 function completeBoarding(e) {
   e.boarded = true;
-  const gold = boardGold(e), p = claimPrize(save, prizeGun(e, boardRoll(), boardRoll()));
+  const gold = boardGold(e), p = claimPrize(save, prizeGun(e, boardRoll(), boardRoll(), boardRoll()));
   const total = gold + p.gold;
   save = { ...p.save, gold: p.save.gold + gold };
   if (total > 0) statsGold(total);
@@ -74,7 +75,7 @@ function completeBoarding(e) {
   floatText(e.x, e.y - 50, t("fBoarded"), "#f6f1e3", 20);
   if (gold > 0) floatText(e.x, e.y - 74, t("fBoardGold", { n: fmt(gold) }), "#f0c766", 17);
   const got = p.save.store[p.save.store.length - 1];
-  if (p.kind === "gun") toast(t("toastPrizeGun", { gun: t("gf_" + got.g), lv: got.lv }));
+  if (p.kind === "gun") toast(t("toastPrizeGun", { gun: t("gf_" + got.g) + (got.r ? ` [${t("gr_" + got.r)}]` : ""), lv: got.lv }));
   else if (p.kind === "sold") toast(t("toastPrizeSold", { n: fmt(p.gold) }));
   Snd.play("board", { x: e.x, y: e.y, gun: p.kind !== "none", amount: total });
   S.fx.spark.explode(18, e.x, e.y);
