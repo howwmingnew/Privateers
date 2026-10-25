@@ -62,7 +62,7 @@ const BOSS_TETHER = 480;
 // its real class (the fire-raiders are fireships), so only `cls` matters now.
 const FIRE_RAIDER = { cls: "fireship", hpMul: 0.6, guns: 1 };
 const BOUNTIES = [
-  { id: "ned",    L: 3,  cls: "cutter",  faction: "pirate", hpMul: 2.5, speed: 0.9,  ang: Math.PI,        r: ringMid(3), reward: 400,   escorts: [], margin: 1, tether: BOSS_TETHER },
+  { id: "ned",    L: 3,  cls: "cutter",  faction: "pirate", hpMul: 2.5, speed: 0.9,  ang: Math.PI,        r: ringMid(3), reward: 400,   escorts: [], margin: 1, tether: BOSS_TETHER, stands: true },
   { id: "carey",  L: 5,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: -Math.PI / 2,   r: ringMid(5), reward: 1500,  escorts: [{ cls: "brig" }] },
   { id: "saint",  L: 7,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: Math.PI * 0.75, r: ringMid(7), reward: 4000,  escorts: [FIRE_RAIDER, FIRE_RAIDER, FIRE_RAIDER] },
   { id: "hale",   L: 9,  cls: "frigate", faction: "navy",   hpMul: 1.6,              ang: 0,              r: ringMid(9), reward: 10000, escorts: [{ cls: "brig" }, { cls: "brig" }] },
@@ -73,14 +73,21 @@ const LAIR_LEASH = 380;   // an idle boss (or escort) further than this from its
 const ASSIST_MS = 20000;  // a boss someone else sinks still pays if the player hit it this recently
 const lairOf = b => polarPt(b.ang, b.r);
 const TETHER_BACK = 120;   // once turned back, a tethered boss only gives chase again inside tether - this, so it does not dither on the line
-// A bounty with a tether that is farther than that from its lair, on a course that takes it farther still, turns for the lair instead
-// (js/ships.js think) and stays turned (e.tethered) until it is back inside the line by TETHER_BACK.
+const TETHER_SLACK = 100, TETHER_BEND = 0.35;   // past the line he first slides along it, bent a little inward (still fighting); this far beyond it he turns for home
+// A bounty that "stands" (Red Ned, #108) never sheers off, never gives up the chase and never flees: his wounds stay, and the leash below is the only thing that limits him.
+const bossStands = e => !!e.boss && !!(findBounty(e.boss) || {}).stands;
+// A bounty with a tether that is on the line, on a course that takes it farther out, slides along the line instead (so the fight goes on
+// without leading the captain into deeper water); TETHER_SLACK beyond it he turns for the lair (js/ships.js think) and stays turned
+// (e.tethered) until he is back inside the line by TETHER_BACK.
 function bossTether(e, desired, thr) {
   const b = e.boss && e.lair && desired != null ? findBounty(e.boss) : null;
   if (!b || !b.tether) return null;
-  const d = dist(e, e.lair), out = Math.atan2(e.y - e.lair.y, e.x - e.lair.x);
+  const d = dist(e, e.lair), out = Math.atan2(e.y - e.lair.y, e.x - e.lair.x), off = angDiff(desired, out);
   if (e.tethered && d < b.tether - TETHER_BACK) e.tethered = false;
-  if (!e.tethered && d >= b.tether && Math.cos(angDiff(desired, out)) > 0) e.tethered = true;
+  if (!e.tethered && d >= b.tether && Math.cos(off) > 0) {
+    if (d >= b.tether + TETHER_SLACK) e.tethered = true;
+    else return { desired: out + (off >= 0 ? 1 : -1) * (Math.PI / 2 + TETHER_BEND), thr };
+  }
   return e.tethered ? { desired: out + Math.PI, thr } : null;
 }
 // Hull art for a spec class (js/art.js SHIP_ART; the man-o'-war has its own, bigger than anything the yard sells).
@@ -102,8 +109,9 @@ let bossShip = null, bossTag = null, bossSeen = false, bossHitAt = -1e9, storyKe
 // On the first voyage the bounty waits until the tutorial is done (bountyHeld), so it never crosses the lesson.
 const HUNT_REMIND_MS = 5 * 60 * 1000;
 // A hurt bounty keeps his wounds while the page stays open (#105): after the captain's death or a return to harbor he sails again
-// with the hull share he had, mended by BOSS_MEND of it. Not saved: a reload is a fresh start. Keyed by bounty id.
-const BOSS_MEND = 0.2;
+// with exactly the hull share he had (BOSS_MEND 0: #108, the reviewers watched him mend 2% -> 20% and the duel never ended). Not saved: a reload
+// is a fresh start; a sinking, a new game, New Game+ and a wipe reset it. Keyed by bounty id.
+const BOSS_MEND = 0;
 let bossHpFrac = {};
 const bossHpReset = () => { bossHpFrac = {}; };   // a new game, a wiped save or New Game+ starts the bounties whole
 const keepsWounds = b => b === BOUNTIES[0];   // only Red Ned, the newcomer's duel (#98), keeps his wounds; the later captains sail whole each time

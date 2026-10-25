@@ -48,7 +48,7 @@ function spawnEnemy(sc, at) {
   // placed ships (bosses, escorts, the tutorial's mark) keep their designed level: the war's escalation is for the open sea
   const d0 = Math.hypot(x - PORT.x, y - PORT.y), L = at ? ringAt(d0) + levelBonus() : levelAt(d0);
   const faction = at && at.faction ? at.faction : pickFaction();
-  const e = makeEnemy(sc, x, y, L, faction);
+  const e = makeEnemy(sc, x, y, L, faction, undefined, !!at);
   // placed ships (bosses, escorts, the tutorial's target) sail alone; a fleet only fills what its own ring is short of
   // its quota (js/world-seas.js), so it never starves the other rings (js/fleet.js)
   if (!at) maybeFleet(sc, e);
@@ -56,14 +56,14 @@ function spawnEnemy(sc, at) {
 }
 // One enemy of level L and faction at (x, y); its class (js/archetypes.js) is picked by level and faction unless given.
 // A campaign boss or escort re-takes its bounty's class next frame (js/volley.js campaignOutfit).
-function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
+function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction), placed = false) {
   const e = makeShip(sc, "ship-" + faction, x, y);
   Object.assign(e, { L, ring: ringAt(Math.hypot(x - PORT.x, y - PORT.y)), faction, angry: 0, thinkT: 0, wander: null, target: null, chaseFrom: null,
     retarget: rand(0, 0.5), attacker: null, ignore: new Map() });
   e.badge = worldText(x, y - 36, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#1b1410", padding: { x: 5, y: 1 } })   // sc is S: worldText (js/art.js) draws into S
     .setOrigin(0.5).setDepth(9);
   outfitEnemy(e, cls);   // numbers, guns, and the class's art + hitbox via applyShipArt (js/art.js)
-  if (typeof tameFirstVoyage === "function") tameFirstVoyage(e);   // no ▲▲ ship in the Shallows on a first voyage (js/notify-order.js)
+  if (typeof tameFirstVoyage === "function") tameFirstVoyage(e, placed);   // no ▲▲ ship in the Shallows on a first voyage, none above a newcomer's cap near the harbor (js/notify-order.js)
   refreshBadge(e);
   enemies.push(e);
   return e;
@@ -191,7 +191,8 @@ function think(e, dt) {
     const chased = dist(e, cf);
     // an ordinary ship breaks off once its quarry has fled two or more rings shallower than the ring it calls home
     const shoal = tg === player && !e.boss && !e.escortOf && e.ring && ringAt(dist(player, PORT)) <= e.ring - 2;
-    if ((chased > LEASH && d > range) || d > GIVE_UP_DIST || shoal) giveUp(e, tg, now);
+    const stands = typeof bossStands === "function" && bossStands(e);   // Red Ned keeps the fight on however far it has run (js/campaign.js, #108)
+    if ((chased > LEASH && d > range && !stands) || d > GIVE_UP_DIST || shoal) giveUp(e, tg, now);
     else { ({ desired, thr } = archTactic(e, tg, d, toT, now)); fd = d; fToT = toT; }   // each class's battle plan (js/archetypes.js)
   }
   if (e.fleet) { const c = fleetSteer(e, tg, fd, fToT, now); if (c) ({ desired, thr } = c); }   // formation, flanking, a lost lead (js/fleet.js)

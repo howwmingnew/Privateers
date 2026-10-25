@@ -20,7 +20,7 @@ function outfitAlly(e, entry, slotNo, stance, guns) {
   Object.assign(e, { ally: true, slot: slotNo, stance, yardId: entry.id, allyName: escortName(entry), loot: 0, stolen: 0, merchant: false, fixed: false,
     arch: entry.ship, A: { plan: ESCORT_PLAN[entry.ship] || "circle" }, angry: 0, target: null, boss: undefined, escortOf: undefined });
   e.maxHp = e.hp = yardVal("hull", entry.hull, sh);
-  e.maxSpeed = yardVal("sails", entry.sails, sh) * ESCORT_SPEED_K;
+  e.maxSpeed = e.baseSpeed = yardVal("sails", entry.sails, sh) * ESCORT_SPEED_K;
   e.turnRate = 1.7 * (ESCORT_TURN[entry.ship] || 1);
   e.aim = st.aim; e.aimLead = st.lead; e.aimLeadErr = st.leadErr; e.aimTurn = st.turn; e.aimSpread = st.spread;
   e.guns = { ...escortBattery(entry.ship, guns), turret: [] };
@@ -76,11 +76,14 @@ function escortRetarget(e, now) {
   }
   if (best !== e.target) { e.target = best; if (best) e.chaseFrom = { x: e.x, y: e.y }; }
 }
+// Top speed of an escort `away` px from its slot: its own, or, once it has fallen behind, enough to catch a full-sail flagship (#108).
+const escortPace = (base, leadMax, away) => away > ESCORT_CATCH_D ? Math.max(base, leadMax * ESCORT_CATCH_K) : base;
 // Station keeping: called from fleetSteer for an "escort" fleet. null = let the class's battle plan steer (it is fighting inside its leash, ESCORT_LEASH from its slot).
 function escortSteer(e, f, tg, d, toT, now) {
   const lead = f.lead;
   if (!lead.alive || docked) return null;
   const s = slotOf(f, e), home = s ? slotWorld(fleetFrame(f), s) : lead, away = dist(e, home);   // measured from its own slot, so an outer slot is not always "too far"
+  if (e.baseSpeed) e.maxSpeed = escortPace(e.baseSpeed, lead.maxSpeed, away);   // behind: press on until back in formation
   e.retreat = e.stance === "passive" && e.hp < e.maxHp * ESCORT_RETREAT;   // a hurt passive escort keeps to the flagship and does not chase
   if (e.retreat || away > ESCORT_LEASH || !tg) return holdStation(e, f);
   return null;
