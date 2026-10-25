@@ -208,7 +208,8 @@ function saveTimes(fresh) {
 
 async function main() {
   const argv = process.argv.slice(2);
-  const opt = { jobs: Math.min(4, Math.max(1, Math.floor(cpus().length / 2))), retry: true, base: "origin/main", list: false };
+  // half the logical CPUs, at most 8: on a 16-thread desktop test:all took 351 s at 4 jobs, 275 s at 6 and 229 s at 8, all passing
+  const opt = { jobs: Math.min(8, Math.max(1, Math.floor(cpus().length / 2))), retry: true, base: "origin/main", list: false };
   const words = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];

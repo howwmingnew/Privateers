@@ -124,7 +124,8 @@ function vfxShip(s, dt) {
   if (s.speed > 25 && s.wakeT <= 0) {
     s.wakeT = PERF_LOW && !vis ? 0.2 : 0.07;   // frames running long: off-screen wakes go sparser (nobody sees them form)
     const back = a.len * 0.46;
-    if (vis || onScreen(s.x, s.y, wakePad())) S.fx.wake.emitParticleAt(s.x - c * back, s.y - sn * back, 1);
+    // frames running long: none at all far off screen. Only then, since photo mode can pan to any ship, and its wake must already be there.
+    if (vis || !PERF_LOW || onScreen(s.x, s.y, wakePad())) S.fx.wake.emitParticleAt(s.x - c * back, s.y - sn * back, 1);
     if (vis && s.speed > s.maxSpeed * 0.4) {   // bow spray: foam peeling off both shoulders in a V
       const bx = s.x + c * a.len * 0.36, by = s.y + sn * a.len * 0.36, w = a.beam * 0.45;
       for (const sg of [-1, 1]) { FX.deg = toDeg(s.rot + Math.PI - sg * 0.55); FX.spray.emitParticleAt(bx - sn * w * sg, by + c * w * sg, 1); }

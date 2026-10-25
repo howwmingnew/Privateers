@@ -34,6 +34,7 @@ const Snd = (() => {
   const SEA_THEME = { shallows: "sea", reef: "sea_reef", lanes: "sea_lanes", maelstrom: "sea_maelstrom" };
   const taper = v => v * v;                       // slider position -> gain, so halfway sounds about half as loud
   const HUSH_MS = 250;                            // muted: the master fades out (applyVol), then the whole graph is suspended
+  let hushT = 0;                                  // the pending suspend: a quick off/on/off must not cut the last fade short
 
   // ---------- settings: per-bus volume and mute, merged into a shared settings object ----------
   function readSettings() {
@@ -349,7 +350,8 @@ const Snd = (() => {
   }
   function setMuted(m) {
     muted = !!m; writeSettings({ muted }); applyVol();
-    if (ctx) { if (muted) setTimeout(hush, HUSH_MS); else if (!pauses.size) ctx.resume().catch(() => {}); }   // the score picks up where it was muted
+    clearTimeout(hushT);
+    if (ctx) { if (muted) hushT = setTimeout(hush, HUSH_MS); else if (!pauses.size) ctx.resume().catch(() => {}); }   // the score picks up where it was muted
     return muted;
   }
   const meterBuf = new Float32Array(2048);

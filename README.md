@@ -49,7 +49,7 @@ npm install            # 只裝測試用的 Playwright（使用系統安裝的 C
 npm run serve          # 在 http://127.0.0.1:8765 提供遊戲（手動玩用；測試自己會開伺服器，不需要這個）
 npm test               # 單元 + 冒煙測試（CI 的必過關卡）
 npm run test:quick     # 單元 + 冒煙 + 依分支相對 origin/main 分岔點的改動挑出的相關瀏覽器測試，目標 5 分鐘內
-npm run test:all       # 全部測試；加 `-- --jobs 4` 平行跑
+npm run test:all       # 全部測試；預設同時跑「CPU 執行緒數的一半、最多 8」支，可用 `-- --jobs N` 指定
 npm run fonts          # 重新產生 js/fonts-link.js（字型子集）
 ```
 
