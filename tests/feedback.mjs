@@ -223,13 +223,13 @@ check(g68.bow === "six6" && g68.gold === up.gold - up.sum, `buying it: Lv 1 -> 6
 const near = await ev(() => { save.bow[0] = gunItem("six", GUN_MAX - 2); renderPort(); return document.querySelector('#ctx [data-act="gup5"]').textContent; });
 check(/Upgrade 2 levels/.test(near), `two levels from the cap it says so (${near})`);
 const poor = await ev(() => { save.bow[0] = gunItem("six", 3); save.gold = 10; renderPort(); const b = document.querySelector('#ctx [data-act="gup5"]'); return { t: b.textContent, d: b.disabled }; });
-check(poor.d && /need \d+ more/.test(poor.t), `without the gold it is disabled and shows the shortfall (${poor.t})`);
+check(poor.d && /\d+ gold short/.test(poor.t), `without the gold it is disabled and shows the shortfall (${poor.t})`);
 await tap('#ctx [data-act="gup5"]').catch(() => {});
 check((await bayState()).bow === "six3", "pressing it anyway buys nothing: no partial upgrade");
 await page.screenshot({ path: `${out}/gunbay-upgrade5-desktop.png` });
 await ev(() => { lang = "zh"; applyLang(); save.gold = 50000; renderPort(); });
 const zhUp = await ev(() => document.querySelector('#ctx [data-act="gup5"]').textContent + "|" + document.querySelector('#ctx [data-act="unload"]').textContent);
-check(/^升級 5 級（總價 [\d,]+ 金幣）火力 \+\d+%( · 船艦 Lv (進度 \+\d+%|→ \d+))?\|卸下$/.test(zhUp), `Chinese: ${zhUp}`);
+check(/^一次升 5 級（共 [\d,]+ 金幣）火力 \+\d+%( · 船艦 Lv (進度 \+\d+%|→ \d+))?\|卸下$/.test(zhUp), `Chinese: ${zhUp}`);
 await ev(() => { lang = "en"; applyLang(); });
 
 // touch on a phone, and the compact 30-gun deck

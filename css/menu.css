@@ -125,7 +125,7 @@ body.scale-preview #title, body.scale-preview #pause { opacity: 0; pointer-event
 @media (max-width: 700px) { #coach.up { top: calc(env(safe-area-inset-top, 0px) + max(178px, 28px + 134px * var(--ts))); } }   /* a phone's compass and chart reach lower */
 #coach .coach-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
 #coach .eyebrow { color: #f0c766; font-size: min(calc(11px * var(--ts)), 4.4vh); }
-#coach p { margin: 1px 0 0; font-size: min(calc(14px * var(--ts)), 5.6vh); line-height: 1.35; }   /* short screens: the card must not climb into the bars */
+#coach p { white-space: pre-line; margin: 1px 0 0; font-size: min(calc(14px * var(--ts)), 5.6vh); line-height: 1.35; }   /* short screens: the card must not climb into the bars */
 #coach .textbtn { pointer-events: auto; color: rgba(246,241,227,.75); min-height: 26px; }
 #coach.in-sheet { position: static; transform: none; width: auto; max-width: none; z-index: 0;   /* a grid item honors z-index: it would ride over the sticky header */ background: rgba(240,199,102,.22); color: var(--ink);
   border-color: rgba(138,93,12,.45); border-left-color: #8a5d0c; box-shadow: none; }

@@ -155,7 +155,7 @@ for (const [tag, viewport, mobile] of [["desktop", { width: 1280, height: 720 },
   // Chinese strings
   await ev(page, () => { lang = "zh"; applyLang(); deckSel = { side: "bow", i: 0 }; renderPort(); });
   const zh = await ev(page, () => ({ up5: document.querySelector('#ctx [data-act="gup5"]').textContent, off: document.querySelector('#ctx [data-act="unload"]').textContent, up: document.querySelector('#ctx [data-act="gup"]').textContent }));
-  ok(`#34 ${tag}: Chinese labels`, /^升級 \d 級（總價 [\d,]+ 金幣/.test(zh.up5) && zh.off === "卸下" && /^升級到 Lv \d（[\d,]+ 金幣/.test(zh.up), zh);
+  ok(`#34 ${tag}: Chinese labels`, /^一次升 \d 級（共 [\d,]+ 金幣/.test(zh.up5) && zh.off === "卸下" && /^升級到 Lv \d（[\d,]+ 金幣/.test(zh.up), zh);
   await page.screenshot({ path: join(out, `gunbay-card-${tag}-zh.png`) });
   await ctx.close();
 }

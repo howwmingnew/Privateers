@@ -19,3 +19,11 @@
 #flagbox .fl-sw:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
 #tally .t-ship { margin-top: 4px; font: 600 13px var(--f-ui); opacity: .85; text-align: center; }
 @media (max-width: 420px) { #flagbox .fl-top { grid-template-columns: 1fr; } #flagbox .fl-prev { justify-self: center; } }
+
+/* the folded card (#100): the heading is the toggle */
+#flagbox h2 { margin: 0; }
+#flagbox .fold-h { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 0; min-height: 44px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+#flagbox .fold-h::after { content: "\25B8"; font-size: .7em; color: var(--ink-soft); transition: transform .15s; }
+#flagbox .fold-h[aria-expanded="true"]::after { transform: rotate(90deg); }
+#flagbox .fold-h:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
+#flagbox:not(.open) { border-top: 1px dashed rgba(42,29,16,.35); }

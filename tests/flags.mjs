@@ -35,12 +35,17 @@ const done = async (tag, o) => { check(o.errors.length === 0, `${tag}: no page e
 const card = page => page.locator("#flagbox");
 const pick = (page, k, id) => page.click(`#flagbox [data-k="${k}"][data-id="${id}"]`);
 const flag = page => page.evaluate(() => ({ ...save.flag }));
+// the card starts folded (the gun deck owns the first screen, #100): open it once per page load
+const unfold = async page => { if ((await page.getAttribute("#flagbox .fold-h", "aria-expanded")) !== "true") await page.click("#flagbox .fold-h"); };
 
 console.log("Old save: default flag and name");
 {
   const o = await open(OLD), { page } = o;
   check(await page.evaluate(() => save.flag.main === "blue" && save.flag.alt === "white" && save.flag.emblem === "diag" && save.shipName === ""), "an old save loads with the classic blue-and-white sash and no custom name");
   check(await card(page).isVisible(), "the Colours card shows in the ledger");
+  check(await page.isHidden("#shipNameIn"), "the card starts folded: the first screen is the gun deck");
+  await unfold(page);
+  check(await page.isVisible("#shipNameIn"), "its heading opens it");
   check(await page.locator('#flagbox [data-k="main"][data-id="blue"][aria-checked="true"]').count() === 1, "blue is the selected main colour");
   check((await page.inputValue("#shipNameIn")) === "", "the name field is empty (placeholder shows the default)");
   check((await page.textContent("#pStats > span b")).startsWith("Sea Wolf"), "the stats line leads with the default ship name");
@@ -51,6 +56,7 @@ console.log("Old save: default flag and name");
 console.log("Ledger: change the flag and the name");
 {
   const o = await open(OLD), { page } = o;
+  await unfold(page);
   await pick(page, "main", "red"); await pick(page, "alt", "gold"); await pick(page, "emblem", "skull");
   const f = await flag(page);
   check(f.main === "red" && f.alt === "gold" && f.emblem === "skull", `the picks reach the save (${JSON.stringify(f)})`);
@@ -97,7 +103,7 @@ console.log("Ledger: change the flag and the name");
   // the chart mark draws the pennant without error
   check(await page.evaluate(() => { const cv = document.createElement("canvas"); cv.width = cv.height = 60; miniPlayer(cv.getContext("2d"), 30, 30, 0, 2); const d = cv.getContext("2d").getImageData(0, 0, 60, 60).data; let red = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200 && d[i] > 150 && d[i + 1] < 70 && d[i + 2] < 70) red++; return red > 3; }), "the chart's player mark flies the main colour");
   // reload keeps everything
-  await o.reopen();
+  await o.reopen(); await unfold(page);
   const kept = await page.evaluate(() => ({ f: { ...save.flag }, n: save.shipName, liv: player.livery }));
   check(kept.f.main === "red" && kept.f.alt === "gold" && kept.f.emblem === "skull" && kept.n === "Dread Queen" && kept.liv === "pf-red-gold-skull", `reload keeps the flag, the name and the sea livery (${JSON.stringify(kept)})`);
   // names live on the ship, the flag on the captain: buy a brig (unnamed, same flag), name it, switch back
@@ -116,7 +122,7 @@ console.log("Ledger: change the flag and the name");
   await page.click('#ships [data-act="switch"]'); await page.waitForTimeout(200 * SLOW);
   check(await page.evaluate(() => save.ship === "sloop" && save.shipName === "Dread Queen" && save.fleet.some(e => e.name === "Iron Maiden")), "switching back shows that ship's name");
   check((await page.inputValue("#shipNameIn")) === "Dread Queen", "the name field follows the ship");
-  await o.reopen();
+  await o.reopen(); await unfold(page);
   check(await page.evaluate(() => save.shipName === "Dread Queen" && save.fleet[0].name === "Iron Maiden"), "both names survive a reload");
   await done("ledger", o);
 }
@@ -124,6 +130,7 @@ console.log("Ledger: change the flag and the name");
 console.log("Chinese UI");
 {
   const o = await open(JSON.stringify({ ...JSON.parse(OLD), flag: { main: "green", alt: "white", emblem: "anchor" }, shipName: "海鷗號" }), { lang: "zh" }), { page } = o;
+  await unfold(page);
   check((await page.textContent("#flagbox h2")) === "船旗", "the card's title is in Chinese");
   check((await page.inputValue("#shipNameIn")) === "海鷗號", "a Chinese name loads into the field");
   check((await page.textContent("#pStats > span b")).startsWith("海鷗號"), "the stats line shows the Chinese name");
@@ -134,6 +141,7 @@ console.log("Chinese UI");
 console.log("Phone width (390x844)");
 {
   const o = await open(OLD, { viewport: { width: 390, height: 844 }, mobile: true }), { page } = o;
+  await unfold(page);
   await page.locator("#flagbox").scrollIntoViewIfNeeded();
   const m = await page.evaluate(() => {
     const sheet = document.querySelector("#port .sheet"), box = document.getElementById("flagbox").getBoundingClientRect(), sw = [...document.querySelectorAll("#flagbox .fl-sw")].map(b => b.getBoundingClientRect());

@@ -3,8 +3,8 @@
 // Below STRIKE_AT of her hull a fluyt strikes her colours: she slows to STRIKE_SLOW, her guns fall silent, a white flag
 // replaces her house flag and her pennant comes down, and her cargo goes over the side at once as a loot crate. The
 // next hit sinks her (hurt() sinks right after its "hurt" hook). Escort brigs are not fluyts and fight on.
-Object.assign(STR.en, { toastStruck: "They struck their colors!", fStruck: "Colors struck" });
-Object.assign(STR.zh, { toastStruck: "對方降旗投降！", fStruck: "降旗投降" });
+Object.assign(STR.en, { toastStruck: "They struck their colors! Sail slowly alongside her to board.", fStruck: "Colors struck" });
+Object.assign(STR.zh, { toastStruck: "對方降旗投降！放慢船速、貼緊船舷就能登船。", fStruck: "降旗投降" });
 const STRIKE_AT = 0.35, STRIKE_SLOW = 0.3;
 if (typeof LIVERY !== "undefined") for (const [k, base] of [["struck", "merchant"], ["struck_pirate", "pirate"], ["struck_navy", "navy"]])
   LIVERY[k] = { ...LIVERY[base], flag: "#f6f1e3", flag2: "#f6f1e3", pennant: "rgba(0,0,0,0)", pennant2: "rgba(0,0,0,0)" };

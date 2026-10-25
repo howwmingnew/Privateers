@@ -128,7 +128,7 @@ function swapListHtml() {
 }
 function gunPanelHtml() {
   const p = deckSel, gun = gunAt(p), y = p.e != null ? escortShipOf(save, save.escorts[p.e]) : activeShip(save);
-  return `<div class="cpanel gunp">${xBtn()}<h3>${t("portHead", { side: sideLabel(p.side), n: p.i + 1 })}${gun ? " · " + t("gf_" + gun.g) : ""}</h3><p class="sub">${t("portOn", { ship: y ? shipNameOf(y) : "" })}</p>
+  return `<div class="cpanel gunp">${xBtn()}<h3>${t("portHead", { side: sideLabel(p.side), n: `<span class="n">${p.i + 1}</span>` })}${gun ? " · " + t("gf_" + gun.g) : ""}</h3><p class="sub">${t("portOn", { ship: y ? shipNameOf(y) : "" })}</p>
     ${gunNoteHtml()}${gun ? gunCardHtml() : `<p class="hint-s">${t("emptyPortTip")}</p>`}
     <h4>${t("swapHead")}</h4>${swapListHtml()}
     <h4>${t("buyHead")}</h4><div class="list" id="armory">${armoryHtml()}</div></div>`;

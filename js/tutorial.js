@@ -8,7 +8,7 @@ Object.assign(STR.en, {
   tut_out: "Sail out of the harbor.",
   tut_aim: "Find the gold-ringed ship. Turn until the aim line turns red.",
   tut_fire: "Red means a hit. Fire!",
-  tut_sink: "Keep firing until it sinks. Faint lines are still reloading.",
+  tut_sink: "Keep firing until it sinks. Faint lines are still reloading. {hold}",
   tut_scoop: "Sunk! Sail over the floating crate to scoop up the plunder.",
   tut_sell: "Now sail back into the dashed ring around the harbor to sell your cargo.",
   tut_buy: "Spend your gold: tap a gun port to buy or upgrade a gun, or tap the hull to upgrade the ship. The cheapest costs {n} gold.",
@@ -16,19 +16,21 @@ Object.assign(STR.en, {
   tut_buySea: "Bring plunder home, then buy or upgrade something. The cheapest costs {n} gold.",
   tut_buyMoor: "Stop inside the harbor ring and hold still to open the ledger, then buy or upgrade something. The cheapest costs {n} gold.",
   tut_docked: "Set sail to carry on with your first voyage.",
-  tut_done: "That is the whole loop, captain. Farther waters hold richer ships, and deadlier ones.",
+  tut_done: "That is the whole loop, captain. What next:\n1. Sink ships with green tags to earn gold.\n2. Back in port, upgrade guns or change ship until your Ship Lv reaches {lv} (now Lv {me}).\n3. {boss} lurks {dir} of the harbor: follow the gold skull arrow.",
+  tut_doneGen: "That is the whole loop, captain. Farther waters hold richer ships, and deadlier ones.", tut_ok: "Got it",
   ctl_steer_keys: "W raises the sail, S lowers it, A and D turn.", ctl_steer_mouse: "Hold the left mouse button where you want to sail; farther means faster.",
   ctl_steer_touch: "Drag anywhere to steer.", ctl_steer_pad: "Steer with the left stick; D-pad up raises the sail.",
   ctl_steer_desk: "Steer with W A S D, or hold the left mouse button where you want to sail.",
   ctl_fire_keys: "Press Space to fire.", ctl_fire_mouse: "Let go of the mouse button, or click, to fire.", ctl_fire_touch: "Let go to fire.",
   ctl_fire_pad: "Press A or RT to fire.", ctl_fire_desk: "Press Space, or click, to fire.",
+  ctl_hold: "Hold Space to auto-fire at red lines.",
 });
 Object.assign(STR.zh, {
   tut_title: "首航", tut_skip: "略過", tut_count: "第 {n}／{m} 步",
   tut_out: "駛出港口。",
   tut_aim: "找綠色標籤的船（金圈標示），轉向讓瞄準線變紅。",
   tut_fire: "紅線代表會命中。開火！",
-  tut_sink: "繼續開火，直到它沉沒。淡色的線代表還在裝填。",
+  tut_sink: "繼續開火，直到它沉沒。淡色的線代表還在裝填。{hold}",
   tut_scoop: "擊沉了！駛過漂浮的木箱，把戰利品撈上船。",
   tut_sell: "現在駛回港口周圍的虛線圈，把貨物賣掉。",
   tut_buy: "把金幣花掉吧：點砲口購買或升級火砲，或點船身升級船隻。最便宜的要 {n} 金幣。",
@@ -36,14 +38,17 @@ Object.assign(STR.zh, {
   tut_buySea: "把戰利品帶回港口，再購買或升級任何一項。最便宜的要 {n} 金幣。",
   tut_buyMoor: "在港口的虛線圈裡停船、保持靜止就能打開帳簿，再購買或升級任何一項。最便宜的要 {n} 金幣。",
   tut_docked: "啟航，繼續你的首航。",
-  tut_done: "這就是整個循環了，船長。越遠的海域，敵船越富有，也越危險。",
+  tut_done: "這就是整個循環了，船長。接下來：\n1. 去打綠色標籤的商船賺金幣。\n2. 回港口在帳簿升級砲或換船，讓船艦 Lv 升到 {lv}（現在 Lv {me}）。\n3. {boss}在港口{dir}方，跟著金色骷髏指標去找他。",
+  tut_doneGen: "這就是整個循環了，船長。越遠的海域，敵船越富有，也越危險。", tut_ok: "知道了",
   ctl_steer_keys: "W 升帆、S 降帆，A 和 D 轉向。", ctl_steer_mouse: "在想去的方向按住滑鼠左鍵，游標越遠速度越快。",
   ctl_steer_touch: "在任意位置拖曳來轉向。", ctl_steer_pad: "用左搖桿轉向，十字鍵上升帆。",
   ctl_steer_desk: "用 W A S D 操控，或在想去的方向按住滑鼠左鍵。",
   ctl_fire_keys: "按空白鍵開火。", ctl_fire_mouse: "放開滑鼠左鍵或點一下就會開火。", ctl_fire_touch: "放開手指就會開火。",
   ctl_fire_pad: "按 A 或 RT 開火。", ctl_fire_desk: "按空白鍵或點一下滑鼠開火。",
+  ctl_hold: "按住空白鍵，會自動對紅線開火。",
 });
 
+const TUT_DONE_T = 30;   // seconds at sea the "what next" card stays up (the ledger does not count it down); "Got it" closes it sooner
 const TUT = ["out", "aim", "fire", "sink", "scoop", "sell", "buy"];
 const tut = { active: false, step: 0, sunk0: 0, gold0: 0, sold: false, sig: "", target: null, pickT: 0, doneT: 0, html: "", g: null, up: false };
 
@@ -165,12 +170,12 @@ function enterStep(n) {
 }
 function finish() {
   save.tutorialDone = true; save.tutorialStep = 0; persist();
-  tut.doneT = 6;
+  tut.doneT = TUT_DONE_T;
 }
 
 function tutorialTick(dt) {
   if (!tut.active) { if (tut.g) tut.g.clear(); return; }
-  if (tut.doneT > 0) { tut.doneT -= dt; if (tut.doneT <= 0) tut.active = false; renderCoach(); if (tut.g) tut.g.clear(); return; }
+  if (tut.doneT > 0) { if (!docked && !paused) tut.doneT -= dt; if (tut.doneT <= 0) tut.active = false; renderCoach(); if (tut.g) tut.g.clear(); return; }
   const at = TUT[tut.step];
   if (at === "buy" && !cheapestBuy()) { finish(); renderCoach(); return; }   // a replay on a maxed-out save: nothing left to buy
   let next = tut.step;
@@ -191,15 +196,21 @@ function tutorialTick(dt) {
   drawGuide(dt);
 }
 
+// What to do next, in words: the first bounty's goal level, where its captain lurks (the skull arrow points the way).
+function nextStepText() {
+  const b = typeof activeBounty === "function" ? activeBounty() : null;
+  if (!b || typeof bountyRecLv !== "function" || typeof dirWord !== "function" || typeof bossName !== "function") return t("tut_doneGen");
+  return t("tut_done", { lv: bountyRecLv(b), me: shipRating(), boss: bossName(b), dir: dirWord(b.ang) });
+}
 function coachText() {
-  if (tut.doneT > 0) return t("tut_done");
+  if (tut.doneT > 0) return nextStepText();
   const at = TUT[tut.step];
   if (at === "buy") {
     const n = fmt(cheapestBuy()), rich = save.gold >= cheapestBuy();
     return t(!docked ? (rich ? "tut_buyMoor" : "tut_buySea") : rich ? "tut_buy" : "tut_poor", { n });
   }
   if (docked) return t("tut_docked");
-  return t("tut_" + at, { steer: t("ctl_steer_" + device), fire: t("ctl_fire_" + device) });
+  return t("tut_" + at, { steer: t("ctl_steer_" + device), fire: t("ctl_fire_" + device), hold: device === "keys" || device === "desk" ? t("ctl_hold") : "" }).trim();   // Space only
 }
 // The card floats over the sea, and moves into the ledger sheet while docked so it never covers the shop.
 function renderCoach() {
@@ -217,7 +228,7 @@ function renderCoach() {
   tutEl("coachTxt").textContent = coachText();
   // steps 1-3 show the control itself: keycaps, a mouse or a finger (js/onboard.js)
   tutEl("coachKeys").innerHTML = !docked && tut.doneT <= 0 && typeof coachGlyphs === "function" ? coachGlyphs(TUT[tut.step]) : "";
-  tutEl("coachSkip").hidden = tut.doneT > 0;
+  const skip = tutEl("coachSkip"); skip.dataset.i18n = tut.doneT > 0 ? "tut_ok" : "tut_skip"; skip.textContent = t(skip.dataset.i18n);   // the done card closes with "Got it"
 }
 document.addEventListener("langchange", () => { tut.html = ""; renderCoach(); });
 document.addEventListener("devicechange", () => { tut.html = ""; renderCoach(); });

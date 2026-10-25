@@ -371,6 +371,15 @@ for (const dpr of [1, 2]) {
   await page.waitForTimeout(150 * SLOW);
   const t7 = await ev(page, () => ({ done: save.tutorialDone, txt: document.getElementById("coachTxt").textContent }));
   ok("tutorial advances out > aim (red) > fire > sink > scoop > sell > buy > done from game state", t6.gold > 0 && t6.inSheet && /12/.test(t6.txt) && t7.done && /loop/.test(t7.txt), { t6, t7 });
+  // the card after the loop says what to do next, stays up at sea until "Got it", and the ledger's time does not use it up
+  const nx = await ev(page, () => ({ txt: document.getElementById("coachTxt").textContent, btn: document.getElementById("coachSkip").textContent, t: tut.doneT }));
+  ok("the done card names the goal Ship Lv, the captain and the skull arrow", /Ship Lv reaches \d+ \(now Lv \d+\)/.test(nx.txt) && /Red Ned/.test(nx.txt) && /skull/.test(nx.txt) && nx.btn === "Got it", nx);
+  await page.waitForTimeout(1200 * SLOW);
+  ok("docked, the done card does not count down", await ev(page, t => tut.doneT === t, nx.t));
+  await page.click("#sail");
+  await until(page, () => !docked && !document.getElementById("coach").hidden && tut.doneT > 0 && tut.doneT < 30);
+  await page.click("#coachSkip");
+  ok("Got it closes the done card", await ev(page, () => !tut.active && document.getElementById("coach").hidden));
   await page.reload({ waitUntil: "load" }); await booted(page);
   await toSea(page);
   ok("finished tutorial stays finished after a reload", await ev(page, () => !tut.active && document.getElementById("coach").hidden && save.tutorialDone));
@@ -402,6 +411,22 @@ for (const dpr of [1, 2]) {
   await until(page, () => tut.step >= 4);
   ok("tutorial: sinking the mark is a counted kill (the lesson never ends on 0 sunk)", await ev(page, () => save.sunk >= 1));
   await ctx.close();
+}
+{   // docking mid-card never sends the captain back to step 1 of the card ("sail out"): the sea gets a fresh mark and the chase restarts at "find the ship" or later (also on a replay, where a kill is already on the books)
+  for (const replay of [false, true]) {
+    const { ctx, page } = await open(D, { tag: "tut-dock" });
+    await toSea(page);
+    await ev(page, r => { if (r) { save.sunk = 5; tutorialReplay(); } player.x = PORT.x + DOCK_R + 220; player.y = PORT.y; }, replay);
+    await until(page, () => tut.step >= 1);
+    await ev(page, () => { enterStep(3); dock("return"); });
+    await until(page, () => docked);
+    await page.click("#sail");
+    await until(page, () => !docked && !paused);
+    await page.waitForTimeout(600 * SLOW);
+    const r = await ev(page, () => ({ step: tut.step, saved: save.tutorialStep, mark: !!(tut.target && tut.target.alive && enemies.includes(tut.target)), txt: document.getElementById("coachStep").textContent }));
+    ok(`docking mid-card and sailing again never sends the captain back to "sail out", and puts a mark back${replay ? " (replay)" : ""}`, r.step >= 1 && r.step < 4 && r.saved === r.step && r.mark, r);
+    await ctx.close();
+  }
 }
 {   // an old save with progress and no tutorial field never sees the tutorial
   const ctx = await browser.newContext({ viewport: D });

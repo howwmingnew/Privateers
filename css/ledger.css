@@ -159,3 +159,19 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 .tab .lockic { margin-right: 4px; }
 .berth .cols { grid-template-columns: 1fr; }   /* each card takes the stage's full width: the ship rows and their buttons keep their lines apart */
 .gcard .lockhint { grid-column: 1 / -1; margin: 4px 0 0; font-size: calc(13px * var(--ts)); color: var(--ink-soft); }
+/* ---- first screen of the ledger (#100): the fleet and its gun deck lead; the poster and the flag fold; the left column holds still ---- */
+.cpanel h3 .n { font-family: var(--f-ui); font-weight: 700; }   /* the display face draws a 1 like a small-cap I */
+.deck .lbl .lbl-tip { display: block; margin-top: 1px; font-size: .85em; font-weight: 600; letter-spacing: 0; text-transform: none; }
+@media (min-width: 1100px) {
+  /* a gun port picked opens its panel under the deck, so the right column scrolls: the left one stays put instead of sliding down to the flag */
+  #port .lcol-l:not(:has(.poster:not(.folded))):not(:has(#flagbox.open)) { position: sticky; top: calc(min(70px * var(--ts), 18vw) + 20px); align-self: start; }
+}
+@media (max-width: 1099px) {
+  /* one column: the fleet and its deck come right after the ledger's header; the poster, the flag and the gear follow */
+  #port .sheet > header { order: -5; }
+  #port .sheet > #coach, #port .sheet > .msg { order: -4; }
+  #port #pStats { order: -3; }
+  #port #fleet { order: -2; }
+  #port #fleet + section { order: -1; }
+  #port .sheet > footer { order: 99; }
+}

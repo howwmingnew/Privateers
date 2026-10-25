@@ -28,7 +28,7 @@ Object.assign(STR.en, {
   storeFullWhy: "The gun store is full ({n}): free a place before unloading.",
   movedMount: "Mounted {gun}.", movedShift: "Moved {gun} to another port.", movedSwap: "Swapped {a} and {b}.", movedUnload: "Unloaded {gun} to the store.", gunUndo: "Undo", gunUndone: "Undone.",
   upTo: "Upgrade to Lv {n} ({cost} gold)", upShort: "Upgrade to Lv {n} ({cost} gold, need {d} more)",
-  upN: "Upgrade {n} levels ({cost} gold total)", upNShort: "Upgrade {n} levels ({cost} gold total, need {d} more)", gainDmg: "Damage +{p}%", gainFx: "Effect +{p}%",
+  upN: "Upgrade {n} levels at once ({cost} gold)", upNShort: "Upgrade {n} levels at once: {d} gold short ({cost} in all)", gainDmg: "Damage +{p}%", gainFx: "Effect +{p}%",
   boughtMounted: "Bought a <em>{gun}</em> and mounted it.", putHere: "Put here", candInfo: "Details",
 });
 Object.assign(STR.zh, {
@@ -41,7 +41,7 @@ Object.assign(STR.zh, {
   storeFullWhy: "庫存已滿（{n} 門）：先騰出位置才能卸下。",
   movedMount: "已裝上{gun}。", movedShift: "已把{gun}移到另一個砲位。", movedSwap: "已交換{a}與{b}。", movedUnload: "已把{gun}卸下到庫存。", gunUndo: "復原", gunUndone: "已復原。",
   upTo: "升級到 Lv {n}（{cost} 金幣）", upShort: "升級到 Lv {n}（{cost} 金幣，還差 {d}）",
-  upN: "升級 {n} 級（總價 {cost} 金幣）", upNShort: "升級 {n} 級（總價 {cost} 金幣，還差 {d}）", gainDmg: "火力 +{p}%", gainFx: "效果 +{p}%",
+  upN: "一次升 {n} 級（共 {cost} 金幣）", upNShort: "一次升 {n} 級：還差 {d} 金（共 {cost}）", gainDmg: "火力 +{p}%", gainFx: "效果 +{p}%",
   boughtMounted: "已買下<em>{gun}</em>並裝上。", putHere: "裝到這裡", candInfo: "詳情",
 });
 const GUN_ACTS = ["slot", "store", "buy", "gup", "gup5", "unload", "tostore", "gundo", "gfrom"];

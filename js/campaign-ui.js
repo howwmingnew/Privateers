@@ -96,7 +96,7 @@ function posterHtml(b) {
     <dl class="p-facts">
       <div class="p-tgt"><dt>${t("pTarget")}</dt><dd>${t("cls_" + b.cls)}${escorts}</dd></div>
       ${recLine(b)}
-      <div><dt>${t("pSeen")}</dt><dd>${t("pWhere", { sea, dir: dirWord(b.ang) })}</dd></div>
+      <div class="p-seen"><dt>${t("pSeen")}</dt><dd>${t("pWhere", { sea, dir: dirWord(b.ang) })}</dd></div>
       <div><dt>${t("pReward")}</dt><dd><b>${t("pGold", { n: fmt(bountyReward(b)) })}</b> · ${prize}</dd></div>
     </dl>
     <button class="p-toggle" type="button" data-camp="poster" aria-expanded="${posterOpen}">${t(posterOpen ? "pLess" : "pMore")}</button></div>`;
@@ -120,7 +120,7 @@ wantedEl.addEventListener("click", ev => {
   const btn = ev.target.closest("[data-camp]");
   if (!btn) return;
   if (btn.dataset.camp === "log") { openLog(); return; }   // js/logbook.js
-  if (btn.dataset.camp === "poster") { posterOpen = !posterOpen; sfx("uiClick"); renderWanted(); wantedEl.querySelector("[data-camp=poster]")?.focus(); return; }
+  if (btn.dataset.camp === "poster") { posterOpen = !posterOpen; sfx("uiClick"); renderWanted(); wantedEl.querySelector("[data-camp=poster]")?.focus({ preventScroll: true }); return; }
   if (!ngArmed) {   // New Game+ wipes the ship and gold, so it takes a second press
     ngArmed = true; btn.textContent = t("ngArm"); sfx("uiClick");
     clearTimeout(ngArmT); ngArmT = setTimeout(() => { ngArmed = false; const el = wantedEl.querySelector("[data-camp=ng]"); if (el) el.textContent = t("ngBtn"); }, 3000);
