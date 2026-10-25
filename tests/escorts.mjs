@@ -75,6 +75,9 @@ check(await ev(() => !document.getElementById("tabs").hidden && document.querySe
 let t = await ev(() => document.getElementById("tabs").innerText);
 check(/Flagship/.test(t) && /Escort 1\s+200 gold/.test(t) && (t.match(/Locked/g) || []).length === 3, `slot 1 shows its price, slots 2-4 are locked (${t.replace(/\s+/g, " ")})`);
 const tabTo = i => page.click(`#tabs [data-act="tab"][data-i="${i}"]`);
+// #92: a locked tab is greyed and names what opens it
+check(await ev(() => { const l = [...document.querySelectorAll("#tabs .tab.lock")]; return l.length === 3 && l.every(b => getComputedStyle(b).filter.includes("grayscale") && b.querySelector(".tw")) && /Sink bounty 2/.test(l[0].textContent) && /Sink bounty 3/.test(l[1].textContent) && /Sink bounty 4/.test(l[2].textContent); }),
+  "locked tabs are grey and name the bounty that opens them");
 await tabTo(1);
 t = await stage();
 check(/Buy slot · 200/.test(t), `slot 1 offers to be bought for 200 (${t.replace(/\s+/g, " ").slice(0, 80)})`);

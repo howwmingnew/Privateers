@@ -137,3 +137,25 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 .cand .cinfo[aria-pressed="true"], .cand.prev .slot { box-shadow: 0 0 0 3px var(--brass); }
 .candcard { margin: 6px 0 4px; }
 .candcard .gcard { margin-top: 0; }
+
+/* ---- Wanted poster folded to its head, the goal and the reward; the toggle opens the story, the ship and the long reasons (js/campaign-ui.js) ---- */
+.poster .p-rec .calc { color: var(--ink-soft); font-size: .92em; }
+.poster .p-rec .how { display: block; margin-top: 2px; color: var(--ink-soft); font-size: .92em; }
+.poster .p-rec .why { display: block; margin-top: 3px; color: var(--ink-soft); font-size: .92em; }
+.poster .p-toggle { display: block; margin: 8px auto 0; font: inherit; font-size: calc(13px * var(--ts)); font-weight: 700; color: var(--ink); background: transparent; border: 1.5px solid rgba(42,29,16,.45); border-radius: 3px; padding: 3px 12px; cursor: pointer; }
+.poster.min .p-ship, .poster.min .p-story, .poster.min .p-tgt, .poster.min .p-rec .why, .poster.min .p-rec .speed { display: none; }
+.poster.min .p-head { grid-template-columns: 72px 1fr; margin-top: 4px; }
+.poster.min .p-flag { width: 72px; height: 51px; }
+.poster.min .p-wanted { font-size: 20px; } .poster.min .p-name { font-size: 24px; }
+
+/* ---- ship rows: the owned/locked note on its own line, locked models folded away, a gain line under an upgrade button (js/ledger-panel.js) ---- */
+.item .ds .own, .item .ds .lock { display: block; margin-top: 2px; }
+.item .btn .gain { display: block; margin-top: 1px; font-size: .78em; font-weight: 600; opacity: .85; white-space: normal; }
+.lockedships { margin: 6px 0 0; }
+.lockedships > summary { cursor: pointer; font-weight: 700; color: var(--ink-soft); padding: 4px 0; font-size: calc(13px * var(--ts)); }
+.lockedships .item { opacity: .75; }
+.tab.lock { filter: grayscale(1); }
+.tab .tw { display: block; font-size: calc(11px * var(--ts)); color: var(--ink-soft); line-height: 1.15; white-space: normal; }
+.tab .lockic { margin-right: 4px; }
+.berth .cols { grid-template-columns: 1fr; }   /* each card takes the stage's full width: the ship rows and their buttons keep their lines apart */
+.gcard .lockhint { grid-column: 1 / -1; margin: 4px 0 0; font-size: calc(13px * var(--ts)); color: var(--ink-soft); }

@@ -388,7 +388,17 @@ window.addEventListener("blur", () => { if (S && sailing()) pauseGame(); });
 document.addEventListener("visibilitychange", () => { if (S && document.hidden && sailing()) pauseGame(); });
 
 // ---------- language ----------
+// The title's English | 中文 pair (#94): a first visit already follows navigator.language (js/i18n.js); this is how to change it before anything else is read.
+const paintTitleLang = () => document.querySelectorAll("[data-lang-set]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.langSet === lang)));
+document.querySelectorAll("[data-lang-set]").forEach(b => b.addEventListener("click", () => {
+  if (b.dataset.langSet === lang) return;
+  lang = b.dataset.langSet; if (typeof Snd !== "undefined") Snd.play("uiClick");
+  try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+  applyLang(); b.focus();
+}));
+paintTitleLang();   // applyLang (js/hud.js) has already run once, before this listener existed
 document.addEventListener("langchange", () => {
+  paintTitleLang();
   document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
   $m("pauseBtn").setAttribute("aria-label", t("m_pause"));
   if (pauseOpen) renderPause();

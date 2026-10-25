@@ -9,6 +9,7 @@ const TAB_ACTS = ["tab", "port", "hull", "ctxclose", "gprev"];
 let tab = 0;            // the picked tab: 0 the flagship, n the escort in slot n - 1
 let hullOpen = false;   // the hull of that ship is picked
 let candSel = null;     // a gun of the panel's replace list whose card is open: a place like deckSel (js/gunbay.js), or null
+let lastPick = "";      // what the context panel showed last (renderFleet): a new pick scrolls the panel back to its top
 let ledgerFocus = null; // a selector the click handler focuses after the next render (a closed panel: the thing it was about)
 
 // Nothing picked: no gun port, no hull, no undo note.
@@ -47,15 +48,17 @@ function cancelLedgerPick() {
 // ---------- the tabs ----------
 const MINI_HULL = `<svg class="mini" viewBox="0 0 20 30" aria-hidden="true"><path d="M10 1C15 8 16 18 14 28H6C4 18 5 8 10 1Z"/></svg>`;
 function tabsHtml() {
-  const one = (n, role, name, cls, dot, extra = "") => `<button class="tab${cls}${n === tab ? " sel" : ""}" type="button" role="tab" aria-selected="${n === tab}" data-act="tab" data-i="${n}" ` +
-    `aria-label="${role} · ${name.replace(/<[^>]+>/g, "")}${extra ? " · " + extra : ""}">${MINI_HULL}<span><span class="tl">${role}</span><span class="tn">${name}</span></span>${dot}</button>`;
+  const one = (n, role, name, cls, dot, extra = "", why = "") => `<button class="tab${cls}${n === tab ? " sel" : ""}" type="button" role="tab" aria-selected="${n === tab}" data-act="tab" data-i="${n}" ` +
+    `aria-label="${role} · ${name.replace(/<[^>]+>/g, "")}${extra ? " · " + extra : ""}${why ? " · " + why : ""}">${MINI_HULL}<span><span class="tl">${role}</span><span class="tn">${name}</span>${why ? `<span class="tw">${why}</span>` : ""}</span>${dot}</button>`;
   const out = [one(0, t("tabFlag"), shipNameOf(activeShip(save)), "", "")];
   for (let i = 0; i < ESCORT_SLOTS; i++) {
     const e = save.escorts[i], role = t("tabEsc", { n: i + 1 });
     if (e) {
       const ship = escortShipOf(save, e), on = ship && escortReady(save, i), state = t(on ? "stOn" : "stOff");
       out.push(ship ? one(i + 1, role, shipNameOf(ship), "", `<span class="dot${on ? " on" : ""}" title="${state}"></span>`, state) : one(i + 1, role, t("tabEmpty"), " empty", ""));
-    } else if (!escortOpen(save, i) || i > save.escorts.length) out.push(one(i + 1, role, t("tabLock"), " empty lock", ""));
+    } else if (!escortOpen(save, i) || i > save.escorts.length) {   // greyed, and it says what opens it: a bounty, or the slot before it
+      out.push(one(i + 1, role, t("tabLock"), " empty lock", "", "", t(!escortOpen(save, i) ? "tabLockBounty" : "tabLockOrder", { n: !escortOpen(save, i) ? i + 1 : i })));
+    }
     else out.push(one(i + 1, role, t("tabBuy", { n: fmt(escortPrice(i)) }), " empty", ""));
   }
   return out.join("");
@@ -83,7 +86,7 @@ function slotBodyHtml(i) {
   const price = escortPrice(i);
   if (!escortOpen(save, i)) return `<div class="berth"><p class="role">${head}</p><p class="lock">${t("escLocked", { n: i + 1, price: fmt(price) })}</p></div>`;
   if (i > save.escorts.length) return `<div class="berth"><p class="role">${head}</p><p class="lock">${t("escOrder", { n: i })}</p></div>`;
-  const lbl = armedTap("escBuy" + i) ? t("escBuyArm") : t("escBuy", { n: fmt(price) });
+  const lbl = armedTap("escBuy" + i) ? t("escBuyArm") : t(save.gold < price ? "escBuyShort" : "escBuy", { n: fmt(price), d: fmt(price - save.gold) });
   return `<div class="berth"><p class="role">${head}</p><div class="card"><h3>${t("escSlot", { n: i + 1 })}</h3><p class="sub">${t("escHint")}</p>` +
     `<button class="btn" type="button" data-act="escBuy" data-id="${i}" ${save.gold < price ? "disabled" : ""}>${lbl}</button></div></div>`;
 }
@@ -111,7 +114,8 @@ function renderFleet() {
   deck.style.display = foot.style.display = ship ? "" : "none";
   if (ship) { renderDeck(deck, deckView(tab, ship)); foot.innerHTML = shipFootHtml(ship); berth.innerHTML = ""; }
   else { foot.innerHTML = ""; berth.innerHTML = slotBodyHtml(i); }
-  const ctx = $("ctx");
+  const ctx = $("ctx"), pick = `${tab}|${hullOpen}|${deckSel ? `${deckSel.side}${deckSel.i}${deckSel.e ?? ""}` : ""}`;
   ctx.innerHTML = ctxHtml();
   ctx.classList.toggle("open", !!ship && (hullOpen || !!deckSel));
+  if (pick !== lastPick) { ctx.scrollTop = 0; lastPick = pick; }   // a newly opened panel starts at its top, not where the last one was scrolled to (a phone's bottom sheet scrolls)
 }
