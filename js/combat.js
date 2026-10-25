@@ -121,7 +121,8 @@ function sink(s, killer) {
     if (lastLost > 0) { const w = { x: Math.round(s.x), y: Math.round(s.y), value: lastLost }; save.wrecks.push(w); addCrate(w.x, w.y, w.value, w); }
     save.salvage = [];   // whatever was salvaged went down again inside the new wreck
     cargo = 0; persist();
-    toast(t(lastLost > 0 ? "toastSunkHalf" : lastLostExtra ? "toastSunkLoss" : "toastSunk"), true);
+    noteSunk(killer);   // who and where (js/sunk-by.js)
+    toast(t(lastLost > 0 ? "toastSunkHalf" : lastLostExtra ? "toastSunkLoss" : "toastSunk") + " " + sunkByText(), true);
     S.time.delayedCall(1700, () => {
       cargo = 0;
       Object.assign(player, { x: PORT.x + 140, y: PORT.y, rot: 0, speed: 0, alive: true, burnT: 0 });

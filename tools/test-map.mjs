@@ -19,6 +19,7 @@ export const MAP = [
   [/^js\/replay/, ["replay"]],
   [/^js\/(collision|ships|combat|strike|ai-nav|ambush|sea-guard)/, ["collision", "phase1"]],
   [/^js\/(plunder|ai-plunder)/, ["aiplunder"]],
+  [/^js\/sunk-by/, ["shell", "harbor", "collision"]],
   [/^js\/(ship-lines|shipyard)/, ["shiplines", "shipyard"]],
   [/^js\/flags/, ["flags"]],
   [/^js\/(rematch|run|daily)/, ["rematch", "daily-ports"]],

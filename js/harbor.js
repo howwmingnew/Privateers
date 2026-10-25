@@ -17,7 +17,7 @@ function dock(kind, prior = { sold: 0, bonus: 0, cargo: 0, sunk: 0 }) {
   // keep the message as a key so it re-renders when the language changes
   if (kind === "welcome") portMsg = [save.sunk === 0 ? "welcome" : "welcomeBack"];
   else if (kind === "sunk") portMsg = lastLost > 0 ? ["sunkWreckHalf", { n: fmt(lastLost) }] : [lastLostExtra ? "sunkLoss" : "sunkMsg"];
-  else if (kind === "supply") portMsg = ["supplyMsg"];
+  else if (kind === "supply") portMsg = player.hp >= player.maxHp - 0.5 ? ["supplyMsg"] : ["supplyPart", { p: Math.round(player.hp / player.maxHp * 100) }];   // says the real hull when the purse ran dry (js/ports.js)
   else if (kind === "trade") portMsg = sold > 0 ? (bonus > 0 ? ["tradeSoldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["tradeSold", { n: fmt(sold) }]) : ["tradeEmpty"];
   else portMsg = sold > 0 ? (bonus > 0 ? ["soldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["sold", { n: fmt(sold) }]) : ["empty"];
   setVisitBills(kind, portMsg);   // what the visit took from the purse, itemised under the message (js/ledger-gold.js)
@@ -57,7 +57,7 @@ const buyLabel = id => save.gold < SHIPS[id].cost ? t("buyShort", { n: fmt(SHIPS
   : t(ownedShips().some(e => e.ship === id) ? "buyAnother" : "buy", { n: fmt(SHIPS[id].cost), cost: fmt(SHIPS[id].cost) });
 function renderPort() {
   const $ = id => document.getElementById(id);
-  $("pMsg").innerHTML = t(...portMsg) + visitBillsHtml();
+  $("pMsg").innerHTML = t(...portMsg) + sunkByHtml(portMsg) + visitBillsHtml();
   $("pGold").textContent = fmt(save.gold);
   const rate = lvProgress();   // Ship Lv and the share of the way to the next (js/lv-path.js)
   $("pStats").innerHTML = `<span><b>${t("s_" + save.ship)}</b></span><span>${t("statLvP", { n: rate.lv, p: rate.pct })}</span><span><b>${YARD.hull.show(yardVal("hull"))}</b></span>` +
