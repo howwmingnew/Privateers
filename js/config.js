@@ -151,6 +151,16 @@ const WEATHER = {
   yaw: 0.32, leeway: 26, calmRadius: 230,             // storm: rad/s the hull is slewed beam-on at full gale, px/s pushed downwind, px from a coast inside which neither acts
   ballDrift: 45,                                      // storm: px/s a cannonball is blown downwind
 };
+// Fleeing enemies (js/flee.js). [PLACEHOLDER] until playtested. Per kind: gap = how many levels the captain's ship rating must
+// stand above the enemy's threat level for it to run on sight; hp = hull share below which it may retreat; min = the least
+// rating lead (negative: even when stronger than you) at which a hurt ship retreats. Merchants run first, the Navy last.
+const FLEE = {
+  merchant: { gap: 2, hp: 0.65, min: -99 }, pirate: { gap: 4, hp: 0.5, min: -1 }, navy: { gap: 7, hp: 0.35, min: 1 },
+  sight: 700, escape: 1250,          // px: a gap-runner starts inside sight; any runner is clear once this far off (gap-runners resume, hurt ones sail away for good)
+  cornerR: 200, cornerT: 4,          // pinned this close for this many s (a map edge, a rock): it turns and fights, once
+  pad: 320, windSpan: 1, windStep: 0.25, windBend: 0.35,   // px from a map edge where it veers inward; the rad either side of "straight away" it may bend to find fair wind, and how much each bit of bend costs (0 = none, 1 = as much as the lost range)
+  tick: 0.25, dump: 0.5, boost: 1.1,       // s between decisions; a hurt merchant tips this share of its cargo and sails this much faster
+};
 // Navy heat and the Admiral's fleet (js/heat.js). Heat is per sortie (not saved): sinking Navy ships raises it, quiet cools it, any harbor clears it.
 // [PLACEHOLDER] until playtested. Off in the daily sea and #seed voyages (their ships come from a fixed seed).
 const HEAT_STARS = 5, HEAT_STAR_SIZE = 20;   // heat 0..100; a star lights every 20
