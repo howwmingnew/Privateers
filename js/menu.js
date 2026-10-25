@@ -195,7 +195,7 @@ function toTitle() {
   if (pauseOpen) { pauseOpen = false; $m("pause").hidden = true; document.body.classList.remove("on-pause"); freeze(false); }
   if (docked) { $m("port").hidden = true; docked = false; }
   paused = true; wasDocked = false;
-  for (const b of balls) b.spr.destroy();
+  for (const b of balls) ballFree(b);   // back to the pool (js/ball-pool.js)
   balls.length = 0;
   cargo = 0; canDock = false; restoreSalvage();   // js/save.js: unsold wreck cargo goes back to sea
   if (player.alive) {

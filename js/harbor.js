@@ -40,7 +40,7 @@ function setSail() {
 function resetEnemies(sc) {
   for (const e of enemies) { sc.tweens.killTweensOf(e.spr); e.spr.destroy(); e.badge?.destroy(); }
   enemies.length = 0;
-  for (const b of balls) b.spr.destroy();
+  for (const b of balls) ballFree(b);   // back to the pool (js/ball-pool.js)
   balls.length = 0;
   // fill up to the sea's ship count (a convoy is several ships from one spawn)
   for (let i = 0; i < ENEMY_COUNT * 2 && enemies.filter(e => e.alive && !e.boss && !e.escortOf).length < ENEMY_COUNT; i++) spawnEnemy(sc);

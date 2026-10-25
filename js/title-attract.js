@@ -49,10 +49,10 @@ function attractBall(b, dt) {
   const rock = !hit && islands.some(isl => Math.hypot(isl.x - b.x, isl.y - b.y) < isl.r * 0.9);
   if (!hit && !rock && b.life > 0) return true;
   if (hit) vfxHit(b.x, b.y); else vfxSplash(b.x, b.y, rock);
-  b.spr.destroy();
+  ballFree(b);   // a pooled sprite goes back to the pool, any other is destroyed (js/ball-pool.js)
   return false;
 }
-function attractGunsClear() { for (const b of taBalls) b.spr?.destroy(); taBalls = []; }
+function attractGunsClear() { for (const b of taBalls) if (b.spr) ballFree(b); taBalls = []; }
 onHook("sail", attractGunsClear);
 onHook("dock", attractGunsClear);
 // The in-world harbor name would sit half under the title card: the title shows the logo instead.

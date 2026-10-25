@@ -50,7 +50,7 @@ function playerFire(only, pick) {
       S.time.delayedCall(delay, () => {
         if (!player.alive || paused || !ballRoom()) return;
         const m = muzzle(player, mount, g.pi, g.pn), life = g.range / g.speed;   // each gun has its own ball speed
-        balls.push({ spr: S.add.image(m.x, m.y, "ball").setDepth(7), x: m.x, y: m.y,
+        balls.push({ spr: ballSpr(m.x, m.y), x: m.x, y: m.y,
           vx: Math.cos(m.a) * g.speed, vy: Math.sin(m.a) * g.speed, life, life0: life, dmg: g.dmg, burn: g.burn, chain: g.chain, chainT: g.chainT, drag: g.drag, fromPlayer: true, owner: player });
         vfxMuzzle(m.x, m.y, m.a, !loud);
         gunFired(player, mount.key, g.pi, g.pn);   // the mount recoils, a flash at the gun (js/gun-art.js)
@@ -72,8 +72,8 @@ function hitShip(s, x, y) {
   const dx = x - s.x, dy = y - s.y, hl = s.hl ?? 28, hw = s.hw ?? 13;
   if (dx > hl + hw || dx < -hl - hw || dy > hl + hw || dy < -hl - hw) return false;   // far off: skip the trig
   const c = Math.cos(s.rot), sn = Math.sin(s.rot);
-  const along = clamp(dx * c + dy * sn, -hl, hl);
-  return Math.hypot(dx - c * along, dy - sn * along) < hw;
+  const along = clamp(dx * c + dy * sn, -hl, hl), qx = dx - c * along, qy = dy - sn * along;
+  return qx * qx + qy * qy < hw * hw;   // squared: every ball tests every ship near it each frame
 }
 function floatText(x, y, str, color, size = 16) {
   const txt = S.add.text(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
