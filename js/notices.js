@@ -72,9 +72,8 @@ function dmgNumber(s, dmg, color, size) {
     riseText(m.txt, s.x, s.y - 22);
     return;
   }
-  const txt = S.add.text(s.x, s.y - 22, String(Math.round(dmg)), { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
+  const txt = worldText(s.x, s.y - 22, String(Math.round(dmg)), { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
     .setOrigin(0.5).setDepth(10);
-  labelText(txt);
   s.dmgTxt = { txt, total: dmg, at: now };
   riseText(txt, s.x + rand(-6, 6), s.y - 22);
 }

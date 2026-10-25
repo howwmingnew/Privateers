@@ -76,9 +76,8 @@ function hitShip(s, x, y) {
   return Math.hypot(dx - c * along, dy - sn * along) < hw;
 }
 function floatText(x, y, str, color, size = 16) {
-  const txt = S.add.text(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
-    .setOrigin(0.5).setDepth(10);
-  labelText(txt);   // counter-scaled so it stays readable when zoomed out
+  const txt = worldText(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 4 })
+    .setOrigin(0.5).setDepth(10);   // counter-scaled so it stays readable when zoomed out (js/art.js)
   S.tweens.add({ targets: txt, y: y - 34 * labelScale(), alpha: 0, duration: 900, ease: "Cubic.easeOut", onComplete: () => txt.destroy() });
 }
 function hurt(s, dmg, burn, src, ball) {

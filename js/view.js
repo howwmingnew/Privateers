@@ -57,7 +57,7 @@ function fitView(sc) {
     VIEW = { ...VIEW, textRes: res };
     for (const o of sc.children.list) if (isText(o)) crispText(o, res);
   };
-  const onAdd = o => { if (isText(o)) crispText(o, VIEW.textRes); };   // badges, damage numbers, labels made later
+  const onAdd = o => { if (isText(o) && !o.worldRes) crispText(o, VIEW.textRes); };   // labels made later; worldText() (js/art.js) comes drawn at its own resolution
   sc.scale.on("resize", fit); viewRefit = fit;
   sc.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, onAdd);
   sc.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { sc.scale.off("resize", fit); sc.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, onAdd); });

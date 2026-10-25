@@ -73,9 +73,8 @@ function spar(x, y, a) {
 
 // ---------- the kill card: one big word at the hull, then its pay as one line that flies to the HUD ----------
 function popText(x, y, str, color, size) {
-  const txt = S.add.text(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 5 })
+  const txt = worldText(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 5 })
     .setOrigin(0.5).setDepth(10.2);
-  labelText(txt);
   const lk = txt.scaleX;
   txt.setScale(lk * 1.4);
   S.tweens.add({ targets: txt, scale: lk, duration: 160, ease: "Back.easeOut" });

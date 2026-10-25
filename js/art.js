@@ -22,6 +22,7 @@
 //   threatTier(L)              { d, glyph, color } vs the player's rating; the glyph keeps threat readable without colour.
 //   shipTop(s), labelScale()   world-y just above a hull's drawn extent, and the 1/zoom counter-scale for world labels.
 //   labelText(txt)             keep a counter-scaled world text crisp (resolution = device px it covers).
+//   worldText(x, y, str, style) a new world text already at labelText's resolution and scale (damage numbers, badges).
 // On HiDPI screens art is baked at 2x (artRes()) and shown at scale 1/2: ship sprites keep that base scale in
 // s.artScale, so scale effects must multiply it (s.spr.setScale(s.artScale * k)), never setScale(k).
 const SHIP_ART = {
@@ -166,6 +167,13 @@ function labelScale() {
 function labelText(txt) {
   if (typeof crispText === "function" && typeof viewTextRes === "function") crispText(txt, viewTextRes(S.cameras.main.zoom * labelScale()));
   return txt.setScale(labelScale());
+}
+// A new labelText'd world text, drawn once at that resolution: S.add.text drew it at 1x, then the view's onAdd and
+// labelText each drew and uploaded it again on HiDPI screens. worldRes tells the onAdd (js/view.js) to leave it be.
+function worldText(x, y, str, style) {
+  const txt = S.make.text({ x, y, text: str, style: { ...style, resolution: viewTextRes(S.cameras.main.zoom * labelScale()) } }, false);
+  txt.worldRes = true;
+  return labelText(S.add.existing(txt));
 }
 // Common combos are drawn at boot so no frame hitches when they first sail into view.
 function warmShipArt(sc) {
