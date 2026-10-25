@@ -86,6 +86,11 @@ function threatLevelOf(e) {
   while (L < 40 && enemyPower(L + 1) <= p * 1.0001) L++;
   return L;
 }
+// A campaign boss (rematch or not) and its guard are the player's hunt alone: no other AI ship picks them as a target, and they
+// pick no other AI. The flagship and the player's own escorts (ally) stay fair game on both sides. Used by isHostile (js/ships.js)
+// and the cannonball test (js/main.js), so a stray shot or blast from a brawl nearby does not steal the boss fight either.
+const bossSide = s => !!s && !!(s.boss || s.escortOf);
+const bossFeud = (a, b) => !!a && !!b && ((bossSide(a) && !b.isPlayer && !b.ally && !bossSide(b)) || (bossSide(b) && !a.isPlayer && !a.ally && !bossSide(a)));
 // js/campaign.js spawns a boss or escort as an ordinary ship and then tags it (e.boss = bounty id or e.escortOf,
 // e.cls = the bounty's class), scaling HP / speed by hand and fitting stand-in guns. Re-take the class once, with the
 // bounty's own hpMul / speed, so it fights as that archetype: the fire-raiders are real fireships, the Sovereign a
@@ -202,7 +207,7 @@ function fireshipBoom(s) {
   Snd.play("sink", { x: s.x, y: s.y, big: true }); Snd.play("cannonFar", { x: s.x, y: s.y });
   const hit = enemies.filter(o => o.alive && o !== s && dist(o, s) < BOOM_R);
   if (player.alive && !docked && dist(player, s) < BOOM_R) hit.push(player);
-  for (const o of hit) hurt(o, o.maxHp * (o.boss ? BOOM_BOSS_K : BOOM_K), 0, s.rammed ? s : s.killedBy || s);
+  for (const o of hit) if (!bossFeud(s.killedBy || s, o)) hurt(o, o.maxHp * (o.boss ? BOOM_BOSS_K : BOOM_K), 0, s.rammed ? s : s.killedBy || s);
   if (dist(player, s) < 500) camShake(220, 0.008);
 }
 // The default hull js/art.js draws for an enemy is its archetype (this replaces art.js's interim guess by level), so

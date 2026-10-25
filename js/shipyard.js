@@ -8,12 +8,14 @@
 Object.assign(STR.en, {
   shipsOwned: "Your ships", shipsBuy: "Buy a ship", switchTo: "Switch", yardFull: "Yard full", shipNo: "{ship} #{n}",
   shipLvs: " · hull Lv {h}, sails Lv {s}, hold Lv {o}",
+  ownedHint: "Owned ×{n} · switch to it above, free", buyAnother: "Buy another {cost}",
   switchedShip: "You are aboard the <em>{ship}</em>. Your cannons came with you.",
   switchedSpill: "You are aboard the <em>{ship}</em>. Your cannons came with you; <em>{n}</em> had no port and went back to the store.",
 });
 Object.assign(STR.zh, {
   shipsOwned: "已擁有的船", shipsBuy: "購買船隻", switchTo: "換上", yardFull: "船塢已滿", shipNo: "{ship} #{n}",
   shipLvs: " · 船體 Lv {h}、船帆 Lv {s}、貨艙 Lv {o}",
+  ownedHint: "已擁有 ×{n}・在上方免費換上", buyAnother: "再買一艘 {cost}",
   switchedShip: "你換到<em>{ship}</em>上了，火砲一起搬了過來。",
   switchedSpill: "你換到<em>{ship}</em>上了，火砲一起搬了過來；有 <em>{n}</em> 門砲沒有砲位，放回了庫存。",
 });
@@ -24,7 +26,8 @@ const idNum = id => Number(id.slice(1));
 const activeShip = (s = save) => ({ id: s.shipId, ship: s.ship, hull: s.hull, sails: s.sails, hold: s.hold, ...(s.shipName ? { name: s.shipName } : {}) });   // name: js/flags.js
 // Every ship owned, the one you sail included, in the order bought.
 const ownedShips = (s = save) => [activeShip(s), ...s.fleet].sort((a, b) => idNum(a.id) - idNum(b.id));
-// The starter sloop is free, so the yard does not sell it (it would be an endless supply of ships).
+// The starter sloop is free, so the yard does not sell it (it would be an endless supply of ships). It is always owned instead:
+// the sanitizer below parks one in the yard if a save has lost it, so it is always one tap (and free) away in "Your ships".
 const forSale = type => Object.hasOwn(SHIPS, type) && SHIPS[type].cost > 0;
 const canBuyShip = (s, type) => forSale(type) && s.gold >= SHIPS[type].cost && s.fleet.length + 1 < FLEET_MAX;
 
@@ -54,6 +57,9 @@ SAVE_SANITIZERS.push(s => {
     fleet.push({ id: e.id, ship: e.ship, hull: toInt(e.hull, 1, YARD.hull.max, 1), sails: toInt(e.sails, 1, YARD.sails.max, 1), hold: toInt(e.hold, 1, YARD.hold.max, 1),
       ...(typeof e.name === "string" && e.name ? { name: e.name.slice(0, 80) } : {}) });   // js/flags.js cleans the text
   }
-  const top = Math.max(...[...seen].map(idNum));
+  let top = Math.max(...[...seen].map(idNum));
+  // The starter sloop is never sold, so a save that no longer owns one (an old save from before ships stayed in the yard, whose first ship
+  // was replaced by the first purchase) could never sail it again: park a fresh Lv 1 sloop in the yard, free to switch to (#72).
+  if (s.ship !== "sloop" && !fleet.some(e => e.ship === "sloop")) { top += 1; fleet.push({ id: "s" + top, ship: "sloop", hull: 1, sails: 1, hold: 1 }); }
   return { ...s, shipId: active, fleet, shipSeq: Math.max(toInt(s.shipSeq, 1, 999999, 1), top + 1) };
 });

@@ -74,6 +74,7 @@ function crashShips(a, b, nx, ny) {
   if (a.fixed || b.fixed || (a.A && a.A.boom) || (b.A && b.A.boom) || (docked && (a.isPlayer || b.isPlayer))) return;
   if ((typeof inSafe === "function") && (inSafe(a) || inSafe(b))) return;
   if ((a.isPlayer || a.ally) && (b.isPlayer || b.ally)) return;   // the flagship and its escorts jostle in formation: no blow, no damage
+  if (bossFeud(a, b)) return;   // a boss (or its guard) and an ordinary AI ship brush past each other: the boss fight is the player's alone (js/archetypes.js)
   const now = S.time.now / 1000, book = a.crashBook || (a.crashBook = new Map());
   const fresh = crashContact(book, b, now), base = shipFrac((a.vx - b.vx) * nx + (a.vy - b.vy) * ny);
   if (!fresh || !crashDue(book, b, now)) return;

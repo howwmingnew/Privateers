@@ -16,7 +16,7 @@ function deckMuzzle(a, side, i, n) {   // ship-local point: bow +x, larboard -y 
 }
 function deckHtml() {
   const a = SHIP_ART[save.ship] || SHIP_ART.sloop, { w, h } = texSize(a);
-  const btn = (side, label, i) => { const gun = save[side][i], cls = (gun ? "slot" : "slot empty") + (isPicked(side, i) ? " sel" : "");   // js/gunbay.js
+  const btn = (side, label, i) => { const gun = save[side][i], cls = (gun ? "slot" : "slot empty") + (isPicked(side, i) ? " sel" : "") + (isDest(side, i) ? " dest" : "");   // js/gunbay.js
     const name = gun ? `${t("gf_" + gun.g)} Lv ${gun.lv}` : t("emptyPort");
     return `<button class="${cls}" type="button" data-act="slot" data-side="${side}" data-i="${i}" data-k="${side}${i}" aria-pressed="${isPicked(side, i)}" aria-label="${t("slotAria", { side: label, n: i + 1, gun: name })}">` +
       (gun ? `${t("g_" + gun.g)}<small>Lv ${gun.lv}</small>` : `${t("emptyPort")}<small>&nbsp;</small>`) + `</button>`; };   // .deck.dense css: one line per port

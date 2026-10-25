@@ -44,6 +44,7 @@ const MINI_UNIT_MIN = 0.35;   // a chart unit never draws smaller than this many
 
 // Sharing (js/sharecard.js) and the daily sea (js/daily.js, js/run.js). [PLACEHOLDER] loadout until playtested.
 const PLAYER_TURN = 2.5;   // rad/s the captain turns at before the hull's own turn factor (SHIPS[id].turn)
+const GUN_UP_BATCH = 5;   // levels the gun card's "Upgrade 5 levels" button buys at once (js/gunbay.js)
 const FLEET_MAX = 12;   // ships the yard keeps for one captain, the one you sail included (js/shipyard.js)
 const SHARE_URL = "https://howwmingnew.github.io/Privateers/";
 const DAILY_EPOCH = Date.UTC(2026, 9, 24);   // daily #1: 2026-10-24, UTC, so every device agrees on the day
@@ -86,6 +87,20 @@ const BOARD_GAP = 26;            // px between the two hull circles that still c
 const BOARD_REL_V = 80;          // px/s: faster than this relative to the prize and the grapples will not hold
 const BOARD_HINT_R = 260;        // px from the prize at which the "stay alongside" prompt shows and she heaves to
 const BOARD_DECAY = 2;           // progress drains this many times faster than it fills when you drift off
+// The grapple's spring (js/grapple.js): hooked within BOARD_HOOK_GAP, it reels the flagship in and matches the prize's drift,
+// never faster than BOARD_PULL_MAX; a full-speed run straight away for BOARD_SNAP_T seconds (or a rope BOARD_ROPE_MAX long) cuts it.
+const BOARD_HOOK_GAP = 90;       // px between the hull circles within which the hooks catch
+const BOARD_HOOK_V = 260;        // px/s: faster than this relative to the prize and the hooks skip off the rail
+const BOARD_REST = 13;           // px between the hull circles where the rope hangs slack: hulls nearly touching
+const BOARD_PULL_K = 2.2;        // px/s of reel per px of stretch (the spring)
+const BOARD_PULL_MAX = 60;       // px/s: the most the rope can drag the flagship, so any ship can still sail away at full speed
+const BOARD_PULL_MATCH = 0.7;    // share of the flagship's drift past the prize the rope cancels (so no fine steering is needed)
+const BOARD_PULL_RESP = 4;       // 1/s: how fast the pull eases toward what the spring asks for (no jerks)
+const BOARD_SNAP_FRAC = 0.8;     // sailing straight away at this share of full speed strains the rope
+const BOARD_SNAP_T = 1.2;        // seconds of that strain before the rope parts
+const BOARD_STRAIN_DECAY = 2;    // strain eases off this many times faster than it builds once you stop pulling away
+const BOARD_ROPE_MAX = 420;      // px between the hull circles at which the rope parts whatever the speed
+const BOARD_REHOOK_S = 2.5;      // seconds after a parted rope before the hooks can bite again
 const BOARD_GOLD_K = 0.5;        // gold paid at once: this share of the prize's loot (a merchant's cargo already went over the side)
 const BOARD_GUN_CHANCE = { merchant: 0.3, pirate: 0.5, navy: 0.5 };   // chance she yields a gun, by faction
 const BOARD_GUNS = {             // which gun, by faction: weights (a rarity roll joins these in #38)

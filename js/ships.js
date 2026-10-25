@@ -123,6 +123,7 @@ const inSafe = s => Math.hypot(s.x - PORT.x, s.y - PORT.y) < SAFE_R * 0.6 || inT
 function isHostile(e, o) {
   if (!o || o === e || !o.alive || e.struck) return false;   // a ship that struck her colours fights no more (js/strike.js)
   if (o.isPlayer && (docked || inSafe(o))) return false;
+  if (bossFeud(e, o)) return false;   // bosses, rematch captains and their guards stay out of the other AI's fights (js/archetypes.js)
   if (e.ally) return !o.isPlayer && !o.fixed && !o.ally && (o.faction === "pirate" || o.faction === "navy");   // an escort fights pirates and the Navy, not batteries or merchants (js/escort-ai.js)
   if (e.attacker === o && e.angry > 0) return true;
   const g = o.isPlayer ? "player" : o.faction;

@@ -121,9 +121,15 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 .gacts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .gacts .btn { min-width: 0; }
 .gacts .btn.on { background: var(--ink); color: var(--parch); box-shadow: 0 0 0 3px var(--brass); }
-.gcard.swapping { border-color: var(--ink); border-width: 2.5px; }
-.gcard.swapping .hint-s { color: var(--ink); font-weight: 700; }
-.swapping .slot:not(.sel) { outline: 2px dashed var(--brass); outline-offset: 2px; }   /* every place the picked gun could trade with */
+.picking .slot.dest { outline: 2px dashed var(--brass); outline-offset: 2px; background: #f3e4b8; }   /* every place the picked gun could go (js/gunbay.js) */
+.picking .slot.dest:hover { background: #ead8aa; }
+.slot.put { border-style: dashed; font-weight: 600; }   /* the store as a destination: "Put in store" */
+/* what the last move did, with Undo (js/gunbay.js): a status line above the picked gun's card */
+.gnote { margin: 12px 0 0; padding: 6px 10px; border-left: 4px solid #3f6b2a; background: rgba(63,107,42,.12); border-radius: 0 3px 3px 0; font-size: calc(14px * var(--ts)); font-weight: 600;
+  display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.gnote.tip { border-left-color: var(--brass); background: rgba(224,204,156,.45); display: block; }
+.gnote .btn { flex: none; min-width: 0; padding: 4px 12px; }
+.gnote + .gcard { margin-top: 8px; }
 .btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); }
 .bay { margin-top: 14px; padding-top: 10px; border-top: 1px dashed rgba(42,29,16,.35); }
 .bay .lbl { margin-bottom: 6px; }
@@ -140,9 +146,9 @@ body { background: var(--sea-deep); color: var(--foam); font-family: var(--f-ui)
 /* Big gun deck (10+ ports a side, js/gundeck.js): tight one-line ports, and a ship cell as tall as the longest side so the
    rows line up with the hull; the picked gun's card sticks above the sheet's footer so it stays in view while you tap through. */
 .deck.dense { row-gap: 8px; }
-.deck.dense .dk-ship { aspect-ratio: auto; height: calc(var(--rows) * 30px * var(--ts)); }
+.deck.dense .dk-ship { aspect-ratio: auto; height: calc(var(--rows) * 36px * var(--ts)); }   /* one row per port: 33px buttons and a 3px gap */
 .deck.dense .dk-left .slots, .deck.dense .dk-right .slots { gap: 3px; }
-.deck.dense .slot { padding: 5px 2px; line-height: 1.15; font-size: min(calc(12px * var(--ts)), 4.4cqw); }
+.deck.dense .slot { padding: 3px 2px; min-height: calc(33px * var(--ts)); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; align-content: center; line-height: 1.15;   /* a finger-sized target in the compact deck (#68) */ font-size: min(calc(12px * var(--ts)), 4.4cqw); }
 .deck.dense .slot small { display: inline; margin-left: 3px; font-size: min(calc(10px * var(--ts)), 3.8cqw); }
 .deck.dense .slot.empty small { display: none; }
 .deck.dense:has(.dk-left .slot:nth-child(8)) ~ #gunSel:not(:empty) { position: sticky; bottom: calc(66px * var(--ts)); z-index: 2; background: var(--parch); padding-top: 1px; }
