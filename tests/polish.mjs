@@ -22,7 +22,7 @@ const D = { width: 1280, height: 720 }, HD = { width: 1920, height: 1080 }, M = 
 async function open(viewport, { mobile = false, lang = "en", tag = "", save = null } = {}) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: mobile, hasTouch: mobile });
   const page = await ctx.newPage();
-  page.on("pageerror", e => errors.push(`[${tag}] pageerror: ${e.message}`));
+  page.on("pageerror", e => errors.push(`[${tag}] pageerror: ${e.message} ${(e.stack || "").split("\n").slice(1, 4).join(" | ")}`));
   page.on("console", m => { if (m.type() === "error" && !/favicon/i.test(m.text())) errors.push(`[${tag}] console: ${m.text()}`); });
   await page.goto(url, { waitUntil: "load" });
   await page.waitForFunction(() => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 * SLOW });
@@ -241,7 +241,7 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
   ok("damage numbers: three hits inside 0.3 s show one '30'; a later hit starts a new number", dm.merged.join() === "30" && dm.after.includes("10"), dm);
   // hit markers
   const hm = await ev(page, () => {
-    for (const e of enemies) e.guns = { left: [], right: [] };   // only the two staged hits below may land
+    for (const e of enemies) { e.guns = { left: [], right: [] }; e.vol = {}; }   // only the two staged hits below may land
     hitLayer.innerHTML = ""; hitMarks = [];
     const foes = enemies.filter(x => x.alive && !x.boss).sort((a, b) => dist(a, player) - dist(b, player));
     const far = foes[1], near = foes[2];
@@ -254,13 +254,15 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
   const edge = hm.marks.find(m => !m.near), over = hm.marks.find(m => m.near);
   ok("hit markers: an off-screen shooter gets an edge marker on its side, an on-screen one a marker over it", hm.n === 2 && edge && edge.x > hm.vw * 0.8 && over && over.x < hm.vw / 2, hm);
   await page.screenshot({ path: join(out, "sea-720-hit-markers.png") });
-  const fade = await ev(page, async () => { await new Promise(r => setTimeout(r, 2300)); return hitLayer.children.length; });
+  // game time runs slower than the wall clock on a busy machine: poll until the markers are gone instead of sleeping 2.3 s
+  const fade = await ev(page, async () => { const t0 = performance.now(); await new Promise(r => setTimeout(r, 2300)); while (hitLayer.children.length && performance.now() - t0 < 15000) await new Promise(r => setTimeout(r, 100)); return hitLayer.children.length; });
   ok("hit markers clear about two seconds after the last hit", fade === 0, fade);
   // text size reaches the world labels
   const ts = await ev(page, async () => {
     const e = enemies.find(x => x.alive && x.badge), k1 = labelScale(), b1 = e.badge.scaleX, h1 = harborLabel.scaleX;
     saveSettings({ uiPct: 130 }); applyUiScale();
-    await new Promise(r => setTimeout(r, 200));
+    // the badge is rescaled on a game frame: wait for it (up to 5 s) rather than a fixed 200 ms
+    for (let w = 0; w < 50 && e.badge.scaleX === b1; w++) await new Promise(r => setTimeout(r, 100));
     const k2 = labelScale(), b2 = e.badge.scaleX, h2 = harborLabel.scaleX;
     saveSettings({ uiPct: 100 }); applyUiScale();
     return { k: +(k2 / k1).toFixed(3), badge: +(b2 / b1).toFixed(3), harbor: +(h2 / h1).toFixed(3) };
@@ -314,7 +316,7 @@ for (const [vp, tag, mobile] of [[HD, "1080", false], [M, "phone", true]]) {
   await page.waitForTimeout(300 * SLOW);
   const lap = await ev(page, () => {
     player.maxHp = player.hp = 1e6;
-    for (const e of enemies) e.guns = { left: [], right: [] };
+    for (const e of enemies) { e.guns = { left: [], right: [] }; e.vol = {}; }
     const foes = enemies.filter(x => x.alive && !x.boss).sort((a, b) => dist(a, player) - dist(b, player));
     foes[0].x = player.x + 120; foes[0].y = player.y - 160; foes[1].x = player.x - 2000; foes[1].y = player.y + 300;
     hurt(player, 3, 0, foes[0]); hurt(player, 3, 0, foes[1]);

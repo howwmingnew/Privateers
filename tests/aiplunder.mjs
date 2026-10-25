@@ -24,6 +24,8 @@ const sail = () => page.evaluate(() => { if (!docked) { sendHome(); dock("return
 
 // One pirate alone in open water far from the harbor; every other ship sent to the far corner. Returns the spot.
 const isolate = () => page.evaluate(() => {
+  // Nothing but this pirate may change the sea: no top-up spawns (they arrive hostile and pull it into a fight), fair weather, no disasters.
+  managePopulation = () => {}; spawnT = 1e9; wx.on = false; dis.live = []; dis.plan = [];
   let spot = null;
   for (let x = 1200; x < W - 300 && !spot; x += 300) for (let y = 600; y < H - 300 && !spot; y += 300)
     if (Math.hypot(x - PORT.x, y - PORT.y) > SAFE_R + 900 && !islands.some(i => Math.hypot(i.x - x, i.y - y) < i.r + 700)) spot = { x, y };

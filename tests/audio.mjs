@@ -93,10 +93,14 @@ try {
   check(await page.evaluate(() => !pauseOpen && Snd.state()) === "running", "Resume from the pause menu resumes audio");
 
   // M toggles mute, with a toast in the current language, and it persists
+  // Phaser reads the keyboard on its next game step, not inside the key event: wait for each press to land
+  // (a slow, busy machine can take several frames) instead of reading the state straight after pressing.
   await page.keyboard.press("KeyM");
+  await page.waitForFunction(() => Snd.isMuted(), null, { timeout: 4000 * SLOW }).catch(() => {});
   const m1 = await page.evaluate(() => ({ muted: Snd.isMuted(), toast: document.getElementById("toast").textContent, want: t("muted"), saved: JSON.parse(localStorage.getItem("privateers-settings")) }));
   check(m1.muted && m1.toast === m1.want && m1.saved.muted === true, `M mutes, toasts "${m1.toast}", and saves it`);
   await page.keyboard.press("KeyM");
+  await page.waitForFunction(() => !Snd.isMuted(), null, { timeout: 4000 * SLOW }).catch(() => {});
   check(!(await page.evaluate(() => Snd.isMuted())), "M again unmutes");
   check(await page.evaluate(() => STR.zh.muted && STR.zh.unmuted && STR.en.muted && STR.en.unmuted) ? true : false, "mute strings exist in English and Traditional Chinese");
 
@@ -110,7 +114,8 @@ try {
 
   // docking: harbour music + ambience; combat intensity follows a nearby hostile
   await page.evaluate(() => { player.x = PORT.x + 1200; player.y = PORT.y; const e = enemies.find(x => x.alive && !x.merchant) || enemies[0]; e.x = player.x + 300; e.y = player.y; e.target = player; e.chaseFrom = { x: e.x, y: e.y }; });
-  await page.waitForTimeout(1500 * SLOW);
+  // the intensity eases toward its target, so wait for it to cross the line rather than sampling once after a fixed sleep
+  await page.waitForFunction(() => Snd.debug().intensity > 0.4, null, { timeout: 8000 * SLOW }).catch(() => {});
   const iv = await page.evaluate(() => Snd.debug().intensity);
   check(iv > 0.4, `combat layer rises with a hostile ship close (intensity ${iv})`);
   await page.evaluate(() => dock("return"));
@@ -124,6 +129,7 @@ try {
   const pressed = await page.evaluate(() => window.__pressed);
   check(hasDisabled && pressed === true, `pressing a disabled ledger button reaches the "denied" listener (${hasDisabled ? pressed : "no disabled button"})`);
   await page.click("#port [data-act=slot]");
+  await page.waitForFunction(() => Snd.debug().voices > 0, null, { timeout: 2000 * SLOW }).catch(() => {});
   check(await page.evaluate(() => Snd.debug().voices) > 0, "a ledger click plays a sound");
 
   if (levels) {
