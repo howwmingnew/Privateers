@@ -1,7 +1,7 @@
 "use strict";
 // ---------- Gear: the words (parts, rarities, affixes, legendary effects) and the names the ledger and the toasts use ----------
 // (gearTitle and gearHint are the ledger page's heading and hint: js/hud.js applies data-i18n once as it loads, so they live here, before it.)
-// ga_<key> is an affix line ({n} is a percent), gl_<effect> a legendary effect, gln_<part> a legendary's own name. Numbers in the legendary lines
+// ga_<key> is an affix line ({n} is a percent), gleg_<effect> a legendary effect, gln_<part> a legendary's own name. Numbers in the legendary lines
 // come from GEAR_LEGX (js/config.js), so the text never drifts from the rule.
 Object.assign(STR.en, {
   gearTitle: "Gear", gearHint: "Seven parts. Sink ships to find them: pick a spare, then tap its part to wear it. Guns are set on the gun deck above. The gear follows you from ship to ship, as far as the hull's tier allows.",
@@ -14,13 +14,13 @@ Object.assign(STR.en, {
   ga_repair: "Repair at sea +{n}%", ga_cargo: "Hold +{n}%", ga_powder: "Magazine blast chance +{n}%",
   ga_view: "Sight and plunder-reading range +{n}%", ga_aim: "Up to +{n}% damage at full range", ga_storm: "Storm yaw −{n}%", ga_reach: "Every gun's range +{n}%",
   ga_escDef: "Escorts take {n}% less damage", ga_loot: "Plunder +{n}%", ga_heat: "Navy heat gained −{n}%", ga_luck: "Gear drop chance +{n}%",
-  gl_scatter: "Ram at {closing}+ px/s: the other ship's rigging tears for {t} s and its line breaks",
-  gl_lastStand: "Once a sortie, below {below}% hull: {t} s of −{cut}% damage",
-  gl_swift: "After a hard turn: +{k}% speed for {t} s",
-  gl_drag: "Hits slow the target {k}% for {t} s",
-  gl_dock: "At a supply station, repairs {k}x as fast",
-  gl_mark: "Every {cd} s the nearest enemy within {r} px is marked: +{k}% damage taken for {t} s",
-  gl_rally: "When you first hit a ship, escorts deal +{k}% damage for {t} s",
+  gleg_scatter: "Ram at {closing}+ px/s: the other ship's rigging tears for {t} s and its line breaks",
+  gleg_lastStand: "Once a sortie, below {below}% hull: {t} s of −{cut}% damage",
+  gleg_swift: "After a hard turn: +{k}% speed for {t} s",
+  gleg_drag: "Hits slow the target {k}% for {t} s",
+  gleg_dock: "At a supply station, repairs {k}x as fast",
+  gleg_mark: "Every {cd} s the nearest enemy within {r} px is marked: +{k}% damage taken for {t} s",
+  gleg_rally: "When you first hit a ship, escorts deal +{k}% damage for {t} s",
   gln_prow: "Leviathan's Beak", gln_body: "Bulwark of Saints", gln_sail: "Albatross Canvas", gln_gun: "Hellmouth", gln_supply: "Bottomless Hold", gln_instr: "Seer's Astrolabe", gln_flag: "Admiral's Colours",
   gGot: "Found: {name} ({r}, Item Lv {n})", gScrapFull: "Bag full: {name} broken down, +{m} fittings", gGotShort: "{name}",
 });
@@ -35,13 +35,13 @@ Object.assign(STR.zh, {
   ga_repair: "海上修船速度 +{n}%", ga_cargo: "貨艙 +{n}%", ga_powder: "火藥庫引爆機率 +{n}%",
   ga_view: "視野與看見戰利品的距離 +{n}%", ga_aim: "遠距命中：射程盡頭最多 +{n}% 傷害", ga_storm: "暴風雨偏航 −{n}%", ga_reach: "所有火砲射程 +{n}%",
   ga_escDef: "隨從受到的傷害 −{n}%", ga_loot: "戰利品 +{n}%", ga_heat: "海軍熱度增長 −{n}%", ga_luck: "裝備掉落機率 +{n}%",
-  gl_scatter: "以 {closing}+ px/s 撞擊：對方索具斷裂 {t} 秒，隊形被打亂",
-  gl_lastStand: "每次出航一次：船體低於 {below}% 時，{t} 秒內傷害 −{cut}%",
-  gl_swift: "急轉彎後：航速 +{k}%，持續 {t} 秒",
-  gl_drag: "命中使目標航速 −{k}%，持續 {t} 秒",
-  gl_dock: "靠補給站時，修船速度 {k} 倍",
-  gl_mark: "每 {cd} 秒標記 {r} px 內最近的敵船：{t} 秒內它受到的傷害 +{k}%",
-  gl_rally: "你第一次打中某艘船時，隨從的傷害 +{k}%，持續 {t} 秒",
+  gleg_scatter: "以 {closing}+ px/s 撞擊：對方索具斷裂 {t} 秒，隊形被打亂",
+  gleg_lastStand: "每次出航一次：船體低於 {below}% 時，{t} 秒內傷害 −{cut}%",
+  gleg_swift: "急轉彎後：航速 +{k}%，持續 {t} 秒",
+  gleg_drag: "命中使目標航速 −{k}%，持續 {t} 秒",
+  gleg_dock: "靠補給站時，修船速度 {k} 倍",
+  gleg_mark: "每 {cd} 秒標記 {r} px 內最近的敵船：{t} 秒內它受到的傷害 +{k}%",
+  gleg_rally: "你第一次打中某艘船時，隨從的傷害 +{k}%，持續 {t} 秒",
   gln_prow: "利維坦之喙", gln_body: "聖徒壁壘", gln_sail: "信天翁帆", gln_gun: "地獄之口", gln_supply: "無底艙", gln_instr: "先知星盤", gln_flag: "提督戰旗",
   gGot: "獲得：{name}（{r}，物品等級 {n}）", gScrapFull: "背包已滿：{name} 已拆解，+{m} 零件", gGotShort: "{name}",
 });
@@ -54,7 +54,7 @@ const gearAffixText = ([k, v]) => t("ga_" + k, { n: gearPct(v) });
 function gearLegendText(part) {
   const id = GEAR_LEG[part], x = GEAR_LEGX[id], n = {};
   for (const k in x) n[k] = ["k", "cut", "below"].includes(k) && x[k] < 1 ? Math.round(x[k] * 100) : x[k];
-  return t("gl_" + id, n);
+  return t("gleg_" + id, n);
 }
 const gearTypeName = it => (it.g ? t("gf_" + it.g) : t("gp_" + it.p));
 // The name on a card: a legendary has one of its own, over the kind it is.

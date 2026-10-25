@@ -12,7 +12,8 @@
 // its upgrade (named with the next level and its price), the same upgrade five levels at a time (total price; fewer levels near
 // the cap, disabled with the shortfall when gold runs out) and Unload. The armory sells one gun at a time; it lands in the store
 // already picked, so the next tap on a port mounts it. renderPort (js/harbor.js) calls renderGunBay and armoryHtml; its click
-// handler hands every gun action to gunAct; Esc reaches cancelGunPick through goBack (js/menu.js).
+// handler hands every gun action to gunAct; Esc reaches cancelGunPick through goBack (js/menu.js). A gun may carry a rarity, item level and affixes
+// (#38, js/gear-core.js): its slot is edged in the rarity colour, and its card (gearExtraHtml, js/gear-ui.js) lists them with re-roll, lock and break down.
 Object.assign(STR.en, {
   bay: "Gun store", bayEmpty: "Nothing in store. Guns bought in the armory wait here until you mount them.",
   emptyPort: "Empty", toStore: "Unload", owned: "{n} owned", storeAria: "Stored gun {n}: {gun}, Lv {lv}",
@@ -49,10 +50,12 @@ function swapGuns(a, b) {
   const s = withGun(withGun(save, a.side, a.i, gb), b.side, b.i, ga);
   return { ...s, store: s.store.filter(Boolean) };
 }
+const gunMark = gun => (gun.lg ? "!" : "");   // a legendary gun's picture has gold inlay (js/gun-art.js)
 const gunIcon = (id, cls) => (typeof gunSideImg === "function" ? gunSideImg(id, cls) : "");   // the side view (js/gun-art.js); the unit tests load this file without it
 const gunStats = (g, lv) => { const G = GUNS[g], m = gunLvMul(lv) * shipGunK();   // what it hits for on this hull (js/data.js)
   return t("dmg", { n: Math.round(G.dmg * m) }) + (G.burn ? t("burn", { n: Math.round(G.burn * m * BURN_T) }) : ""); };
 const gunName = gun => t("gf_" + gun.g) + " Lv " + gun.lv;
+const gunRar = gun => (typeof rarClass === "function" ? rarClass(gun) : "");   // " r0".." r4": the rarity colour of the slot and card (css/gear.css)
 
 // ---------- the rules, pure ----------
 // What a tap on (side, i) does with `src` picked (or null): { kind: "pick" | "drop" | "repick" | "move" | "tip" | "none", ... }.
@@ -93,7 +96,7 @@ function gunAct(act, d) {
   if (act === "slot" || act === "store") {
     const side = act === "store" ? "store" : d.side, r = gunTap(save, deckSel, side, +d.i);
     if (r.kind === "move") return doMove(r);
-    if (r.kind === "pick" || r.kind === "repick") { deckSel = { side, i: +d.i }; gunNote = null; return "uiClick"; }
+    if (r.kind === "pick" || r.kind === "repick") { deckSel = { side, i: +d.i }; gunNote = null; if (typeof gearSel !== "undefined") gearSel = null; return "uiClick"; }   // one pick at a time: a gun or a gear part (js/gear-ui.js)
     if (r.kind === "drop") { deckSel = null; return "uiClick"; }
     gunNote = { tip: "emptyTip" }; return "denied";   // r.kind "tip": nothing moved
   }
@@ -118,7 +121,7 @@ function gunAct(act, d) {
   if (act === "gup" || act === "gup5") {
     const plan = act === "gup5" ? gunUpPlan(gun, save.gold) : { n: gun.lv < GUN_MAX ? 1 : 0, cost: gunUpCost(gun), short: Math.max(0, gunUpCost(gun) - save.gold) };
     if (!plan.n || plan.short > 0) return null;
-    save = withGun({ ...save, gold: save.gold - plan.cost }, deckSel.side, deckSel.i, gunItem(gun.g, gun.lv + plan.n));
+    save = withGun({ ...save, gold: save.gold - plan.cost }, deckSel.side, deckSel.i, { ...gun, lv: gun.lv + plan.n });   // rarity, affixes and lock stay with the gun
     gunNote = null;   // gold was spent: Undo would hand the levels back for free, so it only ever covers a move
     return "upgrade";
   }
@@ -139,8 +142,8 @@ function renderGunBay() {
   document.getElementById("gunSel").innerHTML = gunNoteHtml() + gunCardHtml();
   const toStore = deckSel && deckSel.side !== "store" && save.store.length < MAX_STORE;   // "Put in store": the store as a destination, when it has room
   document.getElementById("bay").innerHTML = `<div class="lbl">${t("bay")}</div>` + (save.store.length || toStore
-    ? `<div class="slots">${save.store.map((gun, i) => `<button class="slot${isPicked("store", i) ? " sel" : ""}${isDest("store", i) ? " dest" : ""}" type="button" data-act="store" data-i="${i}" aria-pressed="${isPicked("store", i)}" ` +
-      `aria-label="${t("storeAria", { n: i + 1, gun: t("gf_" + gun.g), lv: gun.lv })}">${gunIcon(gun.g, "sm")}${t("g_" + gun.g)}<small>Lv ${gun.lv}</small></button>`).join("")}` +
+    ? `<div class="slots">${save.store.map((gun, i) => `<button class="slot${gunRar(gun)}${isPicked("store", i) ? " sel" : ""}${isDest("store", i) ? " dest" : ""}" type="button" data-act="store" data-i="${i}" aria-pressed="${isPicked("store", i)}" ` +
+      `aria-label="${t("storeAria", { n: i + 1, gun: t("gf_" + gun.g), lv: gun.lv })}">${gunIcon(gun.g + gunMark(gun), "sm")}${t("g_" + gun.g)}<small>Lv ${gun.lv}</small></button>`).join("")}` +
       (toStore ? `<button class="slot dest put" type="button" data-act="tostore">${t("toStoreDest")}<small>${save.store.length} / ${MAX_STORE}</small></button>` : "") + `</div>`
     : `<p class="hint-s">${t("bayEmpty")}</p>`);
 }
@@ -161,9 +164,12 @@ function gunCardHtml() {
   const full = save.store.length >= MAX_STORE;
   const off = !mounted ? "" : `<button class="btn ghost" type="button" data-act="unload" ${full ? "disabled" : ""}>${t("toStore")}</button>`;
   const next = max ? "" : ` <span class="up">→ ${Math.round(G.dmg * gunLvMul(gun.lv + 1) * shipGunK())}</span>`;
-  return `<div class="gcard"><div class="nm">${gunIcon(gun.g)}${t("gf_" + gun.g)}<small>Lv ${gun.lv}</small></div><div class="gacts">${up}${up5}${off}</div>
+  const x = typeof gearExtraHtml === "function" ? gearExtraHtml(gun, "gun") : null;   // rarity, affixes, re-roll, lock, break down (js/gear-ui.js)
+  const acts = up + up5 + off + (x ? x.lockBtn + (mounted ? "" : x.scrapBtn) : "");
+  const name = typeof gearTitle === "function" ? gearTitle(gun) : t("gf_" + gun.g);
+  return `<div class="gcard${gunRar(gun)}"><div class="nm">${gunIcon(gun.g + gunMark(gun))}${name}<small>Lv ${gun.lv}${x ? " · " + rarLine(gun) : ""}</small></div><div class="gacts">${acts}</div>
     <div class="ds">${gunStats(gun.g, gun.lv)}${next} · ${t("range", { n: G.range })} · ${t("rpm", { n: G.rpm })}${G.chain ? t("chainFx", { n: CHAIN_T }) : ""}</div>
-    <p class="hint-s">${mounted && full ? t("storeFullWhy", { n: MAX_STORE }) + " " : ""}${t(mounted ? "pickHintPort" : "pickHintStore")}</p></div>`;
+    ${x ? x.list + (mounted ? "" : gunCompareHtml(gun)) : ""}<p class="hint-s">${mounted && full ? t("storeFullWhy", { n: MAX_STORE }) + " " : ""}${t(mounted ? "pickHintPort" : "pickHintStore")}</p></div>`;
 }
 // "Upgrade to Lv 4 (310 gold)"; with too little gold the same label says how much is missing (the button is disabled then).
 const upgradeLabel = (n, cost, short) => t(short > 0 ? "upShort" : "upTo", { n, cost: fmt(cost), d: fmt(Math.max(0, short)) });

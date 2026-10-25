@@ -45,6 +45,7 @@
 <link rel="stylesheet" href="css/photo.css">
 <link rel="stylesheet" href="css/share.css">
 <link rel="stylesheet" href="css/weather.css">
+<link rel="stylesheet" href="css/gear.css">
 </head>
 <body>
 
@@ -87,6 +88,11 @@
       <div class="deck" id="deck"></div>
       <div id="gunSel" aria-live="polite"></div>
       <div class="bay" id="bay"></div>
+    </section>
+    <section>
+      <h2 data-i18n="gearTitle">Gear</h2>
+      <p class="hint-s" data-i18n="gearHint"></p>
+      <div id="gear"></div>
     </section>
     <section>
       <h2 data-i18n="armory">Armory</h2>
@@ -259,9 +265,12 @@
 <script defer src="js/audio.js"></script>
 <script defer src="js/i18n.js"></script>
 <script defer src="js/data.js"></script>
+<script defer src="js/gear-core.js"></script>
+<script defer src="js/gear-text.js"></script>
 <script defer src="js/save.js"></script>
 <script defer src="js/save-campaign.js"></script>
 <script defer src="js/shipyard.js"></script>
+<script defer src="js/gear-save.js"></script>
 <script defer src="js/escorts.js"></script>
 <script defer src="js/ship-lines.js"></script>
 <script defer src="js/state.js"></script>
@@ -341,6 +350,8 @@
 <script defer src="js/disasters.js"></script>
 <script defer src="js/disasters-art.js"></script>
 <script defer src="js/gun-art.js"></script>
+<script defer src="js/gear-fx.js"></script>
+<script defer src="js/gear-ui.js"></script>
 <script defer src="js/tech.js"></script>
 <script defer src="js/audio-game.js"></script>
 <script defer src="js/main.js"></script>
