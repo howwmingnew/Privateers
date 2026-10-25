@@ -34,8 +34,10 @@ const groundEl = (() => { const el = document.createElement("div"); el.id = "agr
 let gnd = { t: 0, on: false }, gndLast = null, gndSpeed = 0, gndKn = "";
 function groundReset() { gnd = { t: 0, on: false }; gndLast = null; gndSpeed = 0; }
 onHook("sail", groundReset);
-onHook("lang", () => { groundEl.textContent = t("aground"); gndKn = ""; });
-onHook("frame", dt => {
+// The readout is drawn in the current language at once, not only on the next sailing frame: a docked, paused or just
+// continued game shows "0.0 節", not the page's default "0.0 kn".
+const speedDraw = kn => { gndKn = kn; speedTxt.textContent = t("u_kn", { n: kn }); };
+onHook("lang", () => { groundEl.textContent = t("aground"); speedDraw(gndKn || "0.0"); });onHook("frame", dt => {
   if (!player || paused || docked || !player.alive || dt <= 0) { if (gndLast) groundReset(); if (!groundEl.hidden) groundEl.hidden = true; return; }
   const last = gndLast; gndLast = { x: player.x, y: player.y };
   if (!last) return;
@@ -44,7 +46,7 @@ onHook("frame", dt => {
   gndSpeed += (moved - gndSpeed) * Math.min(1, dt * 6);
   gnd = groundStep(gnd, (player.wantThr || 0) * player.maxSpeed, moved, player.maxSpeed, dt, nearRock(player.x, player.y, player.hl ?? 28));
   const kn = (gndSpeed < 0.4 ? 0 : gndSpeed / SPEED_KN_PX).toFixed(1);
-  if (kn !== gndKn) { gndKn = kn; speedTxt.textContent = t("u_kn", { n: kn }); }
+  if (kn !== gndKn) speedDraw(kn);
   speedEl.classList.toggle("stuck", gnd.on);
   if (groundEl.hidden === gnd.on) { groundEl.hidden = !gnd.on; if (gnd.on) groundEl.textContent = t("aground"); }
 });

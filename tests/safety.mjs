@@ -73,8 +73,18 @@ console.log("Desktop: the danger banner, the glow, speed and aground");
     const isl = islands.filter(i => !i.outpost).sort((a, b) => dist(a, PORT) - dist(b, PORT))[3];
     player.x = isl.x - isl.r * 0.9 - 80; player.y = isl.y; player.rot = 0; player.speed = 0; setSailLevel(3);
   });
+  // a free helm dead on at the rock: the hull glides round it instead of sticking (js/ai-nav.js slideAlong)
+  await sleep(3500);
+  const gl = await page.evaluate(() => ({ kn: parseFloat(document.getElementById("speedTxt").textContent), stuck: document.getElementById("speedInd").classList.contains("stuck"), rot: player.rot }));
+  check(!gl.stuck && gl.kn > 2, "full sail dead on at a rock: the hull glides along it, not aground", gl);
+  // a helm held hard at the rock (the bow reset every few ms) still pins the hull: the readout and the prompt
+  await page.evaluate(() => {
+    const isl = islands.filter(i => !i.outpost).sort((a, b) => dist(a, PORT) - dist(b, PORT))[3];
+    player.x = isl.x - isl.r * 0.9 - 80; player.y = isl.y; player.rot = 0; player.speed = 0; window.__pin = setInterval(() => { player.rot = 0; }, 4);
+  });
   await sleep(3500);
   const g = await page.evaluate(() => ({ kn: document.getElementById("speedTxt").textContent, stuck: document.getElementById("speedInd").classList.contains("stuck"), prompt: !document.getElementById("aground").hidden, want: player.wantThr }));
+  await page.evaluate(() => clearInterval(window.__pin));
   check(g.prompt && g.stuck && g.kn === "0.0 kn" && g.want === 1, "full sail against a rock: Speed reads 0.0 kn and the aground prompt shows", g);
   await page.screenshot({ path: join(out, "aground.png") });
   await page.evaluate(() => { player.rot = Math.PI; });

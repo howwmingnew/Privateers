@@ -160,3 +160,7 @@
   #seaBanner.on { animation-name: seaFade; }
   #achToast, #bossBar .bb i { transition: none; }
 }
+
+/* a bounty whose way (or whose own ship) is above the captain: red rim and pointer, and its label ends in "risky" (js/edge-marks.js) */
+#edgeMarks .em.boss.risky { border-color: #ff6a55; color: #ffe3dc; }
+#edgeMarks .em.boss.risky .ptr { border-left-color: #ff6a55; }

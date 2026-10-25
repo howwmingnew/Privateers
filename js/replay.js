@@ -163,4 +163,5 @@ function replayOffer(ms = REPLAY_OFFER_MS) {
   RP.chip.hidden = false;
   clearTimeout(replayChipTimer); replayChipTimer = setTimeout(() => { RP.chip.hidden = true; }, ms);
 }
-onHook("frame", () => { if (RP.chip && !RP.chip.hidden && (docked || paused || titleOpen)) RP.chip.hidden = true; });
+onHook("frame", () => { if (RP.chip && !RP.chip.hidden && (docked || paused || titleOpen || (typeof dockingNow === "function" && dockingNow()))) RP.chip.hidden = true; });
+onHook("dock", () => { if (RP.chip) { RP.chip.hidden = true; clearTimeout(replayChipTimer); } });
