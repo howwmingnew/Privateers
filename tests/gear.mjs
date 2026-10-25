@@ -138,6 +138,9 @@ const c1 = await page.evaluate(() => document.querySelector('#gear [data-act="gr
 await page.click('#gear [data-act="greroll"][data-k="1"]');
 check(await page.evaluate(c => save.gear.bag[__ei].rr === 2 && document.querySelector('#gear [data-act="greroll"]').innerText !== c, c1), "the re-roll price climbs with each re-roll");
 const g0 = await page.evaluate(() => ({ gold: save.gold, lv: save.gear.bag[__ei].lv }));
+await page.click('#gear [data-act="gpup5"]');   // the first tap arms the button (#110): nothing is spent yet
+check(await page.evaluate(g => save.gold === g.gold && document.querySelector('#gear [data-act="gpup5"]').hasAttribute("data-armed"), g0), "the first tap on Upgrade x5 only arms it");
+await page.waitForTimeout(450);
 await page.click('#gear [data-act="gpup5"]');
 r = await page.evaluate(() => ({ lv: save.gear.bag[__ei].lv, gold: save.gold, plan: gearUpPlan({ ...save.gear.bag[__ei], lv: 1 }, 1e9, 5) }));
 check(r.lv === 6 && g0.gold - r.gold === r.plan.cost, `"Upgrade 5 levels" raises a worn part five levels for the total price (${r.lv}, ${g0.gold - r.gold} gold)`);

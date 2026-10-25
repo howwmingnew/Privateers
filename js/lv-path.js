@@ -6,7 +6,7 @@
 Object.assign(STR.en, {
   shipLvP: "Ship Lv {n} · next {p}%", shipLvN: "Ship Lv {n}", lvNext: " · next {p}%", statLvP: "Ship <b>Lv {n}</b> · next {p}%",
   lvGainUp: "Ship Lv → {n}", lvGainPct: "Ship Lv progress +{p}%",
-  lvGainDown: "Ship Lv falls to {n} (fresh hull)", lvLossPct: "Ship Lv progress −{p}%", lvSame: "Ship Lv unchanged",
+  lvGainDown: "Ship Lv falls to {n} (fresh hull)", lvFalls: "Ship Lv falls to {n}", lvLossPct: "Ship Lv progress −{p}%", lvSame: "Ship Lv unchanged",
   lvGainStore: "Goes to the store: no Ship Lv change until mounted", lvGainEsc: "Escort: flagship Ship Lv unchanged, ports start empty",
   emptyFirst: "This ship has {n} empty port(s): filling empty ports first is the best value.",
   pRecGap: "About {x} levels to go.", pRecPath: "Cheapest way up: upgrade {what} first; about {gold} gold of upgrades in all.",
@@ -15,7 +15,7 @@ Object.assign(STR.en, {
 Object.assign(STR.zh, {
   shipLvP: "船艦 Lv {n} · 下一級 {p}%", shipLvN: "船艦 Lv {n}", lvNext: " · 下一級 {p}%", statLvP: "船艦 <b>Lv {n}</b> · 下一級 {p}%",
   lvGainUp: "船艦 Lv → {n}", lvGainPct: "船艦 Lv 進度 +{p}%",
-  lvGainDown: "船艦 Lv 降到 {n}（新船體從 Lv 1 起算）", lvLossPct: "船艦 Lv 進度 −{p}%", lvSame: "船艦 Lv 不變",
+  lvGainDown: "船艦 Lv 降到 {n}（新船體從 Lv 1 起算）", lvFalls: "船艦 Lv 降到 {n}", lvLossPct: "船艦 Lv 進度 −{p}%", lvSame: "船艦 Lv 不變",
   lvGainStore: "放進庫存：裝上砲位前不影響船艦 Lv", lvGainEsc: "隨從：不影響旗艦船艦 Lv，砲位一開始是空的",
   emptyFirst: "這艘船還有 {n} 個空砲位：先補滿空砲位最划算。",
   pRecGap: "還差約 {x} 級。", pRecPath: "最省的補法：先升級{what}，全部補齊約再花 {gold} 金幣。",
@@ -29,8 +29,9 @@ const lvLabelHtml = () => { const r = lvProgress(); return `${t("shipLvN", { n: 
 function lvGainText(what) {
   const a = lvProgress(), b = lvProgress(what);
   if (b.lv > a.lv) return t("lvGainUp", { n: b.lv });
+  if (b.lv < a.lv) return t("lvFalls", { n: b.lv });   // a swap can weaken the ship (a new Lv 1 gun over a Lv 4 one)
   const d = Math.round((b.frac - a.frac) * 100);
-  return d >= 1 ? t("lvGainPct", { p: d }) : b.frac > a.frac ? t("lvGainPct", { p: "<1" }) : "";
+  return d >= 1 ? t("lvGainPct", { p: d }) : d <= -1 ? t("lvLossPct", { p: -d }) : b.frac > a.frac ? t("lvGainPct", { p: "<1" }) : "";
 }
 // The preview of raising the flagship's mounted gun `gun` (the object in save) by `n` levels; "" for a stored gun or an escort's.
 const lvGainGun = (gun, n) => (gun && MOUNTS.some(({ key }) => save[key].includes(gun)) ? lvGainText({ gun: g => (g === gun ? { ...g, lv: g.lv + n } : g) }) : "");

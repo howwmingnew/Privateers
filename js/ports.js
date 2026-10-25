@@ -16,7 +16,9 @@ Object.assign(STR.en, {
   tradeEmpty: "Your hold is empty. This port only buys cargo.",
   fSupplyIn: "Repairs: {n} gold for a full hull", supplyBroke: "Not enough gold for repairs",
   fSupplyFull: "Hull is sound, no repairs needed", fTradeIn: "Buys your whole hold",
-  supplyAuto: "Supply station: repairs are paid automatically as the hull mends, up to {n} gold for a full hull.",
+  supplyAuto: "Supply station: repairs are charged as the hull mends. A full hull costs {n} gold; yours needs about {c}.",
+  supplyShort: "Supply station: your hull needs about {c} gold of repairs, you have {g}. Only about {p}% more of the hull will be mended.",
+  supplyPart: "The berth mended what your gold paid for: the hull is at {p}%. Your hold is still aboard.",
   supplyPaid: "Repairs paid: {n} gold for {p}% of the hull.",
 });
 Object.assign(STR.zh, {
@@ -29,7 +31,9 @@ Object.assign(STR.zh, {
   tradeEmpty: "貨艙是空的。這個港口只收購貨物。",
   fSupplyIn: "修船：整個船體 {n} 金幣", supplyBroke: "金幣不夠，無法修船",
   fSupplyFull: "船體完好，不需修理", fTradeIn: "收購貨物",
-  supplyAuto: "補給站：船體修補時自動扣金幣，整個船體最多 {n} 金幣。",
+  supplyAuto: "補給站：船體修補時才會扣金幣。整個船體要 {n} 金幣，你這次約需 {c}。",
+  supplyShort: "補給站：你的船體約需 {c} 金幣修理，但你只有 {g}，只能再修好約 {p}% 的船體。",
+  supplyPart: "碼頭只修了你付得起的部分：船體現在 {p}%。貨艙的貨物還在船上。",
   supplyPaid: "修船費已付：{n} 金幣，修好 {p}% 船體。",
 });
 
@@ -81,6 +85,12 @@ function supplyStep(hp, maxHp, dt, gold, ring, k = 1) {   // k: a legendary supp
   return { hp: hp + heal, cost };
 }
 
+// Pure: what a repair would take, in whole gold, and the share of the hull the purse covers (0..1 of max hull, never more than is missing).
+function supplyQuote(hp, maxHp, gold, ring) {
+  const missing = Math.max(0, 1 - hp / maxHp), fee = supplyFee(ring), cost = Math.ceil(missing * fee - 1e-9);
+  return { cost, afford: gold >= cost ? missing : Math.max(0, gold) / fee };
+}
+
 // ---------- At sea: the ring's service (called from js/mooring.js) ----------
 let feeCarry = 0, brokeShown = false, feePaid = 0, feeFrom = 0;   // feePaid: gold taken on this visit; feeFrom: the hull share it started from
 let visitFee = 0;   // all the gold the ring took since the ship came in: the ledger lists it among the charges (js/ledger-gold.js)
@@ -106,7 +116,10 @@ function stationGreet(hb, kind) {
   floatText(x, y - 22, t("stationName_" + kind), "#f6f1e3", 15);
   const sound = player.hp >= player.maxHp;
   feePaid = 0; visitFee = 0; feeFrom = player.hp / player.maxHp;
-  if (kind === "supply" && !sound && save.gold >= 1) toast(t("supplyAuto", { n: supplyFee(hb.ring) }));
+  if (kind === "supply" && !sound && save.gold >= 1) {   // the rule first, before a coin leaves: the price, and how far the purse goes
+    const q = supplyQuote(player.hp, player.maxHp, save.gold, hb.ring);
+    toast(q.afford < 1 - player.hp / player.maxHp - 1e-9 ? t("supplyShort", { c: q.cost, g: Math.floor(save.gold), p: Math.max(1, Math.round(q.afford * 100)) }) : t("supplyAuto", { n: supplyFee(hb.ring), c: q.cost }));
+  }
   floatText(x, y, kind === "supply" ? t(sound ? "fSupplyFull" : "fSupplyIn", { n: supplyFee(hb.ring) }) : t("fTradeIn"), "#9fe0a0", 15);
   if (kind === "trade" && cargo <= 0) toast(t("tradeEmpty"));
 }

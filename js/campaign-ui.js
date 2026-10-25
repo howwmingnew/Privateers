@@ -105,12 +105,11 @@ function posterHtml(b) {
 function renderWanted() {
   const c = save.campaign, b = activeBounty();
   const story = storyKey ? `<p class="story">${t(storyKey, { n: save.ngPlus })}</p>` : "";
-  const next = giftCard ? `<p class="story gift">${t(giftCard)} <button class="btn" type="button" data-camp="gift">${t("giftGo")}</button></p>` : "";   // js/escort-gift.js
   const note = atOutpost ? `<p class="hint-s">${t(dockNoteKey())}</p>` : "";
   const body = b ? posterHtml(b)
     : `<div class="poster done"><div class="p-wanted">${t("allDoneT")}</div><p class="p-story">${t("allDone")}</p>
        <button class="btn ngbtn" type="button" data-camp="ng">${t(ngArmed ? "ngArm" : "ngBtn")}</button></div>`;
-  wantedEl.innerHTML = story + next + note + body +
+  wantedEl.innerHTML = story + note + body +
     `<div class="rankline"><span>${t("rankLbl")} <b>${t("rank_" + c.rank)}</b>${save.ngPlus ? ` · ${t("ngLbl", { n: save.ngPlus })}` : ""}</span>` +
     `<button class="logbtn" type="button" data-camp="log">${t("logBtn")}</button></div>`;
   const cv = wantedEl.querySelector(".p-flag");
@@ -122,7 +121,6 @@ wantedEl.addEventListener("click", ev => {
   const btn = ev.target.closest("[data-camp]");
   if (!btn) return;
   if (btn.dataset.camp === "log") { openLog(); return; }   // js/logbook.js
-  if (btn.dataset.camp === "gift") { tab = 1; resetLedgerPick(); giftCard = ""; sfx("uiClick"); renderPort(); return; }   // the card's button: the Escort 1 tab (js/ledger-tabs.js)
   if (btn.dataset.camp === "poster") { posterOpen = !posterOpen; sfx("uiClick"); renderWanted(); wantedEl.querySelector("[data-camp=poster]")?.focus({ preventScroll: true }); return; }
   if (!ngArmed) {   // New Game+ wipes the ship and gold, so it takes a second press
     ngArmed = true; btn.textContent = t("ngArm"); sfx("uiClick");
@@ -162,7 +160,7 @@ onHook("frame", () => {
   const live = bossShip && bossShip.alive && !paused && !docked && player.alive;
   if (!live) { bossArrow.hidden = true; bossBar.hidden = true; return; }
   placeBossArrow();
-  const near = dist(player, bossShip) < 1200;
+  const near = dist(player, bossShip) < 1200 && onScreen(bossShip.x, bossShip.y, 40);   // off screen the edge marker points the way instead (js/edge-marks.js, #108)
   bossBar.hidden = !near;
   if (near) {
     bossBar.firstElementChild.textContent = bossName(findBounty(bossShip.boss));

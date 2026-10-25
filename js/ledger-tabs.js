@@ -10,6 +10,9 @@ let tab = 0;            // the picked tab: 0 the flagship, n the escort in slot 
 let hullOpen = false;   // the hull of that ship is picked
 let candSel = null;     // a gun of the panel's replace list whose card is open: a place like deckSel (js/gunbay.js), or null
 let lastPick = "";      // what the context panel showed last (renderFleet): a new pick scrolls the panel back to its top
+let openScroll = 0;     // the sheet's scrollTop just before the context panel opened: closing it puts the page back there (renderFleet)
+let openClamped = 0;    // where the sheet sat once the panel was open and settled (the wide page clamps it, harbor.js scrolls the panel into view)
+const noteOpenScroll = () => { openClamped = sheetEl.scrollTop; };   // that move is the panel's own, not the player's: only a scroll beyond it counts as theirs
 let ledgerFocus = null; // a selector the click handler focuses after the next render (a closed panel: the thing it was about)
 
 // Nothing picked: no gun port, no hull, no undo note.
@@ -41,7 +44,7 @@ function tabAct(act, d) {
 function cancelLedgerPick() {
   if (!hullOpen) return false;
   hullOpen = false; renderPort();
-  document.querySelector('#deck [data-act="hull"]')?.focus();
+  document.querySelector('#deck [data-act="hull"]')?.focus({ preventScroll: true });   // focusing must not scroll: the page stays where it is (renderFleet)
   return true;
 }
 
@@ -108,6 +111,9 @@ function renderFleet() {
   if (candSel && (!deckSel || !gunAt(candSel))) candSel = null;   // the card belongs to a picked port's list, and to a gun still there
   const tabs = $("tabs");
   tabs.hidden = !show; tabs.innerHTML = show ? tabsHtml() : "";
+  const gift = $("giftCard"), card = typeof giftCard !== "undefined" ? giftCard : "";   // the first escort's next step (js/escort-gift.js)
+  gift.hidden = !card;
+  gift.innerHTML = card ? `${t(card)} <button class="btn" type="button" data-act="escGift">${t("giftGo")}</button>` : "";
   const rep = $("escRep"), r = typeof escortReport !== "undefined" ? escortReport : null;
   rep.hidden = !(show && r);
   rep.innerHTML = show && r ? `${t("escReport", { n: fmt(r.paid) })}${r.lost.length ? " " + t("escReportSunk", { names: r.lost.join(", ") }) : ""}` : "";
@@ -116,8 +122,14 @@ function renderFleet() {
   deck.style.display = foot.style.display = ship ? "" : "none";
   if (ship) { renderDeck(deck, deckView(tab, ship)); foot.innerHTML = shipFootHtml(ship); berth.innerHTML = ""; }
   else { foot.innerHTML = ""; berth.innerHTML = slotBodyHtml(i); }
-  const ctx = $("ctx"), pick = `${tab}|${hullOpen}|${deckSel ? `${deckSel.side}${deckSel.i}${deckSel.e ?? ""}` : ""}`;
+  const ctx = $("ctx"), wasOpen = ctx.classList.contains("open"), scrolled = sheetEl.scrollTop, pick = `${tab}|${hullOpen}|${deckSel ? `${deckSel.side}${deckSel.i}${deckSel.e ?? ""}` : ""}`;
   ctx.innerHTML = ctxHtml();
-  ctx.classList.toggle("open", !!ship && (hullOpen || !!deckSel));
+  const nowOpen = !!ship && (hullOpen || !!deckSel);
+  ctx.classList.toggle("open", nowOpen);
+  if (!wasOpen && nowOpen) { openScroll = scrolled; openClamped = sheetEl.scrollTop; }   // on the wide two-column page the panel's arrival can itself shorten the sheet: clamped at once
+  // The tall panel going away shortens the sheet and the browser clamps the scroll position: the ship jumps under the player's finger.
+  // When that happened (or it was clamped when the panel opened and the player has not scrolled since), go back to where the page
+  // was before the panel opened (the browser stops at the new end).
+  else if (wasOpen && !nowOpen && Math.abs(sheetEl.scrollTop - openScroll) > 1 && (sheetEl.scrollTop < scrolled - 1 || Math.abs(scrolled - openClamped) <= 1)) sheetEl.scrollTop = openScroll;
   if (pick !== lastPick) { ctx.scrollTop = 0; lastPick = pick; }   // a newly opened panel starts at its top, not where the last one was scrolled to (a phone's bottom sheet scrolls)
 }

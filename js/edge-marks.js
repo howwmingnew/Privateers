@@ -44,14 +44,15 @@ function edgeCandidates(v, kx, ky) {
   const out = [], reach = EDGE_RANGE * gearMul("view") * v.width, me = shipRating();   // one rating for every ship's threat
   const add = (o, it) => {
     const px = Math.hypot(o.x - player.x, o.y - player.y);
-    if (px > reach || px < 1) return;
+    if ((px > reach && !it.far) || px < 1) return;   // far: the harbor's box has no range limit (the "Arrow to Safe Harbor" setting)
+    if (it.far && px > reach) it = { ...it, home: true };   // beyond the usual range it always gets a box (edgePick)
     if (it.boss) it = { ...it, risky: edgeRisky(it.e.threatL ?? it.e.L, seaLowLv(seaOfRing(ringAt(dist(o, PORT))).id), me) };   // the skull warns about the water it points into
     out.push({ ...it, o, px, sx: (o.x - v.x) * kx, sy: (o.y - v.y) * ky });
   };
   for (const e of enemies) if (e.alive && !e.fixed && (e.ally || !(typeof disFogHides === "function" && disFogHides(e)))) add(e, { kind: "ship", e, boss: !!e.boss, ally: !!e.ally, d: e.ally ? 0 : threatTier(e.threatL ?? e.L, me).d });   // an escort that has dropped out of sight keeps a mint box, fog or not
   if (typeof disMarks === "function") for (const h of disMarks()) add(h, { kind: "hazard", hz: h, d: 2 });   // warning or running disasters (js/disasters.js)
   if (portsOff()) return out;   // the daily sea has no harbor or stations (js/ports.js)
-  add(PORT, { kind: "place", place: "harbor", d: 0 });
+  add(PORT, { kind: "place", place: "harbor", d: 0, far: SETTINGS.homeArrow !== false });   // the way home is shown from anywhere on the chart, unless switched off
   if (save.campaign.outpost) add(OUTPOST, { kind: "place", place: "outpost", d: 0 });
   for (const st of STATIONS) add(st, { kind: "place", place: st.kind, d: 0 });   // supply stations and trade ports (js/ports.js)
   return out;

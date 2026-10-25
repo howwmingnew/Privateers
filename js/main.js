@@ -206,9 +206,10 @@ function drawOverlays() {
   if (!titleOpen) for (const e of enemies) {
     if (!e.alive || e.x < v.x - 60 || e.x > v.right + 60 || e.y < v.y - 60 || e.y > v.bottom + 60) continue;
     if (e.badge && e.badge.alpha < 0.5) continue;   // its plate is faded under the HUD corner (js/sea-guard.js): the bar too
-    const w = 46 * lk, h = 4 * lk, x = e.x - w / 2, y = shipTop(e) - 8 * lk;
+    const hurt = e.ally && e.hp / e.maxHp < ESCORT_WARN;   // a badly hurt escort: a wider red bar, blinking, so the fight on its side is seen (#108)
+    const w = (hurt ? 62 : 46) * lk, h = (hurt ? 6 : 4) * lk, x = e.x - w / 2, y = shipTop(e) - 8 * lk;
     bg.fillStyle(0x08222d, 0.8); bg.fillRect(x - lk, y - lk, w + 2 * lk, h + 2 * lk);
-    bg.fillStyle(e.burnT > 0 ? 0xff8a3a : e.ally ? 0x4cf0a8 : 0x86c46f, 1); bg.fillRect(x, y, w * clamp(e.hp / e.maxHp, 0, 1), h);
+    bg.fillStyle(hurt ? 0xe8553f : e.burnT > 0 ? 0xff8a3a : e.ally ? 0x4cf0a8 : 0x86c46f, hurt ? 0.65 + 0.35 * Math.sin(S.time.now * 0.012) ** 2 : 1); bg.fillRect(x, y, w * clamp(e.hp / e.maxHp, 0, 1), h);
   }
   if (player.alive && !docked && player.hp < player.maxHp) {
     const w = 50 * lk, h = 4 * lk, x = player.x - w / 2, y = shipTop(player) - 8 * lk;

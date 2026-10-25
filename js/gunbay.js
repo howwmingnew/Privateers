@@ -28,6 +28,7 @@ Object.assign(STR.en, {
   storeFullWhy: "The gun store is full ({n}): free a place before unloading.",
   movedMount: "Mounted {gun}.", movedShift: "Moved {gun} to another port.", movedSwap: "Swapped {a} and {b}.", movedUnload: "Unloaded {gun} to the store.", gunUndo: "Undo", gunUndone: "Undone.",
   upTo: "Upgrade to Lv {n} ({cost} gold)", upShort: "Upgrade to Lv {n} ({cost} gold, need {d} more)",
+  upNArm: "Tap again to confirm: +{n} levels for {cost} gold", spreadHint: "This gun is already {d} levels above your {gun}. Each level costs 1.5x the last, so spreading the gold over the lower guns pays off more.",
   upN: "Upgrade {n} levels at once ({cost} gold)", upNShort: "Upgrade {n} levels at once: {d} gold short ({cost} in all)", gainDmg: "Damage +{p}%", gainFx: "Effect +{p}%",
   boughtMounted: "Bought a <em>{gun}</em> and mounted it.", putHere: "Put here", candInfo: "Details",
 });
@@ -40,6 +41,7 @@ Object.assign(STR.zh, {
   emptyTip: "空砲位：先點庫存裡的砲，再點這裡裝上。",
   storeFullWhy: "庫存已滿（{n} 門）：先騰出位置才能卸下。",
   movedMount: "已裝上{gun}。", movedShift: "已把{gun}移到另一個砲位。", movedSwap: "已交換{a}與{b}。", movedUnload: "已把{gun}卸下到庫存。", gunUndo: "復原", gunUndone: "已復原。",
+  upNArm: "再點一次確認：升 {n} 級，花 {cost} 金幣", spreadHint: "這門砲已比你的{gun}高 {d} 級。每升一級費用 ×1.5，把錢分給較低級的砲更划算。",
   upTo: "升級到 Lv {n}（{cost} 金幣）", upShort: "升級到 Lv {n}（{cost} 金幣，還差 {d}）",
   upN: "一次升 {n} 級（共 {cost} 金幣）", upNShort: "一次升 {n} 級：還差 {d} 金（共 {cost}）", gainDmg: "火力 +{p}%", gainFx: "效果 +{p}%",
   boughtMounted: "已買下<em>{gun}</em>並裝上。", putHere: "裝到這裡", candInfo: "詳情",
@@ -79,6 +81,9 @@ const gunStats = (g, lv, ship = save.ship, to = 0) => { const G = GUNS[g], k = s
   const was = dmgNum(G.dmg * m), wasB = dmgNum(G.burn * m * BURN_T);
   const m2 = gunLvMul(to) * k, arrow = n => (to ? ` <span class="up">→ ${n}</span>` : "");
   return t("dmg", { n: was }) + (to ? arrow(dmgNum(G.dmg * m2)) : "") + (G.burn ? t("burn", { n: wasB }) + (to ? arrow(dmgNum(G.burn * m2 * BURN_T)) : "") : ""); };
+const armedNow = key => typeof armedTap === "function" && armedTap(key);   // the two-tap confirm lives in js/escort-ui.js (not loaded by the unit tests)
+const confirmed = key => typeof twoTap !== "function" || twoTap(key);
+const up5Key = p => `gup5:${p.side}${p.i}${p.e ?? ""}`;   // the armed state of one port's "upgrade N levels" button (js/escort-ui.js twoTap)
 const gunName = gun => t("gf_" + gun.g) + " Lv " + gun.lv;
 const gunRar = gun => (typeof rarClass === "function" ? rarClass(gun) : "");   // " r0".." r4": the rarity colour of the slot and card (css/gear.css)
 
@@ -97,6 +102,15 @@ const isDest = (side, i, e) => !!deckSel && gunTap(save, deckSel, side, i, e).ki
 // The guns as they stand, for Undo: the four mounts and the store, nothing else (gold, levels of ships are not part of a move).
 const gunSnap = s => ({ ...Object.fromEntries(MOUNTS.map(({ key }) => [key, s[key].slice()])), store: s.store.slice(), shipId: s.shipId,
   esc: (s.escorts || []).map(e => ({ id: e.id, guns: e.guns })) });   // each escort's ports too (the objects are never edited in place)
+// Pure: the lowest-level gun on the same ship as the one at `p`, when that gun stands 2 or more levels above it (the price climbs x1.5 a level, so the
+// next level of the lower gun is the better buy); else null. The ship is the escort's for one of its ports, else the flagship (a stored gun is compared with it too).
+function gunSpread(s, p) {
+  const gun = gunIn(s, p); if (!gun) return null;
+  const ports = p.e != null ? (s.escorts[p.e] || {}).guns || {} : s;
+  const peers = MOUNTS.flatMap(({ key }, k) => (ports[key] || []).map((g, i) => ({ g, here: p.side === key && p.i === i }))).filter(x => x.g && !x.here).map(x => x.g);
+  const low = peers.sort((a, b) => a.lv - b.lv)[0];
+  return low && gun.lv - low.lv >= 2 ? { gun: low, d: gun.lv - low.lv } : null;
+}
 // Pure: the upgrade `n` levels at once: how many levels that really is (the cap stops it), what it costs in all, and the gold missing.
 function gunUpPlan(gun, gold, n = GUN_UP_BATCH) {
   const k = Math.max(0, Math.min(n, GUN_MAX - gun.lv));
@@ -159,6 +173,7 @@ function gunAct(act, d) {
   if (act === "gup" || act === "gup5") {
     const plan = act === "gup5" ? gunUpPlan(gun, save.gold) : { n: gun.lv < GUN_MAX ? 1 : 0, cost: gunUpCost(gun), short: Math.max(0, gunUpCost(gun) - save.gold) };
     if (!plan.n || plan.short > 0) return null;
+    if (act === "gup5" && !confirmed(up5Key(at))) return null;   // a big spend: the first tap arms the button (js/escort-ui.js)
     save = withGun({ ...save, gold: save.gold - plan.cost }, at, { ...gun, lv: gun.lv + plan.n });   // rarity, affixes and lock stay with the gun
     gunNote = null;   // gold was spent: Undo would hand the levels back for free, so it only ever covers a move
     return "upgrade";
@@ -194,7 +209,8 @@ function gunCardHtml(p = deckSel, cand = false) {
   const up = max ? `<button class="btn max" type="button" disabled>${t("max")}</button>`
     : `<button class="btn" type="button" data-act="gup"${pl} ${short > 0 ? "disabled" : ""}>${upgradeLabel(gun.lv + 1, cost, short, gunGain(gun, 1))}</button>`;
   const plan = gunUpPlan(gun, save.gold), up5 = plan.n >= 2   // one level left is just the button above
-    ? `<button class="btn" type="button" data-act="gup5"${pl} ${plan.short > 0 ? "disabled" : ""}>${t(plan.short > 0 ? "upNShort" : "upN", { n: plan.n, cost: fmt(plan.cost), d: fmt(plan.short) })}${gainLine(gunGain(gun, plan.n))}</button>` : "";
+    ? `<button class="btn" type="button" data-act="gup5"${pl} ${plan.short > 0 ? "disabled" : ""}${armedNow(up5Key(p)) ? armAttrs() : ""}>${t(plan.short > 0 ? "upNShort" : armedNow(up5Key(p)) ? "upNArm" : "upN", { n: plan.n, cost: fmt(plan.cost), d: fmt(plan.short) })}${gainLine(gunGain(gun, plan.n))}</button>` : "";
+  const spread = gunSpread(save, p), spreadNote = spread ? `<p class="hint-s spread">${t("spreadHint", { d: spread.d, gun: gunName(spread.gun) })}</p>` : "";
   const full = save.store.length >= MAX_STORE;
   const off = !mounted || cand ? "" : `<button class="btn ghost" type="button" data-act="unload" ${full ? "disabled" : ""}>${t("toStore")}</button>`;
   const x = typeof gearExtraHtml === "function" ? gearExtraHtml(gun, "gun", pl) : null;   // rarity, affixes, re-roll, lock, break down (js/gear-ui.js)
@@ -203,7 +219,7 @@ function gunCardHtml(p = deckSel, cand = false) {
   const name = typeof gearTitle === "function" ? gearTitle(gun) : t("gf_" + gun.g);
   return `<div class="gcard${gunRar(gun)}"><div class="nm">${gunIcon(gun.g + gunMark(gun))}${name}<small>Lv ${gun.lv}${x ? " · " + rarLine(gun) : ""}</small></div><div class="gacts">${acts}</div>
     <div class="ds">${gunStats(gun.g, gun.lv, ship, max ? 0 : gun.lv + 1)} · ${t("range", { n: G.range })} · ${t("rpm", { n: G.rpm })}${G.chain ? t("chainFx", { n: CHAIN_T }) : ""}</div>
-    ${x ? x.list + (mounted ? "" : gunCompareHtml(gun)) : ""}${cand ? "" : `<p class="hint-s">${mounted && full ? t("storeFullWhy", { n: MAX_STORE }) + " " : ""}${t(mounted ? "pickHintPort" : "pickHintStore")}</p>`}</div>`;
+    ${x ? x.list + (mounted ? "" : gunCompareHtml(gun)) : ""}${cand ? "" : `<p class="hint-s">${mounted && full ? t("storeFullWhy", { n: MAX_STORE }) + " " : ""}${t(mounted ? "pickHintPort" : "pickHintStore")}</p>`}${spreadNote}</div>`;
 }
 // "Upgrade to Lv 4 (310 gold)"; with too little gold the same label says how much is missing (the button is disabled then).
 // `gain` (a text) goes under it as a second line: what the upgrade buys (#97), so the price can be weighed against it.
@@ -222,7 +238,7 @@ function armoryHtml() {
     const G = GUNS[id], n = allGuns().filter(x => x.g === id).length;
     const gain = mine && typeof lvGainNewGun === "function" ? lvGainNewGun(id, mounted ? deckSel : null) : "";   // js/lv-path.js
     return `<div class="item"><div class="nm">${gunIcon(id)}${t("gf_" + id)}<small>${t("owned", { n })}</small></div>
-      <button class="btn" type="button" data-act="buy" data-id="${id}" ${save.gold < G.cost || full ? "disabled" : ""}>${t("buy", { n: fmt(G.cost) })}${gainLine(gain)}</button>
+      <button class="btn" type="button" data-act="buy" data-id="${id}" ${save.gold < G.cost || full ? "disabled" : ""}>${save.gold < G.cost ? t("buyNeed", { n: fmt(G.cost), d: fmt(G.cost - save.gold) }) : t("buy", { n: fmt(G.cost) })}${gainLine(gain)}</button>
       <div class="ds">${gunStats(id, 1)} · ${t("range", { n: G.range })} · ${t("rpm", { n: G.rpm })}${G.chain ? t("chainFx", { n: CHAIN_T }) : ""} · ${t("gn_" + id)}</div></div>`;
   }).join("");
 }

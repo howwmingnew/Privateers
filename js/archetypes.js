@@ -136,7 +136,7 @@ function archTactic(e, tg, d, toT, now) {
       // (side gun bearing) for at most KITE_RUN s, then turns to fight and won't run again for KITE_REST s: a cutter
       // that is not faster than its target must not flee for ever
       if (e.kiteUntil > simT) { if (d > R * 0.92) e.kiteUntil = 0; return tac(toT + Math.PI + e.kiteSide * 1.1, 1); }
-      if (d < R * 0.55 && !(e.kiteRest > simT)) {
+      if (d < R * 0.55 && !(e.kiteRest > simT) && !(typeof bossStands === "function" && bossStands(e))) {   // Red Ned holds his ground (#108)
         e.kiteUntil = simT + KITE_RUN; e.kiteRest = simT + KITE_REST; e.kiteSide = nearSide(e, toT);
         return tac(toT + Math.PI + e.kiteSide * 1.1, 1);
       }

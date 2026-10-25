@@ -21,7 +21,10 @@ const NOVICE_NEAR_SHARE = 0.25;   // share of the sea's ships kept in those ring
 const NOVICE_OVER = 1;        // a ship made in the Shallows fights at most this many levels above a novice's rating
 const SEA_WARN_GAP = 3;       // a sea whose lowest level is this far above the captain's rating gets the red warning
 
-const noviceAt = (rating, ring) => rating < NOVICE_LV && ring <= NOVICE_RINGS;
+const NOVICE_PORT_R = 2400;   // until the first bounty is claimed, no ship made within this of the harbor (about two screens: the Shallows, the Reef Straits, the Lanes' edge) fights above noviceCap (#108)
+// Is a ship made d px from the harbor held to noviceCap? claimed: bounties claimed, ng: New Game+ cycles (a returning captain is no novice).
+const noviceHome = (claimed, ng, d) => claimed === 0 && !ng && d < NOVICE_PORT_R;
+const noviceAt =(rating, ring) => rating < NOVICE_LV && ring <= NOVICE_RINGS;
 const noviceCap = rating => rating + NOVICE_OVER;
 const seaWarnGap = (seaLv, rating) => seaLv - rating >= SEA_WARN_GAP;
 

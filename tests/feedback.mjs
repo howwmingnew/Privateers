@@ -202,6 +202,11 @@ await ev(() => goBack());   // the pad's back button and Esc both come here (js/
 check((await bayState()).sel === null, "the pad's back button (goBack) puts the picked port down");
 await tap(S1("bow", 0)); await page.keyboard.press("Escape");
 check((await bayState()).sel === null, "Esc puts it down");
+// #110: closing the panel must not move the page (the tall panel going away used to clamp the scroll and the deck jumped)
+await ev(() => { document.querySelector("#port .sheet").scrollTop = 120; });
+await tap(S1("bow", 0)); await page.keyboard.press("Escape");
+const scrolled = await ev(() => document.querySelector("#port .sheet").scrollTop);
+check(Math.abs(scrolled - 120) <= 1, `Esc closes the panel and the sheet stays where it was (${scrolled} of 120)`);
 // unload; a full store refuses and never drops a gun
 await tap(S1("bow", 0)); await tap('#ctx [data-act="unload"]');
 g68 = await bayState();
@@ -217,6 +222,10 @@ await ev(() => { save.store = [gunItem("chain", 1)]; deckSel = null; renderPort(
 await tap(S1("bow", 0));
 const up = await ev(() => { const gun = save.bow[0], plan = gunUpPlan(gun, save.gold), b = document.querySelector('#ctx [data-act="gup5"]'); let sum = 0; for (let j = 0; j < 5; j++) sum += gunUpCost({ ...gun, lv: gun.lv + j }); return { label: b.textContent, sum, plan, gold: save.gold, dis: b.disabled }; });
 check(up.plan.n === 5 && up.plan.cost === up.sum && !up.dis && up.label.includes(up.sum.toLocaleString("en-US")), `Upgrade x5 shows the five levels' total (${up.label})`);
+await tap('#ctx [data-act="gup5"]');   // a big spend: the first tap only arms the button (#110)
+g68 = await bayState();
+check(g68.bow === "six1" && g68.gold === up.gold && /Tap again to confirm/.test(await ev(() => document.querySelector('#ctx [data-act="gup5"]').textContent)), "the first tap on Upgrade x5 only asks to confirm; nothing is spent");
+await page.waitForTimeout(450);   // a double-click is not a second tap
 await tap('#ctx [data-act="gup5"]');
 g68 = await bayState();
 check(g68.bow === "six6" && g68.gold === up.gold - up.sum, `buying it: Lv 1 -> 6 for exactly ${up.sum} gold`);

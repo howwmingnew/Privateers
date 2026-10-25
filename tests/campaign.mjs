@@ -98,6 +98,7 @@ console.log("Fresh campaign (desktop, en)");
   // spawning: record every quota spawn, then park the player in each ring for 30 simulated seconds
   await page.evaluate(() => {
     window.__spawns = [];
+    window.__bounty0 = save.campaign.bounty; save.campaign = { ...save.campaign, bounty: 1 };   // the open sea: a newcomer's cap near the harbor (#108) is checked below
     const orig = spawnEnemy;
     spawnEnemy = function (sc, at) { const e = orig(sc, at); if (e && !at) __spawns.push({ L: e.L, d: Math.hypot(e.x - PORT.x, e.y - PORT.y) }); return e; };
     setSail(); paused = true; player.maxHp = 1e6;
@@ -116,6 +117,19 @@ console.log("Fresh campaign (desktop, en)");
   for (const row of rows) console.log(`        r=${row.r} ring ${row.ring}: per ring ${row.count.join(" ")} | total ${row.total} | near share ${row.nearShare} | within 1500px ${row.within1500}`);
   const sp = await page.evaluate(() => ({ n: __spawns.length, bad: __spawns.filter(s => s.L !== ringAt(s.d)).length, levels: [...new Set(__spawns.map(s => s.L))].sort((a, b) => a - b) }));
   check(sp.bad === 0, `every spawn's level comes from its distance (${sp.n} spawns, ${sp.bad} off)`);
+  // #108: before the first bounty is claimed no ship made within two screens of the harbor fights above a newcomer's cap, in any sea (not only the Shallows)
+  const nov = await page.evaluate(() => {
+    save.campaign = { ...save.campaign, bounty: 0 };
+    for (const e of enemies) { e.alive = false; e.spr.destroy(); e.badge?.destroy(); }
+    enemies.length = 0;
+    player.x = PORT.x + 1740; player.y = PORT.y;   // the Reef Straits
+    for (let i = 0; i < 600; i++) { player.hp = player.maxHp; step(0.05); }
+    const cap = noviceCap(shipRating()), near = enemies.filter(e => e.alive && isOrdinary(e) && dist(e, PORT) < NOVICE_PORT_R);
+    const out = { n: near.length, over: near.filter(e => (e.threatL ?? e.L) > cap).map(e => `Lv${e.threatL ?? e.L}@${Math.round(dist(e, PORT))}`), cap };
+    save.campaign = { ...save.campaign, bounty: window.__bounty0 };
+    return out;
+  });
+  check(nov.n >= 5 && nov.over.length === 0, `a newcomer meets nothing above Lv ${nov.cap} within ${nov.n} ships made near the harbor (${nov.over})`);
   check(sp.levels.join() === "1,2,3,4,5,6,7,8,9,10", `spawns cover Lv 1-10 (${sp.levels})`);
   // Far rings hold 1-2 ships each, so one of them can sit empty for a moment between a sinking and the next top-up
   // (spawns come every 1.2 s); the rings around the player never may.
@@ -149,10 +163,15 @@ console.log("Fresh campaign (desktop, en)");
   const arrow =await page.evaluate(() => ({ arrow: !bossArrow.hidden || !!document.querySelector("#edgeMarks .em.boss:not(.gone)"), mini: !!activeBounty() }));
   check(arrow.arrow, "edge arrow (or, within range, the bounty's edge box) points at the bounty while it is off screen");
   await o.shot("desktop-en-3-arrow");
-  await page.evaluate(() => { const b = enemies.find(e => e.boss); player.x = b.x - 280; player.y = b.y + 40; player.rot = 0; b.target = null; });
+  await page.evaluate(() => { const b = enemies.find(e => e.boss); player.x = b.x - 280; player.y = b.y + 40; player.rot = 0; b.target = null; S.cameras.main.centerOn(player.x, player.y); });   // the camera follows the jump: the bar shows for a boss on screen
   await page.waitForTimeout(700 * SLOW);
   const near = await page.evaluate(() => ({ bar: !bossBar.hidden, arrow: !bossArrow.hidden, name: bossBar.textContent }));
   check(near.bar && !near.arrow && /Red Ned/.test(near.name), `boss bar shows when close, arrow hides (${near.name})`);
+  // #108: a boss that has sailed off the screen (still close) shows no bar: the edge marker points the way instead
+  const offscreen = await page.evaluate(async () => { const b = enemies.find(e => e.boss); b.x = player.x + 900; b.y = player.y; b.target = null; S.cameras.main.centerOn(player.x, player.y);
+    await new Promise(r => setTimeout(r, 400)); return { bar: !bossBar.hidden, on: onScreen(b.x, b.y, 40) }; });
+  check(!offscreen.on && !offscreen.bar, `the boss bar folds away while the boss is off screen (${JSON.stringify(offscreen)})`);
+  await page.evaluate(() => { const b = enemies.find(e => e.boss); b.x = player.x + 280; b.y = player.y; });
   await o.shot("desktop-en-4-boss");
 
   const expect = [["ned", 3, "schooner"], ["carey", 5, "brig"], ["saint", 7, "frigate"], ["hale", 9, "line"], ["thorne", 10, null]];
@@ -186,12 +205,13 @@ console.log("Fresh campaign (desktop, en)");
       const o1 = await page.evaluate(() => { sendHome(), dock("return"); setSail(); for (const c of crates) if (!c.wreck) c.value = 0;
         player.x = OUTPOST.x + 420; player.y = OUTPOST.y; player.hp = player.maxHp; cargo = 120; return save.gold; });
       await page.waitForTimeout(300 * SLOW);
+      await page.evaluate(() => { window.__sold = 0; onHook("sale", n => { window.__sold += n; }); });   // a hit on the approach spills part of the hold: compare with what was really sold
       await page.evaluate(() => { for (const c of crates) if (!c.wreck) c.value = 0; cargo = 120; player.x = OUTPOST.x + 70; player.y = OUTPOST.y + 30; player.hp = player.maxHp; });
       await page.waitForFunction(() => docked, null, { timeout: 7000 * SLOW }).catch(() => {});   // sold on the way in, ledger after 3 s stopped (js/mooring.js)
-      const op = await page.evaluate(() => ({ docked, atOutpost, gold: save.gold, title: document.getElementById("portTitle").textContent,
+      const op = await page.evaluate(() => ({ docked, atOutpost, gold: save.gold, sold: window.__sold, title: document.getElementById("portTitle").textContent,
         fleet: document.getElementById("deck").closest("section").hidden, gear: document.getElementById("gear").closest("section").hidden }));
       check(op.docked && op.atOutpost && op.title === "Hulk Outpost", `docks at the outpost ("${op.title}")`);
-      check(op.gold - o1 === 120, `outpost buys the hold (${o1} -> ${op.gold})`);
+      check(op.sold > 0 && op.gold - o1 === op.sold, `outpost buys the hold (${o1} -> ${op.gold}, sold ${op.sold}; a hit on the approach may have spilled some)`);
       check(op.fleet && op.gear, "outpost has no gun deck, armoury or shipyard (they all live under the fleet tabs)");
       await o.shot("desktop-en-6-outpost");
       const tr = await page.evaluate(() => { setSail(); return { truce: inSafe(player), near: nearestHarbor().outpost }; });
