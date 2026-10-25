@@ -8,6 +8,7 @@ export const MAP = [
   [/^js\/(gun|deck-art|volley|powder|arsenal)/, ["gundeck", "phase1b"]],
   [/^js\/(heat|ports|world-seas|forts)/, ["heat", "ports", "daily-ports"]],
   [/^js\/(escort|fleet)/, ["escorts", "fleet"]],
+  [/^js\/flee/, ["flee"]],
   [/^js\/(boarding|grapple)/, ["boarding"]],
   [/^js\/(disasters|weather|sea-fx)/, ["disasters", "weather"]],
   [/^js\/audio/, ["audio"]],

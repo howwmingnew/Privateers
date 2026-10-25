@@ -183,6 +183,7 @@ function think(e, dt) {
   if (e.fleet) { const c = fleetSteer(e, tg, fd, fToT, now); if (c) ({ desired, thr } = c); }   // formation, flanking, a lost lead (js/fleet.js)
   const plunder = typeof aipSeek === "function" && (desired == null || (tg && dist(e, tg) >= AIP_BREAK)) ? aipSeek(e, tg ? dist(e, tg) : 0, dt) : null;   // loose loot (js/ai-plunder.js)
   if (plunder) ({ desired, thr } = plunder);
+  if (typeof fleeSteer === "function") { const c = fleeSteer(e, now); if (c) ({ desired, thr } = c); }   // outmatched or beaten: run, downwind if it helps (js/flee.js)
   if (typeof disDodge === "function") { const c = disDodge(e); if (c) ({ desired, thr } = c); }   // clear of a disaster that has been noticed (js/disasters.js)
   if (desired == null && e.merchant) {
     // merchants run from any pirate or the player that comes close, even before a shot is fired
