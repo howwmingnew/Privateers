@@ -38,6 +38,7 @@ async function openSea(viewport, { mobile = false } = {}) {
     player.x = PORT.x + 1500; player.y = PORT.y; player.speed = 0; moved = true;
     for (const e of enemies) { e.x = W - 200; e.y = H - 200; }
     window.managePopulation = () => {};   // the sea spawns nothing new
+    window.__gt = 0; onHook("frame", dt => { window.__gt += dt; });   // game seconds actually simulated
     window.__calm = setInterval(() => { for (const e of enemies) if (!e.mine && !(e.angry > 5)) { e.x = W - 200; e.y = H - 200; } }, 40);
   });
   await page.waitForFunction(() => !bannerBusy(), null, { timeout: 15000 * SLOW });
@@ -133,7 +134,9 @@ async function ledgerCheck(pg, id, expect) {
         const st = STATIONS.find(s => s.id === id), e = makeEnemy(S, st.x + dx, st.y + dy, 6, faction, cls); e.mine = true;
         e.rot = Math.atan2(-dy, -dx); e.wander = { x: st.x, y: st.y }; e.thinkT = 8;
         const tr = [];
-        for (let i = 0; i < 60; i++) { await new Promise(r => setTimeout(r, 250 * scale)); tr.push({ d: Math.hypot(e.x - st.x, e.y - st.y), v: e.speed / e.maxSpeed, alive: e.alive }); }
+        // 15 s of GAME time (the frames' own clamped dt), not wall time: a busy machine renders slowly and the game clamps each frame to 50 ms
+        const g0 = window.__gt;
+        for (let i = 1; i <= 60; i++) { const t0 = performance.now(); while (window.__gt < g0 + i * 0.25 && performance.now() - t0 < 20000 * scale) await new Promise(r => setTimeout(r, 25)); tr.push({ d: Math.hypot(e.x - st.x, e.y - st.y), v: e.speed / e.maxSpeed, alive: e.alive }); }
         res.push({ id, cls, dx, dy, startD: Math.hypot(dx, dy), alive: tr.every(p => p.alive), meanV: tr.reduce((a, p) => a + p.v, 0) / tr.length, endD: tr.at(-1).d, truce: inTruce(e) });
         e.alive = false; e.spr.setVisible(false); e.x = e.y = 200;
       }
@@ -165,7 +168,7 @@ async function ledgerCheck(pg, id, expect) {
   });
   const trades = Object.entries(px).filter(([id]) => id.startsWith("trade")), supplies = Object.entries(px).filter(([id]) => id.startsWith("supply"));
   ok("minimap draws every trade port as a gold diamond and every supply station as a green cask",
-    trades.every(([, c]) => c.gold >= 3 && c.leaf === 0) && supplies.every(([, c]) => c.leaf >= 3 && c.gold === 0), px);
+    trades.every(([, c]) => c.gold >= 3 && c.leaf <= 1) && supplies.every(([, c]) => c.leaf >= 3 && c.gold <= 1), px);   // <= 1: a stray pixel of a passing ship's or crate's colour is not the mark
   const leg = await ev(page, () => {
     const out = {};
     for (const m of ["supply", "tradeport"]) {

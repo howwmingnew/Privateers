@@ -29,7 +29,14 @@ await page.evaluate(() => {
   __gone(enemies.slice());   // only the ships a check places itself are afloat, so nothing else can shoot or sink them
   save.tutorialDone = true; tutorialReset();
 });
-const wait = ms => page.waitForTimeout(ms * SLOW);
+// The game clamps each frame to 50 ms, so on a busy machine less game time passes than wall time: count the frames' own dt
+// (frame hook) and make every wait last until the sim has really run that long, not just the wall clock.
+await page.evaluate(() => { window.__gt = 0; onHook("frame", dt => { window.__gt += dt; }); });
+const wait = async ms => {
+  const g0 = await page.evaluate(() => window.__gt);
+  await page.waitForTimeout(ms * SLOW);
+  await page.waitForFunction(([g0, s]) => window.__gt >= g0 + s * 0.9, [g0, ms / 1000], { timeout: 20000 * SLOW, polling: 50 });
+};
 
 // the island nearest the harbor but outside its safe waters and away from the outpost, and a point d px off it, port side
 const approach = (d, speedK) => page.evaluate(([d, speedK]) => {
@@ -79,7 +86,8 @@ const ram = cls => page.evaluate(async cls => {
   e.speed = 0; e.rot = 0; e.hp = e.maxHp; window.__land.length = 0;
   Object.assign(player, { x: x0, y: y0, rot: 0, hp: player.maxHp, alive: true }); player.crashBook = new Map();
   const drive = setInterval(() => { player.rot = 0; player.speed = player.maxSpeed; e.speed = 0; }, 8);
-  await new Promise(r => setTimeout(r, 2200)); clearInterval(drive); player.speed = 0;
+  const t0 = performance.now(); while (!(window.__land.some(x => x.s === player) && window.__land.some(x => x.s === e)) && performance.now() - t0 < 15000) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 300)); clearInterval(drive); player.speed = 0;
   const f = o => { const l = window.__land.find(x => x.s === o); return l ? l.dmg / o.maxHp : 0; };
   const out = { pl: f(player), en: f(e), enAlive: e.alive, plAlive: player.alive, mass: [hullMass(player), hullMass(e)] };
   __gone(list);
@@ -99,7 +107,9 @@ const touch = await page.evaluate(async () => {
   e.speed = 0; e.rot = 0; e.hp = e.maxHp; window.__land.length = 0;
   Object.assign(player, { x: x0, y: y0, rot: 0, hp: player.maxHp, alive: true }); player.crashBook = new Map();
   const drive = setInterval(() => { player.rot = 0; player.speed = player.maxSpeed * 0.15; e.speed = 0; }, 8);
-  await new Promise(r => setTimeout(r, 1500)); clearInterval(drive); player.speed = 0;
+  // wait until both hulls have been touched (up to 15 s wall) instead of a fixed sleep: a busy machine renders few frames
+  const t0 = performance.now(); while ((player.maxHp - player.hp <= 0 || e.maxHp - e.hp <= 0) && performance.now() - t0 < 15000) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 200)); clearInterval(drive); player.speed = 0;
   const out = { pl: player.maxHp - player.hp, en: e.maxHp - e.hp, blows: window.__land.length };
   __gone(list); return out;
 });
@@ -111,7 +121,8 @@ const ai = await page.evaluate(async () => {
   for (const s of list) { s.hp = s.maxHp; s.speed = 0; }
   a.rot = 0; b.rot = Math.PI; window.__land.length = 0;
   const drive = setInterval(() => { a.speed = a.maxSpeed; b.speed = b.maxSpeed; }, 8);
-  await new Promise(r => setTimeout(r, 1800)); clearInterval(drive); a.speed = b.speed = 0;
+  const t0 = performance.now(); while (!(window.__land.some(x => x.s === a) && window.__land.some(x => x.s === b)) && performance.now() - t0 < 15000) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 300)); clearInterval(drive); a.speed = b.speed = 0;
   const f = o => { const l = window.__land.find(x => x.s === o); return l ? l.dmg / o.maxHp : 0; };
   const out = { a: f(a), b: f(b), blows: window.__land.length, pos: [a.x, a.y, b.x, b.y, a.speed], alive: a.alive && b.alive };
   __gone(list);
