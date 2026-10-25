@@ -109,7 +109,8 @@ console.log("Fresh campaign (desktop, en)");
   // the previous step left the camera out west, where Red Ned's lair is; snap it home so the boss is truly off screen.
   // A fresh save is still on its first voyage, which holds the bounty back (js/campaign.js): call the tutorial done.
   await page.evaluate(() => { save.tutorialDone = true; sendHome(), dock("return"); setSail(); S.cameras.main.centerOn(player.x, player.y); });
-  await page.waitForTimeout(400 * SLOW);
+  // the arrow / edge box is placed on a frame of its own after the camera settles, and edge marks sit out banners: wait for it
+  await page.waitForFunction(() => !bossArrow.hidden || !!document.querySelector("#edgeMarks .em.boss:not(.gone)"), null, { timeout: 8000 * SLOW }).catch(() => {});
   // within the edge markers' range the bounty's skull box (with its distance, js/edge-marks.js) stands in for the arrow
   const arrow =await page.evaluate(() => ({ arrow: !bossArrow.hidden || !!document.querySelector("#edgeMarks .em.boss:not(.gone)"), mini: !!activeBounty() }));
   check(arrow.arrow, "edge arrow (or, within range, the bounty's edge box) points at the bounty while it is off screen");
@@ -162,12 +163,13 @@ console.log("Fresh campaign (desktop, en)");
       check(tr.truce && tr.near, "sailing out of the outpost starts inside its truce water");
     }
   }
-  await page.waitForTimeout(3200 * SLOW);
+  await page.waitForFunction(() => !vicEl.hidden, null, { timeout: 20000 * SLOW });   // the ending's own delay runs on game time: wait for it, not a fixed sleep
   const vic = await page.evaluate(() => ({ shown: !vicEl.hidden, paused, txt: vicEl.textContent }));
   check(vic.shown && vic.paused && /Free Port Stands/.test(vic.txt) && /Time played/.test(vic.txt), "victory screen after Admiral Thorne, with the captain's stats");
   await o.shot("desktop-en-7-victory");
   // a fire key still held from the last broadside must not dismiss the ending: presses inside the grace period are ignored
-  await page.click("[data-v=keep]"); await page.waitForTimeout(100 * SLOW);
+  // (the grace runs on wall-clock time from the screen opening: restart it right at the press so a slow machine cannot outlast it)
+  await page.evaluate(() => { vicShownAt = performance.now(); vicLastTry = 0; document.querySelector("[data-v=keep]").click(); });
   check(await page.evaluate(() => !vicEl.hidden), "a press right as the victory screen opens does not skip it");
   await page.waitForTimeout(1300 * SLOW);
   await page.click("[data-v=keep]"); await page.waitForTimeout(200 * SLOW);
@@ -211,7 +213,7 @@ console.log("Fresh campaign (desktop, en)");
   check(lv.bad === 0 && lv.min >= 4 && lv.boss === 6, `New Game+ enemies are ring level +3 (min Lv ${lv.min}, Red Ned Lv ${lv.boss})`);
   for (let i = 0; i < 5; i++) await claim(page, i);
   await page.evaluate(() => { player.maxHp = 100; hurt(player, 1e9, 0, null); });   // the Admiral's escorts sink us right after: the ending still comes
-  await page.waitForTimeout(3200 * SLOW);
+  await page.waitForFunction(() => !vicEl.hidden, null, { timeout: 20000 * SLOW });
   const die = await page.evaluate(() => ({ vic: !vicEl.hidden, docked }));
   check(die.vic && die.docked, "sunk right after the final kill: the victory screen still shows, over the harbor");
   await page.waitForTimeout(1300 * SLOW);   // past the victory screen's input grace
@@ -320,7 +322,7 @@ for (const [tag, vp, mobile] of [["desktop", DESK, false], ["mobile", PHONE, tru
   await p2.click("[data-camp=log]"); await p2.waitForTimeout(200 * SLOW);
   await o2.shot(`${tag}-${lang}-4-log`);
   await p2.evaluate(() => closeLog());
-  await claim(p2, 4); await p2.waitForTimeout(3200 * SLOW);
+  await claim(p2, 4); await p2.waitForFunction(() => !vicEl.hidden, null, { timeout: 20000 * SLOW }).catch(() => {});
   check(await p2.evaluate(() => !vicEl.hidden), `${tag} ${lang}: victory screen shows`);
   await o2.shot(`${tag}-${lang}-5-victory`);
   await done(`${tag} ${lang}`, o2);

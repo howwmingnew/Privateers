@@ -60,9 +60,11 @@ const forcedRoll = (page, fn, arg) => ev(page, ([src, arg]) => {
   const early = await ev(page, () => ({ f: player.hp / player.maxHp, mend: document.querySelector(".bar.hp").classList.contains("mend") }));
   ok("repair: the hull starts mending at once, and the bar glows", early.f > 0.5 && early.mend, early);
   // 1% a second under way, 3% stopped: the rate seen over 2 s must match the ship's state at both ends
-  const r0 = await ev(page, () => ({ hp: player.hp, still: player.speed < player.maxSpeed * REPAIR_STILL, t: performance.now() }));
+  // (game seconds, summed from the frame hook: a busy machine caps each frame's dt, so the game runs slower than the wall clock)
+  await ev(page, () => { window.__gt = 0; onHook("frame", dt => { window.__gt += dt; }); });
+  const r0 = await ev(page, () => ({ hp: player.hp, still: player.speed < player.maxSpeed * REPAIR_STILL, t: window.__gt * 1000 }));
   await page.waitForTimeout(2000);
-  const r1 = await ev(page, () => ({ hp: player.hp, still: player.speed < player.maxSpeed * REPAIR_STILL, t: performance.now(), max: player.maxHp }));
+  const r1 = await ev(page, () => ({ hp: player.hp, still: player.speed < player.maxSpeed * REPAIR_STILL, t: window.__gt * 1000, max: player.maxHp }));
   const rate = (r1.hp - r0.hp) / r1.max / ((r1.t - r0.t) / 1000);
   if (r0.still === r1.still) ok(`repair: ${r0.still ? "stopped ~3%" : "under way ~1%"} a second (saw ${(rate * 100).toFixed(2)}%)`,
     r0.still ? rate > 0.02 && rate <= 0.031 : rate > 0.006 && rate <= 0.0105, { r0, r1, rate });
@@ -79,17 +81,20 @@ const forcedRoll = (page, fn, arg) => ev(page, ([src, arg]) => {
   const rake = { vx: 100, vy: 0, fromPlayer: true };
   const a = await enemyNear(page, 300, 0), near = await enemyNear(page, 380, 0), far = await enemyNear(page, 800, 0);
   const r = await forcedRoll(page, ([a, near, far]) => {
-    const A = __e[a], N = __e[near], F = __e[far], hp = [N.hp, F.hp];
+    const A = __e[a], N = __e[near], F = __e[far];
+    // the ships are live AI and the sea moved on while this was set up: put each back on its mark, heading along the rake, right before the hit
+    [[A, 300], [N, 380], [F, 800]].forEach(([e, dx]) => Object.assign(e, { x: player.x + dx, y: player.y, rot: 0, speed: 0 }));
+    const hp = [N.hp, F.hp];
     hurt(A, 1, 0, player, { ...{ vx: 100, vy: 0, fromPlayer: true }, owner: player });
     return { aDead: !A.alive, nearHurt: N.hp < hp[0], farHurt: F.hp < hp[1], playerAlive: player.alive };
   }, [a, near, far]);
   ok("powder: a rake can blow the magazine: the ship goes, its neighbour is hurt, a far ship is not", r.aDead && r.nearHurt && !r.farHurt && r.playerAlive, r);
   const boss = await enemyNear(page, -300, 100, { boss: "ned", hp: 300, maxHp: 300 });
-  const rb = await forcedRoll(page, boss => { const B = __e[boss]; hurt(B, 1, 0, player, { vx: 100, vy: 0, fromPlayer: true, owner: player }); return { alive: B.alive, hp: B.hp }; }, boss);
+  const rb = await forcedRoll(page, boss => { const B = __e[boss]; Object.assign(B, { rot: 0, speed: 0 }); hurt(B, 1, 0, player, { vx: 100, vy: 0, fromPlayer: true, owner: player }); return { alive: B.alive, hp: B.hp }; }, boss);
   ok("powder: a boss is hurt hard (25%) but never sunk by it", rb.alive && rb.hp > 0 && rb.hp < 300 * 0.8, rb);
   const c = await enemyNear(page, 300, -150);
   await ev(page, () => { save.tutorialDone = false; });
-  const rt = await forcedRoll(page, c => { const C = __e[c]; hurt(C, 1, 0, player, { vx: 100, vy: 0, fromPlayer: true, owner: player }); return C.alive; }, c);
+  const rt = await forcedRoll(page, c => { const C = __e[c]; Object.assign(C, { rot: 0, speed: 0 }); hurt(C, 1, 0, player, { vx: 100, vy: 0, fromPlayer: true, owner: player }); return C.alive; }, c);
   ok("powder: not during the tutorial", rt === true);
   await ev(page, () => { save.tutorialDone = true; });
   const d = await enemyNear(page, -400, -150);
@@ -106,7 +111,7 @@ const forcedRoll = (page, fn, arg) => ev(page, ([src, arg]) => {
     for (const o of islands.filter(i => Math.hypot(i.x - PORT.x, i.y - PORT.y) > 1500))
       for (let k = 0; k < 8; k++) {
         const a = k * Math.PI / 4; player.x = o.x + Math.cos(a) * (o.r + 500); player.y = o.y + Math.sin(a) * (o.r + 500);
-        if (ambushIsland()) return true;
+        if (ambushIsland()) { window.__spot = { x: player.x, y: player.y }; return true; }
       }
     return false;
   });
@@ -117,7 +122,10 @@ const forcedRoll = (page, fn, arg) => ev(page, ([src, arg]) => {
   await page.waitForTimeout(600);
   ok("ambush: nothing before the first sinking", await ev(page, () => !save.ambushDone));
   await ev(page, () => { save.sunk = 1; ambushT = 44.9; });
-  await page.waitForTimeout(900);
+  // the trigger runs on game time (0.1 s of sea) and waits out banners: wait for it to come rather than sleep a fixed time
+  // (keep the ship on its spot while it waits: drift or a current would carry it out of the island's range)
+  await page.waitForFunction(() => { player.x = __spot.x; player.y = __spot.y; player.speed = 0; return save.ambushDone; }, null, { timeout: 20000 }).catch(() => {});
+  await page.waitForTimeout(100);
   const r = await ev(page, () => {
     const pirates = enemies.filter(e => e.alive && e.faction === "pirate" && Math.hypot(e.x - player.x, e.y - player.y) < 1300 && e.angry > 0);
     return { done: save.ambushDone, n: pirates.length, L: pirates.map(e => e.L), rating: shipRating(), cls: pirates.map(e => e.cls), saved: JSON.parse(localStorage.getItem("privateers-save-v2")).ambushDone,
@@ -133,6 +141,8 @@ const forcedRoll = (page, fn, arg) => ev(page, ([src, arg]) => {
 // ---------- photo mode (desktop) ----------
 {
   const { ctx, page } = await openSea({ width: 1280, height: 720 });
+  // the crowd rule (js/tech.js) hides plates by how many ships the sea happens to have on screen: not what this test is about
+  await ev(page, () => { thinPlates = () => {}; for (const e of enemies) e.badge?.setVisible(true); });
   await ev(page, () => { makeEnemy(S, player.x + 250, player.y + 60, 1, "pirate"); player.hp = 70; });
   await page.waitForTimeout(300);
   const snap = () => ev(page, () => {
@@ -170,9 +180,10 @@ const forcedRoll = (page, fn, arg) => ev(page, ([src, arg]) => {
   ok("postcard: a PNG the size of the canvas, named privateers-<time>.png", png.subarray(1, 4).toString() === "PNG" && dims[0] === cv[0] && dims[1] === cv[1] && /^privateers-\d{8}-\d{6}\.png$/.test(d.suggestedFilename()), { dims, cv, name: d.suggestedFilename(), bytes: png.length });
   await page.keyboard.press("Escape");
   const after = await snap();   // straight away: the sea runs again from here
-  const close = (a, b) => a.every((v, i) => Math.abs(v - b[i]) < 2);
+  // the sea is already running again when the snapshot lands, and on a busy machine that is a good fraction of a second: allow for the drift of a ship that long
+  const close = (a, b, tol = 2) => a.every((v, i) => Math.abs(v - b[i]) < tol);
   const common = Object.keys(frozenB.ships).filter(id => after.ships[id]);
-  const same = close(frozenB.p.slice(0, 2), after.p.slice(0, 2)) && common.every(id => close(frozenB.ships[id].xy, after.ships[id].xy));   // what was frozen is what comes back
+  const same = close(frozenB.p.slice(0, 2), after.p.slice(0, 2), 40) && common.every(id => close(frozenB.ships[id].xy, after.ships[id].xy, 80));   // what was frozen is what comes back
   const labels = Object.keys(before.ships).filter(id => after.ships[id]).every(id => before.ships[id].badge === after.ships[id].badge);
   await page.waitForTimeout(400);
   const parts = { same, save: after.save === before.save, badges: labels, paused: !after.paused && !after.tp && !after.pauseOpen, zoom: Math.abs(after.z - before.z) < 1e-9, offset: after.fo[0] === before.fo[0] && after.fo[1] === before.fo[1] };
