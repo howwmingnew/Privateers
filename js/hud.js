@@ -56,16 +56,17 @@ function drawMini() {
   }
   mctx.drawImage(miniBase, 0, 0);
   const treasure = new Set(typeof fortSites !== "undefined" ? fortSites.map(s => s.crate).filter(Boolean) : []);
+  const me = shipRating();   // once for every fort and ship mark: it walks every gun and the power table
   // bottom to top: chests and wrecks, forts, ordinary ships, the harbor and outpost, ships that are close and stronger, the bounty, you
   for (const c of crates) if (!c.wreck) miniChest(mctx, c.x * k, c.y * k, u, treasure.has(c));
   for (const c of crates) if (c.wreck) miniWreck(mctx, c.x * k, c.y * k, u);
-  if (typeof fortSites !== "undefined") for (const s of fortSites) if (s.hp !== 0) miniFort(mctx, s.x * k, s.y * k, s.L, u);
+  if (typeof fortSites !== "undefined") for (const s of fortSites) if (s.hp !== 0) miniFort(mctx, s.x * k, s.y * k, s.L, u, me);
   drawMiniShips(mctx, k, u, () => {
     if (portsOff()) return;   // the daily sea has no harbor or stations (js/ports.js)
     miniHarbor(mctx, PORT.x * k, PORT.y * k, u);
     if (save.campaign.outpost) miniOutpost(mctx, OUTPOST.x * k, OUTPOST.y * k, u);
     for (const st of STATIONS) miniStation(mctx, st.kind, st.x * k, st.y * k, u);   // supply stations and trade ports (js/ports.js)
-  });
+  }, me);
   runHook("mini", mctx, k, u);   // the bounty's skull (js/campaign-ui.js)
   miniPlayer(mctx, player.x * k, player.y * k, player.rot, u);
   mctx.restore();

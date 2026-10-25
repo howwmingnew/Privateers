@@ -10,7 +10,7 @@
 //   Snd.ambience("sea" | "harbor" | null) · Snd.setShore(0..1, pan)   ambience; how close land is (gulls, surf)
 //   Snd.setWeather(rain, wind, storm)  each 0..1: rain and gale beds, the score muffled in a storm (js/weather.js)
 //   Snd.setVolume(bus, 0..1) · Snd.getVolume(bus)                     bus = master | music | sfx | ambient
-//   Snd.setMuted(b) · Snd.toggleMute() · Snd.isMuted()
+//   Snd.setMuted(b) · Snd.toggleMute() · Snd.isMuted()                muted, the context is suspended too (state() reads "suspended")
 //   Snd.pauseAll(reason) · Snd.resumeAll(reason)                       the tab being hidden pauses on its own
 // Signal flow: voices -> sfx / music / ambient buses (+ a shared reverb) -> mix -> limiter -> master -> soft clip.
 // The music and ambience pass through sidechain gains that dip under the player's guns and nearby impacts, so the
@@ -33,6 +33,7 @@ const Snd = (() => {
   const LIMIT = { thr: -4, knee: 3, ratio: 16, att: 0.002, rel: 0.1, pre: 0.7 };   // master limiter, and the gain into the soft clip
   const SEA_THEME = { shallows: "sea", reef: "sea_reef", lanes: "sea_lanes", maelstrom: "sea_maelstrom" };
   const taper = v => v * v;                       // slider position -> gain, so halfway sounds about half as loud
+  const HUSH_MS = 250;                            // muted: the master fades out (applyVol), then the whole graph is suspended
 
   // ---------- settings: per-bus volume and mute, merged into a shared settings object ----------
   function readSettings() {
@@ -321,6 +322,7 @@ const Snd = (() => {
     bus.sfxWet = G(taper(vol.sfx)); bus.ambWet = G(taper(vol.ambient)); bus.sfxWet.connect(verb); bus.ambWet.connect(verb);
     const mWet = G(0.25); bus.music.connect(mWet); mWet.connect(verb);
     setInterval(tick, TICK_MS);
+    if (muted) ctx.suspend().catch(() => {});   // built on the first gesture, but a muted game keeps it still: no reverb, sea bed or score running at zero gain
   }
   function unlock() {
     if (broken || pauses.size) return;
@@ -329,10 +331,11 @@ const Snd = (() => {
       if (wantAmb) ambience(wantAmb);
       apply();
     }
-    if (ctx.state !== "running") ctx.resume().catch(() => {});
+    if (ctx.state !== "running" && !muted) ctx.resume().catch(() => {});
   }
   function pauseAll(reason = "user") { pauses.add(reason); if (ctx) ctx.suspend().catch(() => {}); }
-  function resumeAll(reason = "user") { pauses.delete(reason); if (ctx && !pauses.size) ctx.resume().catch(() => {}); }
+  function resumeAll(reason = "user") { pauses.delete(reason); if (ctx && !pauses.size && !muted) ctx.resume().catch(() => {}); }
+  function hush() { if (ctx && muted && ctx.state === "running") ctx.suspend().catch(() => {}); }
   function applyVol() {
     if (!bus) return;
     const t = ctx.currentTime, set = (n, v) => n.gain.setTargetAtTime(v, t, 0.04);
@@ -344,7 +347,11 @@ const Snd = (() => {
     if (!BUSES.includes(name) || u === null) { console.warn(`Snd.setVolume: expected a bus (${BUSES.join(", ")}) and a number 0..1, got`, name, v); return false; }
     vol[name] = u; writeSettings({ volume: { ...vol } }); applyVol(); return true;
   }
-  function setMuted(m) { muted = !!m; writeSettings({ muted }); applyVol(); return muted; }
+  function setMuted(m) {
+    muted = !!m; writeSettings({ muted }); applyVol();
+    if (ctx) { if (muted) setTimeout(hush, HUSH_MS); else if (!pauses.size) ctx.resume().catch(() => {}); }   // the score picks up where it was muted
+    return muted;
+  }
   const meterBuf = new Float32Array(2048);
   function meter() {   // peak and RMS of the last ~43 ms of final output, 0..1
     if (!bus || !bus.meter.getFloatTimeDomainData) return { peak: 0, rms: 0 };

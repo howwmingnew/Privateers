@@ -70,12 +70,20 @@ function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
 }
 const LOOT_SEEN_R = 450;   // px from the player inside which an enemy's badge shows its plunder (about gun range)
 function refreshBadge(e) {
-  if (e.ally) { e.badge.setText("◆ " + e.allyName).setBackgroundColor(ALLY_COLOR).setColor("#0d2a1f"); return; }   // an escort's plate is its name (js/escort-ai.js)
+  // Phaser redraws and re-uploads the whole label on every setColor / setBackgroundColor, even to the colour it has, so the
+  // colours go straight into its style and it is drawn once. Compared with the label itself, not a remembered copy: js/flee.js adds its tag with setText.
+  const b = e.badge, paint = (text, bg, fg) => {
+    const st = b.style;
+    if (b.text === text && st.backgroundColor === bg && st.color === fg) return;
+    st.backgroundColor = bg; st.color = fg;
+    if (b.text !== text) b.setText(text); else b.updateText();
+  };
+  if (e.ally) return paint("◆ " + e.allyName, ALLY_COLOR, "#0d2a1f");   // an escort's plate is its name (js/escort-ai.js)
   const tier = threatTier(e.threatL ?? e.L), c = tier.color;   // glyph + colour (by how hard it fights, js/archetypes.js), readable without colour vision
   // the plunder aboard only reads through the spyglass, so a distant fleet is a tidy row of levels, not a price list
   // the number is how hard it fights (threatL), the same figure its colour and glyph compare with your Ship Lv
   const n = e.threatL ?? e.L, label = e.lootSeen ? t("badge", { n, g: fmt(e.loot + (e.stolen || 0)) }) : t("badgeLv", { n });
-  e.badge.setText(tier.glyph + " " + label).setBackgroundColor(c).setColor(c === "#d9493a" ? "#fff6ea" : "#1b1410");
+  paint(tier.glyph + " " + label, c, c === "#d9493a" ? "#fff6ea" : "#1b1410");
 }
 
 // ---------- Steering & AI ----------

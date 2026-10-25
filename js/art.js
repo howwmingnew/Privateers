@@ -19,7 +19,7 @@
 //   enemyClassFor(e)           interim class by faction and level; the archetype pass replaces it.
 //   liveryFor(s)               "player" | "boss" | s.faction
 //   shipZoomK()                camera zoom factor for the player's class (sloop 1 ... line 0.8). Multiply it into fit().
-//   threatTier(L)              { d, glyph, color } vs the player's rating; the glyph keeps threat readable without colour.
+//   threatTier(L, me?)         { d, glyph, color } vs the player's rating (me, or shipRating()); the glyph keeps threat readable without colour.
 //   shipTop(s), labelScale()   world-y just above a hull's drawn extent, and the 1/zoom counter-scale for world labels.
 //   labelText(txt)             keep a counter-scaled world text crisp (resolution = device px it covers).
 // On HiDPI screens art is baked at 2x (artRes()) and shown at scale 1/2: ship sprites keep that base scale in
@@ -137,8 +137,8 @@ function liveryFor(s) {
   return LIVERY[s.faction] ? s.faction : "pirate";
 }
 function shipZoomK() { return 1 - 0.05 * Math.max(0, ((SHIPS[save.ship] || SHIPS.sloop).tier || 1) - 1); }
-function threatTier(L) {
-  const d = L - shipRating();
+function threatTier(L, me = shipRating()) {   // a loop over many ships passes one me: shipRating walks every gun and the power table
+  const d = L - me;
   return d <= -1 ? { d, glyph: "▼", color: "#86c46f" } : d === 0 ? { d, glyph: "●", color: "#e8c25a" }
     : d === 1 ? { d, glyph: "▲", color: "#e88a3a" } : { d, glyph: "▲▲", color: "#d9493a" };
 }

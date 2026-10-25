@@ -30,10 +30,11 @@ function juiceEl(id, cls) {
   if (!el) { el = document.createElement("div"); el.id = id; if (cls) el.className = cls; el.setAttribute("aria-hidden", "true"); document.body.appendChild(el); }
   return el;
 }
-// World point -> CSS pixels on the page (the canvas is device-px backed and shown at CSS size, js/view.js).
+// World point -> CSS pixels on the page. The canvas fills the window from 0,0 at CSS size (js/view.js), so the camera's view
+// maps straight onto VIEW, as in js/notices.js: reading the canvas' rect would make the browser lay the page out mid-frame.
 function worldToCss(x, y) {
-  const cam = S.cameras.main, r = S.game.canvas.getBoundingClientRect(), k = r.width / S.game.canvas.width;
-  return { x: r.left + (x - cam.worldView.x) * cam.zoom * k, y: r.top + (y - cam.worldView.y) * cam.zoom * k };
+  const v = S.cameras.main.worldView, k = VIEW.cssW / v.width;
+  return { x: (x - v.x) * k, y: (y - v.y) * k };
 }
 function centerOf(el) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
 const streakTarget = () => (byId("streak") && !byId("streak").hidden ? "streak" : "cargoBar");
@@ -41,15 +42,16 @@ function punch(el) {
   if (!el || !el.animate) return;
   el.animate([{ transform: "scale(1.25)" }, { transform: "scale(1)" }], { duration: 240, easing: "cubic-bezier(.2,.8,.3,1)" });
 }
-function flyTo(from, targetId, html, cls, { ms = 620, delay = 0, onLand } = {}) {
+// to: the target's centre when the caller already read it (a burst of coins reads it once, not once per new coin on the page)
+function flyTo(from, targetId, html, cls, { ms = 620, delay = 0, onLand, to } = {}) {
   const target = byId(targetId);
   const land = () => { punch(target); if (onLand) onLand(); };
   if (!target || !document.body.animate) { land(); return; }
+  const end = to || centerOf(target), dx = end.x - from.x, dy = end.y - from.y, lift = Math.min(60, Math.abs(dx) * 0.2);   // read before the write below
   const el = document.createElement("div");
   el.className = "jfly " + cls; el.innerHTML = html; el.setAttribute("aria-hidden", "true");
   el.style.left = from.x + "px"; el.style.top = from.y + "px";
   document.body.appendChild(el);
-  const to = centerOf(target), dx = to.x - from.x, dy = to.y - from.y, lift = Math.min(60, Math.abs(dx) * 0.2);
   const a = el.animate([
     { transform: "translate(-50%,-50%) scale(1)", opacity: 1 },
     { transform: `translate(calc(-50% + ${dx * 0.35}px), calc(-50% + ${dy * 0.25 - lift}px)) scale(.95)`, opacity: 1, offset: 0.35 },
@@ -61,9 +63,10 @@ function flyTo(from, targetId, html, cls, { ms = 620, delay = 0, onLand } = {}) 
 onHook("pickup", (c, take) => {
   if (!take || !S) return;
   const from = worldToCss(c.x, c.y), n = clamp(5 + Math.floor(Math.log2(Math.max(1, take) / 25)), 5, 8);
+  const bar = byId("cargoBar"), to = bar && centerOf(bar);   // the coins are position:fixed, so the bar stays put while they land
   for (let i = 0; i < n; i++) {
     const f = { x: from.x + rand(-10, 10), y: from.y + rand(-8, 8) };
-    flyTo(f, "cargoBar", "", "jcoin", { ms: 480 + i * 22, delay: i * 35, onLand: i === n - 1 ? () => sfx("coin", { amount: take }) : null });
+    flyTo(f, "cargoBar", "", "jcoin", { ms: 480 + i * 22, delay: i * 35, to, onLand: i === n - 1 ? () => sfx("coin", { amount: take }) : null });
   }
 });
 

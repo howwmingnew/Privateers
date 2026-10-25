@@ -25,7 +25,12 @@ const GUN_LOOK = {   // top view at 1x: len = barrel length, w = barrel width at
 // A legendary gun (#38, js/gear-core.js) is its type id plus "!": the same barrel with gold inlay and a glowing mouth (legendTop, legendSide).
 const gunBase = p => p.replace("!", "");
 const gunSig = ports => ports.map(p => (p ? (GUN_CODE[gunBase(p)] || "s") + (p.endsWith("!") ? "!" : "") : "-")).join("");
-const artNameOf = a => Object.keys(SHIP_ART).find(k => SHIP_ART[k] === a) || "sloop";
+const GA_ART_NAME = new Map();   // SHIP_ART entry -> its name: asked for every ship on screen each frame, and SHIP_ART never changes
+const artNameOf = a => {
+  let n = GA_ART_NAME.get(a);
+  if (n === undefined) { n = Object.keys(SHIP_ART).find(k => SHIP_ART[k] === a) || "sloop"; GA_ART_NAME.set(a, n); }
+  return n;
+};
 
 // ---------- layout: where each gun's muzzle sits, matching s.mounts (js/art.js) and muzzle() (js/combat.js) ----------
 const gunLayoutCache = new Map();
