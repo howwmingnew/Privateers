@@ -10,6 +10,7 @@ const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, devi
 const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", e => errors.push(e.message));
+if (+process.env.PERF_CPU > 1) await (await ctx.newCDPSession(page)).send("Emulation.setCPUThrottlingRate", { rate: +process.env.PERF_CPU });   // e.g. PERF_CPU=4: a phone-class CPU
 await page.goto(url, { waitUntil: "load" });
 await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
 await page.reload({ waitUntil: "load" });

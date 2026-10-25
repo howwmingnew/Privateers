@@ -51,12 +51,14 @@ function playerRecoil(rx, ry) {
 // ---------- the kill: a powder-magazine burst ----------
 function magazineBurst(s) {
   const a = s.art || SHIP_ART.sloop, x = s.x, y = s.y;
-  J.burst && J.burst.explode(vfxCap(18), x, y);
-  FX.flame.explode(vfxCap(10), x, y);
-  const f = S.add.image(x, y, "fx-soft").setDepth(8.8).setBlendMode(Phaser.BlendModes.ADD).setTint(0xffa040).setDisplaySize(a.len * 3, a.len * 3);
-  S.tweens.add({ targets: f, scale: f.scale * 1.3, alpha: 0, duration: 140, ease: "Quad.easeOut", onComplete: () => f.destroy() });
-  for (let i = 0, n = Math.random() < 0.5 ? 2 : 3; i < n; i++) spar(x, y, a);
-  for (let i = 0; i < 4; i++) S.time.delayedCall(i * 90, () => { FX.tint = 0x2a2420; FX.dmg.emitParticleAt(x + rand(-8, 8), y + rand(-8, 8), 2); });   // dark smoke column
+  if (typeof vnBlast !== "function" || !vnBlast(s)) {   // the picked C chain blast (js/vfx-new.js); the old burst only if its pool is not up
+    J.burst && J.burst.explode(vfxCap(18), x, y);
+    FX.flame.explode(vfxCap(10), x, y);
+    const f = S.add.image(x, y, "fx-soft").setDepth(8.8).setBlendMode(Phaser.BlendModes.ADD).setTint(0xffa040).setDisplaySize(a.len * 3, a.len * 3);
+    S.tweens.add({ targets: f, scale: f.scale * 1.3, alpha: 0, duration: 140, ease: "Quad.easeOut", onComplete: () => f.destroy() });
+    for (let i = 0, n = Math.random() < 0.5 ? 2 : 3; i < n; i++) spar(x, y, a);
+    for (let i = 0; i < 4; i++) S.time.delayedCall(i * 90, () => { FX.tint = 0x2a2420; FX.dmg.emitParticleAt(x + rand(-8, 8), y + rand(-8, 8), 2); });   // dark smoke column
+  }
   screenFlash();   // js/juice-ui.js
   sfx("magazine", { x, y });
 }

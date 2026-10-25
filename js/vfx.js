@@ -105,12 +105,13 @@ function vfxShip(s, dt) {
     const f = s.hp / s.maxHp;
     if (f < 0.5 && (s.smokeT = (s.smokeT || 0) - dt) <= 0) {
       s.smokeT = (f < 0.25 ? 0.1 : 0.22) * (PERF_LOW ? 2 : 1); FX.tint = f < 0.25 ? 0x1e1a17 : 0x9a958e;
-      const k = rand(-0.35, 0.35) * a.len; FX.dmg.emitParticleAt(s.x + c * k, s.y + sn * k, 1);
+      const k = rand(-0.35, 0.35) * a.len;
+      if (!(f < 0.25 && typeof vnSmoke === "function" && vnSmoke(s.x + c * k, s.y + sn * k))) FX.dmg.emitParticleAt(s.x + c * k, s.y + sn * k, 1);   // a burning hull: the new smoke column (js/vfx-new.js)
     }
     if ((f < 0.25 || s.burnT > 0) && (s.flameT = (s.flameT || 0) - dt) <= 0) {
-      s.flameT = (s.burnT > 0 ? 0.04 : 0.06) * (PERF_LOW ? 2 : 1);
+      s.flameT = (s.burnT > 0 ? 0.04 : 0.06) * (PERF_LOW ? 2 : 1) * (typeof vnFlame === "function" ? 1.5 : 1);
       const k = rand(-0.3, 0.3) * a.len, w = rand(-0.3, 0.3) * a.beam;
-      FX.flame.emitParticleAt(s.x + c * k - sn * w, s.y + sn * k + c * w, 1);
+      if (!(typeof vnFlame === "function" && vnFlame(s.x + c * k - sn * w, s.y + sn * k + c * w))) FX.flame.emitParticleAt(s.x + c * k - sn * w, s.y + sn * k + c * w, 1);   // flame tongues (js/vfx-new.js)
     }
     if (a.smoulder && f >= 0.5 && (s.smokeT = (s.smokeT || 0) - dt) <= 0) { s.smokeT = 0.35; FX.tint = 0x5a524a; FX.dmg.emitParticleAt(s.x + rand(-8, 8), s.y + rand(-5, 5), 1); }
   }
@@ -127,15 +128,16 @@ function vfxMuzzle(x, y, a, lite) {   // lite: one gun of a big broadside, flash
   const c = Math.cos(a), s = Math.sin(a);
   FX.deg = toDeg(a);
   FX.flash.emitParticleAt(x + c * 12, y + s * 12, 1);   // the teardrop's base sits on the muzzle
-  if (lite) { FX.smoke.emitParticleAt(x + c * 10, y + s * 10, 1); return; }
+  if (lite) { if (!(typeof vnMuzzle === "function" && vnMuzzle(x, y, a, true))) FX.smoke.emitParticleAt(x + c * 10, y + s * 10, 1); return; }   // js/vfx-new.js: powder smoke + haze bank
   FX.bloom.emitParticleAt(x + c * 10, y + s * 10, 1);
-  // smoke strung out along the barrel line, the outer puffs dirtier: a plume, not a white disc on the muzzle
-  for (let i = PERF_LOW ? 2 : 0; i < 5; i++) {   // frames running long: the three outer puffs only
-    const d = 4 + i * 6.5 + rand(-2, 2), w = rand(-2.5, 2.5);
-    FX.sTint = i >= 3 ? 0xb3a998 : 0xe9e5dc;
-    FX.smoke.emitParticleAt(x + c * d - s * w, y + s * d + c * w, 1);
+  if (!(typeof vnMuzzle === "function" && vnMuzzle(x, y, a, false))) {   // (the old plume, when the new pool is not up: art-test)
+    for (let i = PERF_LOW ? 2 : 0; i < 5; i++) {   // smoke strung out along the barrel line, the outer puffs dirtier
+      const d = 4 + i * 6.5 + rand(-2, 2), w = rand(-2.5, 2.5);
+      FX.sTint = i >= 3 ? 0xb3a998 : 0xe9e5dc;
+      FX.smoke.emitParticleAt(x + c * d - s * w, y + s * d + c * w, 1);
+    }
+    FX.sTint = 0xe9e5dc;
   }
-  FX.sTint = 0xe9e5dc;
   S.fx.spark.emitParticleAt(x + c * 8, y + s * 8, 2);
   FX.ember.emitParticleAt(x + c * 10, y + s * 10, 2);
 }

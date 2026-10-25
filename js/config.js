@@ -26,6 +26,18 @@ const REPAIR_STILL = 0.08;       // "stopped": below this share of top speed (th
 const POWDER_CHANCE = 1 / 12, POWDER_R = 230;   // blast radius, px
 const POWDER_BOSS_FRAC = 0.25;     // a boss takes this share of its max hull and never dies of the crit itself
 const POWDER_SPLASH = { ai: 0.3, player: 0.15, boss: 0.08 };   // share of max hull at the centre of the blast; fades to 40% at the rim
+// VFX upgrade (#76): the effects the owner picked in tools/vfx-lab.html, with the sliders' values (size, count = particle share, dur = duration x).
+// blast: powder-magazine C chain blast · muzzle: C powder smoke and haze bank · fire: A flame tongues + smoke column (and the fire patch an incendiary
+// leaves on the water) · spout: A spiral column · vortex: A funnel · wave: A foam wall · storm: B pre-flash strike with violet ball, and swirling fog.
+const VFX_NEW = {
+  blast: { size: 0.8, count: 1, dur: 0.5 }, muzzle: { size: 0.8, count: 0.75, dur: 1.2 }, fire: { size: 1, count: 1, dur: 1 },
+  spout: { size: 1, count: 1, dur: 1 }, vortex: { size: 1, count: 1, dur: 1 }, wave: { size: 1, count: 1, dur: 1 }, storm: { size: 1, count: 1, dur: 1 },
+};
+const VFX_POOL_MAX = 300;      // live sprites of the new effects, all kinds together (x0.55 on phones)
+const VFX_MUZZLE_LOUD = 5;     // loud muzzle plumes per 300 ms; past this a shot only gets a small puff (30-gun rolling broadsides, fleets firing together)
+const VFX_HAZE_MAX = 24;       // the long drifting haze puffs alive at once
+const VFX_SPILL_MAX = 4;       // fire patches on the water at once (an incendiary's burning oil)
+const VFX_FOG_PUFFS = 16;      // fog puffs circling at the edge of sight
 // Size sliders in the settings panel (js/settings.js, js/options.js): percentages of a base, 50-250 in steps of 5.
 const SCALE_MIN = 50, SCALE_MAX = 250, SCALE_STEP = 5, SCALE_DEFAULT = 100;
 // The chart (the HUD radar) at 100%: 18% of the shorter screen side, kept between these CSS pixels so a phone still has
