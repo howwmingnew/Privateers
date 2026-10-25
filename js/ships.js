@@ -137,6 +137,7 @@ function isHostile(e, o) {
   if (bossFeud(e, o)) return false;   // bosses, rematch captains and their guards stay out of the other AI's fights (js/archetypes.js)
   if (e.ally) return !o.isPlayer && !o.fixed && !o.ally && (o.faction === "pirate" || o.faction === "navy");   // an escort fights pirates and the Navy, not batteries or merchants (js/escort-ai.js)
   if (e.attacker === o && e.angry > 0) return true;
+  if (o.isPlayer && typeof noviceSpare === "function" && noviceSpare(e)) return false;   // a newcomer's first bounty is a duel; the Shallows are not hunted (js/novice.js)
   const g = o.isPlayer ? "player" : o.faction;
   if (e.faction === "pirate") return g !== "pirate";
   if (e.faction === "navy") return g === "pirate" || g === "player" || g === "ally";

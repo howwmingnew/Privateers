@@ -11,28 +11,28 @@
 // One at a time: a toast that arrives while another is up (or the ledger, or a banner) waits its turn in a short queue.
 // Repeats of the same line fold into one; a line that has waited TOAST_STALE_MS at sea is old news and is dropped.
 // toast(msg, true) is direct feedback on a key press (mute, pad) or a sinking: it shows at once, and a news line that
-// was up goes back to the head of the queue.
+// was up goes back to the head of the queue. toast(msg, now, ms) stays up ms instead of TOAST_MS: a one-time explanation.
 const TOAST_MS = 2400, TOAST_GAP_MS = 350, TOAST_QUEUE_MAX = 4, TOAST_STALE_MS = 6000;
 const toastEl = document.getElementById("toast");
 let toastTimer, toastOn = false, toastQueue = [], toastNowOn = false;   // toastQueue: [{ msg, at }]
-function queueToast(msg, front) {
-  const rest = toastQueue.filter(q => q.msg !== msg), q = { msg, at: performance.now() };
+function queueToast(msg, front, ms) {
+  const rest = toastQueue.filter(q => q.msg !== msg), q = { msg, at: performance.now(), ms };
   toastQueue = front ? [q, ...rest].slice(0, TOAST_QUEUE_MAX) : [...rest, q].slice(-TOAST_QUEUE_MAX);
 }
-function toast(msg, now) {
+function toast(msg, now, ms) {
   const held = (typeof docked !== "undefined" && docked) || (typeof toastHeld === "function" && toastHeld());
   if (now && !held) {
     if (toastOn && !toastNowOn && toastEl.textContent !== msg) queueToast(toastEl.textContent, true);
-    showToast(msg, true);
+    showToast(msg, true, ms);
     return;
   }
   if (toastOn && !held && toastEl.textContent === msg) return;   // already saying it
-  if (held || toastOn) { queueToast(msg); return; }
-  showToast(msg);
+  if (held || toastOn) { queueToast(msg, false, ms); return; }
+  showToast(msg, false, ms);
 }
-function showToast(msg, now) {
+function showToast(msg, now, ms) {
   toastEl.textContent = msg; toastEl.classList.add("on"); toastOn = true; toastNowOn = !!now;
-  clearTimeout(toastTimer); toastTimer = setTimeout(endToast, TOAST_MS);
+  clearTimeout(toastTimer); toastTimer = setTimeout(endToast, ms || TOAST_MS);
 }
 // A faded toast keeps no words: old lines (a sinking, say) must not sit in the page text once they are gone.
 const blankToast = () => { if (!toastOn) toastEl.textContent = ""; };
@@ -47,7 +47,7 @@ function nextToast() {
   toastQueue = toastQueue.filter(q => now - q.at <= TOAST_STALE_MS);
   if (!toastQueue.length) return;
   const [q, ...rest] = toastQueue; toastQueue = rest;
-  showToast(q.msg);
+  showToast(q.msg, false, q.ms);
 }
 // The sinking toast fires just before dock("sunk"): it must not sit on the ledger's first line. Docking also drops sea news
 // still waiting its turn (old by the time the ledger closes); lines raised while docked wait for the sea.

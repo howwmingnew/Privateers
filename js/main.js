@@ -36,6 +36,10 @@ class Main extends Phaser.Scene {
     for (let i = 0; i < ENEMY_COUNT; i++) spawnEnemy(this);
     for (const w of save.wrecks) addCrate(w.x, w.y, w.value, w);
     fitView(this);   // camera zoom, crisp text and canvas size for HiDPI screens (js/view.js)
+    // The camera may look past the sea's edge by a view's width, so a ship pinned against the edge stays mid-screen instead of
+    // hugging the top of it (the edge used to pin the camera: #102). Re-padded with every zoom change (resize, photo mode).
+    const padBounds = () => { const p = Math.ceil(Math.max(cam.displayWidth, cam.displayHeight)); cam.setBounds(-p, -p, W + 2 * p, H + 2 * p); };
+    this.scale.on("resize", padBounds); padBounds();
     buildMiniBase();
     player.spr.setPosition(player.x, player.y);
     cam.centerOn(player.x, player.y);
