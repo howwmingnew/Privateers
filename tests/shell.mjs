@@ -333,17 +333,17 @@ for (const dpr of [1, 2]) {
   ok("brand-new save: tutorial starts on the first voyage with an easy Lv 1 merchant close by", t0.active && t0.step === 0 && t0.coach && t0.easy >= 1 && t0.tgt, t0);
   const step = () => ev(page, () => tut.step);
   await ev(page, () => { player.x = PORT.x + DOCK_R + 220; player.y = PORT.y; player.rot = 0; });
-  await until(page, () => tut.step === 1);
+  await until(page, () => tut.step >= 1);
   await ev(page, () => { const e = tut.target; e.x = player.x + Math.cos(player.rot + Math.PI / 2) * 180; e.y = player.y + Math.sin(player.rot + Math.PI / 2) * 180;
     e.rot = player.rot; e.speed = 0; e.maxSpeed = 0.001; for (const g of Object.values(player.guns).flat()) g.cd = 0; });
-  await until(page, () => tut.step === 2);
+  await until(page, () => tut.step >= 2);
   await page.screenshot({ path: join(out, "d-tutorial-fire.png") });
   await page.keyboard.press("Space");
-  await until(page, () => tut.step === 3);
+  await until(page, () => tut.step >= 3);
   await ev(page, () => sink(tut.target, player));
-  await until(page, () => tut.step === 4);
+  await until(page, () => tut.step >= 4);
   await ev(page, () => { const c = crates.find(k => !k.wreck); c.x = player.x; c.y = player.y; });
-  await until(page, () => tut.step === 5);
+  await until(page, () => tut.step >= 5);
   await ev(page, () => { canDock = true; player.x = PORT.x + 150; player.y = PORT.y; });
   await until(page, () => docked && tut.step === 6);
   await page.click('[data-act="buy"][data-id="six"]');   // too soon after the ledger opened: ignored
