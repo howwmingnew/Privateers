@@ -164,7 +164,8 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 .deck .lbl .lbl-tip { display: block; margin-top: 1px; font-size: .85em; font-weight: 600; letter-spacing: 0; text-transform: none; }
 @media (min-width: 1100px) {
   /* a gun port picked opens its panel under the deck, so the right column scrolls: the left one stays put instead of sliding down to the flag */
-  #port .lcol-l:not(:has(.poster:not(.min):not(.done))):not(:has(#flagbox.open)) { position: sticky; top: calc(min(70px * var(--ts), 18vw) + 20px); align-self: start; max-height: calc(100vh - min(70px * var(--ts), 18vw) - 116px); overflow-y: auto; }   /* taller than the screen: it scrolls inside itself, so the flag below is never stuck under the Set sail bar */
+  #port .lcol-l:not(:has(.poster:not(.min):not(.done))):not(:has(#flagbox.open)) { position: sticky; top: calc(min(70px * var(--ts), 18vw) + 20px); align-self: start; max-height: calc(100vh / var(--pz, 1) - min(70px * var(--ts), 18vw) - 140px); overflow-y: auto; overflow-x: hidden; padding-inline: 6px; margin-inline: -6px; }   /* taller than the screen: it scrolls inside itself, so the flag below is never stuck under the Set sail bar. --pz: #port's big-screen zoom scales vh too, so it is divided out. The side padding (cancelled by the margin) holds the tilted poster's corners, which would count as sideways overflow */
+  #port .lcol-l > * { min-width: 0; }
 }
 @media (max-width: 1099px) {
   /* one column: the fleet and its deck come right after the ledger's header; the poster, the flag and the gear follow */
@@ -179,3 +180,6 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 .btn[data-armed] { position: relative; overflow: hidden; }
 .btn[data-armed]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: currentColor; opacity: .7; transform-origin: left; animation: armdrain linear forwards; }
 @keyframes armdrain { to { transform: scaleX(0); } }
+#port { --pz: 1; }   /* the zoom css/style.css gives #port on big screens, for the sticky column's height */
+@media (min-width: 1500px) and (min-height: 900px) { #port { --pz: 1.25; } }
+@media (min-width: 2400px) and (min-height: 1300px) { #port { --pz: 1.5; } }
