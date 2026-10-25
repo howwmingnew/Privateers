@@ -128,17 +128,20 @@ const r4 = await ev(() => {
   const held = heat;   // 10 s of peace is inside the calm period
   heat = 100; heatQuiet = 0; huntT = 0; stepN(15 * 60);
   const hot = huntFleets().length, heat1 = heat;
+  // The hunters sail at the parked captain and ram or board him; a Navy hull sunk that way would add heat. Left alone means no new sinkings.
+  const heatAdd0 = heatAdd; heatAdd = () => {};
   heat = 100; heatQuiet = HEAT_CALM_S; const t0 = heat;
   stepN(30 * 60);   // 30 s of drain at 1.5/s
   const cooled = t0 - heat;
   const still = { hunters: hunters().length };
   stepN(40 * 60);   // the rest
+  heatAdd = heatAdd0;
   return { held, hot, heat1, cooled, still, end: heat, hunters: hunters().length, hud: hudState(), hunting: huntFleets().length };
 });
 check(r4.held === 60, `no cooling in the first 15 quiet seconds (heat ${r4.held})`);
 check(r4.hot >= 1, `a wanted captain is hunted (${r4.hot} fleet)`);
 check(Math.abs(r4.cooled - 45) < 3, `after the calm period heat falls 1.5 a second (${r4.cooled.toFixed(1)} in 30 s)`);
-check(r4.end === 0 && r4.hud.hidden, "left alone, heat falls to nothing and the HUD gauge hides");
+check(r4.end === 0 && r4.hud.hidden, `left alone, heat falls to nothing and the HUD gauge hides (${JSON.stringify({ end: r4.end, hud: r4.hud, hunters: r4.hunters })})`);
 check(r4.hunters === 0 && r4.hunting === 0, "...and the hunters have given up the chase");
 const r5 = await ev(() => {
   fresh(6); heat = 100; heatQuiet = 0; huntT = 0; stepN(14 * 60);
@@ -172,6 +175,8 @@ const adm = await ev(() => {
       slotErr: Math.max(...wingmen(f).map((m, i) => { const q = slotWorld(f.lead, slots[i]); return Math.hypot(q.x - m.x, q.y - m.y); })),
       far: Math.round(dist(f.lead, player)), hunter: f.lead.hunter === true };
     plain.alive = false; plain.spr.destroy(); plain.badge?.destroy(); enemies.splice(enemies.indexOf(plain), 1);
+    // pirates the sea tops up may meet the fleet and sink a wingman; this checks the population control's retirement, not a battle
+    f.ships.forEach(s => { s.hp = s.maxHp = 1e9; });
     admT = 0; stepN(60 * 30); res.again = fleetsLive().filter(x => x.admiral).length;   // never two at once
     res.live = f.lead.alive; res.later = f.ships.filter(s => s.alive).length;
     // he is announced when he comes within sight, and a wanted captain meets him sooner
