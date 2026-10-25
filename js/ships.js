@@ -196,7 +196,7 @@ function think(e, dt) {
   if (plunder) ({ desired, thr } = plunder);
   if (typeof fleeSteer === "function") { const c = fleeSteer(e, now); if (c) ({ desired, thr } = c); }   // outmatched or beaten: run, downwind if it helps (js/flee.js)
   if (typeof disDodge === "function") { const c = disDodge(e); if (c) ({ desired, thr } = c); }   // clear of a disaster that has been noticed (js/disasters.js)
-  if (desired == null && e.merchant) {
+  if (desired == null && e.merchant && !e.tutMark) {   // (the tutorial's mark holds its course: js/tutorial.js)
     // merchants run from any pirate or the player that comes close, even before a shot is fired
     let threat = null, td = 480;
     for (const o of enemies.concat([player])) {

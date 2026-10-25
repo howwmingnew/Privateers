@@ -72,8 +72,11 @@ function swapGunsIn(s, a, b) {
 const swapGuns = (a, b) => swapGunsIn(save, a, b);
 const gunMark = gun => (gun.lg ? "!" : "");   // a legendary gun's picture has gold inlay (js/gun-art.js)
 const gunIcon = (id, cls) => (typeof gunSideImg === "function" ? gunSideImg(id, cls) : "");   // the side view (js/gun-art.js); the unit tests load this file without it
-const gunStats = (g, lv, ship = save.ship) => { const G = GUNS[g], m = gunLvMul(lv) * shipGunK(ship);   // what it hits for on this hull (js/data.js)
-  return t("dmg", { n: Math.round(G.dmg * m) }) + (G.burn ? t("burn", { n: Math.round(G.burn * m * BURN_T) }) : ""); };
+// to: the next level, to show what the upgrade does to every number the gun states (damage and, for the incendiary, its burn)
+const gunStats = (g, lv, ship = save.ship, to = 0) => { const G = GUNS[g], k = shipGunK(ship), m = gunLvMul(lv) * k;   // what it hits for on this hull (js/data.js)
+  const was = Math.round(G.dmg * m), wasB = Math.round(G.burn * m * BURN_T);
+  const m2 = gunLvMul(to) * k, arrow = n => (to ? ` <span class="up">→ ${n}</span>` : "");
+  return t("dmg", { n: was }) + (to ? arrow(Math.round(G.dmg * m2)) : "") + (G.burn ? t("burn", { n: wasB }) + (to ? arrow(Math.round(G.burn * m2 * BURN_T)) : "") : ""); };
 const gunName = gun => t("gf_" + gun.g) + " Lv " + gun.lv;
 const gunRar = gun => (typeof rarClass === "function" ? rarClass(gun) : "");   // " r0".." r4": the rarity colour of the slot and card (css/gear.css)
 
@@ -182,7 +185,7 @@ function gunNoteHtml() {
 }
 // The card of the picked gun, or (cand) of a candidate in the ledger's replace list: its buttons then carry the gun's place and add "Put here".
 function gunCardHtml(p = deckSel, cand = false) {
-  const gun = p && gunAt(p), ship = placeShip(p), gk = shipGunK(ship);
+  const gun = p && gunAt(p), ship = placeShip(p);
   if (!gun) return "";   // nothing picked, or an empty port (the ledger's panel says so itself)
   const pl = cand ? ` data-side="${p.side}" data-i="${p.i}"${p.e != null ? ` data-e="${p.e}"` : ""}` : "";
   const G = GUNS[gun.g], max = gun.lv >= GUN_MAX, cost = max ? 0 : gunUpCost(gun), short = cost - save.gold, mounted = p.side !== "store";
@@ -192,13 +195,12 @@ function gunCardHtml(p = deckSel, cand = false) {
     ? `<button class="btn" type="button" data-act="gup5"${pl} ${plan.short > 0 ? "disabled" : ""}>${t(plan.short > 0 ? "upNShort" : "upN", { n: plan.n, cost: fmt(plan.cost), d: fmt(plan.short) })}</button>` : "";
   const full = save.store.length >= MAX_STORE;
   const off = !mounted || cand ? "" : `<button class="btn ghost" type="button" data-act="unload" ${full ? "disabled" : ""}>${t("toStore")}</button>`;
-  const next = max ? "" : ` <span class="up">→ ${Math.round(G.dmg * gunLvMul(gun.lv + 1) * gk)}</span>`;
   const x = typeof gearExtraHtml === "function" ? gearExtraHtml(gun, "gun", pl) : null;   // rarity, affixes, re-roll, lock, break down (js/gear-ui.js)
   const put = cand ? `<button class="btn" type="button" data-act="gfrom"${pl}>${t("putHere")}</button>` : "";
   const acts = put + up + up5 + off + (x ? x.lockBtn + (mounted ? "" : x.scrapBtn) : "");
   const name = typeof gearTitle === "function" ? gearTitle(gun) : t("gf_" + gun.g);
   return `<div class="gcard${gunRar(gun)}"><div class="nm">${gunIcon(gun.g + gunMark(gun))}${name}<small>Lv ${gun.lv}${x ? " · " + rarLine(gun) : ""}</small></div><div class="gacts">${acts}</div>
-    <div class="ds">${gunStats(gun.g, gun.lv, ship)}${next} · ${t("range", { n: G.range })} · ${t("rpm", { n: G.rpm })}${G.chain ? t("chainFx", { n: CHAIN_T }) : ""}</div>
+    <div class="ds">${gunStats(gun.g, gun.lv, ship, max ? 0 : gun.lv + 1)} · ${t("range", { n: G.range })} · ${t("rpm", { n: G.rpm })}${G.chain ? t("chainFx", { n: CHAIN_T }) : ""}</div>
     ${x ? x.list + (mounted ? "" : gunCompareHtml(gun)) : ""}${cand ? "" : `<p class="hint-s">${mounted && full ? t("storeFullWhy", { n: MAX_STORE }) + " " : ""}${t(mounted ? "pickHintPort" : "pickHintStore")}</p>`}</div>`;
 }
 // "Upgrade to Lv 4 (310 gold)"; with too little gold the same label says how much is missing (the button is disabled then).

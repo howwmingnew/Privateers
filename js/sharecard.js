@@ -158,14 +158,14 @@ function shareButton(getSpec, cls) {
 
 // ---------- where the button shows up ----------
 // A chip above the postcard chip after a boss or a paid sortie; the ledger's message line after a sortie that docked.
-let shareChip = null, shareChipTimer = 0, shareChipSpec = null, lastTally = null;
-function shareOffer(getSpec, ms = POSTCARD_OFFER_MS) {
-  shareChipSpec = getSpec;
+let shareChip = null, shareChipTimer = 0, shareChipSpec = null, lastTally = null, shareChipHome = null;   // home: see postcardOffer (js/postcard.js)
+function shareOffer(getSpec, ms = POSTCARD_OFFER_MS, home = false) {
+  shareChipSpec = getSpec; shareChipHome = home ? spotNow() : null;
   if (!shareChip) { shareChip = shareButton(() => shareChipSpec(), "pcchip sharechip"); shareChip.id = "shareChip"; shareChip.hidden = true; document.body.appendChild(shareChip); }
   shareChip.hidden = false;
   clearTimeout(shareChipTimer); shareChipTimer = setTimeout(() => { shareChip.hidden = true; }, ms);
 }
-onHook("frame", () => { if (shareChip && !shareChip.hidden && (docked || paused || titleOpen)) shareChip.hidden = true; });
+onHook("frame", () => { if (shareChip && !shareChip.hidden && (docked || paused || titleOpen || leftSpot(shareChipHome) || !player.alive)) shareChip.hidden = true; });
 const portShareEl = () => document.getElementById("pShare");
 function mountPortShare() {
   let p = portShareEl();
@@ -176,7 +176,7 @@ onHook("tally", d => {
   if (!(d.gold > 0)) return;
   lastTally = { sunk: d.sunk, gold: d.gold, secs: sortieSecs() };   // js/hall.js
   if (docked) mountPortShare();
-  else if (d.sunk > 0 && !(runActive() && runKind() === "daily")) { const snap = lastTally; shareOffer(() => shareSpec("sortie", snap)); }
+  else if (d.sunk > 0 && !(runActive() && runKind() === "daily")) { const snap = lastTally; shareOffer(() => shareSpec("sortie", snap), undefined, true); }
 });
 onHook("sail", () => { lastTally = null; portShareEl()?.remove(); });
 onHook("sunk", (s, killer) => {

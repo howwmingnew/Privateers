@@ -25,7 +25,7 @@ const MOOR_T = 3;          // seconds stopped inside the ring before the ledger 
 const MOOR_STOP = 0.08;    // "stopped": below this share of top speed
 const MOOR_HEAL = 0.4;     // share of max hull mended per second inside the ring
 // visit: the current pass through the ring. sold/bonus carry the quick sale into the ledger's message if it opens.
-let moor = { inside: false, t: 0, sold: 0, bonus: 0 };
+let moor = { inside: false, t: 0, sold: 0, bonus: 0, cargo: 0, sunk: 0 };
 // moorArmed: docking has armed once this session (the "sail out" hint is only for before that) · moorMoved: under way
 // since Set sail · moorStillT: seconds sat stopped in the ring since then
 const MOOR_ARM_WAIT = 1.5;   // a ship that never moved gets the "sail out" hint after this long stopped in the ring
@@ -51,7 +51,7 @@ function moorTick(dt, hb, dPort) {
   // the ledger: only once the ship has left the ring since it last set sail (canDock, js/main.js)
   const still = player.speed < player.maxSpeed * MOOR_STOP;
   moor = { ...moor, t: canDock && still ? moor.t + dt : 0 };
-  if (moor.t >= MOOR_T) { const prior = { sold: moor.sold, bonus: moor.bonus }; moorReset(); dock(kind, prior); return; }
+  if (moor.t >= MOOR_T) { const prior = { sold: moor.sold, bonus: moor.bonus, cargo: moor.cargo, sunk: moor.sunk }; moorReset(); dock(kind, prior); return; }
   drawMoor(still, dt);
 }
 // The hold sells exactly as dock() sells it, minus the ledger. The logbook's "dock" hook would have counted the
@@ -62,12 +62,14 @@ function quickSell(kind) {
   const { sold, bonus } = sellHold(kind);
   save.gold += sold; cargo = 0; save.salvage = [];
   persist(); hud(true);
-  moor = { ...moor, sold: moor.sold + sold, bonus: Math.max(moor.bonus, bonus) };
-  sortieTally({ ...tally, bonus, gold: sold });   // the sale's one report: the count-up and its coin roll (js/juice-ui.js)
+  moor = { ...moor, sold: moor.sold + sold, bonus: Math.max(moor.bonus, bonus), cargo: moor.cargo + tally.cargo, sunk: moor.sunk + tally.sunk };
+  // the pass's one report: the count-up and its coin roll (js/juice-ui.js). It says what the whole pass has sold so far, the same
+  // figure the ledger's line gives if the ledger opens, not just the last crate's share.
+  sortieTally({ sunk: moor.sunk, cargo: moor.cargo, bonus: moor.bonus, gold: moor.sold });
 }
 function moorReset() {
   stationLeft();   // settles a supply station's fee (js/ports.js)
-  moor = { inside: false, t: 0, sold: 0, bonus: 0 };
+  moor = { inside: false, t: 0, sold: 0, bonus: 0, cargo: 0, sunk: 0 };
   if (moorG) moorG.clear();
   if (!moorEl.hidden) moorEl.hidden = true;
 }

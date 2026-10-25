@@ -57,7 +57,7 @@ function achYield() {
 // Cards earned under the first voyage's coach card would pop over the ledger when the first sale opens it: they wait
 // until the ledger closes and the ship is at sea again.
 let achSeaHeld = false;
-onHook("frame", () => { if (achQueue.length && typeof coachUp === "function" && coachUp()) achSeaHeld = true; });
+onHook("frame", () => { if (achQueue.length && typeof achCoachHeld === "function" && achCoachHeld()) achSeaHeld = true; });
 onHook("sail", () => { achSeaHeld = false; });
 const achLedgerHold = () => achSeaHeld && docked;
 

@@ -34,9 +34,12 @@ function showToast(msg, now) {
   toastEl.textContent = msg; toastEl.classList.add("on"); toastOn = true; toastNowOn = !!now;
   clearTimeout(toastTimer); toastTimer = setTimeout(endToast, TOAST_MS);
 }
+// A faded toast keeps no words: old lines (a sinking, say) must not sit in the page text once they are gone.
+const blankToast = () => { if (!toastOn) toastEl.textContent = ""; };
 function endToast() {
   toastEl.classList.remove("on"); toastOn = false; toastNowOn = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(nextToast, TOAST_GAP_MS);
+  setTimeout(blankToast, 500);   // after the fade-out
 }
 function nextToast() {
   if (toastOn || docked || (typeof toastHeld === "function" && toastHeld())) return;
@@ -48,7 +51,7 @@ function nextToast() {
 }
 // The sinking toast fires just before dock("sunk"): it must not sit on the ledger's first line. Docking also drops sea news
 // still waiting its turn (old by the time the ledger closes); lines raised while docked wait for the sea.
-onHook("dock", () => { clearTimeout(toastTimer); toastEl.classList.remove("on"); toastOn = false; toastNowOn = false; toastQueue = []; });
+onHook("dock", () => { clearTimeout(toastTimer); toastEl.classList.remove("on"); toastOn = false; toastNowOn = false; toastQueue = []; toastEl.textContent = ""; });
 onHook("sail", () => {   // lines held through the ledger start their wait now; a live toast chains on by itself
   const at = performance.now();
   toastQueue = toastQueue.map(q => ({ ...q, at }));

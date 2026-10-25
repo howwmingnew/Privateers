@@ -45,7 +45,7 @@ Object.assign(STR.zh, {
 });
 
 const TUT = ["out", "aim", "fire", "sink", "scoop", "sell", "buy"];
-const tut = { active: false, step: 0, sunk0: 0, gold0: 0, sold: false, sig: "", target: null, pickT: 0, doneT: 0, html: "", g: null };
+const tut = { active: false, step: 0, sunk0: 0, gold0: 0, sold: false, sig: "", target: null, pickT: 0, doneT: 0, html: "", g: null, up: false };
 
 function hasProgress(s) {
   return s.sunk > 0 || s.gold > 0 || s.ship !== "sloop" || s.hull > 1 || s.sails > 1 || s.hold > 1 ||
@@ -89,12 +89,15 @@ function aimOnTarget() {
   return false;
 }
 
-// Until the captain's first sinking, every departure puts an easy Lv 1 merchant just past the safe waters,
-// in the direction the ship leaves the harbor. It sails at TUT_MARK_HULL of its hull, so 3-4 hits sink it, and its
-// hold is worth at least the cheapest buy, so the first sale buys something.
-const TUT_MARK_HULL = 0.4;
+// Every departure on the first voyage that has no kill and loot to work with yet (the first sortie, or one after a sinking
+// took them away) puts an easy Lv 1 merchant just past the safe waters, in the direction the ship leaves the harbor. It sails
+// at TUT_MARK_HULL of its hull, so 3-4 hits sink it, and its hold is worth at least the cheapest buy, so the first sale buys
+// something. It is slow and never runs (e.tutMark: js/ships.js): the lesson is to sink it, not to chase it.
+const TUT_MARK_HULL = 0.4, TUT_MARK_SPEED = 0.7;
+const needsMark = () => !save.tutorialDone && save.tutorialStep < TUT.indexOf("buy") &&
+  (save.tutorialStep <= TUT.indexOf("sink") || (cargo <= 0 && !lootCrates().length));
 function forgivingSpawn() {
-  if (save.sunk > 0) return null;
+  if (!needsMark()) return null;
   const base = Math.atan2(player.y - PORT.y, player.x - PORT.x), r = SAFE_R + 140;   // still inside the Lv 1 ring
   for (let i = 0; i < 24; i++) {
     const a = base + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.22, x = PORT.x + Math.cos(a) * r, y = PORT.y + Math.sin(a) * r;
@@ -102,6 +105,7 @@ function forgivingSpawn() {
     const e = spawnEnemy(S, { x, y, faction: "merchant", near: true });
     if (!e) return null;
     e.maxHp = e.hp = Math.ceil(e.maxHp * TUT_MARK_HULL);
+    e.tutMark = true; e.maxSpeed *= TUT_MARK_SPEED;
     e.loot = Math.max(e.loot || 0, cheapestBuy());
     retireSpare(e);
     return e;
@@ -122,6 +126,8 @@ function tutorialOnVoyage() {
   const easy = forgivingSpawn();
   tutorialStart();
   tut.target = easy || null;   // the old sea was just destroyed (resetEnemies), so drop any old target too
+  // a fresh mark starts the chase over: a card waiting for a shot, a sinking or a crate that are gone is a dead end
+  if (easy && tut.active && tut.doneT <= 0 && tut.step >= 1 && tut.step < TUT.indexOf("buy")) enterStep(1);
 }
 function tutorialStart() {
   if (save.tutorialDone || tut.active) return;
@@ -170,14 +176,14 @@ function tutorialTick(dt) {
   let next = tut.step;
   if (!docked && !paused) {
     if (save.sunk > tut.sunk0 && next < 4) next = 4;                       // played ahead of the card: catch up
-    if (cargo > 0 && next < 5) next = 5;
+    if (cargo > 0 && next < 5 && save.sunk > 0) next = 5;                   // (a wreck's cargo alone is not the lesson's plunder)
     if (at === "out" && Math.hypot(player.x - PORT.x, player.y - PORT.y) > DOCK_R + 140) next = Math.max(next, 1);
     else if (at === "aim" && aimOnTarget()) next = Math.max(next, 2);
     else if (at === "fire" && balls.some(b => b.fromPlayer)) next = Math.max(next, 3);
     else if (at === "sell" && tut.sold) next = 6;                           // sold on a pass through the ring (js/mooring.js)
-    else if ((at === "scoop" || at === "sell") && cargo <= 0 && !lootCrates().length) next = 3;   // the loot drifted away
+    else if ((at === "scoop" || at === "sell") && cargo <= 0 && !lootCrates().length) next = 1;   // the loot drifted away: find a ship again
   } else if (docked) {
-    if (at === "sell") next = tut.sold ? 6 : 3;              // docked by sinking: the hold was lost
+    if (at === "sell") next = tut.sold ? 6 : 1;              // docked by sinking: the hold was lost
     else if (at === "buy" && purchaseSig() !== tut.sig) { finish(); renderCoach(); return; }
   }
   if (next !== tut.step) enterStep(next);
@@ -242,6 +248,10 @@ function drawGuide(dt) {
   if (!tg) return;
   // px = CSS pixels on screen in world units (camera zoom includes the device pixel ratio, js/view.js)
   const cam = S.cameras.main, v = cam.worldView, px = (typeof VIEW !== "undefined" ? VIEW.dpr : 1) / cam.zoom, now = S.time.now / 1000;
+  // the card sits at the bottom, and hops to the top while the thing to go for is in the lower part of the screen (a gap between
+  // the two thresholds keeps it from flickering); it never covers what it is pointing at
+  const fy = (tg.y - v.y) / v.height, up = fy > 0.55 ? true : fy < 0.4 ? false : tut.up;
+  if (up !== tut.up) { tut.up = up; tutEl("coach").classList.toggle("up", up); }
   if (tg.r) { g.lineStyle(3 * px, 0xf0c766, 0.9); strokeRing(g, tg.x, tg.y, tg.r + Math.sin(now * 4) * 4); }
   // keep the arrow clear of the HUD strip at the top
   const L = v.x + 48 * px, R = v.right - 48 * px, T = v.y + 130 * px, B = v.bottom - 56 * px;

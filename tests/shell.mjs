@@ -370,6 +370,25 @@ for (const dpr of [1, 2]) {
   ok("replay from How to play restarts it; Skip in the pause menu ends it", rp.active && rp.step === 0 && !rp.done && !rp.pauseOpen && skipVis && await ev(page, () => !tut.active && save.tutorialDone), rp);
   await ctx.close();
 }
+{   // #86: the lesson's mark holds its course; a sinking at any step starts the chase over with a fresh mark; the lesson ends with a kill
+  const { ctx, page } = await open(D, { tag: "tut-dead-end" });
+  await toSea(page);
+  const m0 = await ev(page, () => { const e = tut.target, p = { x: e.x, y: e.y }; player.x = e.x - 200; player.y = e.y; player.rot = 0; player.speed = 0; return { mark: !!e.tutMark, slow: e.maxSpeed < 100, p }; });
+  await page.waitForTimeout(1500 * SLOW);
+  const d1 = await ev(page, () => ({ d: dist(player, tut.target), run: tut.target.speed }));
+  ok("tutorial mark: slow, flagged, and it does not run from a ship sailing up to it", m0.mark && m0.slow && d1.d < 320, { m0, d1 });
+  await ev(page, () => { player.x = PORT.x + DOCK_R + 220; player.y = PORT.y; enterStep(3); });
+  await ev(page, () => { sink(player, null); });
+  await until(page, () => docked);
+  await page.click("#sail");
+  await until(page, () => !docked && !paused);
+  const back = await ev(page, () => ({ step: tut.step, mark: !!(tut.target && tut.target.alive && tut.target.tutMark), txt: document.getElementById("coachTxt").textContent }));
+  ok("tutorial: sunk on the 'keep firing' step, the next sortie starts at 'find the ship' with a fresh mark (no empty dead end)", back.step === 1 && back.mark, back);
+  await ev(page, () => { sink(tut.target, player); });
+  await until(page, () => tut.step >= 4);
+  ok("tutorial: sinking the mark is a counted kill (the lesson never ends on 0 sunk)", await ev(page, () => save.sunk >= 1));
+  await ctx.close();
+}
 {   // an old save with progress and no tutorial field never sees the tutorial
   const ctx = await browser.newContext({ viewport: D });
   const page = await ctx.newPage();

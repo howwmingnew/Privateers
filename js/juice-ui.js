@@ -115,9 +115,10 @@ function sortieTally({ sunk, cargo: c, bonus, gold }) {
   if (better) { save = { ...save, bestRun: run }; persist(); }
   const el = juiceEl("tally", "");
   const icons = Math.min(sunk, 12);
+  // (a pass that sold at two different prices has no single multiplier: the cargo and the gold stand alone)
   const firstSale = typeof firstVoyage === "function" && firstVoyage();   // the first sale reads cargo -> gold, no multiplier math
   el.innerHTML = (sunk > 0 ? `<div class="t-sunk"><span>${t("tallySunk")}</span>${SKULL_SVG.repeat(icons)}${sunk > icons ? `<em>+${sunk - icons}</em>` : ""}</div>` : "") +
-    `<div class="t-math">${t("tallyCargo", { n: fmt(c) })}${bonus > 0 && !firstSale ? ` <b>× ${(1 + bonus).toFixed(1)}</b>` : ""}</div>` +
+    `<div class="t-math">${t("tallyCargo", { n: fmt(c) })}${bonus > 0 && !firstSale && Math.abs(Math.round(c * (1 + bonus)) - gold) <= 1 ? ` <b>× ${(1 + bonus).toFixed(1)}</b>` : ""}</div>` +
     `<div class="t-gold">+<b>0</b> <small>${t("tallyGold")}</small></div>` +
     (record ? `<div class="t-best">${t("tallyBest")}</div>` : (save.bestRun.sunk > 0 ? `<div class="t-rec">${t("tallyRec", { n: save.bestRun.sunk })}</div>` : ""));
   el.classList.remove("on", "done"); void el.offsetWidth; el.classList.add("on");
@@ -125,7 +126,7 @@ function sortieTally({ sunk, cargo: c, bonus, gold }) {
   tallyUntil = t0 + TALLY_SHOW_MS;
   sfx("coinRoll");
   runHook("tally", { sunk, cargo: c, bonus, gold });   // the share card keeps it (js/sharecard.js)
-  if (sunk > 0 && !docked && typeof postcardOffer === "function") postcardOffer();   // a sortie worth a postcard (js/postcard.js)
+  if (sunk > 0 && !docked && typeof postcardOffer === "function") postcardOffer(undefined, true);   // a sortie worth a postcard (js/postcard.js)
   const tick = () => {
     const k = dur ? Math.min(1, (performance.now() - t0) / dur) : 1;
     num.textContent = fmt(Math.round(gold * (1 - Math.pow(1 - k, 3))));

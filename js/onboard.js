@@ -45,7 +45,11 @@ onHook("frame", () => {
   if (freed && !toastOn && toastQueue.length && !docked) { clearTimeout(toastTimer); toastTimer = setTimeout(nextToast, 250); }
 });
 // Achievement cards wait for the coach card, any banner, and (if earned on the first voyage) for the ledger to close.
-const achHeld = () => coachUp() || anyBanner() || (typeof achLedgerHold === "function" && achLedgerHold());
+// On a wide screen the card (bottom left) and the coach (bottom middle) do not meet, so only a narrow one makes it wait:
+// "Opening Shot" belongs to the hit, not to the end of the lesson.
+const ACH_COACH_W = 1200;
+const achCoachHeld = () => coachUp() && window.innerWidth < ACH_COACH_W;
+const achHeld = () => achCoachHeld() || anyBanner() || (typeof achLedgerHold === "function" && achLedgerHold());
 onHook("frame", () => { if (typeof achQueue !== "undefined" && achQueue.length && !achShowing && !achHeld()) nextAchToast(); });
 
 // ---------- first-voyage chart ----------

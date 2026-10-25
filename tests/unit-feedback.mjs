@@ -423,3 +423,18 @@ test("#69 the grapple's strings, sounds and constants exist", () => {
     assert.ok(run(`typeof ${k} === "number" && ${k} > 0`), k);
 });
 
+
+// ---------- #88: the upgrade preview shows before and after for every figure the gun states ----------
+test("#88 gunStats: the incendiary's upgrade preview carries the damage AND the burn, before and after; a plain gun only the damage", () => {
+  const g = bay();
+  const dmg = (id, lv) => g.run(`Math.round(GUNS.${id}.dmg * gunLvMul(${lv}) * shipGunK(save.ship))`);
+  const burn = (id, lv) => g.run(`Math.round(GUNS.${id}.burn * gunLvMul(${lv}) * shipGunK(save.ship) * BURN_T)`);
+  const strip = h => h.replace(/<[^>]+>/g, "");
+  const fire = strip(g.run(`gunStats("fire", 3, save.ship, 4)`));
+  assert.equal(fire, `${dmg("fire", 3)} dmg → ${dmg("fire", 4)} + ${burn("fire", 3)} burn → ${burn("fire", 4)}`);
+  assert.notEqual(burn("fire", 3), burn("fire", 4), "the burn really rises with the level");
+  assert.equal(strip(g.run(`gunStats("six", 2, save.ship, 3)`)), `${dmg("six", 2)} dmg → ${dmg("six", 3)}`);
+  assert.equal(strip(g.run(`gunStats("fire", 3)`)), `${dmg("fire", 3)} dmg + ${burn("fire", 3)} burn`, "no preview without a next level");
+  const zh = bay("zh");
+  assert.match(strip(zh.run(`gunStats("fire", 1, save.ship, 2)`)), /^傷害 \d+ → \d+ \+ 燃燒 \d+ → \d+$/);
+});

@@ -1,7 +1,7 @@
 "use strict";
 // ---------- Harbor ----------
 // prior: what a quick resupply on this pass through the ring already sold (js/mooring.js), for the ledger's message.
-function dock(kind, prior = { sold: 0, bonus: 0 }) {
+function dock(kind, prior = { sold: 0, bonus: 0, cargo: 0, sunk: 0 }) {
   const svc = serviceOf(kind);   // js/ports.js: a supply station neither buys nor sells, a trade port does not mend
   runHook("dock", kind, svc.sell ? cargo : 0);   // kind "outpost" docks at the Hulk Outpost (js/campaign.js)
   paused = true; docked = true; deckSel = null; gunNote = null; if (typeof resetLedgerPick === "function") resetLedgerPick();   // js/ledger-tabs.js: tab, hull panel, candidate card
@@ -26,7 +26,8 @@ function dock(kind, prior = { sold: 0, bonus: 0 }) {
   document.querySelector("#port .sheet").scrollTop = 0;   // the result message is at the top; never open scrolled past it
   Snd.music("harbor"); Snd.ambience("harbor");
   if (kind === "return" || isStationKind(kind)) Snd.play("bell");
-  if (sale.sold > 0 && (kind === "return" || kind === "outpost" || kind === "trade")) sortieTally({ ...tally, bonus: sale.bonus, gold: sale.sold });   // count-up (js/juice-ui.js)
+  // count-up (js/juice-ui.js): the visit's whole sale, the quick one on the way in included, so it says what the ledger line and the purse do
+  if (sale.sold > 0 && (kind === "return" || kind === "outpost" || kind === "trade")) sortieTally({ sunk: tally.sunk + (prior.sunk || 0), cargo: tally.cargo + (prior.cargo || 0), bonus, gold: sold });
   document.getElementById("joy").hidden = true; joyVec = { x: 0, y: 0, m: 0 };
 }
 function setSail() {
