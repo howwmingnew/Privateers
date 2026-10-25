@@ -4,6 +4,7 @@
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { stepper } from "./lib/stepper.mjs";
 
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const out = process.argv[3] || ".review/phase1b";
@@ -42,7 +43,8 @@ async function openSea(viewport, { mobile = false, seed = {} } = {}) {
     player.x = PORT.x + 1500; player.y = PORT.y; player.speed = 0; moved = true;
     for (const e of enemies) { e.x = W - 200; e.y = H - 200; }
     window.managePopulation = () => {};   // the sea spawns nothing new: a stray ship would add boxes of its own
-    window.__calm = setInterval(() => { for (const e of enemies) if (!e.mine && !(e.angry > 5)) { e.x = W - 200; e.y = H - 200; } }, 40);
+    window.__park = () => { for (const e of enemies) if (!e.mine && !(e.angry > 5)) { e.x = W - 200; e.y = H - 200; } };
+    window.__calm = setInterval(__park, 40);
   });
   await page.waitForFunction(() => !bannerBusy(), null, { timeout: 15000 * SLOW });
   return { ctx, page };
@@ -51,14 +53,16 @@ async function openSea(viewport, { mobile = false, seed = {} } = {}) {
 // ---------- #41: AI ships near the outpost and the harbor keep moving and leave ----------
 // Each ship starts 600 px out, heading for a wander point on the very hulk / the harbor island. Before the fix it crawled along
 // the rim at about a tenth of its speed until the next wander roll.
+// Game time is hand-stepped (tests/lib/stepper.mjs), so this sea is closed afterwards and never run in real time again.
 {
   const { ctx, page } = await openSea({ width: 1280, height: 720 });
-  const runs = await ev(page, async scale => {
+  await ev(page, stepper);
+  const runs = await ev(page, () => {
     save.campaign.outpost = true; syncOutpost();
-    const sample = async (e, goal, secs) => {
+    const sample = (e, goal, secs) => {   // a sample every 0.25 s of game time; the stray ships are parked every frame
       const tr = [];
       for (let i = 0; i < secs * 4; i++) {
-        await new Promise(r => setTimeout(r, 250 * scale));
+        stepN(15, __park);
         tr.push({ d: Math.hypot(e.x - goal.x, e.y - goal.y), v: e.speed / e.maxSpeed, alive: e.alive });
       }
       return tr;
@@ -70,13 +74,13 @@ async function openSea(viewport, { mobile = false, seed = {} } = {}) {
           const e = makeEnemy(S, goal.x + dx, goal.y + dy, 6, faction, cls); e.mine = true;
           e.rot = Math.atan2(-dy, -dx); e.wander = { x: goal.x, y: goal.y }; e.thinkT = 8;
           // the sea must not hand it a target: the player is far away and the other ships are parked
-          const tr = await sample(e, goal, 10);
+          const tr = sample(e, goal, 10);
           res.push({ name, cls, dx, dy, alive: tr.every(p => p.alive), meanV: tr.reduce((a, p) => a + p.v, 0) / tr.length,
             minD: Math.min(...tr.map(p => p.d)), endD: tr.at(-1).d });
           e.alive = false; e.spr.setVisible(false); e.x = e.y = 200;
         }
     return res;
-  }, SLOW);
+  });
   const bad = runs.filter(r => r.alive && (r.meanV < 0.4 || r.minD < (r.name === "outpost" ? 62 : 110)));
   ok(`#41 ${runs.length} AI ships sent at the outpost / harbor keep sailing (mean speed >= 40%) and never sit on the hulk`, bad.length === 0, bad);
   const stay = runs.filter(r => r.alive && r.name === "outpost" && r.endD < 130);

@@ -20,10 +20,13 @@ async function open(viewport, { lang = "en", saveJson = null, mobile = false } =
   const page = await ctx.newPage(), errors = [];
   page.on("pageerror", e => errors.push("pageerror: " + e.message));
   page.on("console", m => { if (m.type() === "error") errors.push("console: " + m.text()); });
+  // the game reads the save only on boot: ours goes in just before it, once per tab, so the reloads below find what the game wrote
+  await ctx.addInitScript(([l, s]) => {
+    if (sessionStorage.getItem("__seeded")) return;
+    sessionStorage.setItem("__seeded", "1");
+    localStorage.clear(); localStorage.setItem("privateers-lang", l); if (s) localStorage.setItem("privateers-save-v2", s);
+  }, [lang, saveJson]);
   await page.goto(url, { waitUntil: "load" });
-  await ready(page);   // let the first boot write its own save before ours goes in, or it would overwrite it
-  await page.evaluate(([l, s]) => { localStorage.clear(); localStorage.setItem("privateers-lang", l); if (s) localStorage.setItem("privateers-save-v2", s); }, [lang, saveJson]);
-  await page.reload({ waitUntil: "load" });
   await ready(page);
   return { ctx, page, errors, shot: name => page.screenshot({ path: join(out, name + ".png") }) };
 }
@@ -99,7 +102,8 @@ console.log("Fresh campaign (desktop, en)");
   await page.waitForTimeout(900 * SLOW);
   // the first voyage's coach keeps sea banners back (js/world-seas.js): put it away for this check
   await page.evaluate(() => { tutorialReset(); player.x = PORT.x - 1460; player.y = PORT.y + 60; player.hp = player.maxHp; });
-  await page.waitForTimeout(1000 * SLOW);
+  // until the banner is up (and faded in, for the picture below); the check that follows says what was missing
+  await page.waitForFunction(() => seaBanner.classList.contains("on") && seaBanner.dataset.sea === "reef" && !!save.ach.sea_reef && getComputedStyle(seaBanner).opacity === "1", null, { polling: 50, timeout: 3000 * SLOW }).catch(() => {});
   const ban = await page.evaluate(() => ({ on: seaBanner.classList.contains("on"), sea: seaBanner.dataset.sea, txt: seaBanner.textContent, ach: !!save.ach.sea_reef }));
   check(ban.on && ban.sea === "reef" && /Reef Straits/.test(ban.txt) && /Lv 3–5/.test(ban.txt), `banner on crossing into the Reef Straits: "${ban.txt}"`);
   check(ban.ach, "reaching the Reef Straits unlocks its achievement");
@@ -171,7 +175,7 @@ console.log("Fresh campaign (desktop, en)");
   // (the grace runs on wall-clock time from the screen opening: restart it right at the press so a slow machine cannot outlast it)
   await page.evaluate(() => { vicShownAt = performance.now(); vicLastTry = 0; document.querySelector("[data-v=keep]").click(); });
   check(await page.evaluate(() => !vicEl.hidden), "a press right as the victory screen opens does not skip it");
-  await page.waitForTimeout(1300 * SLOW);
+  await page.evaluate(() => { vicShownAt = performance.now() - VIC_GRACE_MS - 100; vicLastTry = 0; });   // the grace and the press-spam calm have run out
   await page.click("[data-v=keep]"); await page.waitForTimeout(200 * SLOW);
   const keep = await page.evaluate(() => ({ hidden: vicEl.hidden, paused, docked, won: save.campaign.won }));
   check(keep.hidden && !keep.paused && !keep.docked && keep.won, "Keep sailing: back at sea, campaign marked won");
@@ -216,7 +220,9 @@ console.log("Fresh campaign (desktop, en)");
   await page.waitForFunction(() => !vicEl.hidden, null, { timeout: 20000 * SLOW });
   const die = await page.evaluate(() => ({ vic: !vicEl.hidden, docked }));
   check(die.vic && die.docked, "sunk right after the final kill: the victory screen still shows, over the harbor");
-  await page.waitForTimeout(1300 * SLOW);   // past the victory screen's input grace
+  // past the victory screen's input grace. Not shortened: the kill and the dock after the sinking each queue a showVictory
+  // (js/campaign.js), the second is still pending here and would open the screen again over a New Game+ taken too soon
+  await page.waitForTimeout(1300 * SLOW);
   await page.click("[data-v=ng]"); await page.waitForTimeout(150 * SLOW); await page.click("[data-v=ng]"); await page.waitForTimeout(300 * SLOW);
   const ng2 = await page.evaluate(() => ({ ng: save.ngPlus, vic: vicEl.hidden, docked, bounty: save.campaign.bounty }));
   check(ng2.ng === 2 && ng2.vic && ng2.docked && ng2.bounty === 0, "New Game+ (victory screen) starts cycle 2 in the harbor");

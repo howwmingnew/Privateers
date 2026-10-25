@@ -3,6 +3,7 @@
 // The pure logic is in tests/unit-ports.mjs.
 // Usage: node tests/ports.mjs [url]     (exit 1 on any failed check or page error)
 import { chromium } from "playwright";
+import { stepper } from "./lib/stepper.mjs";
 
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const SLOW = +process.env.TEST_SLOW || 1;   // CI runners render without a GPU: stretch every wait
@@ -38,8 +39,8 @@ async function openSea(viewport, { mobile = false } = {}) {
     player.x = PORT.x + 1500; player.y = PORT.y; player.speed = 0; moved = true;
     for (const e of enemies) { e.x = W - 200; e.y = H - 200; }
     window.managePopulation = () => {};   // the sea spawns nothing new
-    window.__gt = 0; onHook("frame", dt => { window.__gt += dt; });   // game seconds actually simulated
-    window.__calm = setInterval(() => { for (const e of enemies) if (!e.mine && !(e.angry > 5)) { e.x = W - 200; e.y = H - 200; } }, 40);
+    window.__park = () => { for (const e of enemies) if (!e.mine && !(e.angry > 5)) { e.x = W - 200; e.y = H - 200; } };
+    window.__calm = setInterval(__park, 40);
   });
   await page.waitForFunction(() => !bannerBusy(), null, { timeout: 15000 * SLOW });
   return { ctx, page };
@@ -125,31 +126,7 @@ async function ledgerCheck(pg, id, expect) {
   await page.waitForFunction(() => !docked && !paused, null, { timeout: 5000 * SLOW });
 }
 
-// ---------- 5. AI ships near a station keep moving and leave the truce circle ----------
-{
-  const runs = await ev(page, async scale => {
-    const res = [];
-    for (const [id, cls, faction] of [["supply-4", "brig", "pirate"], ["trade-5", "manowar", "navy"], ["supply-7", "fluyt", "merchant"]])
-      for (const [dx, dy] of [[-120, 0], [0, 150]]) {
-        const st = STATIONS.find(s => s.id === id), e = makeEnemy(S, st.x + dx, st.y + dy, 6, faction, cls); e.mine = true;
-        e.rot = Math.atan2(-dy, -dx); e.wander = { x: st.x, y: st.y }; e.thinkT = 8;
-        const tr = [];
-        // 15 s of GAME time (the frames' own clamped dt), not wall time: a busy machine renders slowly and the game clamps each frame to 50 ms
-        const g0 = window.__gt;
-        for (let i = 1; i <= 60; i++) { const t0 = performance.now(); while (window.__gt < g0 + i * 0.25 && performance.now() - t0 < 20000 * scale) await new Promise(r => setTimeout(r, 25)); tr.push({ d: Math.hypot(e.x - st.x, e.y - st.y), v: e.speed / e.maxSpeed, alive: e.alive }); }
-        res.push({ id, cls, dx, dy, startD: Math.hypot(dx, dy), alive: tr.every(p => p.alive), meanV: tr.reduce((a, p) => a + p.v, 0) / tr.length, endD: tr.at(-1).d, truce: inTruce(e) });
-        e.alive = false; e.spr.setVisible(false); e.x = e.y = 200;
-      }
-    return res;
-  }, SLOW);
-  const TR = await ev(page, () => STATION_TRUCE_R);
-  const stuck = runs.filter(r => r.alive && (r.meanV < 0.3 || r.endD < r.startD + 40 || r.endD < TR * 0.85));
-  ok(`${runs.length} AI ships dropped inside a station's circle keep sailing (mean speed >= 30%), draw 40+ px away from the station and end near or beyond the 280 px truce edge within 15 s`, stuck.length === 0, stuck.length ? stuck : undefined);
-  const safe = await ev(page, () => { const st = STATIONS[0]; return { truce: inTruce({ x: st.x + 100, y: st.y }), far: inTruce({ x: st.x + 900, y: st.y }), safeShip: inSafe({ x: st.x + 100, y: st.y }) }; });
-  ok("a station's circle is a truce for the player and not 900 px out", safe.truce && safe.safeShip && !safe.far, safe);
-}
-
-// ---------- 6. chart marks (minimap), the legend, edge markers ----------
+// ---------- 5. chart marks (minimap), the legend, edge markers ----------
 {
   const px = await ev(page, () => {
     player.x = PORT.x + 400; player.y = PORT.y; player.hp = player.maxHp;
@@ -190,7 +167,7 @@ async function ledgerCheck(pg, id, expect) {
   ok("...and none when it is too far away", !edge2.includes("trade"), edge2);
 }
 
-// ---------- 7. strings: every station string has both languages ----------
+// ---------- 6. strings: every station string has both languages ----------
 {
   const r = await ev(page, () => {
     const keys = Object.keys(STR.en).filter(k => /^(station|supply|trade|fSupply)/.test(k));
@@ -200,6 +177,33 @@ async function ledgerCheck(pg, id, expect) {
   const zh = await ev(page, () => { lang = "zh"; applyLang(); return { title: t("stationName_supply"), label: stationLabels[0].text, trade: t("stationName_trade") }; });
   ok("switching to zh relabels the stations on the sea", zh.title === "補給站" && zh.label === "補給站" && zh.trade === "交易港", zh);
   await ev(page, () => { lang = "en"; applyLang(); });
+}
+
+// ---------- 7. AI ships near a station keep moving and leave the truce circle ----------
+// 15 s of game time each, hand-stepped (tests/lib/stepper.mjs). It runs last on this page: once stepped, game time is ahead of the
+// wall clock and the page must not go on in real time.
+{
+  await ev(page, stepper);
+  const runs = await ev(page, () => {
+    player.x = PORT.x + 1500; player.y = PORT.y; player.speed = 0; player.hp = player.maxHp;   // far from all three stations, as on a fresh sea
+    const res = [];
+    for (const [id, cls, faction] of [["supply-4", "brig", "pirate"], ["trade-5", "manowar", "navy"], ["supply-7", "fluyt", "merchant"]])
+      for (const [dx, dy] of [[-120, 0], [0, 150]]) {
+        const st = STATIONS.find(s => s.id === id), e = makeEnemy(S, st.x + dx, st.y + dy, 6, faction, cls); e.mine = true;
+        e.rot = Math.atan2(-dy, -dx); e.wander = { x: st.x, y: st.y }; e.thinkT = 8;
+        const tr = [];
+        // a sample every 0.25 s of game time; the stray ships are parked every frame (the parking interval cannot fire inside the loop)
+        for (let i = 1; i <= 60; i++) { stepN(15, __park); tr.push({ d: Math.hypot(e.x - st.x, e.y - st.y), v: e.speed / e.maxSpeed, alive: e.alive }); }
+        res.push({ id, cls, dx, dy, startD: Math.hypot(dx, dy), alive: tr.every(p => p.alive), meanV: tr.reduce((a, p) => a + p.v, 0) / tr.length, endD: tr.at(-1).d, truce: inTruce(e) });
+        e.alive = false; e.spr.setVisible(false); e.x = e.y = 200;
+      }
+    return res;
+  });
+  const TR = await ev(page, () => STATION_TRUCE_R);
+  const stuck = runs.filter(r => r.alive && (r.meanV < 0.3 || r.endD < r.startD + 40 || r.endD < TR * 0.85));
+  ok(`${runs.length} AI ships dropped inside a station's circle keep sailing (mean speed >= 30%), draw 40+ px away from the station and end near or beyond the 280 px truce edge within 15 s`, stuck.length === 0, stuck.length ? stuck : undefined);
+  const safe = await ev(page, () => { const st = STATIONS[0]; return { truce: inTruce({ x: st.x + 100, y: st.y }), far: inTruce({ x: st.x + 900, y: st.y }), safeShip: inSafe({ x: st.x + 100, y: st.y }) }; });
+  ok("a station's circle is a truce for the player and not 900 px out", safe.truce && safe.safeShip && !safe.far, safe);
 }
 await ctxA.close();
 
