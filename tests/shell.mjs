@@ -346,12 +346,13 @@ for (const dpr of [1, 2]) {
   await until(page, () => tut.step >= 5);
   await ev(page, () => { canDock = true; player.x = PORT.x + 150; player.y = PORT.y; });
   await until(page, () => docked && tut.step === 6);
-  await page.click('[data-act="buy"][data-id="six"]');   // too soon after the ledger opened: ignored
-  const early = await ev(page, () => save.store.length + 1);
+  await page.click('#deck [data-act="port"]');   // too soon after the ledger opened: ignored
+  const early = await ev(page, () => (deckSel ? 0 : 1));
   await page.waitForTimeout(400 * SLOW);
   const t6 = await ev(page, () => ({ gold: save.gold, inSheet: document.getElementById("coach").parentElement.classList.contains("sheet"), txt: document.getElementById("coachTxt").textContent }));
   ok("a shop click in the first moments after docking is ignored", early === 1, { early });
   await page.screenshot({ path: join(out, "d-tutorial-ledger.png") });
+  await page.click('#deck [data-act="port"]');   // a gun port picked: the armory is in its panel
   await page.click('[data-act="buy"][data-id="six"]');
   await page.waitForTimeout(150 * SLOW);
   const t7 = await ev(page, () => ({ done: save.tutorialDone, txt: document.getElementById("coachTxt").textContent }));

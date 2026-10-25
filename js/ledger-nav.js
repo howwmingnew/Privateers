@@ -6,7 +6,7 @@
 // down from the last control (or with pad Y) and left by going up. LB / RB jump between the shop's sections.
 // After a purchase the shop is rebuilt (renderPort); focus goes back to the same item, or the next one that can still
 // be pressed, never to <body>.
-const LEDGER_BOXES = ["deck", "gear", "armory", "yard", "ships", "escorts"];
+const LEDGER_BOXES = ["tabs", "deck", "ctx", "gear"];
 const inFooter = el => !!el.closest("footer");
 const ledgerControls = () => focusables(sheetEl).filter(el => el !== sheetEl);
 function centre(el) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
@@ -42,7 +42,7 @@ function ledgerMove(dx, dy) {
   // the gun deck is a diagram with the broadsides side by side (js/deck-art.js): down reads it like a page (bow, larboard
   // top to bottom, starboard, stern) so a run of downs reaches every port; up and sideways stay spatial
   if (dy > 0 && cur.closest("#deck")) {
-    const ports = [...$m("deck").querySelectorAll(".slot")], next = ports[ports.indexOf(cur) + 1];
+    const ports = [...$m("deck").querySelectorAll(".slot, .dk-ship")], next = ports[ports.indexOf(cur) + 1];   // the hull button sits between the larboard and starboard ports
     if (next) { focusEl(next); return; }
   }
   const foot = inFooter(cur), col = cur.closest(".lcol");
@@ -79,7 +79,7 @@ sheetEl.addEventListener("focusin", e => {
   const box = e.target.closest(LEDGER_BOXES.map(id => "#" + id).join(", ") + ", #wanted"), item = e.target.closest(".item");
   ledgerLast = { el: e.target, box: box ? box.id : null, idx: box && item ? [...box.querySelectorAll(".item")].indexOf(item) : -1 };
 });
-const DATA_KEYS = ["act", "id", "k", "side", "i", "camp", "w", "p", "r"];
+const DATA_KEYS = ["act", "id", "k", "side", "i", "e", "ship", "type", "v", "camp", "w", "p", "r"];
 const keyOf = (el, skip = []) => DATA_KEYS.filter(k => el.dataset[k] !== undefined && !skip.includes(k)).map(k => `[data-${k}="${el.dataset[k]}"]`).join("");
 function refocusLedger(last) {
   const els = ledgerControls(), shop = els.filter(el => !inFooter(el)), box = last.box && $m(last.box);

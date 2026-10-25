@@ -37,7 +37,10 @@ async function open(lang = "en", view = { width: 1280, height: 720 }, save = SAV
   await ready(page);
   return { ctx, page };
 }
+// The ships list is in the hull's panel (js/ledger-panel.js): open it before reading or pressing it.
+const openHull = page => page.evaluate(() => { if (!hullOpen) { resetLedgerPick(); hullOpen = true; renderPort(); } });
 const buy = async (page, id) => {   // two taps: arm, then confirm
+  await openHull(page);
   await page.click(`#ships [data-act="ship"][data-id="${id}"]`); await page.waitForTimeout(500 * SLOW);
   await page.click(`#ships [data-act="ship"][data-id="${id}"]`); await page.waitForTimeout(200 * SLOW);
 };
@@ -46,6 +49,7 @@ const shot = (page, name, sel) => (sel ? page.locator(sel).first() : page).scree
 // ---------- the yard: two lines, each ship against yours ----------
 {
   const { ctx, page } = await open();
+  await openHull(page);
   const rows = await page.evaluate(() => [...document.querySelectorAll("#ships > *")].map(el => el.matches(".hint-s") ? { head: el.textContent } : { id: el.querySelector(".btn")?.dataset.id, act: el.querySelector(".btn")?.dataset.act, nm: el.querySelector(".nm").textContent, cmp: el.querySelector(".cmp")?.textContent || "", ds: el.querySelector(".ds").textContent }));
   const heads = rows.filter(r => r.head).map(r => r.head);
   check(heads.length >= 3 && heads.some(h => /^Fast line/.test(h)) && heads.some(h => /^Heavy line/.test(h)), `the yard has a heading for each line: ${JSON.stringify(heads)}`);
@@ -66,6 +70,7 @@ const shot = (page, name, sel) => (sel ? page.locator(sel).first() : page).scree
 }
 {
   const { ctx, page } = await open("zh");
+  await openHull(page);
   const heads = await page.evaluate(() => [...document.querySelectorAll("#ships .hint-s")].map(e => e.textContent));
   check(heads.some(h => /^快速線/.test(h)) && heads.some(h => /^重砲線/.test(h)), `繁中 line headings: ${JSON.stringify(heads)}`);
   const cmp = await page.evaluate(() => document.querySelector('#ships [data-id="corsair"]').closest(".item").querySelector(".cmp").textContent);
@@ -79,6 +84,7 @@ const shot = (page, name, sel) => (sel ? page.locator(sel).first() : page).scree
   const { ctx, page } = await open("en", { width: 390, height: 844 });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   check(overflow <= 1, `no sideways scroll at 390 px (${overflow})`);
+  await openHull(page);
   await page.locator("#ships").scrollIntoViewIfNeeded();
   await shot(page, "yard-en-mobile", "#ships");
   await ctx.close();
@@ -177,8 +183,9 @@ const shot = (page, name, sel) => (sel ? page.locator(sel).first() : page).scree
   await buy(page, "gunboat");
   s = await page.evaluate(() => ({ ship: save.ship, fleet: save.fleet.map(e => e.ship).sort(), turn: player.turnRate }));
   check(s.ship === "gunboat" && s.fleet.join() === "corsair,sloop" && s.turn === 2.25, `a gunboat too, the corsair waits in the yard: ${s.fleet}`);
+  await openHull(page);
   const mine = await page.evaluate(() => [...document.querySelectorAll("#ships .item")].filter(e => e.querySelector('[data-act="switch"], .max')).map(e => e.querySelector(".nm").textContent));
-  check(mine.some(n => /Corsair/.test(n) && /Fast/.test(n)) && mine.some(n => /Gunboat/.test(n) && /Heavy/.test(n)), `owned ships carry their line: ${JSON.stringify(mine)}`);
+  check(mine.some(n => /Corsair/.test(n) && /Fast/.test(n)) && mine.some(n => /Sloop/.test(n)) && !mine.some(n => /Gunboat/.test(n)), `idle ships carry their line, the ship you sail is not in the list: ${JSON.stringify(mine)}`);
   await page.click('#ships [data-act="switch"]'); await page.waitForTimeout(300 * SLOW);
   // every hull on the gun deck
   for (const id of ["sloop", "schooner", "gunboat", "brigantine", "brig", "cruiser", "frigate", "corsair", "line"]) {
@@ -204,6 +211,7 @@ const shot = (page, name, sel) => (sel ? page.locator(sel).first() : page).scree
   const old = JSON.stringify({ v: 2, gold: 1234, ship: "frigate", hull: 6, sails: 3, hold: 4, bow: [G("long12"), G("six")], left: new Array(7).fill(0).map((_, i) => ({ g: "carronade", lv: 1 + i })), right: [], stern: [G("six")],
     store: [{ g: "chain", lv: 3 }], sunk: 40, wrecks: [], salvage: [], seed: 99, tutorialDone: true, campaign: { bounty: 3, ships: ["sloop", "schooner", "brig", "frigate"], deaths: 0 } });
   const { ctx, page } = await open("en", { width: 1280, height: 720 }, old);
+  await openHull(page);
   const s = await page.evaluate(() => ({ ship: save.ship, hull: save.hull, sails: save.sails, hold: save.hold, gold: save.gold, maxHp: player.maxHp, speed: player.maxSpeed, turn: player.turnRate, rating: shipRating(),
     carr: save.left.filter(g => g && g.g === "carronade").length, store: save.store.length, ships: save.campaign.ships, buy: [...document.querySelectorAll('#ships .item:not(.locked) [data-act="ship"]')].map(b => b.dataset.id) }));
   check(s.ship === "frigate" && s.hull === 6 && s.sails === 3 && s.hold === 4 && s.gold === 1234, "an old frigate save keeps its ship, upgrades and gold");

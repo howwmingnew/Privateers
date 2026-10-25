@@ -103,7 +103,7 @@ async function ledgerCheck(pg, id, expect) {
   const r = await ev(pg, () => ({
     kind: dockKind, title: document.getElementById("portTitle").textContent, msg: document.getElementById("pMsg").textContent,
     note: document.querySelector("#wanted .hint-s")?.textContent || "", gold: save.gold, cargo,
-    hidden: ["deck", "armory", "yard", "ships"].map(i => document.getElementById(i).closest("section").hidden),
+    hidden: ["deck", "gear"].map(i => document.getElementById(i).closest("section").hidden),   // the fleet block holds the deck, armory, yard and ships
     sailVisible: (() => { const b = document.getElementById("sail"), r = b.getBoundingClientRect(); return r.width > 0 && r.bottom > 0 && r.top < innerHeight + 4000; })(),
     hp: player.hp, max: player.maxHp,
   }));

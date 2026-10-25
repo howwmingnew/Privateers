@@ -64,7 +64,8 @@ console.log("Fresh campaign (desktop, en)");
   check(boot.islands >= 80 && boot.islands <= 85, `about 85 islands (${boot.islands})`);
   check(boot.edgeL === 10 && boot.cornerL === 10, `axis edge and corners are Lv 10 (${boot.edgeL}, ${boot.cornerL})`);
   check(boot.parity[0].length === 0 && boot.parity[1].length === 0 && boot.emptyZh.length === 0, `every string in both languages ${JSON.stringify(boot.parity)} ${boot.emptyZh}`);
-  const lock0 = await page.evaluate(() => { const b = document.querySelector('#ships [data-id="schooner"]'); return { dis: b?.disabled, txt: b?.textContent, why: b?.closest(".item").querySelector(".lock")?.textContent }; });
+  const lock0 = await page.evaluate(() => { resetLedgerPick(); hullOpen = true; renderPort();   // the ships are in the hull's panel (js/ledger-panel.js)
+    const b = document.querySelector('#ships [data-id="schooner"]'); return { dis: b?.disabled, txt: b?.textContent, why: b?.closest(".item").querySelector(".lock")?.textContent }; });
   check(lock0.dis && /Red Ned/.test(lock0.why || ""), `schooner locked before bounty 1: "${lock0.txt}" / "${lock0.why}"`);
   await o.shot("desktop-en-1-ledger");
 
@@ -143,9 +144,10 @@ console.log("Fresh campaign (desktop, en)");
       const story =await page.evaluate(() => document.querySelector("#wanted .story")?.textContent || "");
       check(/Privateer/.test(story), "harbor tells the story of the bounty just claimed");
       await o.shot("desktop-en-5-after-ned");
+      await page.evaluate(() => { resetLedgerPick(); hullOpen = true; renderPort(); });
       await page.click('#ships [data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(500 * SLOW);
       await page.click('#ships [data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(200 * SLOW);
-      const own = await page.evaluate(() => ({ ship: save.ship, ach: !!save.ach.own_schooner, brigLock: document.querySelector('#ships [data-id="brig"]')?.closest(".item").querySelector(".lock")?.textContent }));
+      const own = await page.evaluate(() => (hullOpen = true, renderPort(), { ship: save.ship, ach: !!save.ach.own_schooner, brigLock: document.querySelector('#ships [data-id="brig"]')?.closest(".item").querySelector(".lock")?.textContent }));
       check(own.ship === "schooner" && own.ach, "schooner bought after bounty 1; its achievement unlocks");
       check(/Mother Carey/.test(own.brigLock || ""), `brig still locked: "${own.brigLock}"`);
     }
@@ -158,10 +160,10 @@ console.log("Fresh campaign (desktop, en)");
       await page.evaluate(() => { for (const c of crates) if (!c.wreck) c.value = 0; cargo = 120; player.x = OUTPOST.x + 70; player.y = OUTPOST.y + 30; player.hp = player.maxHp; });
       await page.waitForFunction(() => docked, null, { timeout: 7000 * SLOW }).catch(() => {});   // sold on the way in, ledger after 3 s stopped (js/mooring.js)
       const op = await page.evaluate(() => ({ docked, atOutpost, gold: save.gold, title: document.getElementById("portTitle").textContent,
-        armory: document.getElementById("armory").closest("section").hidden, ships: document.getElementById("ships").closest("section").hidden }));
+        fleet: document.getElementById("deck").closest("section").hidden, gear: document.getElementById("gear").closest("section").hidden }));
       check(op.docked && op.atOutpost && op.title === "Hulk Outpost", `docks at the outpost ("${op.title}")`);
       check(op.gold - o1 === 120, `outpost buys the hold (${o1} -> ${op.gold})`);
-      check(op.armory && op.ships, "outpost has no armoury or shipyard");
+      check(op.fleet && op.gear, "outpost has no gun deck, armoury or shipyard (they all live under the fleet tabs)");
       await o.shot("desktop-en-6-outpost");
       const tr = await page.evaluate(() => { setSail(); return { truce: inSafe(player), near: nearestHarbor().outpost }; });
       check(tr.truce && tr.near, "sailing out of the outpost starts inside its truce water");
@@ -262,14 +264,14 @@ console.log("Old saves");
     const w = save.wrecks[0];
     return { seed: save.seed, gold: save.gold, ship: save.ship, camp: save.campaign, stats: save.stats, ngPlus: save.ngPlus, same, keptOk, kept: kept.length, wreck: w,
       wreckClear: islands.every(i => Math.hypot(i.x - w.x, i.y - w.y) > i.r + 40), crates: crates.filter(c => c.wreck).length,
-      shipsList: [...document.querySelectorAll("#ships .item")].map(el => el.querySelector(".nm").textContent + ":" + el.querySelector(".btn").textContent + ":" + (el.querySelector(".lock")?.textContent || "")) };
+      shipsList: (hullOpen = true, renderPort(), [...document.querySelectorAll("#ships .item")].map(el => el.querySelector(".nm").textContent + ":" + el.querySelector(".btn").textContent + ":" + (el.querySelector(".lock")?.textContent || ""))) };
   });
   check(s.seed === 7, `old save keeps the fixed map (seed ${s.seed})`);
   check(s.keptOk && s.same === s.kept, `the original islands are still there, shifted with the harbor (${s.same} of 34; the rest sat on a lair, the outpost or the wreck)`);
   check(s.wreck.x === 4600 && s.wreck.y === 3300 && s.wreckClear && s.crates === 1, `old wreck moved with the harbor and lies in open water (${s.wreck.x}, ${s.wreck.y})`);
   check(s.gold === 777 && s.ship === "frigate" && s.camp.ships.includes("frigate") && s.camp.bounty === 0, "keeps gold and the frigate it already sails; campaign starts at bounty 1");
   check(s.stats.time >= 0 && s.stats.sunk.pirate === 0 && s.ngPlus === 0, "stats and NG+ get defaults");
-  check(s.shipsList.length === 10 && /Your ship/.test(s.shipsList[0]) && s.shipsList.some(r => /^Sloop:Switch/.test(r)) && s.shipsList.some(r => /Commodore Hale/.test(r)), `ship list (the one owned, the lost starter sloop parked in the yard (#72), then every model for sale, both lines): ${s.shipsList.join(" | ")}`);
+  check(s.shipsList.length === 9 && /^Sloop:Switch/.test(s.shipsList[0]) && !s.shipsList.some(r => /Frigate:Your ship/.test(r)) && s.shipsList.some(r => /Commodore Hale/.test(r)), `ship list (the lost starter sloop parked in the yard (#72), then every model for sale, both lines; the ship you sail is the tab's own): ${s.shipsList.join(" | ")}`);
   await o.shot("desktop-en-10-oldsave");
   await page.reload({ waitUntil: "load" }); await ready(page);
   const again = await page.evaluate(() => ({ seed: save.seed, w: save.wrecks[0] }));

@@ -27,11 +27,12 @@ function fitGear(s) {
 SAVE_SANITIZERS.push(s => fitGear({ ...s, gear: cleanGear(s.gear) }));
 
 // ---------- locations: { w: "bag", i } | { w: "worn", p } | { w: "store", i } | { w: "mount", side, i } ----------
-const gearAt = (s, l) => (l.w === "bag" ? s.gear.bag[l.i] : l.w === "worn" ? s.gear.worn[l.p] : l.w === "store" ? s.store[l.i] : (s[l.side] || [])[l.i]) || null;
+const gearAt = (s, l) => (l.w === "bag" ? s.gear.bag[l.i] : l.w === "worn" ? s.gear.worn[l.p] : l.w === "store" ? s.store[l.i] : ((l.e != null ? ((s.escorts[l.e] || {}).guns || {}) : s)[l.side] || [])[l.i]) || null;   // l.e: a port of that escort (js/escorts.js)
 function gearSet(s, l, it) {   // an item (or null to take it out: a spare closes up, a mount is left empty)
   const put = (arr, i) => { const a = arr.slice(); if (it) a[i] = it; else a.splice(i, 1); return a; };
   if (l.w === "bag") return { ...s, gear: { ...s.gear, bag: put(s.gear.bag, l.i) } };
   if (l.w === "store") return { ...s, store: put(s.store, l.i) };
+  if (l.w === "mount" && l.e != null) return { ...s, escorts: s.escorts.map((e, k) => (k === l.e ? { ...e, guns: { ...e.guns, [l.side]: e.guns[l.side].map((g, j) => (j === l.i ? it : g)) } } : e)) };
   if (l.w === "mount") { const a = (s[l.side] || []).slice(); a[l.i] = it; return { ...s, [l.side]: a }; }
   const worn = { ...s.gear.worn }; if (it) worn[l.p] = it; else delete worn[l.p];
   return { ...s, gear: { ...s.gear, worn } };

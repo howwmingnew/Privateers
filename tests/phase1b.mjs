@@ -105,54 +105,56 @@ async function openHarbor(viewport, { mobile = false } = {}) {
   await page.waitForFunction(() => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 * SLOW });
   await page.click("[data-smoke=start]");
   await page.evaluate(() => { if (!docked) { tutorialReset(); dock("welcome"); } });
-  await page.waitForFunction(() => docked && document.querySelector("#deck [data-act=slot]"), null, { timeout: 8000 * SLOW });
+  await page.waitForFunction(() => docked && document.querySelector("#deck [data-act=port]"), null, { timeout: 8000 * SLOW });
   await page.waitForTimeout(450 * SLOW);   // the ledger's fade-in
   return { ctx, page };
 }
 
-// ---------- #34 / #68: gun bay, tap the source then the destination ----------
+// ---------- #34 / #68: the gun panel: tap a port, then pick the gun that goes there ----------
 for (const [tag, viewport, mobile] of [["desktop", { width: 1280, height: 720 }, false], ["phone", { width: 390, height: 844 }, true]]) {
   const { ctx, page } = await openHarbor(viewport, { mobile });
   await ev(page, () => { save.gold = 20000; save.bow = [gunItem("six", 1), gunItem("long12", 3)]; save.store = [gunItem("chain", 1)]; deckSel = null; gunNote = null; renderPort(); });
   const bow = () => ev(page, () => save.bow.map(x => x && x.g + x.lv).join(","));
-  const slot = i => `#deck [data-act="slot"][data-side="bow"][data-i="${i}"]`;
+  const slot = i => `#deck [data-act="port"][data-side="bow"][data-i="${i}"]`;
   await page.locator(slot(0)).scrollIntoViewIfNeeded();
   await page.click(slot(0));
   ok(`#34 ${tag}: picking a gun shows the next-level upgrade label, Upgrade x5 and Unload, and no Swap position button`, await ev(page, () =>
-    !document.querySelector('#gunSel [data-act="swap"]') && !!document.querySelector('#gunSel [data-act="gup5"]') && !!document.querySelector('#gunSel [data-act="unload"]') &&
-    /^Upgrade to Lv 2 \(\d/.test(document.querySelector('#gunSel [data-act="gup"]').textContent)));
-  ok(`#68 ${tag}: the picked gun lights every other place it could go`, await ev(page, () => document.getElementById("port").classList.contains("picking") &&
-    document.querySelectorAll("#port .slot.dest").length >= 2 && document.querySelector("#deck .slot.sel") && !document.querySelector("#deck .slot.sel.dest")));
+    !document.querySelector('#ctx [data-act="swap"]') && !!document.querySelector('#ctx [data-act="gup5"]') && !!document.querySelector('#ctx [data-act="unload"]') &&
+    /^Upgrade to Lv 2 \(\d/.test(document.querySelector('#ctx [data-act="gup"]').textContent)));
+  ok(`#68 ${tag}: the picked port is outlined, and its panel offers the stored gun and the armory`, await ev(page, () => !!document.querySelector("#deck .slot.sel") &&
+    document.querySelectorAll('#ctx [data-act="gfrom"][data-side="store"]').length === 1 && document.querySelectorAll('#armory [data-act="buy"]').length === 5));
   await page.screenshot({ path: join(out, `gunbay-picked-${tag}.png`) });
   await page.click(slot(1));
-  ok(`#68 ${tag}: tapping a second port swaps the two guns at once, says so, and offers Undo`, (await bow()) === "long123,six1" && await ev(page, () => !deckSel &&
-    /Swapped/.test(document.querySelector("#gunSel .gnote").textContent) && !!document.querySelector('#gunSel [data-act="gundo"]')));
-  await page.click('#gunSel [data-act="gundo"]');
-  ok(`#68 ${tag}: Undo puts them back`, (await bow()) === "six1,long123" && !(await ev(page, () => !!document.querySelector('#gunSel [data-act="gundo"]'))));
+  ok(`#68 ${tag}: tapping a second port moves the pick to it and moves nothing`, (await bow()) === "six1,long123" && await ev(page, () => deckSel && deckSel.i === 1));
+  await page.click(slot(0)); await page.click('#ctx [data-act="gfrom"][data-side="store"][data-i="0"]');
+  ok(`#68 ${tag}: picking the stored gun for the port trades them at once, says so, and offers Undo`, (await bow()) === "chain1,long123" && await ev(page, () => save.store[0].g === "six" &&
+    /Swapped/.test(document.querySelector("#ctx .gnote").textContent) && !!document.querySelector('#ctx [data-act="gundo"]')));
+  await page.click('#ctx [data-act="gundo"]');
+  ok(`#68 ${tag}: Undo puts them back`, (await bow()) === "six1,long123" && await ev(page, () => save.store[0].g === "chain") && !(await ev(page, () => !!document.querySelector('#ctx [data-act="gundo"]'))));
   await page.click(slot(1)); await page.click(slot(1));   // picked, then picked again: put down
   ok(`#68 ${tag}: tapping the source again puts it down`, !(await ev(page, () => !!deckSel)));
   await page.click(slot(0)); await page.keyboard.press("Escape");
   ok(`#68 ${tag}: Esc puts the pick down and moves nothing`, !(await ev(page, () => !!deckSel)) && (await bow()) === "six1,long123");
   await page.click(slot(0)); await page.click("#pMsg");
   ok(`#68 ${tag}: tapping a blank spot puts the pick down`, !(await ev(page, () => !!deckSel)));
-  // keyboard only: focus the stored gun, Enter, then Enter on a port: the stored gun trades in at once
-  await page.focus('#bay [data-act="store"]'); await page.keyboard.press("Enter");
+  // keyboard only: focus a port, Enter, then Enter on the stored gun in its panel: the stored gun trades in at once
   await page.focus(slot(0)); await page.keyboard.press("Enter");
-  ok(`#68 ${tag}: keyboard (Enter) can pick a stored gun and trade it with a port`, (await bow()) === "chain1,long123" && await ev(page, () => save.store[0].g === "six" && save.store[0].lv === 1), await bow());
+  await page.focus('#ctx [data-act="gfrom"][data-side="store"]'); await page.keyboard.press("Enter");
+  ok(`#68 ${tag}: keyboard (Enter) can pick a port and trade a stored gun with it`, (await bow()) === "chain1,long123" && await ev(page, () => save.store[0].g === "six" && save.store[0].lv === 1), await bow());
   // upgrade label: money short, enough, maxed
   const lbl = await ev(page, () => {
     const out = {};
     deckSel = { side: "bow", i: 1 }; save.gold = 5; renderPort();
-    const b = document.querySelector('#gunSel [data-act="gup"]'); out.short = [b.textContent, b.disabled];
-    save.gold = 99999; renderPort(); const c = document.querySelector('#gunSel [data-act="gup"]'); out.enough = [c.textContent, c.disabled];
-    save.bow[1] = gunItem("six", GUN_MAX); renderPort(); const d = document.querySelector('#gunSel .btn.max'); out.max = [d?.textContent, d?.disabled];
+    const b = document.querySelector('#ctx [data-act="gup"]'); out.short = [b.textContent, b.disabled];
+    save.gold = 99999; renderPort(); const c = document.querySelector('#ctx [data-act="gup"]'); out.enough = [c.textContent, c.disabled];
+    save.bow[1] = gunItem("six", GUN_MAX); renderPort(); const d = document.querySelector('#ctx .btn.max'); out.max = [d?.textContent, d?.disabled];
     return out;
   });
   ok(`#34 ${tag}: the upgrade button shows the price, the shortfall when poor, and "Max level" (disabled) at Lv ${10}`,
     /^Upgrade to Lv 4 \(\d[\d,]* gold, \d[\d,]* short\)$/.test(lbl.short[0]) && lbl.short[1] && /^Upgrade to Lv 4 \(\d[\d,]* gold\)$/.test(lbl.enough[0]) && !lbl.enough[1] && lbl.max[0] === "Max level" && lbl.max[1], lbl);
   // Chinese strings
   await ev(page, () => { lang = "zh"; applyLang(); deckSel = { side: "bow", i: 0 }; renderPort(); });
-  const zh = await ev(page, () => ({ up5: document.querySelector('#gunSel [data-act="gup5"]').textContent, off: document.querySelector('#gunSel [data-act="unload"]').textContent, up: document.querySelector('#gunSel [data-act="gup"]').textContent }));
+  const zh = await ev(page, () => ({ up5: document.querySelector('#ctx [data-act="gup5"]').textContent, off: document.querySelector('#ctx [data-act="unload"]').textContent, up: document.querySelector('#ctx [data-act="gup"]').textContent }));
   ok(`#34 ${tag}: Chinese labels`, /^升級 \d 級（總價 [\d,]+ 金幣/.test(zh.up5) && zh.off === "卸下" && /^升級到 Lv \d（[\d,]+ 金幣/.test(zh.up), zh);
   await page.screenshot({ path: join(out, `gunbay-card-${tag}-zh.png`) });
   await ctx.close();

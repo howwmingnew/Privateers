@@ -83,12 +83,14 @@ check(r.b && r.a, "and to the player's own escorts (and the escorts to the boss)
 // ---------- #72: the starter and every bought ship swap back free ----------
 console.log("#72 owned ships switch back free");
 const tap = sel => page.click(sel);
-const yardInfo = () => ev(() => ({ ship: save.ship, id: save.shipId, gold: save.gold, owned: ownedShips().map(e => e.ship), switches: [...document.querySelectorAll('#ships [data-act="switch"]')].map(b => b.dataset.id),
-  labels: Object.fromEntries([...document.querySelectorAll('#ships [data-act="ship"]')].map(b => [b.dataset.id, b.textContent.trim()])), hints: document.querySelectorAll("#ships .up").length }));
+// The ships are in the hull's panel (js/ledger-panel.js): open it before reading or pressing them.
+const openHull = () => ev(() => { if (!hullOpen) { resetLedgerPick(); hullOpen = true; renderPort(); } });
+const yardInfo = async () => { await openHull(); return ev(() => ({ ship: save.ship, id: save.shipId, gold: save.gold, owned: ownedShips().map(e => e.ship), switches: [...document.querySelectorAll('#ships [data-act="switch"]')].map(b => b.dataset.id),
+  labels: Object.fromEntries([...document.querySelectorAll('#ships [data-act="ship"]')].map(b => [b.dataset.id, b.textContent.trim()])), hints: document.querySelectorAll("#ships .up").length })); };
 await boot(saveWith({ gold: 90000 }));
 let y = await yardInfo();
 check(y.ship === "sloop" && y.switches.length === 0 && !("sloop" in y.labels), "the starter is aboard, nothing to switch to, and the yard does not sell a sloop");
-await tap('[data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(500); await tap('[data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(300);
+await openHull(); await tap('[data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(500); await tap('[data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(300);
 y = await yardInfo();
 check(y.ship === "schooner" && y.switches.includes("s1"), "bought a schooner: the sloop waits in the yard with a Switch button");
 const goldAfterBuy = y.gold;
@@ -113,7 +115,7 @@ const ledgerState = () => ev(() => {
   const hit = document.elementFromPoint(g.left + g.width / 2, g.top + g.height / 2);
   return { top: Math.round(sheet.scrollTop), max: sheet.scrollHeight - sheet.clientHeight, goldVisible: g.top >= s.top - 1 && g.bottom <= s.top + h.height + 1 && !!hit && (hit.id === "pGold" || hit === hd || hd.contains(hit)),
     hdrH: Math.round(h.height), vh: innerHeight, sheetH: Math.round(s.height), noHScroll: document.documentElement.scrollWidth <= innerWidth + 1 && sheet.scrollWidth <= sheet.clientWidth + 1,
-    gold: document.getElementById("pGold").textContent, btnBehind: [...sheet.querySelectorAll("button:not([disabled])")].filter(b => { const r = b.getBoundingClientRect(), fr = sheet.querySelector("footer").getBoundingClientRect(); return r.width > 0 && r.bottom < fr.top && r.top >= s.top + h.height && r.bottom <= s.bottom && (() => { const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !(e && (e === b || b.contains(e))); })(); }).length };
+    gold: document.getElementById("pGold").textContent, btnBehind: [...sheet.querySelectorAll("button:not([disabled])")].filter(b => { const r = b.getBoundingClientRect(), fr = sheet.querySelector("footer").getBoundingClientRect(); return r.width > 0 && r.bottom < fr.top && r.top >= s.top + h.height && r.bottom <= s.bottom && r.left + r.width / 2 > 0 && r.left + r.width / 2 < innerWidth /* a tab scrolled out of the tab row sideways is not behind anything */ && (() => { const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !(e && (e === b || b.contains(e))); })(); }).length };
 });
 const sizes = [[1280, 720, 100], [390, 844, 100], [390, 844, 150], [390, 844, 250], [1280, 720, 250], [390, 844, 50]];
 for (const [w, h, pct] of sizes) {
@@ -155,69 +157,78 @@ for (const kind of ["supply", "trade", "outpost"]) {
 }
 await page.setViewportSize({ width: 1280, height: 720 });
 
-// ---------- #68: gun bay, tap the source then the destination, Undo, Upgrade x5 ----------
+// ---------- #68: the gun panel: pick a port, put a gun there, Undo, Upgrade x5 ----------
 console.log("#68 gun bay");
 await boot(saveWith({ gold: 50000 }));
 const bayState = () => ev(() => ({ bow: save.bow.map(x => x && x.g + x.lv).join(","), left: save.left.map(x => x && x.g + x.lv).join(","), right: save.right.map(x => x && x.g + x.lv).join(","), store: save.store.map(x => x.g + x.lv).join(","),
-  sel: deckSel && deckSel.side + deckSel.i, gold: save.gold, note: (document.querySelector("#gunSel .gnote") || {}).textContent || "", acts: [...document.querySelectorAll("#gunSel [data-act]")].map(b => b.dataset.act + (b.disabled ? "!" : "")).join(" ") }));
+  sel: deckSel && deckSel.side + deckSel.i, gold: save.gold, note: (document.querySelector("#ctx .gnote") || {}).textContent || "", acts: [...document.querySelectorAll("#ctx [data-act]")].map(b => b.dataset.act + (b.disabled ? "!" : "")).join(" ") }));
 await ev(() => { save.bow = [gunItem("six", 1)]; save.left = [gunItem("long12", 3)]; save.right = [null]; save.store = [gunItem("chain", 1)]; deckSel = null; gunNote = null; renderPort(); });
-const S1 = (side, i) => `#deck [data-act="slot"][data-side="${side}"][data-i="${i}"]`;
+const S1 = (side, i) => `#deck [data-act="port"][data-side="${side}"][data-i="${i}"]`;
 await page.locator(S1("bow", 0)).scrollIntoViewIfNeeded();
-await tap('[data-act="buy"][data-id="carronade"]'); await page.waitForTimeout(100);
+await tap(S1("right", 0)); await page.waitForTimeout(100);
 let g68 = await bayState();
-check(/store/.test(g68.sel || "") && g68.store.includes("carronade"), `a gun bought in the armory lands in the store already picked (${g68.sel})`);
-await tap(S1("right", 0));
+check(g68.sel === "right0" && g68.acts.includes("gfrom") && g68.acts.includes("buy") && !g68.acts.includes("unload"), `the empty port picked offers the stored gun and the armory, nothing to unload (${g68.acts})`);
+await tap('[data-act="buy"][data-id="carronade"]'); await page.waitForTimeout(100);
 g68 = await bayState();
-check(g68.right === "carronade1" && g68.sel === null && /Mounted/.test(g68.note), `then one tap on the empty port mounts it (${g68.right}); the line says "${g68.note}"`);
-check(!g68.acts.includes("swap") && g68.acts.includes("gundo") && !(await ev(() => !!document.querySelector('[data-act="swap"]'))), "there is no Swap position button anywhere; Undo is offered");
+check(g68.right === "carronade1" && g68.store === "chain1" && g68.sel === "right0", `a gun bought for the empty port is mounted at once (${g68.right}), the store is untouched, the port stays picked`);
+check(!(await ev(() => !!document.querySelector('[data-act="swap"]'))) && !g68.acts.includes("gundo"), "there is no Swap position button anywhere; a purchase has no Undo");
+await tap('#ctx [data-act="unload"]');
+g68 = await bayState();
+check(g68.right === "" && g68.store === "chain1,carronade1" && /Unloaded/.test(g68.note) && g68.sel === null, `Unload sends it to the store and says so (${g68.store}): "${g68.note}"`);
+await tap('#ctx [data-act="gundo"]');
+g68 = await bayState();
+check(g68.right === "carronade1" && g68.store === "chain1", "Undo takes the unloading back");
+await tap(S1("right", 0)); await tap('#ctx [data-act="unload"]');
+await tap(S1("right", 0)); await tap('#ctx [data-act="gfrom"][data-side="store"][data-i="1"]');
+g68 = await bayState();
+check(g68.right === "carronade1" && /Mounted/.test(g68.note) && g68.acts.includes("gundo"), `the empty port picked, then a stored gun: mounted (${g68.right}); the line says "${g68.note}"`);
+await tap('#ctx [data-act="gundo"]');
+g68 = await bayState();
+check(g68.right === "" && g68.store === "chain1,carronade1", `Undo takes the mounted gun back out (${g68.store})`);
+await tap(S1("right", 0)); await tap('#ctx [data-act="gfrom"][data-side="store"][data-i="1"]');
+await tap(S1("bow", 0)); await tap('#ctx [data-act="gfrom"][data-side="store"][data-i="0"]');
+g68 = await bayState();
+check(g68.bow === "chain1" && g68.store === "six1" && /Swapped/.test(g68.note), `a port picked, then a stored gun: they trade places (${g68.bow}; store ${g68.store})`);
 await page.screenshot({ path: `${out}/gunbay-mounted-desktop.png` });
-await tap('#gunSel [data-act="gundo"]');
+await tap('#ctx [data-act="gundo"]');
 g68 = await bayState();
-check(g68.right === "null" || g68.right === "" || g68.right === "0" || !g68.right.includes("carronade"), "Undo takes the mounted gun back out");
-check(g68.store.includes("carronade") && g68.store.includes("chain"), `and it is back in the store (${g68.store})`);
+check(g68.bow === "six1" && g68.store === "chain1", "Undo puts the two guns back; it only ever undoes one step");
 await tap(S1("bow", 0)); await tap(S1("left", 0));
 g68 = await bayState();
-check(g68.bow === "long123" && g68.left === "six1" && /Swapped/.test(g68.note), `a port tapped, then another: swapped at once (${g68.bow} / ${g68.left})`);
-await tap('#gunSel [data-act="gundo"]');
-g68 = await bayState();
-check(g68.bow === "six1" && g68.left === "long123", "Undo puts the two guns back; it only ever undoes one step");
-await tap(S1("bow", 0)); await tap('#bay [data-act="store"][data-i="0"]');
-g68 = await bayState();
-check(g68.bow.startsWith("carronade") || g68.bow.startsWith("chain"), `a port, then a stored gun: they trade places (${g68.bow}; store ${g68.store})`);
-await tap('#gunSel [data-act="gundo"]');
+check(g68.sel === "left0" && g68.bow === "six1" && g68.left === "long123", `a second port tapped only moves the pick (${g68.sel}), nothing is swapped`);
 // pad / Esc / blank cancel
 await tap(S1("bow", 0));
 await ev(() => goBack());   // the pad's back button and Esc both come here (js/menu.js)
-check((await bayState()).sel === null, "the pad's back button (goBack) puts the picked gun down");
+check((await bayState()).sel === null, "the pad's back button (goBack) puts the picked port down");
 await tap(S1("bow", 0)); await page.keyboard.press("Escape");
 check((await bayState()).sel === null, "Esc puts it down");
 // unload; a full store refuses and never drops a gun
-await tap(S1("bow", 0)); await tap('#gunSel [data-act="unload"]');
+await tap(S1("bow", 0)); await tap('#ctx [data-act="unload"]');
 g68 = await bayState();
 check(g68.bow === "" || g68.bow === "null" || !g68.bow.includes("six"), "Unload moves the gun out of the port") ;
 check(g68.store.includes("six1") && /Unloaded/.test(g68.note), `into the store, with the line "${g68.note}"`);
-await tap('#gunSel [data-act="gundo"]');
+await tap('#ctx [data-act="gundo"]');
 await ev(() => { save.store = Array.from({ length: MAX_STORE }, () => gunItem("six", 1)); renderPort(); });
 await tap(S1("left", 0));
 g68 = await bayState();
-check(g68.acts.includes("unload!") && /full/.test(await ev(() => document.querySelector("#gunSel .hint-s").textContent)), "a full store: Unload is disabled and the card says why");
+check(g68.acts.includes("unload!") && /full/.test(await ev(() => document.querySelector("#ctx .gcard .hint-s").textContent)), "a full store: Unload is disabled and the card says why");
 await ev(() => { save.store = [gunItem("chain", 1)]; deckSel = null; renderPort(); });
 // Upgrade x5
 await tap(S1("bow", 0));
-const up = await ev(() => { const gun = save.bow[0], plan = gunUpPlan(gun, save.gold), b = document.querySelector('#gunSel [data-act="gup5"]'); let sum = 0; for (let j = 0; j < 5; j++) sum += gunUpCost({ ...gun, lv: gun.lv + j }); return { label: b.textContent, sum, plan, gold: save.gold, dis: b.disabled }; });
+const up = await ev(() => { const gun = save.bow[0], plan = gunUpPlan(gun, save.gold), b = document.querySelector('#ctx [data-act="gup5"]'); let sum = 0; for (let j = 0; j < 5; j++) sum += gunUpCost({ ...gun, lv: gun.lv + j }); return { label: b.textContent, sum, plan, gold: save.gold, dis: b.disabled }; });
 check(up.plan.n === 5 && up.plan.cost === up.sum && !up.dis && up.label.includes(up.sum.toLocaleString("en-US")), `Upgrade x5 shows the five levels' total (${up.label})`);
-await tap('#gunSel [data-act="gup5"]');
+await tap('#ctx [data-act="gup5"]');
 g68 = await bayState();
 check(g68.bow === "six6" && g68.gold === up.gold - up.sum, `buying it: Lv 1 -> 6 for exactly ${up.sum} gold`);
-const near = await ev(() => { save.bow[0] = gunItem("six", GUN_MAX - 2); renderPort(); return document.querySelector('#gunSel [data-act="gup5"]').textContent; });
+const near = await ev(() => { save.bow[0] = gunItem("six", GUN_MAX - 2); renderPort(); return document.querySelector('#ctx [data-act="gup5"]').textContent; });
 check(/Upgrade 2 levels/.test(near), `two levels from the cap it says so (${near})`);
-const poor = await ev(() => { save.bow[0] = gunItem("six", 3); save.gold = 10; renderPort(); const b = document.querySelector('#gunSel [data-act="gup5"]'); return { t: b.textContent, d: b.disabled }; });
+const poor = await ev(() => { save.bow[0] = gunItem("six", 3); save.gold = 10; renderPort(); const b = document.querySelector('#ctx [data-act="gup5"]'); return { t: b.textContent, d: b.disabled }; });
 check(poor.d && /short/.test(poor.t), `without the gold it is disabled and shows the shortfall (${poor.t})`);
-await tap('#gunSel [data-act="gup5"]').catch(() => {});
+await tap('#ctx [data-act="gup5"]').catch(() => {});
 check((await bayState()).bow === "six3", "pressing it anyway buys nothing: no partial upgrade");
 await page.screenshot({ path: `${out}/gunbay-upgrade5-desktop.png` });
 await ev(() => { lang = "zh"; applyLang(); save.gold = 50000; renderPort(); });
-const zhUp = await ev(() => document.querySelector('#gunSel [data-act="gup5"]').textContent + "|" + document.querySelector('#gunSel [data-act="unload"]').textContent);
+const zhUp = await ev(() => document.querySelector('#ctx [data-act="gup5"]').textContent + "|" + document.querySelector('#ctx [data-act="unload"]').textContent);
 check(/^升級 5 級（總價 [\d,]+ 金幣）\|卸下$/.test(zhUp), `Chinese: ${zhUp}`);
 await ev(() => { lang = "en"; applyLang(); });
 
@@ -243,23 +254,25 @@ await ev(() => { lang = "en"; applyLang(); });
   await mp.waitForTimeout(700 * SLOW);
   const ports = await mp.evaluate(() => ({ n: document.querySelectorAll("#deck .slot").length, minH: Math.round(Math.min(...[...document.querySelectorAll("#deck .slot")].map(b => b.getBoundingClientRect().height))), dense: document.getElementById("deck").classList.contains("dense") }));
   check(ports.n === 30 && ports.dense && ports.minH >= 30, `phone, 30 guns: compact deck, every port at least 30px tall (${ports.minH}px)`);
-  const L = i => `#deck [data-act="slot"][data-side="left"][data-i="${i}"]`;
+  const L = i => `#deck [data-act="port"][data-side="left"][data-i="${i}"]`;
   const lg = () => mp.evaluate(() => save.left.slice(0, 4).map(x => x && x.g + x.lv).join(","));
   const before = await lg();
   await mp.locator(L(0)).scrollIntoViewIfNeeded(); await mp.tap(L(0));
   await mp.screenshot({ path: `${out}/gunbay-picked-30guns-phone.png` });
-  await mp.locator(L(1)).scrollIntoViewIfNeeded(); await mp.tap(L(1));
+  const sheetOk = await mp.evaluate(() => { const r = document.getElementById("ctx").getBoundingClientRect(), f = document.querySelector("#port footer").getBoundingClientRect(); return { open: document.getElementById("ctx").classList.contains("open"), bottom: Math.round(r.bottom), footTop: Math.round(f.top), sticky: getComputedStyle(document.getElementById("ctx")).position }; });
+  check(sheetOk.open && sheetOk.sticky === "sticky" && sheetOk.bottom <= sheetOk.footTop + 1, `phone: the panel is a bottom sheet above the Set sail bar (${JSON.stringify(sheetOk)})`);
+  await mp.locator('#ctx [data-act="gfrom"][data-side="store"]').scrollIntoViewIfNeeded(); await mp.tap('#ctx [data-act="gfrom"][data-side="store"]');
   const after = await lg();
-  check(before !== after && after.split(",")[0] === before.split(",")[1] && after.split(",")[1] === before.split(",")[0], `touch: tap a port, tap another: swapped (${before} -> ${after})`);
+  check(before !== after && after.split(",")[0] === "six2" && after.split(",")[1] === before.split(",")[1], `touch: tap a port, tap the stored gun: they trade places (${before} -> ${after})`);
   await mp.screenshot({ path: `${out}/gunbay-swapped-30guns-phone.png` });
-  await mp.tap('#gunSel [data-act="gundo"]');
+  await mp.locator('#ctx [data-act="gundo"]').scrollIntoViewIfNeeded(); await mp.tap('#ctx [data-act="gundo"]');
   check(await lg() === before, "touch: Undo");
-  // a tap on a stored gun and the empty fifth port of a side mounts it
-  await mp.locator('#bay [data-act="store"]').first().scrollIntoViewIfNeeded(); await mp.tap('#bay [data-act="store"]');
+  // the empty fifth port of a side picked, then the stored gun: mounted
   await mp.locator(L(4)).scrollIntoViewIfNeeded(); await mp.tap(L(4));
-  check(await mp.evaluate(() => save.left[4] && save.left[4].g === "six" && save.store.length === 0), "touch: stored gun, then an empty port: mounted");
-  const sticky = await mp.evaluate(() => { const c = document.querySelector("#gunSel"); const r = c.getBoundingClientRect(); return { bottom: Math.round(r.bottom), vh: innerHeight, h: Math.round(r.height) }; });
-  check(sticky.bottom <= sticky.vh, `the status line stays on screen (${JSON.stringify(sticky)})`);
+  await mp.locator('#ctx [data-act="gfrom"][data-side="store"]').scrollIntoViewIfNeeded(); await mp.tap('#ctx [data-act="gfrom"][data-side="store"]');
+  check(await mp.evaluate(() => save.left[4] && save.left[4].g === "six" && save.store.length === 0), "touch: an empty port, then the stored gun: mounted");
+  const sticky = await mp.evaluate(() => { const c = document.querySelector("#ctx"); const r = c.getBoundingClientRect(); return { bottom: Math.round(r.bottom), vh: innerHeight, h: Math.round(r.height) }; });
+  check(sticky.bottom <= sticky.vh, `the panel stays on screen (${JSON.stringify(sticky)})`);
   await mctx.close();
 }
 

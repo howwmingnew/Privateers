@@ -31,7 +31,7 @@ const GEAR_ACTS = ["gslot", "gbag", "gequip", "gunequip", "gpup", "gpup5", "gloc
 let gearSel = null;    // the picked spare { w: "bag", i } or worn piece { w: "worn", p }, or null
 let gearNote = null;   // the latest move { text: [key, args], before: { gear, shipId } } for Undo, or a bare { tip }
 const cancelGearPick = () => { if (!gearSel) return false; gearSel = null; gearNote = null; renderPort(); return true; };   // Esc (js/menu.js goBack)
-const gunLoc = () => (deckSel ? { w: deckSel.side === "store" ? "store" : "mount", side: deckSel.side, i: deckSel.i } : null);   // the picked gun (js/gunbay.js)
+const gunLoc = () => (deckSel ? { w: deckSel.side === "store" ? "store" : "mount", side: deckSel.side, i: deckSel.i, ...(deckSel.e != null ? { e: deckSel.e } : {}) } : null);   // the picked gun (js/gunbay.js)
 const locOf = w => (w === "gun" ? gunLoc() : gearSel);
 
 // ---------- the compare numbers ----------
@@ -69,22 +69,23 @@ function gunCompareHtml(gun) {
 const rarClass = it => " r" + gearR(it);
 const rarLine = it => `${t("gr_" + gearR(it))} · ${t("gIl", { n: gearIl(it) })}${it.g ? "" : " · " + t("gLvLine", { n: gearLv(it) })}${it.lk ? " · " + t("gLocked") : ""}`;
 // Affix lines (each with its re-roll button), the base line and the legendary line. `w`: "gun" or "gear" (which pick the buttons act on).
-function gearExtraHtml(it, w) {
+function gearExtraHtml(it, w, at = "") {   // at: extra attributes on its buttons: the ledger's candidate card names the gun it is about (js/ledger-panel.js)
   const c = gearRerollCost(it), r = gearR(it), canPay = save.gear.mats >= c.mats && save.gold >= c.gold, mult = it.g ? 1 : gearLvMul(it);
   const base = gearSources({ ...it, af: [] })[0], part = gearPart(it);
   const lines = (base ? [`<li class="base">${t("gBase")}${t("ga_" + base[0], { n: gearPct(base[1]) })}</li>`] : []).concat(gearAffixes(it).map(([k, v], i) =>
-    `<li>${t("ga_" + k, { n: gearPct(v * mult) })}${r ? ` <button class="btn ghost sm" type="button" data-act="greroll" data-w="${w}" data-k="${i}" ${canPay ? "" : "disabled"}>${t("gReroll", { m: c.mats, g: fmt(c.gold) })}</button>` : ""}</li>`));
+    `<li>${t("ga_" + k, { n: gearPct(v * mult) })}${r ? ` <button class="btn ghost sm" type="button" data-act="greroll" data-w="${w}" data-k="${i}"${at} ${canPay ? "" : "disabled"}>${t("gReroll", { m: c.mats, g: fmt(c.gold) })}</button>` : ""}</li>`));
   if (it.lg) lines.push(`<li class="leg">${gearLegendText(part)}</li>`);
-  const lockBtn = `<button class="btn ghost" type="button" data-act="glock" data-w="${w}">${t(it.lk ? "gUnlock" : "gLock")}</button>`;
+  const lockBtn = `<button class="btn ghost" type="button" data-act="glock" data-w="${w}"${at}>${t(it.lk ? "gUnlock" : "gLock")}</button>`;
   return { list: lines.length ? `<ul class="afx">${lines.join("")}</ul>` : "", lockBtn,
-    scrapBtn: `<button class="btn ghost" type="button" data-act="gscrap" data-w="${w}" ${it.lk ? "disabled" : ""}>${t("gScrap", { n: gearScrapValue(it) })}</button>` };
+    scrapBtn: `<button class="btn ghost" type="button" data-act="gscrap" data-w="${w}"${at} ${it.lk ? "disabled" : ""}>${t("gScrap", { n: gearScrapValue(it) })}</button>` };
 }
 
 // ---------- actions: each returns the sound to play, or null when nothing happened ----------
 const gearSnap = () => ({ gear: save.gear, shipId: save.shipId });
 const itemAt = () => (gearSel ? gearAt(save, gearSel) : null);
 function gearAct(act, d) {
-  const need = w => { const l = locOf(w); return l && gearAt(save, l) ? l : null; };
+  const cand = d.side !== undefined && (d.w || "gear") === "gun";   // a button of the ledger's candidate card: the gun it names, not the picked port's
+  const need = w => { const l = cand ? { w: d.side === "store" ? "store" : "mount", side: d.side, i: +d.i, ...(d.e !== undefined ? { e: +d.e } : {}) } : locOf(w); return l && gearAt(save, l) ? l : null; };
   if (act === "gdeck") { document.getElementById("deck")?.closest("section")?.scrollIntoView({ block: "start", behavior: "smooth" }); return null; }
   if (act === "gearundo") {
     const n = gearNote;
@@ -125,7 +126,7 @@ function gearAct(act, d) {
   if (act === "gscrap") {
     const next = gearScrapAt(save, l);
     if (!next) return null;
-    save = next; if (w === "gun") deckSel = null; else gearSel = null; gearNote = null; return "buy";
+    save = next; if (w === "gun") { if (cand) candSel = null; else deckSel = null; } else gearSel = null; gearNote = null; return "buy";
   }
   if (act === "greroll") { const next = gearRerollAt(save, l, +d.k); if (!next) return null; save = next; return "upgrade"; }
   if (act === "gpup" || act === "gpup5") {

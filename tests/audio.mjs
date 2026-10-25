@@ -128,7 +128,7 @@ try {
   if (hasDisabled) await page.click("#port [data-act][disabled]", { force: true });
   const pressed = await page.evaluate(() => window.__pressed);
   check(hasDisabled && pressed === true, `pressing a disabled ledger button reaches the "denied" listener (${hasDisabled ? pressed : "no disabled button"})`);
-  await page.click("#port [data-act=slot]");
+  await page.click("#port [data-act=port]");
   await page.waitForFunction(() => Snd.debug().voices > 0, null, { timeout: 2000 * SLOW }).catch(() => {});
   check(await page.evaluate(() => Snd.debug().voices) > 0, "a ledger click plays a sound");
 

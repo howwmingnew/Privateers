@@ -143,20 +143,20 @@ r = await page.evaluate(() => ({ lv: save.gear.bag[__ei].lv, gold: save.gold, pl
 check(r.lv === 6 && g0.gold - r.gold === r.plan.cost, `"Upgrade 5 levels" raises a worn part five levels for the total price (${r.lv}, ${g0.gold - r.gold} gold)`);
 
 console.log("Guns: rarity edge, the card with affixes, lock and re-roll, compare with a mounted gun, upgrade keeps the gear fields");
-await page.evaluate(() => { cancelGearPick(); });
-check(await page.evaluate(() => document.querySelectorAll("#bay .slot.r3, #bay .slot.r4").length === 2), "stored guns are edged in their rarity colour");
-await page.click('#bay [data-act="store"][data-i="0"]');
-check(await page.evaluate(() => !!document.querySelector("#gunSel .gcard.r3 .afx") && !!document.querySelector('#gunSel [data-act="glock"]') && !!document.querySelector("#gunSel .cmp") && /▲|▼/.test(document.querySelector("#gunSel .cmp").innerText)), "a stored gun's card lists its affixes, offers Lock and compares with a mounted gun");
+await page.evaluate(() => { cancelGearPick(); deckSel = { side: "bow", i: 0 }; renderPort(); document.getElementById("ctx").scrollIntoView(); });   // a port picked: its panel lists the store
+check(await page.evaluate(() => document.querySelectorAll("#ctx .cand .slot.r3, #ctx .cand .slot.r4").length === 2), "stored guns are edged in their rarity colour");
+await page.click('#ctx [data-act="gprev"][data-side="store"][data-i="0"]');
+check(await page.evaluate(() => !!document.querySelector("#ctx .candcard .gcard.r3 .afx") && !!document.querySelector('#ctx .candcard [data-act="glock"]') && !!document.querySelector("#ctx .candcard .cmp") && /▲|▼/.test(document.querySelector("#ctx .candcard .cmp").innerText)), "a stored gun's card lists its affixes, offers Lock and compares with a mounted gun");
 await shot("gear-gun-card");
-await page.click('#gunSel [data-act="gup"]');
+await page.click('#ctx .candcard [data-act="gup"]');
 check(await page.evaluate(() => save.store[0].lv === 3 && save.store[0].r === 3 && save.store[0].af.length === 3), "upgrading a gun keeps its rarity and affixes");
-await page.click('#gunSel [data-act="glock"][data-w="gun"]');
+await page.click('#ctx .candcard [data-act="glock"][data-w="gun"]');
 check(await page.evaluate(() => save.store[0].lk === 1), "a gun can be locked");
-await page.click('#gunSel [data-act="glock"][data-w="gun"]');
-await page.click('#gunSel [data-act="greroll"][data-k="0"]');
+await page.click('#ctx .candcard [data-act="glock"][data-w="gun"]');
+await page.click('#ctx .candcard [data-act="greroll"][data-k="0"]');
 check(await page.evaluate(() => save.store[0].rr === 1), "a gun's affix can be re-rolled");
-await page.click('#gunSel [data-act="gscrap"][data-w="gun"]');
-check(await page.evaluate(() => save.store.length === 2 && save.store[0].g === "six"), "a stored gun can be broken down");
+await page.click('#ctx .candcard [data-act="gscrap"][data-w="gun"]');
+check(await page.evaluate(() => save.store.length === 2 && save.store[0].g === "six" && !candSel && !!deckSel), "a stored gun can be broken down (the picked port stays picked)");
 await page.evaluate(() => { cancelGunPick(); });
 check(await page.evaluate(() => gunSig(["six!", null, "long12", "fire!"]) === "s!-lf!" && gunSig(["six", "carronade"]) === "sc"), "a legendary gun has its own picture key; plain guns keep theirs");
 await page.evaluate(() => { save = { ...save, left: [{ g: "six", lv: 4, r: 4, il: 2, af: [["gdmg", 0.1], ["greload", 0.1]], lg: 1 }, { g: "long12", lv: 1, r: 2, il: 2, af: [["grange", 0.1], ["gdmg", 0.1]] }, { g: "chain", lv: 1 }] }; renderPort(); });
@@ -306,11 +306,11 @@ await page.evaluate(() => {
 });
 await page.evaluate(() => { dock("welcome"); });
 await wait(1000);   // the ledger settles (its sheet scrolls to the top and the first toast leaves) before the first tap
-await page.evaluate(() => { document.querySelector(`#ships [data-act="switch"][data-id="${__sloop.id}"]`).scrollIntoView(); });
+await page.evaluate(() => { resetLedgerPick(); hullOpen = true; renderPort(); document.querySelector(`#ships [data-act="switch"][data-id="${__sloop.id}"]`).scrollIntoView(); });
 await page.click(`#ships [data-act="switch"][data-id="${await page.evaluate(() => __sloop.id)}"]`);
 r = await page.evaluate(() => ({ ship: save.ship, prow: save.gear.worn.prow, flag: save.gear.worn.flag && save.gear.worn.flag.p, bag: save.gear.bag.some(x => x.p === "prow" && x.il === 3), store: save.store.some(g => g.g === "long12" && g.r === 3), hp: player.maxHp }));
 check(r.ship === "sloop" && !r.prow && r.flag === "flag" && r.bag && r.store, `switching to the sloop: the item level 1 flag stays, the item level 3 prow goes to the bag, the rare Long 12 to the store (${JSON.stringify({ ...r, hp: undefined })})`);
-await page.evaluate(() => { document.querySelector('#ships [data-act="switch"]').scrollIntoView(); });
+await page.evaluate(() => { resetLedgerPick(); hullOpen = true; renderPort(); document.querySelector('#ships [data-act="switch"]').scrollIntoView(); });
 await page.click(`#ships [data-act="switch"][data-id="${await page.evaluate(() => save.fleet.find(e => e.ship === "brig").id)}"]`);
 check(await page.evaluate(() => save.ship === "brig" && save.gear.worn.flag && save.gear.bag.some(x => x.p === "prow" && x.il === 3)), "and back on the brig nothing was lost");
 
@@ -341,13 +341,13 @@ await page.evaluate(() => { document.getElementById("gear").scrollIntoView(); })
 await shot("gear-mobile");
 await page.click('#gear [data-act="gslot"][data-p="instr"]');
 await page.click('#gear [data-act="gslot"][data-p="instr"]');
-await page.evaluate(() => { document.querySelector("#bay").scrollIntoView(); });
-await page.click('#bay [data-act="store"][data-i="0"]');
+await page.evaluate(() => { resetLedgerPick(); deckSel = { side: "bow", i: 0 }; renderPort(); document.getElementById("ctx").scrollIntoView(); });
+await page.click('#ctx [data-act="gprev"][data-side="store"][data-i="0"]');
 w = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, win: innerWidth, sheet: [document.querySelector("#port .sheet").scrollWidth, document.querySelector("#port .sheet").clientWidth] }));
 check(w.doc <= w.win && w.sheet[0] <= w.sheet[1] + 1, `no horizontal scroll with a gun card open (${JSON.stringify(w)})`);
-await page.evaluate(() => { document.getElementById("gunSel").scrollIntoView(); });
+await page.evaluate(() => { document.getElementById("ctx").scrollIntoView(); });
 await shot("gear-mobile-gun");
-check(await page.evaluate(() => [...document.querySelectorAll("#gear .gslot, #gear .slot, #gear .btn, #gunSel .btn")].every(el => { const r = el.getBoundingClientRect(); return r.width === 0 || (r.left >= -1 && r.right <= innerWidth + 1); })), "every gear control sits inside the screen width");
+check(await page.evaluate(() => [...document.querySelectorAll("#gear .gslot, #gear .slot, #gear .btn, #ctx .btn")].every(el => { const r = el.getBoundingClientRect(); return r.width === 0 || (r.left >= -1 && r.right <= innerWidth + 1); })), "every gear control sits inside the screen width");
 await page.setViewportSize({ width: 1280, height: 900 });
 await wait(200);
 await page.evaluate(() => { cancelGunPick(); document.getElementById("gear").scrollIntoView(); });
