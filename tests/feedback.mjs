@@ -229,7 +229,7 @@ check((await bayState()).bow === "six3", "pressing it anyway buys nothing: no pa
 await page.screenshot({ path: `${out}/gunbay-upgrade5-desktop.png` });
 await ev(() => { lang = "zh"; applyLang(); save.gold = 50000; renderPort(); });
 const zhUp = await ev(() => document.querySelector('#ctx [data-act="gup5"]').textContent + "|" + document.querySelector('#ctx [data-act="unload"]').textContent);
-check(/^升級 5 級（總價 [\d,]+ 金幣）火力 \+\d+%\|卸下$/.test(zhUp), `Chinese: ${zhUp}`);
+check(/^升級 5 級（總價 [\d,]+ 金幣）火力 \+\d+%( · 船艦 Lv (進度 \+\d+%|→ \d+))?\|卸下$/.test(zhUp), `Chinese: ${zhUp}`);
 await ev(() => { lang = "en"; applyLang(); });
 
 // touch on a phone, and the compact 30-gun deck

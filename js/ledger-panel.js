@@ -53,7 +53,8 @@ function yardRows(e) {   // hull, sails, hold of ship `e` (a yard entry or the f
     let btn, ds;
     if (lv >= y.max) { btn = `<button class="btn max" type="button" disabled>${t("max")}</button>`; ds = `<b>${cur}</b>`; }
     else { const c = y.cost(lv, sh), p = Math.round((yardVal(k, lv + 1, sh) / yardVal(k, lv, sh) - 1) * 100);   // what the next level adds, for the price
-      btn = `<button class="btn" type="button" data-act="yard" data-k="${k}" data-id="${e.id}" ${save.gold < c ? "disabled" : ""}>${t("upgrade", { n: fmt(c) })}<span class="gain">${t("gain_" + k, { p })}</span></button>`;
+      const lvUp = k === "hull" && e.id === save.shipId && typeof lvGainHull === "function" ? lvGainHull() : "";   // the flagship's hull is part of Ship Lv (js/lv-path.js)
+      btn = `<button class="btn" type="button" data-act="yard" data-k="${k}" data-id="${e.id}" ${save.gold < c ? "disabled" : ""}>${t("upgrade", { n: fmt(c) })}<span class="gain">${t("gain_" + k, { p })}${lvUp ? " · " + lvUp : ""}</span></button>`;
       ds = `<b>${cur}</b> <span class="up">→ ${y.show(yardVal(k, lv + 1, sh))}</span>`; }
     return `<div class="item"><div class="nm">${t("y_" + k)}<small>Lv ${lv}</small></div>${btn}<div class="ds">${ds}</div></div>`;
   }).join("");

@@ -195,6 +195,7 @@ function think(e, dt) {
   const plunder = typeof aipSeek === "function" && (desired == null || (tg && dist(e, tg) >= AIP_BREAK)) ? aipSeek(e, tg ? dist(e, tg) : 0, dt) : null;   // loose loot (js/ai-plunder.js)
   if (plunder) ({ desired, thr } = plunder);
   if (typeof fleeSteer === "function") { const c = fleeSteer(e, now); if (c) ({ desired, thr } = c); }   // outmatched or beaten: run, downwind if it helps (js/flee.js)
+  if (typeof bossTether === "function") { const c = bossTether(e, desired, thr); if (c) ({ desired, thr } = c); }   // a boss keeps to its own waters (js/campaign.js)
   if (typeof disDodge === "function") { const c = disDodge(e); if (c) ({ desired, thr } = c); }   // clear of a disaster that has been noticed (js/disasters.js)
   if (desired == null && e.merchant && !e.tutMark) {   // (the tutorial's mark holds its course: js/tutorial.js)
     // merchants run from any pirate or the player that comes close, even before a shot is fired

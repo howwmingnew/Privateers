@@ -15,6 +15,7 @@ export const MAP = [
   [/^js\/(disasters|weather|sea-fx)/, ["disasters", "weather"]],
   [/^js\/audio/, ["audio"]],
   [/^js\/(campaign|bounty|victory|postcard|sharecard)/, ["campaign"]],
+  [/^js\/lv-path/, ["campaign", "harbor", "polish"]],   // Ship Lv progress: the HUD label, the upgrade buttons, the poster
   [/^js\/replay/, ["replay"]],
   [/^js\/(collision|ships|combat|strike|ai-nav|ambush|sea-guard)/, ["collision", "phase1"]],
   [/^js\/(plunder|ai-plunder)/, ["aiplunder"]],

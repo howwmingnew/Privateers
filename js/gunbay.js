@@ -73,10 +73,12 @@ const swapGuns = (a, b) => swapGunsIn(save, a, b);
 const gunMark = gun => (gun.lg ? "!" : "");   // a legendary gun's picture has gold inlay (js/gun-art.js)
 const gunIcon = (id, cls) => (typeof gunSideImg === "function" ? gunSideImg(id, cls) : "");   // the side view (js/gun-art.js); the unit tests load this file without it
 // to: the next level, to show what the upgrade does to every number the gun states (damage and, for the incendiary, its burn)
+// Figures to one decimal (12 -> 13.8, not 12 -> 14), so the "+15%" on the button and the numbers beside it say the same thing.
+const dmgNum = v => Math.round(v * 10) / 10;
 const gunStats = (g, lv, ship = save.ship, to = 0) => { const G = GUNS[g], k = shipGunK(ship), m = gunLvMul(lv) * k;   // what it hits for on this hull (js/data.js)
-  const was = Math.round(G.dmg * m), wasB = Math.round(G.burn * m * BURN_T);
+  const was = dmgNum(G.dmg * m), wasB = dmgNum(G.burn * m * BURN_T);
   const m2 = gunLvMul(to) * k, arrow = n => (to ? ` <span class="up">→ ${n}</span>` : "");
-  return t("dmg", { n: was }) + (to ? arrow(Math.round(G.dmg * m2)) : "") + (G.burn ? t("burn", { n: wasB }) + (to ? arrow(Math.round(G.burn * m2 * BURN_T)) : "") : ""); };
+  return t("dmg", { n: was }) + (to ? arrow(dmgNum(G.dmg * m2)) : "") + (G.burn ? t("burn", { n: wasB }) + (to ? arrow(dmgNum(G.burn * m2 * BURN_T)) : "") : ""); };
 const gunName = gun => t("gf_" + gun.g) + " Lv " + gun.lv;
 const gunRar = gun => (typeof rarClass === "function" ? rarClass(gun) : "");   // " r0".." r4": the rarity colour of the slot and card (css/gear.css)
 
@@ -190,9 +192,9 @@ function gunCardHtml(p = deckSel, cand = false) {
   const pl = cand ? ` data-side="${p.side}" data-i="${p.i}"${p.e != null ? ` data-e="${p.e}"` : ""}` : "";
   const G = GUNS[gun.g], max = gun.lv >= GUN_MAX, cost = max ? 0 : gunUpCost(gun), short = cost - save.gold, mounted = p.side !== "store";
   const up = max ? `<button class="btn max" type="button" disabled>${t("max")}</button>`
-    : `<button class="btn" type="button" data-act="gup"${pl} ${short > 0 ? "disabled" : ""}>${upgradeLabel(gun.lv + 1, cost, short, t("gainDmg", { p: pctUp(gunLvMul(gun.lv), gunLvMul(gun.lv + 1)) }))}</button>`;
+    : `<button class="btn" type="button" data-act="gup"${pl} ${short > 0 ? "disabled" : ""}>${upgradeLabel(gun.lv + 1, cost, short, gunGain(gun, 1))}</button>`;
   const plan = gunUpPlan(gun, save.gold), up5 = plan.n >= 2   // one level left is just the button above
-    ? `<button class="btn" type="button" data-act="gup5"${pl} ${plan.short > 0 ? "disabled" : ""}>${t(plan.short > 0 ? "upNShort" : "upN", { n: plan.n, cost: fmt(plan.cost), d: fmt(plan.short) })}${gainLine(t("gainDmg", { p: pctUp(gunLvMul(gun.lv), gunLvMul(gun.lv + plan.n)) }))}</button>` : "";
+    ? `<button class="btn" type="button" data-act="gup5"${pl} ${plan.short > 0 ? "disabled" : ""}>${t(plan.short > 0 ? "upNShort" : "upN", { n: plan.n, cost: fmt(plan.cost), d: fmt(plan.short) })}${gainLine(gunGain(gun, plan.n))}</button>` : "";
   const full = save.store.length >= MAX_STORE;
   const off = !mounted || cand ? "" : `<button class="btn ghost" type="button" data-act="unload" ${full ? "disabled" : ""}>${t("toStore")}</button>`;
   const x = typeof gearExtraHtml === "function" ? gearExtraHtml(gun, "gun", pl) : null;   // rarity, affixes, re-roll, lock, break down (js/gear-ui.js)
@@ -207,6 +209,9 @@ function gunCardHtml(p = deckSel, cand = false) {
 // `gain` (a text) goes under it as a second line: what the upgrade buys (#97), so the price can be weighed against it.
 const gainLine = gain => (gain ? `<span class="gain">${gain}</span>` : "");
 const upgradeLabel = (n, cost, short, gain = "") => t(short > 0 ? "upShort" : "upTo", { n, cost: fmt(cost), d: fmt(Math.max(0, short)) }) + gainLine(gain);
+// What `n` upgrade levels do to a gun: its damage, and (a gun on the flagship) the share of the way to the next Ship Lv (js/lv-path.js).
+const gunGain = (gun, n) => { const lv = typeof lvGainGun === "function" ? lvGainGun(gun, n) : "";
+  return t("gainDmg", { p: pctUp(gunLvMul(gun.lv), gunLvMul(gun.lv + n)) }) + (lv ? " · " + lv : ""); };
 const pctUp = (from, to) => Math.round((to / from - 1) * 100);   // 1.15x per gun level -> 15; k levels at once -> the compound figure
 // The armory sells Lv 1 guns one at a time; how many of each the captain has is shown beside the name.
 function armoryHtml() {

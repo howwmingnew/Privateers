@@ -56,7 +56,8 @@ function renderPort() {
   const $ = id => document.getElementById(id);
   $("pMsg").innerHTML = t(...portMsg);
   $("pGold").textContent = fmt(save.gold);
-  $("pStats").innerHTML = `<span><b>${t("s_" + save.ship)}</b></span><span>${t("statLv", { n: shipRating() })}</span><span><b>${YARD.hull.show(yardVal("hull"))}</b></span>` +
+  const rate = lvProgress();   // Ship Lv and the share of the way to the next (js/lv-path.js)
+  $("pStats").innerHTML = `<span><b>${t("s_" + save.ship)}</b></span><span>${t("statLvP", { n: rate.lv, p: rate.pct })}</span><span><b>${YARD.hull.show(yardVal("hull"))}</b></span>` +
     `<span><b>${YARD.sails.show(yardVal("sails"))}</b></span><span>${t("statHold", { n: fmt(yardVal("hold")) })}</span><span>${t("statSunk", { n: save.sunk })}</span>`;
   renderGunBay();   // drops a pick whose place is gone (js/gunbay.js), before the fleet is drawn
   renderFleet();   // the ship tabs, the picked ship's gun deck and the context panel (js/ledger-tabs.js)
