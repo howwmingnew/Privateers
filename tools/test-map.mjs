@@ -9,6 +9,7 @@ export const MAP = [
   [/^js\/gear/, ["gear", "gundeck", "boarding", "harbor"]],
   [/^js\/(heat|ports|world-seas|forts)/, ["heat", "ports", "daily-ports"]],
   [/^js\/(escort|fleet)/, ["escorts", "fleet"]],
+  [/^js\/flee/, ["flee"]],
   [/^js\/(boarding|grapple)/, ["boarding"]],
   [/^js\/(disasters|weather|sea-fx)/, ["disasters", "weather"]],
   [/^js\/audio/, ["audio"]],
