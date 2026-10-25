@@ -113,7 +113,7 @@ setEl("p-settings").addEventListener("click", e => {
     case "auto": saveSettings({ autoFire: v === "on" }); break;
     case "weatherfx": saveSettings({ weatherFx: v === "on" }); break;   // js/weather.js
     case "fxq": saveSettings({ fxq: v }); fxqDrop = 0; break;   // effects quality (js/vfx.js fxLevel): picking again clears the auto steps taken off
-    case "scale-reset": saveSettings({ uiPct: SCALE_DEFAULT, miniPct: SCALE_DEFAULT, markPct: SCALE_DEFAULT }); applyUiScale(); applyMiniSize(); break;
+    case "scale-reset": saveSettings({ uiPct: SCALE_DEFAULT, miniPct: MINI_DEFAULT_PCT, markPct: SCALE_DEFAULT }); applyUiScale(); applyMiniSize(); break;
     case "full": toggleFullscreen(); break;
     case "reset": pressReset(); return;
   }
@@ -148,7 +148,7 @@ function pressReset() {
 function wipeProgress() {
   save = defaultSave(); persist();
   for (let i = crates.length - 1; i >= 0; i--) if (crates[i].wreck) { crates[i].spr.destroy(); crates[i].label?.destroy(); crates.splice(i, 1); }
-  cargo = 0; lastLost = 0;
+  cargo = 0; lastLost = 0; lastLostExtra = false;
   applyPlayerStats(true); hud(true);
   tutorialReset();
 }

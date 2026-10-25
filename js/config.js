@@ -50,6 +50,7 @@ const FXQ = [
 const FXQ_SLOW_MS = 22, FXQ_SLOW_S = 2.5, FXQ_COOL_S = 5;      // fog puffs circling at the edge of sight
 // Size sliders in the settings panel (js/settings.js, js/options.js): percentages of a base, 50-250 in steps of 5.
 const SCALE_MIN = 50, SCALE_MAX = 250, SCALE_STEP = 5, SCALE_DEFAULT = 100;
+const MINI_COARSE_PCT = 150;   // the chart's starting size on a touch screen (phone, tablet): 100% is too small to read there (js/settings.js)
 // The chart (the HUD radar) at 100%: 18% of the shorter screen side, kept between these CSS pixels so a phone still has
 // a readable one and a 4K screen does not get a poster. It never takes more than 44% of the width or 60% of the height.
 const MINI_BASE_FRAC = 0.18, MINI_BASE_MIN = 124, MINI_BASE_MAX = 420, MINI_MIN_PX = 64, MINI_MAX_VW = 0.44, MINI_MAX_VH = 0.6;
@@ -60,6 +61,8 @@ const EDGE_RANGE = 1.8;      // screen widths (of the world view) a target may b
 const EDGE_M_PER_PX = 0.5;   // metres per world pixel, for the distance on a box
 const EDGE_ROUND_M = 10;     // the distance is rounded to this many metres
 const EDGE_MAX = 5;          // boxes on screen at once: the bounty, then the most dangerous, then the nearest
+const EDGE_MAX_SMALL = 3;    // ...on a touch screen or a narrow window, where five boxes crowd the edge (edgeMax, js/edge-math.js)
+const EDGE_SMALL_W = 900;    // css px: a window narrower than this counts as small
 const MINI_NEAR_R = 1000;   // px: a ship this close that out-fights you is drawn above the harbor and the rest of the chart's marks
 const MINI_MERGE = 5;       // chart units: ordinary ships closer than this on the chart merge into one mark with a count
 const MINI_UNIT_MIN = 0.35;   // a chart unit never draws smaller than this many CSS px, so the marks stay readable at 50% icon size on a small chart

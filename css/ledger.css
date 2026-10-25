@@ -133,7 +133,53 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 /* a replace-list candidate: the tile mounts it, the small (i) opens its card (js/ledger-panel.js) */
 .cand { position: relative; min-width: 0; }
 .cand .slot { width: 100%; }
-.cand .cinfo { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 1.5px solid var(--ink-soft); background: var(--parch); color: var(--ink); font: italic 700 13px/1 var(--f-display, serif); cursor: pointer; }
+.cand .cinfo { position: absolute; top: 2px; right: 2px; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; border: 1.5px solid var(--ink-soft); background: var(--parch); color: var(--ink); font: 700 11px/1 var(--f-ui); cursor: pointer; }
 .cand .cinfo[aria-pressed="true"], .cand.prev .slot { box-shadow: 0 0 0 3px var(--brass); }
 .candcard { margin: 6px 0 4px; }
 .candcard .gcard { margin-top: 0; }
+
+/* ---- Wanted poster folded to its head, the goal and the reward; the toggle opens the story, the ship and the long reasons (js/campaign-ui.js) ---- */
+.poster .p-rec .calc { color: var(--ink-soft); font-size: .92em; }
+.poster .p-rec .how { display: block; margin-top: 2px; color: var(--ink-soft); font-size: .92em; }
+.poster .p-rec .why { display: block; margin-top: 3px; color: var(--ink-soft); font-size: .92em; }
+.poster .p-toggle { display: block; margin: 8px auto 0; font: inherit; font-size: calc(13px * var(--ts)); font-weight: 700; color: var(--ink); background: transparent; border: 1.5px solid rgba(42,29,16,.45); border-radius: 3px; padding: 3px 12px; cursor: pointer; }
+.poster.min .p-ship, .poster.min .p-story, .poster.min .p-tgt, .poster.min .p-rec .why, .poster.min .p-rec .speed { display: none; }
+.poster.min .p-head { grid-template-columns: 72px 1fr; margin-top: 4px; }
+.poster.min .p-flag { width: 72px; height: 51px; }
+.poster.min .p-wanted { font-size: 20px; } .poster.min .p-name { font-size: 24px; }
+
+/* ---- ship rows: the owned/locked note on its own line, locked models folded away, a gain line under an upgrade button (js/ledger-panel.js) ---- */
+.item .ds .own, .item .ds .lock { display: block; margin-top: 2px; }
+.item .btn .gain { display: block; margin-top: 1px; font-size: .78em; font-weight: 600; opacity: .85; white-space: normal; }
+.lockedships { margin: 6px 0 0; }
+.lockedships > summary { cursor: pointer; font-weight: 700; color: var(--ink-soft); padding: 4px 0; font-size: calc(13px * var(--ts)); }
+.lockedships .item { opacity: .75; }
+.tab.lock { filter: grayscale(1); }
+.tab .tw { display: block; font-size: calc(11px * var(--ts)); color: var(--ink-soft); line-height: 1.15; white-space: normal; }
+.tab .lockic { margin-right: 4px; }
+.berth .cols { grid-template-columns: 1fr; }   /* each card takes the stage's full width: the ship rows and their buttons keep their lines apart */
+.gcard .lockhint { grid-column: 1 / -1; margin: 4px 0 0; font-size: calc(13px * var(--ts)); color: var(--ink-soft); }
+/* ---- first screen of the ledger (#100): the fleet and its gun deck lead; the poster and the flag fold; the left column holds still ---- */
+.cpanel h3 .n { font-family: var(--f-ui); font-weight: 700; }   /* the display face draws a 1 like a small-cap I */
+.deck .lbl .lbl-tip { display: block; margin-top: 1px; font-size: .85em; font-weight: 600; letter-spacing: 0; text-transform: none; }
+@media (min-width: 1100px) {
+  /* a gun port picked opens its panel under the deck, so the right column scrolls: the left one stays put instead of sliding down to the flag */
+  #port .lcol-l:not(:has(.poster:not(.min):not(.done))):not(:has(#flagbox.open)) { position: sticky; top: calc(min(70px * var(--ts), 18vw) + 20px); align-self: start; max-height: calc(100vh / var(--pz, 1) - min(70px * var(--ts), 18vw) - 140px); overflow-y: auto; overflow-x: hidden; padding-inline: 6px; margin-inline: -6px; }   /* taller than the screen: it scrolls inside itself, so the flag below is never stuck under the Set sail bar. --pz: #port's big-screen zoom scales vh too, so it is divided out. The side padding (cancelled by the margin) holds the tilted poster's corners, which would count as sideways overflow */
+  #port .lcol-l > * { min-width: 0; }
+}
+@media (max-width: 1099px) {
+  /* one column: the fleet and its deck come right after the ledger's header; the poster, the flag and the gear follow */
+  #port .sheet > header { order: -5; }
+  #port .sheet > #coach, #port .sheet > .msg { order: -4; }
+  #port #pStats { order: -3; }
+  #port #fleet { order: -2; }
+  #port #fleet + section { order: -1; }
+  #port .sheet > footer { order: 99; }
+}
+/* a purchase waiting for its second tap: a bar under the label drains over the time left (js/escort-ui.js armAttrs) */
+.btn[data-armed] { position: relative; overflow: hidden; }
+.btn[data-armed]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: currentColor; opacity: .7; transform-origin: left; animation: armdrain linear forwards; }
+@keyframes armdrain { to { transform: scaleX(0); } }
+#port { --pz: 1; }   /* the zoom css/style.css gives #port on big screens, for the sticky column's height */
+@media (min-width: 1500px) and (min-height: 900px) { #port { --pz: 1.25; } }
+@media (min-width: 2400px) and (min-height: 1300px) { #port { --pz: 1.5; } }

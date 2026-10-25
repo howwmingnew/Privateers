@@ -116,15 +116,25 @@ function enemyPower(L) {
 const gearMul = k => (typeof gx === "function" ? 1 + gx(k) : 1), gearCut = k => (typeof gx === "function" ? 1 - gx(k) : 1);
 const gunBoost = gun => (typeof gunMods === "function" ? 1 + gunMods(gun).gdmg : 1);
 const gunReload = gun => (typeof gunMods === "function" ? 1 + gunMods(gun).greload : 1);
-function playerPower() {
+// what (for "what if" previews, nothing is changed): { gun: gun => the gun to count in its place, hull: a hull level to count instead of the ship's }
+function playerPower(what = {}) {
   let dps = 0, fireRate = 0, fireDps = 0;
-  for (const { key } of MOUNTS) for (const gun of save[key]) {
-    if (!gun) continue;   // an empty port
-    const g = GUNS[gun.g], m = gunLvMul(gun.lv) * gunBoost(gun), rate = g.rpm / 60 * MOUNT_UPTIME * gunReload(gun);
+  for (const { key } of MOUNTS) for (const port of save[key]) {
+    if (!port) continue;   // an empty port
+    const gun = what.gun ? what.gun(port) : port, g = GUNS[gun.g], m = gunLvMul(gun.lv) * gunBoost(gun), rate = g.rpm / 60 * MOUNT_UPTIME * gunReload(gun);
     dps += g.dmg * m * rate * shipGunK();
     if (g.burn) { fireRate += rate; fireDps = Math.max(fireDps, g.burn * m * shipGunK()); }
   }
   dps += Math.min(BURN_MAX, fireRate * BURN_T) * fireDps;
-  return Math.sqrt(yardVal("hull") * gearMul("hp") * shipEvade() * dps);
+  return Math.sqrt(yardVal("hull", what.hull ?? save.hull) * gearMul("hp") * shipEvade() * dps);
 }
-function shipRating() { const p = playerPower(); let L = 1; while (L < 40 && enemyPower(L + 1) <= p) L++; return L; }
+// Where a power sits on the enemy ladder: the level, and pct = how far it is from that level's power to the next one's (0..0.99).
+function ratingAt(p) {
+  let L = 1;
+  while (L < 40 && enemyPower(L + 1) <= p) L++;
+  const lo = enemyPower(L), hi = enemyPower(L + 1);
+  return { lv: L, pct: L >= 40 ? 0 : clamp((p - lo) / (hi - lo), 0, 0.99) };
+}
+function shipRating() { return ratingAt(playerPower()).lv; }
+// The whole-percent form of the progress to the next level, for the HUD, the ledger and the upgrade buttons (js/lv-path.js).
+const lvProgress = what => { const r = ratingAt(playerPower(what)); return { lv: r.lv, pct: Math.floor(r.pct * 100), frac: r.pct }; };

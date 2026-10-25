@@ -10,6 +10,7 @@ Object.assign(STR.en, {
   allDoneT: "The seas are yours",
   allDone: "Every Letter of Marque is claimed. Sail on as you please, or begin New Game+: a new map, enemies 3 levels stronger, half again the plunder. You keep your guns.",
   ngBtn: "Begin New Game+", ngArm: "Press again to begin",
+  pMore: "Show the full poster", pLess: "Fold the poster",
 });
 Object.assign(STR.zh, {
   wanted: "懸賞通緝", marque: "私掠許可狀 {n}/{m}", sunkOrTaken: "擊沉或擒獲",
@@ -21,6 +22,7 @@ Object.assign(STR.zh, {
   allDoneT: "大海是你的了",
   allDone: "所有私掠許可狀都已完成。你可以繼續自由航行，或開始新遊戲+：新的地圖、敵人強 3 級、戰利品多一半，火砲全部保留。",
   ngBtn: "開始新遊戲+", ngArm: "再按一次開始",
+  pMore: "展開完整海報", pLess: "收起海報",
 });
 
 // A skull in the game's gold, for the chart, the arrow and the posters.
@@ -79,32 +81,36 @@ const wantedEl = document.createElement("section");
 wantedEl.id = "wanted";
 document.getElementById("pStats").after(wantedEl);
 let ngArmed = false, ngArmT;
+let posterOpen = false;   // the poster starts folded to its head, the goal and the reward (css/ledger.css .poster.min); the toggle is per visit, not saved
 const dirWord = a => t("dir_" + (Math.round(((a % TAU) + TAU) % TAU / (Math.PI / 4)) % 8));
 function posterHtml(b) {
   const i = BOUNTIES.indexOf(b), sea = t("sea_" + seaOfRing(b.L).id), ship = shipsFor(i).map(id => t("s_" + id)).join(" / ");
   const escorts = b.escorts.length ? " · " + t(b.escorts.length === 1 ? "pEscort1" : "pEscorts", { n: b.escorts.length }) : "";
   const prize = b.final ? t("pFinal") : t(i + 1 === OUTPOST_BOUNTY ? "pUnlocksOutpost" : "pUnlocks", { ship });
-  return `<div class="poster" data-boss="${b.id}">
+  return `<div class="poster${posterOpen ? "" : " min"}" data-boss="${b.id}">
     <div class="p-marque">${t("marque", { n: i + 1, m: BOUNTIES.length })}</div>
     <div class="p-head"><canvas class="p-flag" width="240" height="170" aria-hidden="true"></canvas>
       <div><div class="p-wanted">${t("wanted")}</div><div class="p-name">${bossName(b)}</div><div class="p-sub">${t("sunkOrTaken")}</div></div></div>
     ${posterShipHtml(b)}
     <p class="p-story">${t("intro_" + b.id)}</p>
     <dl class="p-facts">
-      <div><dt>${t("pTarget")}</dt><dd>${t("cls_" + b.cls)}${escorts}</dd></div>
+      <div class="p-tgt"><dt>${t("pTarget")}</dt><dd>${t("cls_" + b.cls)}${escorts}</dd></div>
       ${recLine(b)}
-      <div><dt>${t("pSeen")}</dt><dd>${t("pWhere", { sea, dir: dirWord(b.ang) })}</dd></div>
+      <div class="p-seen"><dt>${t("pSeen")}</dt><dd>${t("pWhere", { sea, dir: dirWord(b.ang) })}</dd></div>
       <div><dt>${t("pReward")}</dt><dd><b>${t("pGold", { n: fmt(bountyReward(b)) })}</b> · ${prize}</dd></div>
-    </dl></div>`;
+      ${i === 0 && !save.escortGift ? `<div class="p-bonus"><dt>${t("pBonus")}</dt><dd>${t("pGift")}</dd></div>` : ""}
+    </dl>
+    <button class="p-toggle" type="button" data-camp="poster" aria-expanded="${posterOpen}">${t(posterOpen ? "pLess" : "pMore")}</button></div>`;
 }
 function renderWanted() {
   const c = save.campaign, b = activeBounty();
   const story = storyKey ? `<p class="story">${t(storyKey, { n: save.ngPlus })}</p>` : "";
+  const next = giftCard ? `<p class="story gift">${t(giftCard)} <button class="btn" type="button" data-camp="gift">${t("giftGo")}</button></p>` : "";   // js/escort-gift.js
   const note = atOutpost ? `<p class="hint-s">${t(dockNoteKey())}</p>` : "";
   const body = b ? posterHtml(b)
     : `<div class="poster done"><div class="p-wanted">${t("allDoneT")}</div><p class="p-story">${t("allDone")}</p>
        <button class="btn ngbtn" type="button" data-camp="ng">${t(ngArmed ? "ngArm" : "ngBtn")}</button></div>`;
-  wantedEl.innerHTML = story + note + body +
+  wantedEl.innerHTML = story + next + note + body +
     `<div class="rankline"><span>${t("rankLbl")} <b>${t("rank_" + c.rank)}</b>${save.ngPlus ? ` · ${t("ngLbl", { n: save.ngPlus })}` : ""}</span>` +
     `<button class="logbtn" type="button" data-camp="log">${t("logBtn")}</button></div>`;
   const cv = wantedEl.querySelector(".p-flag");
@@ -116,6 +122,8 @@ wantedEl.addEventListener("click", ev => {
   const btn = ev.target.closest("[data-camp]");
   if (!btn) return;
   if (btn.dataset.camp === "log") { openLog(); return; }   // js/logbook.js
+  if (btn.dataset.camp === "gift") { tab = 1; resetLedgerPick(); giftCard = ""; sfx("uiClick"); renderPort(); return; }   // the card's button: the Escort 1 tab (js/ledger-tabs.js)
+  if (btn.dataset.camp === "poster") { posterOpen = !posterOpen; sfx("uiClick"); renderWanted(); wantedEl.querySelector("[data-camp=poster]")?.focus({ preventScroll: true }); return; }
   if (!ngArmed) {   // New Game+ wipes the ship and gold, so it takes a second press
     ngArmed = true; btn.textContent = t("ngArm"); sfx("uiClick");
     clearTimeout(ngArmT); ngArmT = setTimeout(() => { ngArmed = false; const el = wantedEl.querySelector("[data-camp=ng]"); if (el) el.textContent = t("ngBtn"); }, 3000);

@@ -281,8 +281,8 @@ test("gun bay (#68): Upgrade x5 prices the five levels in all, in both languages
   for (const g of [en, zh]) g.run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", 2)`);
   const total = en.run("[0,1,2,3,4].reduce((n, j) => n + gunUpCost(gunItem('six', 2 + j)), 0)");
   assert.deepEqual(en.json("gunUpPlan(save.bow[0], 1e9)"), { n: 5, cost: total, short: 0 });
-  assert.ok(en.run("gunCardHtml()").includes(`Upgrade 5 levels (${en.run("fmt")(total)} gold total)`));
-  assert.ok(zh.run("gunCardHtml()").includes(`升級 5 級（總價 ${en.run("fmt")(total)} 金幣）`));
+  assert.ok(en.run("gunCardHtml()").includes(`Upgrade 5 levels at once (${en.run("fmt")(total)} gold)`));
+  assert.ok(zh.run("gunCardHtml()").includes(`一次升 5 級（共 ${en.run("fmt")(total)} 金幣）`));
   en.run(`gunAct("gup5", {})`);
   assert.deepEqual(en.json("[save.bow[0].lv, save.gold]"), [7, 100000 - total]);
 });
@@ -291,7 +291,7 @@ test("gun bay (#68): near the cap Upgrade x5 shows the real number of levels; on
   const g = bay();
   g.run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", GUN_MAX - 3)`);
   assert.equal(g.json("gunUpPlan(save.bow[0], 1e9).n"), 3);
-  assert.match(g.run("gunCardHtml()"), /data-act="gup5" >Upgrade 3 levels \(/);
+  assert.match(g.run("gunCardHtml()"), /data-act="gup5" >Upgrade 3 levels at once \(/);
   g.run(`gunAct("gup5", {})`);
   assert.equal(g.run("save.bow[0].lv"), g.run("GUN_MAX"));
   g.run(`save.bow[0] = gunItem("six", GUN_MAX - 1)`);
@@ -306,10 +306,10 @@ test("gun bay (#68): too little gold disables Upgrade x5 and shows the shortfall
   g.run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", 2)`);
   const plan = g.json("gunUpPlan(save.bow[0], 0)");
   g.run(`save.gold = ${plan.cost - 25}`);
-  assert.match(g.run("gunCardHtml()"), /data-act="gup5" disabled>Upgrade 5 levels \(\d[\d,]* gold total, 25 short\)/);
+  assert.match(g.run("gunCardHtml()"), /data-act="gup5" disabled>Upgrade 5 levels at once: 25 gold short \(\d[\d,]* in all\)/);
   assert.equal(g.run(`gunAct("gup5", {})`), null);
   assert.deepEqual(g.json("[save.bow[0].lv, save.gold]"), [2, plan.cost - 25], "no levels bought, no gold taken");
-  assert.match(bay("zh").run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", 2); save.gold = 0; gunCardHtml()`), /disabled>升級 5 級（總價 [\d,]+ 金幣，還差 [\d,]+）/);
+  assert.match(bay("zh").run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", 2); save.gold = 0; gunCardHtml()`), /disabled>一次升 5 級：還差 [\d,]+ 金（共 [\d,]+）/);
 });
 
 test("gun bay (#68): the guns' strings exist in both languages and the old swap strings are gone", () => {
@@ -423,3 +423,18 @@ test("#69 the grapple's strings, sounds and constants exist", () => {
     assert.ok(run(`typeof ${k} === "number" && ${k} > 0`), k);
 });
 
+
+// ---------- #88: the upgrade preview shows before and after for every figure the gun states ----------
+test("#88 gunStats: the incendiary's upgrade preview carries the damage AND the burn, before and after; a plain gun only the damage", () => {
+  const g = bay();
+  const dmg = (id, lv) => g.run(`Math.round(GUNS.${id}.dmg * gunLvMul(${lv}) * shipGunK(save.ship) * 10) / 10`);   // one decimal: the "+15%" must show in the figures (#98)
+  const burn = (id, lv) => g.run(`Math.round(GUNS.${id}.burn * gunLvMul(${lv}) * shipGunK(save.ship) * BURN_T * 10) / 10`);
+  const strip = h => h.replace(/<[^>]+>/g, "");
+  const fire = strip(g.run(`gunStats("fire", 3, save.ship, 4)`));
+  assert.equal(fire, `${dmg("fire", 3)} dmg → ${dmg("fire", 4)} + ${burn("fire", 3)} burn → ${burn("fire", 4)}`);
+  assert.notEqual(burn("fire", 3), burn("fire", 4), "the burn really rises with the level");
+  assert.equal(strip(g.run(`gunStats("six", 2, save.ship, 3)`)), `${dmg("six", 2)} dmg → ${dmg("six", 3)}`);
+  assert.equal(strip(g.run(`gunStats("fire", 3)`)), `${dmg("fire", 3)} dmg + ${burn("fire", 3)} burn`, "no preview without a next level");
+  const zh = bay("zh");
+  assert.match(strip(zh.run(`gunStats("fire", 1, save.ship, 2)`)), /^傷害 [\d.]+ → [\d.]+ \+ 燃燒 [\d.]+ → [\d.]+$/);
+});

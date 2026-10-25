@@ -5,9 +5,9 @@
 // older save always loads with the classic blue-and-cream ensign and the default name.
 // The flag reaches the sea through a livery (flagLivery, js/art.js liveryFor), the ledger card, the chart mark and the share card.
 Object.assign(STR.en, {
-  flTitle: "Colours", flHint: "Name your ship and pick the flag she flies: it shows at sea, on the chart and on share cards.",
+  flTitle: "Colors", flHint: "Name your ship and pick the flag she flies: it shows at sea, on the chart and on share cards.",
   flName: "Ship name", flNamePh: "Sea Wolf", flDefName: "Sea Wolf", flReset: "Default name", flRude: "That name is not allowed. Try another.",
-  flMain: "Main colour", flAlt: "Second colour", flEmblem: "Emblem", flShip: "Ship",
+  flMain: "Main color", flAlt: "Second color", flEmblem: "Emblem", flShip: "Ship",
   fc_red: "Red", fc_blue: "Blue", fc_green: "Green", fc_black: "Black", fc_gold: "Gold", fc_purple: "Purple", fc_teal: "Teal", fc_orange: "Orange", fc_white: "White", fc_grey: "Grey",
   fe_diag: "Sash", fe_skull: "Skull", fe_anchor: "Anchor", fe_swords: "Swords", fe_star: "Star", fe_cross: "Cross",
 });
@@ -139,7 +139,7 @@ const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;
 const flagEl = document.createElement("section");
 flagEl.id = "flagbox";
 document.querySelector("#port .lcol-l").appendChild(flagEl);
-let flagMsg = "";   // "rude" after a refused name
+let flagMsg = "", flagOpen = false;   // "rude" after a refused name; the card starts folded: first screens belong to the gun deck
 function swatches(k, list, cur, label) {
   return `<div class="fl-row" role="radiogroup" aria-label="${label}"><span class="fl-lab">${label}</span><span class="fl-opts">` + list.map(id => {
     const on = id === cur, nm = t((k === "emblem" ? "fe_" : "fc_") + id);
@@ -150,13 +150,15 @@ function swatches(k, list, cur, label) {
 function renderFlagCard() {
   const f = flagOf(), name = save.shipName;
   if (document.activeElement && document.activeElement.id === "shipNameIn") return;   // never rebuild a field somebody is typing in
-  flagEl.innerHTML = `<h2>${t("flTitle")}</h2><p class="hint-s">${t("flHint")}</p>
+  flagEl.classList.toggle("open", flagOpen);
+  flagEl.innerHTML = `<h2><button type="button" class="fold-h" data-flag-fold="1" aria-expanded="${flagOpen}" aria-controls="flagBody">${t("flTitle")}</button></h2>
+    <div id="flagBody"${flagOpen ? "" : " hidden"}><p class="hint-s">${t("flHint")}</p>
     <div class="fl-top"><canvas class="fl-prev" width="200" height="130" aria-hidden="true"></canvas>
     <div class="fl-name"><label for="shipNameIn">${t("flName")}</label>
       <input id="shipNameIn" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="${FLAG_NAME_UNITS}" value="${esc(name)}" placeholder="${esc(t("flNamePh"))}">
       <p class="fl-err" role="alert">${flagMsg === "rude" ? t("flRude") : ""}</p>
       <button type="button" class="textbtn" data-flag-reset="1" ${name ? "" : "disabled"}>${t("flReset")}</button></div></div>` +
-    swatches("main", FLAG_COLORS, f.main, t("flMain")) + swatches("alt", FLAG_COLORS, f.alt, t("flAlt")) + swatches("emblem", FLAG_EMBLEMS, f.emblem, t("flEmblem"));
+    swatches("main", FLAG_COLORS, f.main, t("flMain")) + swatches("alt", FLAG_COLORS, f.alt, t("flAlt")) + swatches("emblem", FLAG_EMBLEMS, f.emblem, t("flEmblem")) + `</div>`;
   drawBanner(flagEl.querySelector(".fl-prev").getContext("2d"), 30, 14, 150, 100, f, 112);
   for (const cv of flagEl.querySelectorAll("canvas[data-em]")) {
     drawFlagEmblem(cv.getContext("2d"), cv.dataset.em, 22, 22, 11, flagColor(f.alt), flagColor(f.main));
@@ -167,6 +169,8 @@ function renderFlagCard() {
 function flagChanged() { persist(); applyPlayerStats(false); renderPort(); }   // renderPort rebuilds the card and the gun-deck ship (js/deck-art.js)
 flagEl.addEventListener("click", ev => {
   const b = ev.target.closest("button"); if (!b || b.disabled) return;
+  if (b.dataset.flagFold) { if (document.activeElement && document.activeElement.id === "shipNameIn") document.activeElement.blur();   // Safari leaves the field focused, and a focused field stops the redraw
+    flagOpen = !flagOpen; Snd.play("uiClick"); renderFlagCard(); b.blur(); flagEl.querySelector(".fold-h")?.focus({ preventScroll: true }); return; }
   if (b.dataset.flagReset) { save = { ...save, shipName: "" }; Snd.play("uiClick"); flagChanged(); return; }
   if (!b.dataset.flag) return;
   save = { ...save, flag: cleanFlag({ ...save.flag, [b.dataset.k]: b.dataset.id }) };

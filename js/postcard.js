@@ -72,14 +72,22 @@ function postcardButton(cls) {
 }
 
 // ---------- the offer: a chip at the bottom of the sea for a few seconds ----------
-let chipEl = null, chipTimer = 0;
-function postcardOffer(ms = POSTCARD_OFFER_MS) {
+// home: offered where a quick sale was made (the harbor ring): it goes once the ship has sailed off from that spot, so it
+// never trails the captain out to sea. The boss's offer is not tied to a place.
+let chipEl = null, chipTimer = 0, chipHome = null;
+const CHIP_HOME_R = 260;
+const leftSpot = spot => !!spot && !!player && dist(player, spot) > CHIP_HOME_R;
+// Stopped in the dock ring with the ledger about to open (js/mooring.js): no chip floats over the "Opening the ledger" line.
+const dockingNow = () => typeof moor !== "undefined" && moor.t > 0;
+const spotNow = () => (player ? { x: player.x, y: player.y } : null);
+function postcardOffer(ms = POSTCARD_OFFER_MS, home = false) {
   if (!chipEl) { chipEl = postcardButton("pcchip"); chipEl.id = "postcardChip"; chipEl.hidden = true; document.body.appendChild(chipEl); }
-  chipEl.hidden = false;
+  chipEl.hidden = false; chipHome = home ? spotNow() : null;
   clearTimeout(chipTimer); chipTimer = setTimeout(() => { chipEl.hidden = true; }, ms);
 }
 // It belongs to the sea it was offered on: the ledger, a pause and the title take it away.
-onHook("frame", () => { if (chipEl && !chipEl.hidden && (docked || paused || titleOpen)) chipEl.hidden = true; });
+onHook("frame", () => { if (chipEl && !chipEl.hidden && (docked || paused || titleOpen || dockingNow() || leftSpot(chipHome) || !player.alive)) chipEl.hidden = true; });
+onHook("dock", () => { if (chipEl) { chipEl.hidden = true; clearTimeout(chipTimer); } });
 onHook("sunk", (s, killer) => {   // a boss goes down to the player: after its card has been read
-  if (s.boss && killer === player) setTimeout(() => postcardOffer(), 1800);
+  if (s.boss && killer === player) setTimeout(() => { if (!docked) postcardOffer(); }, 1800);
 });

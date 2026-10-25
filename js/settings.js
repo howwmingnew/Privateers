@@ -4,7 +4,9 @@
 // into what is stored now instead of overwriting it with a stale copy.
 const SETTINGS_KEY = "privateers-settings";
 // Screen shake starts off for players whose system asks for reduced motion; their own choice wins once made.
-const SETTINGS_DEFAULTS = { shake: !(typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches), zoom: 1, autoFire: true, uiPct: SCALE_DEFAULT, miniPct: SCALE_DEFAULT, markPct: SCALE_DEFAULT, fxq: "auto" };
+// The chart starts bigger on a touch screen, where 100% is a thumbnail (MINI_COARSE_PCT); "Reset sizes" returns to this too.
+const MINI_DEFAULT_PCT = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches ? MINI_COARSE_PCT : SCALE_DEFAULT;
+const SETTINGS_DEFAULTS = { shake: !(typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches), zoom: 1, autoFire: true, uiPct: SCALE_DEFAULT, miniPct: MINI_DEFAULT_PCT, markPct: SCALE_DEFAULT, fxq: "auto" };
 function readSettings() {
   try { const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); return s && typeof s === "object" && !Array.isArray(s) ? s : {}; }
   catch (e) { return {}; }
@@ -34,7 +36,7 @@ const SETTINGS = (() => {
   if (typeof s.autoFire !== "boolean") s.autoFire = SETTINGS_DEFAULTS.autoFire;
   if (!["auto", "low", "mid", "high"].includes(s.fxq)) s.fxq = "auto";   // effects quality; settings saved before it existed mean auto
   s.uiPct = scalePct(stored.uiPct) ?? legacyPct(stored.textScale, [1, 1.15, 1.3]) ?? SCALE_DEFAULT;
-  s.miniPct = scalePct(stored.miniPct) ?? legacyPct(stored.miniScale, [0.8, 1, 1.25]) ?? SCALE_DEFAULT;
+  s.miniPct = scalePct(stored.miniPct) ?? legacyPct(stored.miniScale, [0.8, 1, 1.25]) ?? MINI_DEFAULT_PCT;
   s.markPct = scalePct(stored.markPct) ?? SCALE_DEFAULT;
   if (!(typeof s.zoom === "number" && s.zoom >= 0.75 && s.zoom <= 1.25)) s.zoom = SETTINGS_DEFAULTS.zoom;
   return s;

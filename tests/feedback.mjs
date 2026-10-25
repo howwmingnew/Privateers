@@ -22,7 +22,7 @@ const ready = async () => {
   await page.evaluate(() => { if (!docked) dock("welcome"); });
   await page.waitForFunction(() => docked, null, { timeout: 15000 * SLOW });
 };
-const saveWith = (extra = {}) => ({ v: 2, gold: 20000, sunk: 30, tutorialDone: true, seed: 424242, wrecks: [], campaign: { bounty: 3 }, store: [], ...extra });
+const saveWith = (extra = {}) => ({ v: 2, gold: 20000, sunk: 30, tutorialDone: true, seed: 424242, wrecks: [], campaign: { bounty: 3 }, escortGift: "had", store: [], ...extra });
 const seed = ([s, lang]) => { localStorage.clear(); localStorage.setItem("privateers-lang", lang); localStorage.setItem("privateers-save-v2", JSON.stringify(s)); localStorage.setItem("privateers-settings", JSON.stringify({ muted: true, shake: false })); };
 // The game reads the save only on boot. The first boot gets it from an init script (once per tab: it would run again on every
 // reload); after that it goes into the running page, with its loop put to sleep so nothing can persist() over it, and a reload.
@@ -223,13 +223,13 @@ check(g68.bow === "six6" && g68.gold === up.gold - up.sum, `buying it: Lv 1 -> 6
 const near = await ev(() => { save.bow[0] = gunItem("six", GUN_MAX - 2); renderPort(); return document.querySelector('#ctx [data-act="gup5"]').textContent; });
 check(/Upgrade 2 levels/.test(near), `two levels from the cap it says so (${near})`);
 const poor = await ev(() => { save.bow[0] = gunItem("six", 3); save.gold = 10; renderPort(); const b = document.querySelector('#ctx [data-act="gup5"]'); return { t: b.textContent, d: b.disabled }; });
-check(poor.d && /short/.test(poor.t), `without the gold it is disabled and shows the shortfall (${poor.t})`);
+check(poor.d && /\d+ gold short/.test(poor.t), `without the gold it is disabled and shows the shortfall (${poor.t})`);
 await tap('#ctx [data-act="gup5"]').catch(() => {});
 check((await bayState()).bow === "six3", "pressing it anyway buys nothing: no partial upgrade");
 await page.screenshot({ path: `${out}/gunbay-upgrade5-desktop.png` });
 await ev(() => { lang = "zh"; applyLang(); save.gold = 50000; renderPort(); });
 const zhUp = await ev(() => document.querySelector('#ctx [data-act="gup5"]').textContent + "|" + document.querySelector('#ctx [data-act="unload"]').textContent);
-check(/^升級 5 級（總價 [\d,]+ 金幣）\|卸下$/.test(zhUp), `Chinese: ${zhUp}`);
+check(/^一次升 5 級（共 [\d,]+ 金幣）火力 \+\d+%( · 船艦 Lv (進度 \+\d+%|→ \d+))?\|卸下$/.test(zhUp), `Chinese: ${zhUp}`);
 await ev(() => { lang = "en"; applyLang(); });
 
 // touch on a phone, and the compact 30-gun deck

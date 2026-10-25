@@ -221,7 +221,15 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
   const { ctx, page } = await open(D, { tag: "read" });
   await toLedger(page);
   const rec = await ev(page, () => ({ txt: document.querySelector(".poster .p-rec")?.textContent || "", ned: bountyRecLv(BOUNTIES[0]), all: BOUNTIES.map(bountyRecLv), me: shipRating() }));
-  ok("poster: a goal ship level from the boss's real threat (Red Ned: Ready at Ship Lv 4)", rec.ned === 4 && /Goal/.test(rec.txt) && /Ready/.test(rec.txt) && new RegExp(`Lv ${rec.ned}`).test(rec.txt) && /you: Lv/.test(rec.txt), rec);
+  ok("poster: a goal ship level from the boss's real threat (Red Ned: Ready at Ship Lv 3, his badge Lv 2 + 1: #98)", rec.ned === 3 && rec.all.slice(1).join() === "9,11,13,17" && /Goal/.test(rec.txt) && /Ready/.test(rec.txt) && new RegExp(`Lv ${rec.ned}`).test(rec.txt) && /you: Lv/.test(rec.txt), rec);
+  // #91 #92: the poster is folded to head, goal and reward; its goal line shows the badge number it adds to; the toggle opens the rest
+  const fold = await ev(page, () => { const p = document.querySelector("#wanted .poster"), vis = s => { const el = p.querySelector(s); return !!el && getComputedStyle(el).display !== "none"; };
+    return { min: p.classList.contains("min"), story: vis(".p-story"), ship: vis(".p-ship"), goal: vis(".p-rec .goal"), calc: p.querySelector(".p-rec .calc")?.textContent || "", badge: bountyThreat(BOUNTIES[0]), h: Math.round(p.getBoundingClientRect().height) }; });
+  ok("poster starts folded: no story or ship picture, the goal stays, and it says the boss's badge + the lair margin", fold.min && !fold.story && !fold.ship && fold.goal && new RegExp(`Lv ${fold.badge} \\+ \\d`).test(fold.calc), fold);
+  await page.click('#wanted [data-camp="poster"]');
+  const open2 = await ev(page, () => { const p = document.querySelector("#wanted .poster"); return { min: p.classList.contains("min"), story: getComputedStyle(p.querySelector(".p-story")).display !== "none", ship: getComputedStyle(p.querySelector(".p-ship")).display !== "none", why: p.querySelector(".p-rec .why")?.textContent || "", pressed: p.querySelector("[data-camp=poster]").getAttribute("aria-expanded"), h: Math.round(p.getBoundingClientRect().height) }; });
+  ok("the toggle unfolds the story, the ship and the long reason, and says Ship Lv's meaning", !open2.min && open2.story && open2.ship && /level badge/.test(open2.why) && /Ship Lv is your ship/.test(open2.why) && open2.pressed === "true" && open2.h > fold.h, open2);
+  await page.click('#wanted [data-camp="poster"]');
   await ev(page, () => { save.tutorialDone = true; });
   await page.click("#sail"); await page.waitForFunction(() => !docked && !paused);
   await page.waitForTimeout(200 * SLOW);

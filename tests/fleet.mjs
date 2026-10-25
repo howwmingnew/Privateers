@@ -13,7 +13,7 @@ const fails = [];
 const check = (ok, msg) => { if (!ok) fails.push(msg); console.log((ok ? "  ok    " : "  FAIL  ") + msg); };
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 
-const SAVE = JSON.stringify({ v: 2, gold: 500, sunk: 30, tutorialDone: true, seed: 424242, wrecks: [], campaign: { bounty: 2 } });
+const SAVE = JSON.stringify({ v: 2, gold: 500, sunk: 30, tutorialDone: true, seed: 424242, wrecks: [], campaign: { bounty: 2 }, escortGift: "had" });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
 const page = await ctx.newPage(), errors = [];
 page.on("pageerror", e => errors.push("pageerror: " + e.message));

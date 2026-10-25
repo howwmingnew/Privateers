@@ -151,11 +151,11 @@ for (const [tag, viewport, mobile] of [["desktop", { width: 1280, height: 720 },
     return out;
   });
   ok(`#34 ${tag}: the upgrade button shows the price, the shortfall when poor, and "Max level" (disabled) at Lv ${10}`,
-    /^Upgrade to Lv 4 \(\d[\d,]* gold, \d[\d,]* short\)$/.test(lbl.short[0]) && lbl.short[1] && /^Upgrade to Lv 4 \(\d[\d,]* gold\)$/.test(lbl.enough[0]) && !lbl.enough[1] && lbl.max[0] === "Max level" && lbl.max[1], lbl);
+    /^Upgrade to Lv 4 \(\d[\d,]* gold, need \d[\d,]* more\)Damage \+\d+%( · Ship Lv (progress \+\d+%|→ \d+))?$/.test(lbl.short[0]) && lbl.short[1] && /^Upgrade to Lv 4 \(\d[\d,]* gold\)Damage \+\d+%( · Ship Lv (progress \+\d+%|→ \d+))?$/.test(lbl.enough[0]) && !lbl.enough[1] && lbl.max[0] === "Max level" && lbl.max[1], lbl);
   // Chinese strings
   await ev(page, () => { lang = "zh"; applyLang(); deckSel = { side: "bow", i: 0 }; renderPort(); });
   const zh = await ev(page, () => ({ up5: document.querySelector('#ctx [data-act="gup5"]').textContent, off: document.querySelector('#ctx [data-act="unload"]').textContent, up: document.querySelector('#ctx [data-act="gup"]').textContent }));
-  ok(`#34 ${tag}: Chinese labels`, /^升級 \d 級（總價 [\d,]+ 金幣/.test(zh.up5) && zh.off === "卸下" && /^升級到 Lv \d（[\d,]+ 金幣/.test(zh.up), zh);
+  ok(`#34 ${tag}: Chinese labels`, /^一次升 \d 級（共 [\d,]+ 金幣/.test(zh.up5) && zh.off === "卸下" && /^升級到 Lv \d（[\d,]+ 金幣/.test(zh.up), zh);
   await page.screenshot({ path: join(out, `gunbay-card-${tag}-zh.png`) });
   await ctx.close();
 }

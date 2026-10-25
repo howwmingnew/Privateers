@@ -15,7 +15,7 @@ const browser = await chromium.launch({ channel: "chrome", headless: true });
 
 const G = g => ({ g, lv: 1 });
 const SAVE = JSON.stringify({ v: 2, gold: 99999, ship: "sloop", hull: 1, sails: 1, hold: 1, bow: [G("six")], left: [G("six")], right: [G("six")],
-  stern: [], store: [], sunk: 0, wrecks: [], salvage: [], seed: 424242, tutorialDone: true,
+  stern: [], store: [], sunk: 0, wrecks: [], salvage: [], seed: 424242, tutorialDone: true, escortGift: "had",
   campaign: { bounty: 4, ships: ["sloop", "schooner", "brig", "frigate", "line"], deaths: 0 } });
 
 const ready = async page => {

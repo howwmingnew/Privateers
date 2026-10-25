@@ -78,8 +78,22 @@ const tank = page => ev(page, () => { player.maxHp = player.hp = 1e6; });
   const after = await ev(page, () => ({ cam: [S.cameras.main.midPoint.x, S.cameras.main.midPoint.y], e: enemies.map(e => e.x + e.y).join() }));
   ok("title: camera drifts, the player's ship is hidden", Math.hypot(after.cam[0] - before.cam[0], after.cam[1] - before.cam[1]) > 1 && await ev(page, () => !player.spr.visible));
   await page.screenshot({ path: join(out, "d-title-en.png") });
+  // #94: the title carries an English | 中文 pair; a fresh en-US browser starts in English, the pair switches both ways and remembers it
+  const lp = await ev(page, () => ({ lang, pressed: [...document.querySelectorAll("#title [data-lang-set]")].map(b => b.dataset.langSet + ":" + b.getAttribute("aria-pressed")).join(), vis: !!document.querySelector("#title [data-lang-set]").offsetParent }));
+  ok("title: an English | 中文 pair is visible and starts on English for an en-US browser", lp.vis && lp.lang === "en" && lp.pressed === "en:true,zh:false", lp);
+  await page.click('#title [data-lang-set="zh"]');
+  const lz = await ev(page, () => ({ lang, saved: localStorage.getItem("privateers-lang"), neu: document.getElementById("tNew").textContent, pressed: document.querySelector('[data-lang-set="zh"]').getAttribute("aria-pressed") }));
+  ok("title: tapping 中文 relabels the menu at once and the choice is kept", lz.lang === "zh" && lz.saved === "zh" && /啟航/.test(lz.neu) && lz.pressed === "true", lz);
+  await page.click('#title [data-lang-set="en"]');
+  ok("title: tapping English switches back", await ev(page, () => lang === "en" && /Set sail/i.test(document.getElementById("tNew").textContent)));
+  {
+    const z = await open(D, { locale: "zh-TW", tag: "title-zh" });
+    ok("title: a zh-TW browser's first visit opens in Chinese with 中文 marked", await ev(z.page, () => lang === "zh" && document.querySelector('[data-lang-set="zh"]').getAttribute("aria-pressed") === "true" && /啟航/.test(document.getElementById("tNew").textContent)));
+    await z.ctx.close();
+  }
 
-  await page.keyboard.down("Enter");                  // a held Enter starts the game once and stops at the ledger
+  await page.focus("#tNew");   // the language pair keeps focus after a tap; a keyboard player goes back to the menu
+  await page.keyboard.down("Enter");                // a held Enter starts the game once and stops at the ledger
   await page.keyboard.down("Enter"); await page.keyboard.down("Enter");   // (Playwright sends these as auto-repeats)
   await page.keyboard.up("Enter");
   await until(page, () => !titleOpen);
@@ -357,6 +371,15 @@ for (const dpr of [1, 2]) {
   await page.waitForTimeout(150 * SLOW);
   const t7 = await ev(page, () => ({ done: save.tutorialDone, txt: document.getElementById("coachTxt").textContent }));
   ok("tutorial advances out > aim (red) > fire > sink > scoop > sell > buy > done from game state", t6.gold > 0 && t6.inSheet && /12/.test(t6.txt) && t7.done && /loop/.test(t7.txt), { t6, t7 });
+  // the card after the loop says what to do next, stays up at sea until "Got it", and the ledger's time does not use it up
+  const nx = await ev(page, () => ({ txt: document.getElementById("coachTxt").textContent, btn: document.getElementById("coachSkip").textContent, t: tut.doneT }));
+  ok("the done card names the goal Ship Lv, the captain and the skull arrow", /Ship Lv reaches \d+ \(now Lv \d+\)/.test(nx.txt) && /Red Ned/.test(nx.txt) && /skull/.test(nx.txt) && nx.btn === "Got it", nx);
+  await page.waitForTimeout(1200 * SLOW);
+  ok("docked, the done card does not count down", await ev(page, t => tut.doneT === t, nx.t));
+  await page.click("#sail");
+  await until(page, () => !docked && !document.getElementById("coach").hidden && tut.doneT > 0 && tut.doneT < 30);
+  await page.click("#coachSkip");
+  ok("Got it closes the done card", await ev(page, () => !tut.active && document.getElementById("coach").hidden));
   await page.reload({ waitUntil: "load" }); await booted(page);
   await toSea(page);
   ok("finished tutorial stays finished after a reload", await ev(page, () => !tut.active && document.getElementById("coach").hidden && save.tutorialDone));
@@ -369,6 +392,53 @@ for (const dpr of [1, 2]) {
   await page.click("#pSkipTut");
   ok("replay from How to play restarts it; Skip in the pause menu ends it", rp.active && rp.step === 0 && !rp.done && !rp.pauseOpen && skipVis && await ev(page, () => !tut.active && save.tutorialDone), rp);
   await ctx.close();
+}
+{   // #86: the lesson's mark holds its course; a sinking at any step starts the chase over with a fresh mark; the lesson ends with a kill
+  const { ctx, page } = await open(D, { tag: "tut-dead-end" });
+  await toSea(page);
+  const m0 = await ev(page, () => { const e = tut.target, p = { x: e.x, y: e.y }; player.x = e.x - 200; player.y = e.y; player.rot = 0; player.speed = 0; return { mark: !!e.tutMark, slow: e.maxSpeed < 100, p }; });
+  await page.waitForTimeout(1500 * SLOW);
+  const d1 = await ev(page, () => ({ d: dist(player, tut.target), run: tut.target.speed }));
+  ok("tutorial mark: slow, flagged, and it does not run from a ship sailing up to it", m0.mark && m0.slow && d1.d < 320, { m0, d1 });
+  await ev(page, () => { player.x = PORT.x + DOCK_R + 220; player.y = PORT.y; enterStep(3); });
+  await ev(page, () => { sink(player, null); });
+  await until(page, () => docked);
+  await page.click("#sail");
+  await until(page, () => !docked && !paused);
+  const back = await ev(page, () => ({ step: tut.step, mark: !!(tut.target && tut.target.alive && tut.target.tutMark), txt: document.getElementById("coachTxt").textContent }));
+  ok("tutorial: sunk on the 'keep firing' step, the card keeps its step (no step back) and a fresh mark is there to point at", back.step === 3 && back.mark, back);
+  await ev(page, () => { sink(tut.target, player); });
+  await until(page, () => tut.step >= 4);
+  ok("tutorial: sinking the mark is a counted kill (the lesson never ends on 0 sunk)", await ev(page, () => save.sunk >= 1));
+  // #103: dying on the 'sell' step (hold lost) keeps the step, and the card asks for new plunder with the arrow on a ship
+  await ev(page, () => { for (const c of [...crates]) { c.spr.destroy(); c.label?.destroy(); crates.splice(crates.indexOf(c), 1); } cargo = 0; enterStep(5); player.x = PORT.x + DOCK_R + 220; player.y = PORT.y; });
+  await page.waitForTimeout(400 * SLOW);
+  const rf = await ev(page, () => ({ step: tut.step, txt: document.getElementById("coachTxt").textContent, tg: !!guideTarget(0) }));
+  ok("tutorial: empty hold on 'sell' stays on the step, says plunder is gone and still points at a ship", rf.step === 5 && /plunder is gone/i.test(rf.txt) && rf.tg, rf);
+  // a crate picked up from a ship the player did not sink, or a full hold, moves 'keep firing' on to 'sell'
+  await ev(page, () => { enterStep(3); save.sunk = 0; tut.sunk0 = 0; cargo = player.cap; });
+  await page.waitForTimeout(300 * SLOW);
+  ok("tutorial: a full hold on 'keep firing' (kill was not the player's) advances to 'sell'", await ev(page, () => tut.step === 5));
+  await ev(page, () => { enterStep(3); save.sunk = 0; cargo = 0; runHook("pickup", { wreck: null, value: 10 }, 10); cargo = 10; });
+  await page.waitForTimeout(300 * SLOW);
+  ok("tutorial: a picked-up crate on 'keep firing' advances to 'sell' without a kill of its own", await ev(page, () => tut.step >= 5));
+  await ctx.close();
+}
+{   // docking mid-card never sends the captain back to step 1 of the card ("sail out"): the sea gets a fresh mark and the chase restarts at "find the ship" or later (also on a replay, where a kill is already on the books)
+  for (const replay of [false, true]) {
+    const { ctx, page } = await open(D, { tag: "tut-dock" });
+    await toSea(page);
+    await ev(page, r => { if (r) { save.sunk = 5; tutorialReplay(); } player.x = PORT.x + DOCK_R + 220; player.y = PORT.y; }, replay);
+    await until(page, () => tut.step >= 1);
+    await ev(page, () => { enterStep(3); dock("return"); });
+    await until(page, () => docked);
+    await page.click("#sail");
+    await until(page, () => !docked && !paused);
+    await page.waitForTimeout(600 * SLOW);
+    const r = await ev(page, () => ({ step: tut.step, saved: save.tutorialStep, mark: !!(tut.target && tut.target.alive && enemies.includes(tut.target)), txt: document.getElementById("coachStep").textContent }));
+    ok(`docking mid-card and sailing again never sends the captain back to "sail out", and puts a mark back${replay ? " (replay)" : ""}`, r.step >= 1 && r.step < 4 && r.saved === r.step && r.mark, r);
+    await ctx.close();
+  }
 }
 {   // an old save with progress and no tutorial field never sees the tutorial
   const ctx = await browser.newContext({ viewport: D });

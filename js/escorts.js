@@ -13,7 +13,7 @@
 // with a debt waits in port. The sea itself is js/escort-ai.js, the ledger's actions js/escort-ui.js and js/ledger-tabs.js.
 Object.assign(STR.en, {
   escTitle: "Escorts", escHint: "Ships from your yard sail beside you. A slot costs gold once; the ships, guns and upgrades are the ones you already own. Sunk or damaged escorts cost a repair fee after the sortie.",
-  escSlot: "Escort slot {n}", escBuy: "Buy slot · {n}", escBuyArm: "Press again to buy", escLocked: "Sink bounty {n} to unlock · {price} gold",
+  escSlot: "Escort slot {n}", escBuy: "Buy slot · {n}", escBuyArm: "Press again within 6 s to buy", escLocked: "Sink bounty {n} to unlock · {price} gold",
   escNone: "No ship assigned", escShip: "Ship", escStance: "Stance", escOn: "Sails with you", escOff: "Stays in port",
   escStay: "Stand down", escDeploy: "Deploy", escRepair: "Repair · {n}", escGone: "Now your flagship: assign another ship",
   escNoSpare: "No spare ship in the yard. Buy another ship, then assign it here.", escChange: "Change",
@@ -26,7 +26,7 @@ Object.assign(STR.en, {
 });
 Object.assign(STR.zh, {
   escTitle: "隨從艦隊", escHint: "從船塢指派的船會跟在你身邊。船位只買一次；船、砲和升級都用你已經有的。出航後若隨從受損或沉沒，要付修理費。",
-  escSlot: "隨從船位 {n}", escBuy: "購買船位 · {n}", escBuyArm: "再按一次確認購買", escLocked: "擊敗首領 {n} 後解鎖 · {price} 金",
+  escSlot: "隨從船位 {n}", escBuy: "購買船位 · {n}", escBuyArm: "6 秒內再按一次確認購買", escLocked: "擊敗首領 {n} 後解鎖 · {price} 金",
   escNone: "尚未指派船", escShip: "船", escStance: "攻擊傾向", escOn: "跟你出航", escOff: "留在港裡",
   escStay: "停用", escDeploy: "出戰", escRepair: "修理 · {n}", escGone: "已成為你的主艦：請改派別艘",
   escNoSpare: "船塢裡沒有多餘的船。請先買一艘船，再來這裡指派。", escChange: "更換",

@@ -98,10 +98,20 @@ test("gun bay: the upgrade button names the next level and its price, in both la
 test("gun bay: too little gold shows the shortfall and disables the button; max level says so and is disabled", () => {
   const g = bay();
   g.run(`deckSel = { side: "bow", i: 0 }; save.gold = gunUpCost(save.bow[0]) - 40`);
-  assert.match(g.run("gunCardHtml()"), /data-act="gup" disabled>Upgrade to Lv 3 \(\d[\d,]* gold, 40 short\)/);
+  assert.match(g.run("gunCardHtml()"), /data-act="gup" disabled>Upgrade to Lv 3 \(\d[\d,]* gold, need 40 more\)/);
   g.run(`save.bow[0] = gunItem("six", GUN_MAX)`);
   assert.match(g.run("gunCardHtml()"), /class="btn max" type="button" disabled>Max level/);
   assert.match(bay("zh").run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", GUN_MAX); gunCardHtml()`), /disabled>已滿級/);
+});
+
+// ---------- #97: an upgrade button says what the level buys ----------
+test("gun bay: each upgrade button names its gain (one level 15%, five levels compound), in both languages", () => {
+  const g = bay();
+  g.run(`deckSel = { side: "bow", i: 0 }; save.gold = 1e6`);
+  const en = g.run("gunCardHtml()");
+  assert.match(en, /data-act="gup" >Upgrade to Lv 3 \(\d[\d,]* gold\)<span class="gain">Damage \+15%<\/span>/);
+  assert.match(en, /Upgrade 5 levels[^<]*<span class="gain">Damage \+101%<\/span>/);
+  assert.match(bay("zh").run(`deckSel = { side: "bow", i: 0 }; save.gold = 1e6; gunCardHtml()`), /<span class="gain">火力 \+15%<\/span>/);
 });
 
 // ---------- #33: letter of marque, level warning (js/bounty-rec.js) ----------
@@ -114,6 +124,10 @@ test("letter of marque: only a ship level below the asked one is short, and both
   assert.deepEqual([run("recShort(4, 2)"), run("recShort(4, 3)"), run("recShort(4, 4)"), run("recShort(4, 9)")], [true, true, false, false]);
   assert.equal(run('t("pRecLow")'), "建議先升級再出戰");
   assert.equal(run('STR.en.pRecLow'), "Level up before you sail");
+  // #91: the poster explains why its number is higher than the boss's badge, and how Ship Lv rises, in both languages
+  for (const k of ["pRecCalc", "pRecWhy", "pRecWhyEsc", "lvHow"]) { assert.ok(run(`STR.en.${k}`) && run(`STR.zh.${k}`), k); }
+  assert.match(run('t("pRecCalc", { b: 2, m: 2 })'), /Lv 2/);
+  assert.match(run('t("pRecWhy", { b: 2, m: 2 })'), /Lv 2.*2/);
 });
 
 // ---------- #42: chart marks (js/mini-marks.js) ----------
@@ -251,4 +265,32 @@ test("edge markers: the bounty comes first, then stronger ships, then places, ne
   const pair = g.json(`edgePick([{ id: "a", kind: "ship", d: 0, px: 900 }, { id: "b", kind: "ship", d: 0, px: 300 }]).map(i => i.id)`);
   assert.deepEqual(pair, ["b", "a"], "same danger: the nearer first");
   assert.deepEqual(g.json("edgePick([])"), []);
+});
+
+// ---------- #99: gliding along the shore, and the bounty box's warning ----------
+test("slideAlong: a graze keeps almost all its speed, a head-on push loses the most, a bow turned away loses nothing", () => {
+  const g = boot();
+  const graze = g.json("slideAlong(0, 0.2, 0.98)"), head = g.json("slideAlong(0, 1, 0)"), away = g.json("slideAlong(Math.PI, 1, 0)");
+  assert.ok(graze.keep > 0.98, JSON.stringify(graze));
+  assert.ok(Math.abs(head.keep - 0.7) < 1e-9, JSON.stringify(head));
+  assert.deepEqual(away, { keep: 1, turn: 0 });
+  assert.ok(graze.keep > head.keep);
+});
+
+test("slideAlong: the bow is eased toward the tangent it already leans to, away from the rock", () => {
+  const g = boot();
+  // rock to the starboard (positive y) of an eastward bow: the bow turns to port (negative)
+  assert.ok(g.run("slideAlong(0, 0.5, 0.87).turn") < 0);
+  assert.ok(g.run("slideAlong(0, 0.5, -0.87).turn") > 0);
+  assert.notEqual(g.run("slideAlong(0, 1, 0).turn"), 0, "dead on still picks a side");
+});
+
+test("edgeRisky: a bounty far above the captain, or lying in a sea above them, warns; a fair one does not", () => {
+  const g = edge("en");
+  assert.equal(g.run("edgeRisky(4, 1, 2)"), true);    // the boss itself 2 levels over
+  assert.equal(g.run("edgeRisky(3, 3, 2)"), true);    // the Reef Straits (Lv 3+) for a Lv 2 captain
+  assert.equal(g.run("edgeRisky(3, 2, 2)"), false);
+  assert.equal(g.run("edgeRisky(2, 1, 4)"), false);
+  assert.equal(g.run("edgeLabel(640, true)"), "~320 m · risky");
+  assert.equal(edge("zh").run("edgeLabel(640, true)"), "約 320 公尺 · 危險");
 });

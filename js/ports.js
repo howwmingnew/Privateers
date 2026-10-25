@@ -16,6 +16,8 @@ Object.assign(STR.en, {
   tradeEmpty: "Your hold is empty. This port only buys cargo.",
   fSupplyIn: "Repairs: {n} gold for a full hull", supplyBroke: "Not enough gold for repairs",
   fSupplyFull: "Hull is sound, no repairs needed", fTradeIn: "Buys your whole hold",
+  supplyAuto: "Supply station: repairs are paid automatically as the hull mends, up to {n} gold for a full hull.",
+  supplyPaid: "Repairs paid: {n} gold for {p}% of the hull.",
 });
 Object.assign(STR.zh, {
   stationName_supply: "補給站", stationName_trade: "交易港",
@@ -27,6 +29,8 @@ Object.assign(STR.zh, {
   tradeEmpty: "貨艙是空的。這個港口只收購貨物。",
   fSupplyIn: "修船：整個船體 {n} 金幣", supplyBroke: "金幣不夠，無法修船",
   fSupplyFull: "船體完好，不需修理", fTradeIn: "收購貨物",
+  supplyAuto: "補給站：船體修補時自動扣金幣，整個船體最多 {n} 金幣。",
+  supplyPaid: "修船費已付：{n} 金幣，修好 {p}% 船體。",
 });
 
 // Fixed spots (found by scanning the ring midlines for the point farthest from every bounty lair, the hulk outpost and the
@@ -78,13 +82,20 @@ function supplyStep(hp, maxHp, dt, gold, ring, k = 1) {   // k: a legendary supp
 }
 
 // ---------- At sea: the ring's service (called from js/mooring.js) ----------
-let feeCarry = 0, brokeShown = false;
+let feeCarry = 0, brokeShown = false, feePaid = 0, feeFrom = 0;   // feePaid: gold taken on this visit; feeFrom: the hull share it started from
+// Says what the visit cost, once, so gold never leaves without a reason.
+function stationBill() {
+  if (feePaid <= 0) return;
+  toast(t("supplyPaid", { n: feePaid, p: Math.max(1, Math.round((player.hp / player.maxHp - feeFrom) * 100)) }));
+  feePaid = 0; feeFrom = player.hp / player.maxHp;   // the next bill (the ring can mend a hull in two sittings) counts from here
+}
 function stationHeal(hb, dt) {
   const r = supplyStep(player.hp, player.maxHp, dt, save.gold, hb.ring, typeof gxDockK === "function" ? gxDockK() : 1);
   player.hp = r.hp;
   feeCarry += r.cost;
   const whole = Math.min(Math.floor(feeCarry), save.gold);
-  if (whole > 0) { save.gold -= whole; feeCarry -= whole; hud(true); }
+  if (whole > 0) { save.gold -= whole; feeCarry -= whole; feePaid += whole; hud(true); }
+  if (player.hp >= player.maxHp) stationBill();   // the hull is whole: the bill comes now, not only when the ship leaves
   if (r.cost <= 0 && player.hp < player.maxHp && save.gold < 1 && !brokeShown) { brokeShown = true; toast(t("supplyBroke")); sfx("denied"); }
 }
 // The moment the ship enters a station's ring: its name, then what it does (or that nothing is needed). The hold-still hint
@@ -93,10 +104,12 @@ function stationGreet(hb, kind) {
   const x = player.x, y = player.y - 40;
   floatText(x, y - 22, t("stationName_" + kind), "#f6f1e3", 15);
   const sound = player.hp >= player.maxHp;
+  feePaid = 0; feeFrom = player.hp / player.maxHp;
+  if (kind === "supply" && !sound && save.gold >= 1) toast(t("supplyAuto", { n: supplyFee(hb.ring) }));
   floatText(x, y, kind === "supply" ? t(sound ? "fSupplyFull" : "fSupplyIn", { n: supplyFee(hb.ring) }) : t("fTradeIn"), "#9fe0a0", 15);
   if (kind === "trade" && cargo <= 0) toast(t("tradeEmpty"));
 }
-function stationLeft() { if (feeCarry > 0 || brokeShown) persist(); feeCarry = 0; brokeShown = false; }
+function stationLeft() { stationBill(); if (feeCarry > 0 || brokeShown) persist(); feeCarry = 0; brokeShown = false; }
 
 // ---------- The ledger's face (js/campaign-ui.js reads these) ----------
 let dockKind = "return";

@@ -8,6 +8,7 @@
 // through --ts, like the HUD (js/options.js); the big-screen zoom of the HUD is repeated in css/campaign.css as --ez.
 
 const EDGE_TICK = 0.05, EDGE_FADE_MS = 280, EDGE_HYST = 24;   // s between updates; fade-out time; px a target must be inside before its box goes
+const EDGE_BADGE_X = 34, EDGE_BADGE_Y = 44;   // px a ship's level badge reaches past its hull: sideways, and up (so below the bottom edge)
 const edgeLayer = document.createElement("div");
 edgeLayer.id = "edgeMarks"; edgeLayer.setAttribute("aria-hidden", "true"); edgeLayer.hidden = true;
 document.body.append(edgeLayer);
@@ -44,6 +45,7 @@ function edgeCandidates(v, kx, ky) {
   const add = (o, it) => {
     const px = Math.hypot(o.x - player.x, o.y - player.y);
     if (px > reach || px < 1) return;
+    if (it.boss) it = { ...it, risky: edgeRisky(it.e.threatL ?? it.e.L, seaLowLv(seaOfRing(ringAt(dist(o, PORT))).id), me) };   // the skull warns about the water it points into
     out.push({ ...it, o, px, sx: (o.x - v.x) * kx, sy: (o.y - v.y) * ky });
   };
   for (const e of enemies) if (e.alive && !e.fixed && (e.ally || !(typeof disFogHides === "function" && disFogHides(e)))) add(e, { kind: "ship", e, boss: !!e.boss, ally: !!e.ally, d: e.ally ? 0 : threatTier(e.threatL ?? e.L, me).d });   // an escort that has dropped out of sight keeps a mint box, fog or not
@@ -60,17 +62,22 @@ function readEdgeKeepouts(dt) {   // the HUD strip (as one top limit) and the bo
   if ((edgeKeepT -= dt) > 0) return edgeKeep;
   edgeKeepT = 0.4;
   const box = el => el && !el.hidden && el.getBoundingClientRect().width > 0 ? el.getBoundingClientRect() : null;
-  const top = Math.max(0, ...[...document.querySelectorAll("#hud .side, #hud .bars")].map(el => el.getBoundingClientRect().bottom));
-  return (edgeKeep = { top, bottom: ["bossBar", "hint"].map(id => box(document.getElementById(id))).filter(Boolean).map(r => [r.left, r.right]) });
+  // the sea banner, the sale tally and the tutorial card (when it hops to the top) land in the strip the top boxes use: while one shows, the boxes sit below it
+  const over = ["seaBanner", "tally", "coach"].map(id => document.getElementById(id)).filter(el => el && !el.hidden && el.classList.contains(el.id === "coach" ? "up" : "on"))
+    .map(el => el.getBoundingClientRect()).filter(r => r.width > 0).map(r => r.bottom);
+  const top = Math.max(0, ...over, ...[...document.querySelectorAll("#hud .side, #hud .bars")].map(el => el.getBoundingClientRect().bottom));
+  return (edgeKeep = { top, bottom: ["bossBar", "hint", "touchSail"].map(id => box(document.getElementById(id))).filter(Boolean).map(r => [r.left, r.right]) });
 }
 function updateEdgeMarks(dt) {
   if (edgeHidden()) { edgeLayer.hidden = true; edgeShowsBoss = false; for (const [, m] of edgeEls) m.el.remove(); edgeEls.clear(); return; }
   edgeLayer.hidden = false;
   const v = S.cameras.main.worldView, w = VIEW.cssW, h = VIEW.cssH, kx = w / v.width, ky = h / v.height, z = edgeScale();
-  const away = it => it.sx < 0 || it.sx > w || it.sy < 0 || it.sy > h;
-  const inside = it => it.sx > EDGE_HYST && it.sx < w - EDGE_HYST && it.sy > EDGE_HYST && it.sy < h - EDGE_HYST;
+  // a ship's level badge rides 36 px above its hull and ~30 px to each side, so a ship is "off screen" only once its badge is too: a box never lands on a badge
+  const bx = it => (it.kind === "ship" ? EDGE_BADGE_X * kx : 0), by = it => (it.kind === "ship" ? EDGE_BADGE_Y * ky : 0);
+  const away = it => it.sx < -bx(it) || it.sx > w + bx(it) || it.sy < 0 || it.sy - by(it) > h;
+  const inside = it => it.sx > EDGE_HYST - bx(it) && it.sx < w - EDGE_HYST + bx(it) && it.sy > EDGE_HYST && it.sy - by(it) < h - EDGE_HYST;
   const cands = edgeCandidates(v, kx, ky).filter(it => (edgeEls.has(it.o) ? !inside(it) : away(it)));   // a shown box stays until the target is well inside
-  const picked = edgePick(cands);
+  const picked = edgePick(cands, edgeMax(EDGE_MQ_COARSE.matches, w));
   edgeShowsBoss = picked.some(it => it.boss);
   const keep = readEdgeKeepouts(dt), pad = 16 * z, boxH = 30 * z,   // pad: room for a box's pointer between it and the screen edge
      inset = { l: pad, r: w - pad, t: Math.max(keep.top + pad, 56 * z), b: h - pad - (EDGE_MQ_COARSE.matches ? 24 * z : 0) };
@@ -79,9 +86,11 @@ function updateEdgeMarks(dt) {
     let m = edgeEls.get(it.o);
     if (!m) { m = edgeBox(it); edgeEls.set(it.o, m); requestAnimationFrame(() => m.el.classList.add("on")); }
     m.el.classList.remove("gone"); m.it = it;
+    m.el.classList.toggle("risky", !!it.risky);
+    if (it.kind === "ship" && !it.boss && !it.ally) { const th = String(edgeThreat(it.d)); if (m.el.dataset.th !== th) m.el.dataset.th = th; }   // the box's border and pointer take the threat colour (css/campaign.css)
     const key = (it.boss ? "b" : it.place || (it.hz ? "h" + it.hz.kind : "s")) + (it.e ? it.d + (it.e.faction || "") + (it.e.arch || "") : "");
     if (key !== m.key || it.e?.arch === "fireship") { m.key = key; edgeIcon(m.ic, it); }   // a fireship's flicker needs a fresh paint
-    const text = edgeLabel(it.px), sk = m.look + z + "|" + text;
+    const text = edgeLabel(it.px, it.risky), sk = m.look + z + "|" + text;
     if (text !== m.label) { m.label = text; m.txt.textContent = text; }
     if (sk !== m.sk) { m.sk = sk; const sz = edgeSize.get(sk); if (sz) { m.w = sz.w; m.h = sz.h; } else unsized.push(m); }
   }

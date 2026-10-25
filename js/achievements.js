@@ -70,10 +70,16 @@ function unlockAch(id) {
   if (!achShowing) nextAchToast();
   return true;
 }
+// A card can wait a long while behind the coach card, a banner or the ledger. The ones that name a place or a state
+// (the Reef, a full hold) are dropped if it no longer holds when their turn comes: the achievement itself stays saved,
+// but "Into the Reefs" must not pop up in the harbor, nor "Full to the Gunwales" over a hold at 29 / 240.
+const achStillTrue = id => id === "full_hold" ? player.cap > 0 && cargo >= player.cap * 0.95
+  : id.startsWith("sea_") ? typeof seaNow !== "undefined" && seaNow === id.slice(4) : true;
 function renderAchToast(id) { achToastEl.innerHTML = `<small>${t("achUnlocked")}</small><b>${t("ach_" + id)}</b><span>${t("achd_" + id)}</span>`; }
 function nextAchToast() {
   if (achQueue.length && typeof achHeld === "function" && achHeld()) { achShowing = false; return; }   // after the coach card (js/onboard.js)
-  const id = achQueue.shift();
+  let id = achQueue.shift();
+  while (id && !achStillTrue(id)) id = achQueue.shift();   // earned, but not worth a card now (below)
   if (!id) { achShowing = false; achToastEl.classList.remove("on"); return; }
   achShowing = true; achToastEl.dataset.id = id; renderAchToast(id);
   achToastEl.classList.remove("on"); void achToastEl.offsetWidth; achToastEl.classList.add("on");
@@ -100,5 +106,12 @@ onHook("bounty", n => {
 });
 onHook("sea", id => { if (id !== "shallows") unlockAch("sea_" + id); });
 onHook("renderPort", () => { if (save.ship !== "sloop") unlockAch("own_" + save.ship); });
-onHook("frame", () => { if (!paused && player.alive && player.cap > 0 && cargo >= player.cap) unlockAch("full_hold"); });
+// the hold has to stay full for FULL_HOLD_T s: one frame at the brim (a crate scooped, then sold in the ring) is not "full to the gunwales"
+const FULL_HOLD_T = 0.1;
+let fullHoldT = 0;
+onHook("frame", dt => {
+  const full = !paused && !docked && player.alive && player.cap > 0 && cargo >= player.cap;
+  fullHoldT = full ? fullHoldT + dt : 0;
+  if (fullHoldT >= FULL_HOLD_T) unlockAch("full_hold");
+});
 onHook("lang", () => { if (achShowing && achToastEl.dataset.id) renderAchToast(achToastEl.dataset.id); });

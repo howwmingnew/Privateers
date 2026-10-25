@@ -7,6 +7,7 @@
 // js/art-draw.js) into that cell and runs a leader line from each button to its muzzle. Muzzles follow muzzle()
 // (js/combat.js): slot i of n sits at -span/2 + span*i/(n-1) along the mount, so broadside slot 0 is the aftmost gun and
 // bow / stern slot 0 the larboard one. Broadside guns sit where drawDeck's barrels poke through the rail.
+const DECK_CHROME = 520;   // px of the ledger round the ship (header, tabs, bow and stern guns, footer): the hull may use the rest of the window, so the deck fits the first screen
 const DECK_K = 2.6;   // ship cell width per art px of the sprite's width (beam plus sails), capped at 46% of the deck
 
 function deckMuzzle(a, side, i, n) {   // ship-local point: bow +x, larboard -y (as in the baked sprite)
@@ -23,14 +24,15 @@ function deckHtml(v = flagDeck()) {
     const name = gun ? `${t("gf_" + gun.g)} Lv ${gun.lv}` : t("emptyPort");
     return `<button class="${cls}" type="button" data-act="port" data-side="${side}" data-i="${i}"${E != null ? ` data-e="${E}"` : ""} data-k="${side}${i}" aria-pressed="${pk}" aria-label="${t("slotAria", { side: label, n: i + 1, gun: name })}">` +
       (gun ? `${t("g_" + gun.g)}<small>Lv ${gun.lv}</small>` : `${t("emptyPort")}<small>&nbsp;</small>`) + `</button>`; };   // .deck.dense css: one line per port
+  const tip = { left: t("larboardTip"), right: t("starboardTip") };   // English readers: larboard is port (left), starboard is right
   const grp = (side, label) => {
     const idx = v.mounts[side].map((_, i) => i);
     if (!idx.length) return "";
     if (side === "left" || side === "right") idx.reverse();   // bow-most gun on top, so the list reads like the hull
-    return `<div class="dk-grp dk-${side}"><div class="lbl">${label}</div><div class="slots">${idx.map(i => btn(side, label, i)).join("")}</div></div>`;
+    return `<div class="dk-grp dk-${side}"><div class="lbl">${label}${tip[side] ? `<small class="lbl-tip">${tip[side]}</small>` : ""}</div><div class="slots">${idx.map(i => btn(side, label, i)).join("")}</div></div>`;
   };
   const rows = Math.max(v.mounts.left.length, v.mounts.right.length);   // a dense deck (js/gundeck.js) stretches the ship cell to as many rows as the longest side
-  return { dense: denseDeck(v.ship), style: `--shipw: min(46%, ${Math.round(h * DECK_K)}px); --ship-ar: ${h} / ${w}; --rows: ${rows}`,
+  return { dense: denseDeck(v.ship), style: `--shipw: min(46%, ${Math.round(h * DECK_K)}px, max(110px, calc((100dvh - ${DECK_CHROME}px) * ${(h / w).toFixed(3)}))); --ship-ar: ${h} / ${w}; --rows: ${rows}`,
     html: `<svg class="dk-lines" aria-hidden="true"></svg>` + grp("bow", t("bow")) + grp("left", t("larboard")) +
       `<button class="dk-ship${v.hull ? " sel" : ""}" type="button" data-act="hull" aria-pressed="${!!v.hull}" aria-label="${t("hullAria")}"></button>` + grp("right", t("starboard")) + grp("stern", t("stern")) };
 }

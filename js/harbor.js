@@ -1,7 +1,7 @@
 "use strict";
 // ---------- Harbor ----------
 // prior: what a quick resupply on this pass through the ring already sold (js/mooring.js), for the ledger's message.
-function dock(kind, prior = { sold: 0, bonus: 0 }) {
+function dock(kind, prior = { sold: 0, bonus: 0, cargo: 0, sunk: 0 }) {
   const svc = serviceOf(kind);   // js/ports.js: a supply station neither buys nor sells, a trade port does not mend
   runHook("dock", kind, svc.sell ? cargo : 0);   // kind "outpost" docks at the Hulk Outpost (js/campaign.js)
   paused = true; docked = true; deckSel = null; gunNote = null; if (typeof resetLedgerPick === "function") resetLedgerPick();   // js/ledger-tabs.js: tab, hull panel, candidate card
@@ -16,7 +16,7 @@ function dock(kind, prior = { sold: 0, bonus: 0 }) {
   persist();
   // keep the message as a key so it re-renders when the language changes
   if (kind === "welcome") portMsg = [save.sunk === 0 ? "welcome" : "welcomeBack"];
-  else if (kind === "sunk") portMsg = lastLost > 0 ? ["sunkWreckHalf", { n: fmt(lastLost) }] : ["sunkMsg"];
+  else if (kind === "sunk") portMsg = lastLost > 0 ? ["sunkWreckHalf", { n: fmt(lastLost) }] : [lastLostExtra ? "sunkLoss" : "sunkMsg"];
   else if (kind === "supply") portMsg = ["supplyMsg"];
   else if (kind === "trade") portMsg = sold > 0 ? (bonus > 0 ? ["tradeSoldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["tradeSold", { n: fmt(sold) }]) : ["tradeEmpty"];
   else portMsg = sold > 0 ? (bonus > 0 ? ["soldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["sold", { n: fmt(sold) }]) : ["empty"];
@@ -26,7 +26,8 @@ function dock(kind, prior = { sold: 0, bonus: 0 }) {
   document.querySelector("#port .sheet").scrollTop = 0;   // the result message is at the top; never open scrolled past it
   Snd.music("harbor"); Snd.ambience("harbor");
   if (kind === "return" || isStationKind(kind)) Snd.play("bell");
-  if (sale.sold > 0 && (kind === "return" || kind === "outpost" || kind === "trade")) sortieTally({ ...tally, bonus: sale.bonus, gold: sale.sold });   // count-up (js/juice-ui.js)
+  // count-up (js/juice-ui.js): the visit's whole sale, the quick one on the way in included, so it says what the ledger line and the purse do
+  if (sale.sold > 0 && (kind === "return" || kind === "outpost" || kind === "trade")) sortieTally({ sunk: tally.sunk + (prior.sunk || 0), cargo: tally.cargo + (prior.cargo || 0), bonus, gold: sold });
   document.getElementById("joy").hidden = true; joyVec = { x: 0, y: 0, m: 0 };
 }
 function setSail() {
@@ -50,12 +51,15 @@ function resetEnemies(sc) {
 let portMsg = ["welcome"];
 // Buying a ship costs its full price, so the button needs a second tap within a few seconds.
 let shipArmed = null, shipArmedAt = 0, shipArmTimer;
-const buyLabel = id => t(ownedShips().some(e => e.ship === id) ? "buyAnother" : "buy", { n: fmt(SHIPS[id].cost), cost: fmt(SHIPS[id].cost) });
+// A model you cannot pay for yet says how much is missing (like the upgrade buttons, js/gunbay.js upgradeLabel).
+const buyLabel = id => save.gold < SHIPS[id].cost ? t("buyShort", { n: fmt(SHIPS[id].cost), d: fmt(SHIPS[id].cost - save.gold) })
+  : t(ownedShips().some(e => e.ship === id) ? "buyAnother" : "buy", { n: fmt(SHIPS[id].cost), cost: fmt(SHIPS[id].cost) });
 function renderPort() {
   const $ = id => document.getElementById(id);
   $("pMsg").innerHTML = t(...portMsg);
   $("pGold").textContent = fmt(save.gold);
-  $("pStats").innerHTML = `<span><b>${t("s_" + save.ship)}</b></span><span>${t("statLv", { n: shipRating() })}</span><span><b>${YARD.hull.show(yardVal("hull"))}</b></span>` +
+  const rate = lvProgress();   // Ship Lv and the share of the way to the next (js/lv-path.js)
+  $("pStats").innerHTML = `<span><b>${t("s_" + save.ship)}</b></span><span>${t("statLvP", { n: rate.lv, p: rate.pct })}</span><span><b>${YARD.hull.show(yardVal("hull"))}</b></span>` +
     `<span><b>${YARD.sails.show(yardVal("sails"))}</b></span><span>${t("statHold", { n: fmt(yardVal("hold")) })}</span><span>${t("statSunk", { n: save.sunk })}</span>`;
   renderGunBay();   // drops a pick whose place is gone (js/gunbay.js), before the fleet is drawn
   renderFleet();   // the ship tabs, the picked ship's gun deck and the context panel (js/ledger-tabs.js)
@@ -95,8 +99,8 @@ document.getElementById("port").addEventListener("click", ev => {
       shipArmTimer = setTimeout(() => {
         shipArmed = null;   // relabel in place rather than re-render, so keyboard focus stays put
         const el = document.querySelector(`[data-act="ship"][data-id="${id}"]`);
-        if (el) el.textContent = buyLabel(id);
-      }, 3000);
+        if (el) { el.textContent = buyLabel(id); el.removeAttribute("data-armed"); el.removeAttribute("style"); }
+      }, ARM_MS);
       renderPort(); document.querySelector(`[data-act="ship"][data-id="${id}"]`)?.focus();
       Snd.play("uiClick");
       return;

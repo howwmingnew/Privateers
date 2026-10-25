@@ -54,12 +54,15 @@ Object.assign(STR.zh, {
 // upgrade that dodges about half the volleys (7/8 at 60%, 5/8 at 35%); Hale to a frigate rated ~10 (6/8); the
 // finale to a refitted ship of the line rated ~13 (5/6). The deep-water classes carry more hull than the stand-ins
 // these multipliers were first set against, so the late ones are lower.
+// #98: the first bounty is the newcomer's: Red Ned asks only one level above his badge (b.margin, js/bounty-rec.js), and a hurt Ned sheers
+// off no farther than b.tether from his lair, so chasing him never leads into the Navy Lanes (the lair is mid-ring 3: 600 px out is still the Reef Straits).
+const BOSS_TETHER = 600;
 // Lair: polar from the harbor (screen y points south), placed mid-ring so its level is the bounty's level.
 // Escort `guns`/`hpMul` were stand-ins from before the archetypes; js/archetypes.js campaignOutfit gives each escort
 // its real class (the fire-raiders are fireships), so only `cls` matters now.
 const FIRE_RAIDER = { cls: "fireship", hpMul: 0.6, guns: 1 };
 const BOUNTIES = [
-  { id: "ned",    L: 3,  cls: "cutter",  faction: "pirate", hpMul: 2.5, speed: 0.9,  ang: Math.PI,        r: ringMid(3), reward: 400,   escorts: [] },
+  { id: "ned",    L: 3,  cls: "cutter",  faction: "pirate", hpMul: 2.5, speed: 0.9,  ang: Math.PI,        r: ringMid(3), reward: 400,   escorts: [], margin: 1, tether: BOSS_TETHER },
   { id: "carey",  L: 5,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: -Math.PI / 2,   r: ringMid(5), reward: 1500,  escorts: [{ cls: "brig" }] },
   { id: "saint",  L: 7,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: Math.PI * 0.75, r: ringMid(7), reward: 4000,  escorts: [FIRE_RAIDER, FIRE_RAIDER, FIRE_RAIDER] },
   { id: "hale",   L: 9,  cls: "frigate", faction: "navy",   hpMul: 1.6,              ang: 0,              r: ringMid(9), reward: 10000, escorts: [{ cls: "brig" }, { cls: "brig" }] },
@@ -69,6 +72,17 @@ const BOUNTIES = [
 const LAIR_LEASH = 380;   // an idle boss (or escort) further than this from its lair heads back to it
 const ASSIST_MS = 20000;  // a boss someone else sinks still pays if the player hit it this recently
 const lairOf = b => polarPt(b.ang, b.r);
+const TETHER_BACK = 120;   // once turned back, a tethered boss only gives chase again inside tether - this, so it does not dither on the line
+// A bounty with a tether that is farther than that from its lair, on a course that takes it farther still, turns for the lair instead
+// (js/ships.js think) and stays turned (e.tethered) until it is back inside the line by TETHER_BACK.
+function bossTether(e, desired, thr) {
+  const b = e.boss && e.lair && desired != null ? findBounty(e.boss) : null;
+  if (!b || !b.tether) return null;
+  const d = dist(e, e.lair), out = Math.atan2(e.y - e.lair.y, e.x - e.lair.x);
+  if (e.tethered && d < b.tether - TETHER_BACK) e.tethered = false;
+  if (!e.tethered && d >= b.tether && Math.cos(angDiff(desired, out)) > 0) e.tethered = true;
+  return e.tethered ? { desired: out + Math.PI, thr } : null;
+}
 // Hull art for a spec class (js/art.js SHIP_ART; the man-o'-war has its own, bigger than anything the yard sells).
 const artClass = cls => SHIP_ART[cls] ? cls : "brig";
 const activeBounty = () => (runActive() && runBounty()) || BOUNTIES[save.campaign.bounty] || null;   // a daily run hunts its own captain (js/run.js)
@@ -164,6 +178,7 @@ function claimBounty(b, s) {
   sfx("coin", { amount: reward, delay: 0.35 });
   if (b.final) S.time.delayedCall(2600, showVictory);   // js/victory.js
   else { toast(t("rankUp", { rank: t("rank_" + save.campaign.rank) })); sfx("buy", { big: true, delay: 1.1 }); }
+  if (typeof claimEscortGift === "function") claimEscortGift();   // the first bounty pays a free escort slot and a ship (js/escort-gift.js)
   syncOutpost();
   hud(true);
   runHook("bounty", n, b);

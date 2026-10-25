@@ -46,6 +46,7 @@
 <link rel="stylesheet" href="css/share.css">
 <link rel="stylesheet" href="css/weather.css">
 <link rel="stylesheet" href="css/gear.css">
+<link rel="stylesheet" href="css/safety.css">
 </head>
 <body>
 
@@ -59,6 +60,7 @@
       <button class="lang" id="pauseBtn" type="button" data-menu="pause" aria-label="Pause"><i class="ic-pause" aria-hidden="true"></i></button>
       <button class="lang" id="langHud" type="button" data-lang-toggle>中文</button>
       <div class="sail-ind" id="sailInd" hidden><span data-i18n="sl_lbl">Sail</span><span class="pips" aria-hidden="true"><i></i><i></i><i></i></span><b id="sailTxt"></b></div>
+      <div class="sail-ind speed-ind" id="speedInd"><span data-i18n="spd_lbl">Speed</span><b id="speedTxt">0.0 kn</b></div>
       <div class="sail-ind heat-ind" id="heatInd" role="status" hidden><span id="heatLbl">Wanted</span><span class="stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><b id="heatTxt"></b></div>
     </div>
   </div>
@@ -130,6 +132,9 @@
     <h1 class="logo"><span class="logo-en" lang="en">PRIVATEERS</span><span class="logo-zh" lang="zh-Hant">私掠者</span></h1>
     <p class="logo-sub"><span lang="en">Letters of Marque</span> · <span lang="zh-Hant">私掠許可狀</span></p>
     <p class="tagline"><span lang="en">Five bounties. One Admiral. Every broadside by hand.</span><span lang="zh-Hant">五張懸賞，一位海軍上將，每一輪齊射都由你瞄準。</span></p>
+    <div class="tlang" id="tLang" role="group" aria-label="Language / 語言">
+      <button type="button" data-lang-set="en" lang="en">English</button><button type="button" data-lang-set="zh" lang="zh-Hant">中文</button>
+    </div>
     <nav class="menu" id="titleMenu">
       <button class="mbtn" id="tContinue" type="button" data-menu="continue" data-i18n="m_continue">Continue</button>
       <button class="mbtn" id="tNew" type="button" data-menu="new" data-i18n="m_new">New game</button>
@@ -212,7 +217,9 @@
     <h2 id="htTitle" data-i18n="m_howto">How to play</h2>
     <div class="ht" data-i18n-html="ht_controls"></div>
     <div class="ht" data-i18n-html="ht_aim"></div>
+    <div class="ht" data-i18n-html="ht_combat"></div>
     <div class="ht" data-i18n-html="ht_badges"></div>
+    <div class="ht" data-i18n-html="ht_terms"></div>
     <div class="ht" data-i18n-html="ht_chart"></div>
     <div class="ht" data-i18n-html="ht_harbor"></div>
     <div class="ht" data-i18n-html="ht_wreck"></div>
@@ -264,6 +271,7 @@
 <script defer src="js/shipyard.js"></script>
 <script defer src="js/gear-save.js"></script>
 <script defer src="js/escorts.js"></script>
+<script defer src="js/escort-gift.js"></script>
 <script defer src="js/ship-lines.js"></script>
 <script defer src="js/state.js"></script>
 <script defer src="js/world.js"></script>
@@ -296,6 +304,7 @@
 <script defer src="js/gunbay.js"></script>
 <!-- shell modules load before hud.js: its applyLang() at load must already see their strings -->
 <script defer src="js/input.js"></script>
+<script defer src="js/touch-sail.js"></script>
 <script defer src="js/options.js"></script>
 <script defer src="js/howto.js"></script>
 <script defer src="js/tutorial.js"></script>
@@ -306,10 +315,15 @@
 <script defer src="js/menu.js"></script>
 <script defer src="js/chart-legend.js"></script>
 <script defer src="js/roadmap-panel.js"></script>
+<script defer src="js/aground.js"></script>
 <script defer src="js/hud.js"></script>
 <script defer src="js/repair.js"></script>
 <script defer src="js/collision.js"></script>
+<script defer src="js/hit-glow.js"></script>
 <script defer src="js/notices.js"></script>
+<script defer src="js/novice.js"></script>
+<script defer src="js/hull-alert.js"></script>
+<script defer src="js/plate-spread.js"></script>
 <script defer src="js/world-seas.js"></script>
 <script defer src="js/ports.js"></script>
 <script defer src="js/campaign.js"></script>
@@ -324,6 +338,7 @@
 <script defer src="js/flags.js"></script>
 <script defer src="js/edge-math.js"></script>
 <script defer src="js/edge-marks.js"></script>
+<script defer src="js/lv-path.js"></script>
 <script defer src="js/bounty-rec.js"></script>
 <script defer src="js/poster-ship.js"></script>
 <script defer src="js/ledger-nav.js"></script>

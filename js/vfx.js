@@ -7,7 +7,7 @@
 //   vfxFrame(dt) -> k       every frame, paused or not; returns the time scale for step() (< 1 during a hit-stop)
 //   vfxShip(s, dt)          each living ship each step: wake + bow spray, damage smoke and flames, badge, player halo
 //   vfxMuzzle(x, y, a)      each shot: flash and smoke blown along the firing direction a
-//   vfxFlash(s)             a hull takes damage: white tint-fill flash (reads on black hulls too), then a short red tint
+//   vfxFlash(s)             a hull takes damage: a short salmon tint-fill flash (reads on black hulls too, never a white silhouette), then a red tint
 //   vfxHit(x, y)            a ball strikes a hull: sparks and wood splinters
 //   vfxSplash(x, y, rock)   a ball falls in the sea (ring, column, droplets) or on rock (dust)
 //   vfxSink(s, killer)      the sinking: lists, darkens and goes under with bubbles, foam and planks; sets s.dead (AI)
@@ -171,11 +171,12 @@ function vfxMuzzle(x, y, a, lite) {   // lite: one gun of a big broadside, flash
   S.fx.spark.emitParticleAt(x + c * 8, y + s * 8, 2);
   FX.ember.emitParticleAt(x + c * 10, y + s * 10, 2);
 }
+const HIT_FLASH = 0xff9a82;   // a hit paints the hull this warm salmon, not white: a white silhouette hid the fight (#102)
 function vfxFlash(s) {
   if (!s.spr || !s.alive) return;
-  s.spr.setTintFill(0xffffff);
-  S.time.delayedCall(60, () => { if (s.alive && s.spr.active) s.spr.setTint(0xffb0a0); });
-  S.time.delayedCall(150, () => { if (s.alive && s.spr.active) s.spr.clearTint(); });
+  s.spr.setTintFill(HIT_FLASH);
+  S.time.delayedCall(45, () => { if (s.alive && s.spr.active) s.spr.setTint(0xffb0a0); });
+  S.time.delayedCall(140, () => { if (s.alive && s.spr.active) s.spr.clearTint(); });
 }
 function vfxHit(x, y) {
   if (!onScreen(x, y, 80)) return;

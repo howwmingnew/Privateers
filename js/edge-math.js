@@ -3,12 +3,16 @@
 // A target beyond the screen edge but within EDGE_RANGE screen widths gets a small box on the screen edge, on the line from
 // the middle of the screen toward it, showing its icon and "about N m". These functions work on plain numbers.
 
-Object.assign(STR.en, { edgeDist: "~{n} m" });
-Object.assign(STR.zh, { edgeDist: "約 {n} 公尺" });
+Object.assign(STR.en, { edgeDist: "~{n} m", edgeRisky: "risky" });
+Object.assign(STR.zh, { edgeDist: "約 {n} 公尺", edgeRisky: "危險" });
 
 // World px -> metres, rounded to the nearest EDGE_ROUND_M (never shown as 0).
 function edgeMeters(px) { return Math.max(EDGE_ROUND_M, Math.round(px * EDGE_M_PER_PX / EDGE_ROUND_M) * EDGE_ROUND_M); }
-const edgeLabel = px => t("edgeDist", { n: edgeMeters(px) });
+const edgeLabel = (px, risky = false) => t("edgeDist", { n: edgeMeters(px) }) + (risky ? " · " + t("edgeRisky") : "");
+// A bounty's box warns when the way there is above the captain: the boss itself 2+ levels over the rating, or the sea it
+// lies in (its weakest ship) 1+ over. The route runs through that water, and nothing else tells a new captain so.
+const EDGE_RISK_BOSS = 2, EDGE_RISK_SEA = 1;
+const edgeRisky = (bossLv, seaLv, rating) => bossLv - rating >= EDGE_RISK_BOSS || seaLv - rating >= EDGE_RISK_SEA;
 // Where the ray from the middle of rect {l,t,r,b} toward (dx, dy) leaves it, and through which side.
 function edgePoint(rect, dx, dy) {
   const cx = (rect.l + rect.r) / 2, cy = (rect.t + rect.b) / 2, hx = (rect.r - rect.l) / 2, hy = (rect.b - rect.t) / 2;
@@ -42,4 +46,9 @@ function edgeRank(it) {   // it: { boss, kind: "ship" | "place", d: threat step 
   const base = it.boss ? 1000 : it.ally ? 45 : it.kind === "place" ? 60 : it.d >= 1 ? 100 + it.d * 20 : 50;   // an escort out of sight ranks below the sea's own ships
   return base - it.px / (EDGE_RANGE * EDGE_REF_W) * 40;   // up to 40 points off for distance
 }
-const edgePick = items => items.slice().sort((a, b) => edgeRank(b) - edgeRank(a)).slice(0, EDGE_MAX);
+// How many boxes the screen can carry: a touch screen or a narrow window gets the few that matter (EDGE_MAX_SMALL).
+const edgeMax = (coarse, width) => (coarse || width < EDGE_SMALL_W ? EDGE_MAX_SMALL : EDGE_MAX);
+const edgePick = (items, max = EDGE_MAX) => items.slice().sort((a, b) => edgeRank(b) - edgeRank(a)).slice(0, max);
+// A ship box is tinted by how hard that ship fights next to you (the chart's own threat colours, threatTier in js/art.js):
+// 2 = two or more levels above you, 1 = one above, 0 = level, -1 = weaker. Anything that is not a ship has no step.
+const edgeThreat = d => (d >= 2 ? 2 : d === 1 ? 1 : d === 0 ? 0 : -1);

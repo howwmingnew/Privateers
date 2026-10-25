@@ -155,7 +155,7 @@ const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold
 {
   const { ctx, page } = await open(D, { tag: "tutorial" });
   await toSea(page, { tutorial: true });
-  await ev(page, () => { tut.active = true; enterStep(5); });
+  await ev(page, () => { tut.active = true; save.sunk = 1; enterStep(5); });   // the lesson reaches "sell" with a kill behind it (js/tutorial.js: loot alone, say a wreck's, does not move the card on)
   await atRingEdge(page, { cargo: 60 });
   await page.keyboard.press("KeyW"); await page.keyboard.press("KeyW");
   await until(page, () => tut.step === 6);

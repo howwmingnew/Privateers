@@ -137,6 +137,7 @@ function isHostile(e, o) {
   if (bossFeud(e, o)) return false;   // bosses, rematch captains and their guards stay out of the other AI's fights (js/archetypes.js)
   if (e.ally) return !o.isPlayer && !o.fixed && !o.ally && (o.faction === "pirate" || o.faction === "navy");   // an escort fights pirates and the Navy, not batteries or merchants (js/escort-ai.js)
   if (e.attacker === o && e.angry > 0) return true;
+  if (o.isPlayer && typeof noviceSpare === "function" && noviceSpare(e)) return false;   // a newcomer's first bounty is a duel; the Shallows are not hunted (js/novice.js)
   const g = o.isPlayer ? "player" : o.faction;
   if (e.faction === "pirate") return g !== "pirate";
   if (e.faction === "navy") return g === "pirate" || g === "player" || g === "ally";
@@ -195,8 +196,9 @@ function think(e, dt) {
   const plunder = typeof aipSeek === "function" && (desired == null || (tg && dist(e, tg) >= AIP_BREAK)) ? aipSeek(e, tg ? dist(e, tg) : 0, dt) : null;   // loose loot (js/ai-plunder.js)
   if (plunder) ({ desired, thr } = plunder);
   if (typeof fleeSteer === "function") { const c = fleeSteer(e, now); if (c) ({ desired, thr } = c); }   // outmatched or beaten: run, downwind if it helps (js/flee.js)
+  if (typeof bossTether === "function") { const c = bossTether(e, desired, thr); if (c) ({ desired, thr } = c); }   // a boss keeps to its own waters (js/campaign.js)
   if (typeof disDodge === "function") { const c = disDodge(e); if (c) ({ desired, thr } = c); }   // clear of a disaster that has been noticed (js/disasters.js)
-  if (desired == null && e.merchant) {
+  if (desired == null && e.merchant && !e.tutMark) {   // (the tutorial's mark holds its course: js/tutorial.js)
     // merchants run from any pirate or the player that comes close, even before a shot is fired
     let threat = null, td = 480;
     for (const o of enemies.concat([player])) {
@@ -234,14 +236,20 @@ function move(s, dt) {
   s.x = clamp(s.x + (s.vx + lee.x) * dt, 60, W - 60); s.y = clamp(s.y + (s.vy + lee.y) * dt, 60, H - 60);
   // islands are solid to the whole hull: the hit capsule (s.hl / s.hw, cutter to man-o'-war) is kept off the rock
   const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28, hw = s.hw ?? 13;
-  for (const isl of islandsNear(s.x, s.y)) pushOffRock(s, isl, c, sn, hl, hw);   // the rocks near it, in map order (js/ai-nav.js)
-  if (!portsOff()) pushOffRock(s, HARBOR_ROCK, c, sn, hl, hw);   // the harbor island last, as before; none in the daily sea (js/ports.js)
+  for (const isl of islandsNear(s.x, s.y)) pushOffRock(s, isl, c, sn, hl, hw, dt);   // the rocks near it, in map order (js/ai-nav.js)
+  if (!portsOff()) pushOffRock(s, HARBOR_ROCK, c, sn, hl, hw, dt);   // the harbor island last, as before; none in the daily sea (js/ports.js)
 }
-function pushOffRock(s, isl, c, sn, hl, hw) {
+function pushOffRock(s, isl, c, sn, hl, hw, dt) {
   const R = isl.r * 0.9 + hw + 5, ix = isl.x - s.x, iy = isl.y - s.y;
   if (Math.abs(ix) > R + hl || Math.abs(iy) > R + hl) return;
   const k = clamp(ix * c + iy * sn, -hl, hl), qx = s.x + c * k - isl.x, qy = s.y + sn * k - isl.y, d = Math.sqrt(qx * qx + qy * qy);
-  if (d < R && d > 0.01) { crashIsland(s, isl, -qx / d, -qy / d); s.x += qx / d * (R - d); s.y += qy / d * (R - d); s.speed *= 0.9; }   // damage by the speed it arrived at (js/collision.js)
+  if (d < R && d > 0.01) {
+    crashIsland(s, isl, -qx / d, -qy / d);   // damage by the speed it arrived at (js/collision.js)
+    s.x += qx / d * (R - d); s.y += qy / d * (R - d);
+    const sl = slideAlong(s.rot, -qx / d, -qy / d);   // glide along the shore: only the speed that drove into the rock is lost (js/ai-nav.js)
+    s.speed *= sl.keep;
+    if (s.isPlayer) s.rot += sl.turn * dt;
+  } else if (s.isPlayer && d < R + SLIDE_SKIN && d > 0.01) s.rot += slideAlong(s.rot, -qx / d, -qy / d).turn * dt;   // the bow keeps turning along the rock while it hugs the shore
 }
 // Radius two hulls keep between them (half capsule length + beam): 20 px for the old one-size hull, more for big ships.
 const shipRadius = s => ((s.hl ?? 28) + (s.hw ?? 13)) / 2;

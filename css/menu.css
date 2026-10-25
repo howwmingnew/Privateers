@@ -119,12 +119,15 @@ body.scale-preview #title, body.scale-preview #pause { opacity: 0; pointer-event
 #coach { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + max(64px, 28px + 36px * var(--ts)));   /* above the hint line, which grows with the UI size */ z-index: 7;
   width: max-content; max-width: min(calc(100vw - 32px), calc(440px * var(--ts))); pointer-events: none;
   background: rgba(8,34,45,.9); color: var(--foam); border: 1px solid rgba(240,199,102,.5); border-left: 4px solid #f0c766; border-radius: 3px;
-  padding: 8px 14px 10px; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+  padding: 5px 12px 6px; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+/* the card hops to the top while the ship it points at is in the lower half (js/tutorial.js drawGuide) */
+#coach.up { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + max(140px, 28px + 96px * var(--ts))); }
+@media (max-width: 700px) { #coach.up { top: calc(env(safe-area-inset-top, 0px) + max(178px, 28px + 134px * var(--ts))); } }   /* a phone's compass and chart reach lower */
 #coach .coach-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
-#coach .eyebrow { color: #f0c766; font-size: min(calc(12px * var(--ts)), 4.6vh); }
-#coach p { margin: 2px 0 0; font-size: min(calc(15px * var(--ts)), 6vh); line-height: 1.4; }   /* short screens: the card must not climb into the bars */
-#coach .textbtn { pointer-events: auto; color: rgba(246,241,227,.75); min-height: 32px; }
-#coach.in-sheet { position: static; transform: none; width: auto; max-width: none; background: rgba(240,199,102,.22); color: var(--ink);
+#coach .eyebrow { color: #f0c766; font-size: min(calc(11px * var(--ts)), 4.4vh); }
+#coach p { white-space: pre-line; margin: 1px 0 0; font-size: min(calc(14px * var(--ts)), 5.6vh); line-height: 1.35; }   /* short screens: the card must not climb into the bars */
+#coach .textbtn { pointer-events: auto; color: rgba(246,241,227,.75); min-height: 26px; }
+#coach.in-sheet { position: static; transform: none; width: auto; max-width: none; z-index: 0;   /* a grid item honors z-index: it would ride over the sticky header */ background: rgba(240,199,102,.22); color: var(--ink);
   border-color: rgba(138,93,12,.45); border-left-color: #8a5d0c; box-shadow: none; }
 #coach.in-sheet .eyebrow { color: #8a5d0c; }
 #coach.in-sheet .textbtn { color: var(--ink-soft); }
@@ -167,3 +170,9 @@ body.pad-nav button:focus, body.pad-nav input:focus { outline: 3px solid var(--b
 .heat-ind.hot { animation: heatPulse 1.1s ease-in-out infinite alternate; }
 @keyframes heatPulse { to { border-color: rgba(255,122,85,.95); } }
 @media (prefers-reduced-motion: reduce) { .heat-ind.hot { animation: none; } }
+/* title: English | 中文, above the buttons so a reader of either language finds it first (js/menu.js) */
+.tlang { display: inline-flex; margin: 6px 0 2px; border: 1px solid rgba(240,199,102,.5); border-radius: 3px; overflow: hidden; }
+.tlang button { font: inherit; font-weight: 700; font-size: calc(14px * var(--ts)); min-height: 38px; min-width: 84px; padding: 4px 14px; border: 0; cursor: pointer; color: var(--foam); background: rgba(8,34,45,.72); }
+.tlang button + button { border-left: 1px solid rgba(240,199,102,.5); }
+.tlang button[aria-pressed="true"] { background: #f0c766; color: #1b1410; }
+.tlang button:hover:not([aria-pressed="true"]), .tlang button:focus-visible { background: rgba(15,63,82,.95); }

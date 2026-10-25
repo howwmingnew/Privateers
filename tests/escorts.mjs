@@ -24,7 +24,7 @@ const ready = async () => {
 };
 const YARD = [{ id: "s1", ship: "sloop", hull: 2, sails: 2, hold: 1 }, { id: "s3", ship: "schooner", hull: 3, sails: 1, hold: 1 },
   { id: "s4", ship: "frigate", hull: 4, sails: 2, hold: 1 }, { id: "s5", ship: "brig", hull: 2, sails: 1, hold: 1, name: "Sea Mule" }];
-const saveWith = (extra = {}) => ({ v: 2, gold: 20000, sunk: 30, tutorialDone: true, seed: 424242, wrecks: [], campaign: { bounty: 3 }, ship: "brig", hull: 3, shipId: "s2", shipSeq: 9,
+const saveWith = (extra = {}) => ({ v: 2, gold: 20000, sunk: 30, tutorialDone: true, seed: 424242, wrecks: [], campaign: { bounty: 3 }, escortGift: "had", ship: "brig", hull: 3, shipId: "s2", shipSeq: 9,
   fleet: YARD, store: [{ g: "long12", lv: 4 }], bow: [{ g: "six", lv: 1 }], left: Array(3).fill({ g: "six", lv: 1 }), right: Array(3).fill({ g: "six", lv: 1 }), ...extra });
 const boot = async (s, lang = "en") => {
   await page.goto(url, { waitUntil: "load" }); await ready();
@@ -66,6 +66,28 @@ const full = (ship, g = "six", lv = 1) => Object.fromEntries(["bow", "left", "ri
 // A slot for a save: no guns given, so loading arms it with new Lv 1 6-pounders (the migration); pass `guns` to choose.
 const cfg = (id, extra = {}) => ({ id, on: true, stance: "normal", owed: 0, ...extra });
 
+console.log("First escort gift (#101)");
+await boot(saveWith({ campaign: { bounty: 0 }, escortGift: "", escorts: [], gold: 100 }));
+check(await ev(() => /Free escort slot 1/.test(document.getElementById("wanted").innerText)), "the first poster says what comes with the bounty");
+await ev(() => { claimBounty(findBounty("ned"), player); });
+check(await ev(() => save.escortGift === "given" && save.escorts.length === 1 && save.fleet.some(x => x.id === save.escorts[0].id && x.ship === "sloop") &&
+  ["bow", "left", "right"].every(k => save.escorts[0].guns[k].length === 1 && save.escorts[0].guns[k][0].g === "six" && save.escorts[0].guns[k][0].lv === 1) && save.escorts[0].on),
+  "claiming the first bounty posts a Sloop with a Lv 1 6-pounder per port in slot 1, deployed");
+check(await ev(() => { const before = JSON.stringify(save.escorts); claimEscortGift(); return before === JSON.stringify(save.escorts) && save.escorts.length === 1; }), "claiming again does not give a second one");
+await boot(saveWith({ campaign: { bounty: 1 }, escortGift: "", escorts: [], gold: 100 }));
+check(await ev(() => save.escortGift === "given" && save.escorts.length === 1 && readStored("privateers-save-v2") && JSON.parse(localStorage.getItem("privateers-save-v2")).escortGift === "given"), "an old save past bounty 1 with no escort gets it once on load, and it is saved");
+check(await ev(() => /first escort/.test(document.querySelector("#wanted .story.gift")?.innerText || "")), "the ledger shows the next-step card");
+await page.click('#wanted [data-camp="gift"]');
+check(await ev(() => document.querySelector('#tabs .tab.sel')?.dataset.i === "1" && /Estimated fire: about [\d.]+ damage\/s, \d+% of the flagship/.test(document.getElementById("shead").innerText)), "its button opens Escort 1, which shows the estimated output against the flagship");
+await page.screenshot({ path: `${out}/gift.png` });
+await boot(saveWith({ campaign: { bounty: 1 }, escortGift: "", escorts: [], gold: 100 }), "zh");
+check(await ev(() => /第一艘隨從已在船位 1 就位/.test(document.querySelector("#wanted .story.gift")?.innerText || "")), "the card is in Chinese too");
+await boot(saveWith({ campaign: { bounty: 1 }, escortGift: "had", escorts: [], gold: 100 }));
+await page.click('#tabs [data-act="tab"][data-i="1"]');
+check(/Slot 200 gold, plus a ship/.test(await ev(() => document.getElementById("stage").innerText)), "an unbought slot spells out the total (slot, a ship, guns)");
+await ev(() => { tab = 0; hullOpen = true; renderPort(); });
+check(await ev(() => [...document.querySelectorAll('#ships [data-act="ship"]:disabled')].some(b => /need [\d,]+ more/.test(b.textContent))), "a ship button greyed for lack of gold says how much is missing");
+
 console.log("Ledger: tabs, unlock, buy, assign, arm");
 await boot(saveWith({ campaign: { bounty: 0 }, escorts: [] }));
 check(await ev(() => document.getElementById("tabs").hidden && document.getElementById("tabs").children.length === 0), "no escort tabs before bounty 1: only the flagship's deck");
@@ -75,6 +97,9 @@ check(await ev(() => !document.getElementById("tabs").hidden && document.querySe
 let t = await ev(() => document.getElementById("tabs").innerText);
 check(/Flagship/.test(t) && /Escort 1\s+200 gold/.test(t) && (t.match(/Locked/g) || []).length === 3, `slot 1 shows its price, slots 2-4 are locked (${t.replace(/\s+/g, " ")})`);
 const tabTo = i => page.click(`#tabs [data-act="tab"][data-i="${i}"]`);
+// #92: a locked tab is greyed and names what opens it
+check(await ev(() => { const l = [...document.querySelectorAll("#tabs .tab.lock")]; return l.length === 3 && l.every(b => getComputedStyle(b).filter.includes("grayscale") && b.querySelector(".tw")) && /Sink bounty 2/.test(l[0].textContent) && /Sink bounty 3/.test(l[1].textContent) && /Sink bounty 4/.test(l[2].textContent); }),
+  "locked tabs are grey and name the bounty that opens them");
 await tabTo(1);
 t = await stage();
 check(/Buy slot · 200/.test(t), `slot 1 offers to be bought for 200 (${t.replace(/\s+/g, " ").slice(0, 80)})`);
@@ -84,7 +109,7 @@ await tabTo(4); t = await stage();
 check(/Sink bounty 4 to unlock · 5,000 gold/.test(t), "slot 4 says what unlocks it and for how much");
 await tabTo(1);
 await page.click('#stage [data-act="escBuy"][data-id="0"]');
-check(await ev(() => save.gold === 500 && save.escorts.length === 0) && /Press again to buy/.test(await stage()), "the first tap on a slot only arms the button");
+check(await ev(() => save.gold === 500 && save.escorts.length === 0) && /Press again.*to buy/.test(await stage()), "the first tap on a slot only arms the button");
 await page.waitForTimeout(500);
 await page.click('#stage [data-act="escBuy"][data-id="0"]');
 check(await ev(() => save.gold === 300 && save.escorts.length === 1 && save.escorts[0].id === "" && save.escorts[0].stance === "normal"), "the second tap buys slot 1 for 200 (stance Normal by default)");

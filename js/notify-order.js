@@ -57,7 +57,7 @@ function achYield() {
 // Cards earned under the first voyage's coach card would pop over the ledger when the first sale opens it: they wait
 // until the ledger closes and the ship is at sea again.
 let achSeaHeld = false;
-onHook("frame", () => { if (achQueue.length && typeof coachUp === "function" && coachUp()) achSeaHeld = true; });
+onHook("frame", () => { if (achQueue.length && typeof achCoachHeld === "function" && achCoachHeld()) achSeaHeld = true; });
 onHook("sail", () => { achSeaHeld = false; });
 const achLedgerHold = () => achSeaHeld && docked;
 
@@ -69,21 +69,30 @@ onHook("frame", () => {
   if (el) { const q = streakQuiet(); if (el.classList.contains("quiet") !== q) el.classList.toggle("quiet", q); }
 });
 
-// ---------- a quiet Shallows on the first voyage ----------
-// Until the first voyage is done, a ship made in the Shallows (js/ships.js makeEnemy) fights at most one level above
-// the captain's Ship Lv: no ▲▲ ship waits by the harbor mouth. Re-roll its class, then drop its level.
+// ---------- a quiet Shallows for a new captain ----------
+// On the first voyage, and after it while the captain's Ship Lv is still under NOVICE_LV (js/novice.js), a ship made in
+// the Shallows (js/ships.js makeEnemy) fights at most one level above that Ship Lv: no ▲▲ ship waits by the harbor
+// mouth. Re-roll its class, then drop its level. The player's own escorts (faction "ally", js/escort-ai.js; e.ally is only
+// set after makeEnemy returns) keep the class and level their yard entry gave them.
 function tameFirstVoyage(e) {
-  if (save.tutorialDone || e.fixed || typeof seaOfRing !== "function" || seaOfRing(e.ring).id !== "shallows") return;
-  const cap = shipRating() + 1, over = () => (e.threatL ?? e.L) > cap;
+  if (e.fixed || e.faction === "ally" || typeof seaOfRing !== "function" || seaOfRing(e.ring).id !== "shallows") return;
+  const me = shipRating();
+  if (save.tutorialDone && me >= NOVICE_LV) return;
+  const cap = noviceCap(me), over = () => (e.threatL ?? e.L) > cap;
   for (let i = 0; i < 4 && over(); i++) outfitEnemy(e, i < 2 ? pickArch(e.L, e.faction) : e.merchant ? "fluyt" : "cutter");
   while (over() && e.L > 1) { e.L--; outfitEnemy(e, e.arch); }
 }
 
 // ---------- phones: the achievement card sits just above the hint, whatever its height ----------
-let hintH = -1, hintPollT = 0;
+let hintH = -1, barsB = -1, hintPollT = 0;
 onHook("frame", dt => {
   if ((hintPollT -= dt) > 0) return;
   hintPollT = 0.25;   // getBoundingClientRect forces a layout: every frame it cost ~2.5% of a phone fight
   const h = document.getElementById("hint"), px = h && !h.hidden ? Math.round(h.getBoundingClientRect().height) : 0;   // fixed: no offsetParent
   if (px !== hintH) { hintH = px; document.documentElement.style.setProperty("--hintH", px + "px"); }
+  // where the HUD bars end, in the toast's own (zoomed) pixels: the speed and sail readouts wrap onto a second row at big UI sizes,
+  // and the toast lane (css/weather.css) must start below whatever they make of the column
+  const bars = document.querySelector("#hud .bars"), r = bars && bars.getBoundingClientRect();
+  const k = bars && bars.offsetHeight ? r.height / bars.offsetHeight : 1, below = r && r.height ? Math.ceil(r.bottom / k) + 8 : 0;
+  if (below !== barsB) { barsB = below; document.documentElement.style.setProperty("--barsB", below + "px"); }
 });

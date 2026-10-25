@@ -67,7 +67,33 @@ console.log("Fresh campaign (desktop, en)");
   const lock0 = await page.evaluate(() => { resetLedgerPick(); hullOpen = true; renderPort();   // the ships are in the hull's panel (js/ledger-panel.js)
     const b = document.querySelector('#ships [data-id="schooner"]'); return { dis: b?.disabled, txt: b?.textContent, why: b?.closest(".item").querySelector(".lock")?.textContent }; });
   check(lock0.dis && /Red Ned/.test(lock0.why || ""), `schooner locked before bounty 1: "${lock0.txt}" / "${lock0.why}"`);
+  // #92: models a Letter of Marque has not opened fold into one closed list at the end; the rest keep their order, owned ones first
+  const fold = await page.evaluate(() => { const d = document.querySelector("#ships details.lockedships"), open = [...document.querySelectorAll("#ships > .item:not(.locked)")].map(e => e.querySelector(".btn").dataset.id);
+    return { has: !!d, closed: d && !d.open, hint: !!document.querySelector("#ships > .hint-s:not([class*=line-])+details.lockedships"), inside: d && !!d.querySelector('[data-id="schooner"]'), summary: d?.querySelector("summary").textContent, open, loose: !!document.querySelector("#ships > .item.locked") }; });
+  // #103: with nothing on sale at all the list starts open, under a line saying why (no bare headings over an empty block)
+  check(fold.has && fold.closed === (fold.open.length > 0) && (fold.open.length > 0 || fold.hint) && fold.inside && !fold.loose && /Not unlocked yet \(\d+\)/.test(fold.summary) && !fold.open.includes("schooner"), `locked ships fold away: "${fold.summary}", on sale: ${fold.open}`);
+  // the next level's gain sits on every hull upgrade button
+  const gain = await page.evaluate(() => [...document.querySelectorAll('#yard [data-act="yard"] .gain')].map(g => g.textContent));
+  check(gain.length === 3 && /^Hull \+\d+%( · Ship Lv (progress \+\d+%|→ \d+))?$/.test(gain[0]) && /^Speed \+\d+%$/.test(gain[1]) && /^Hold \+\d+%$/.test(gain[2]), `hull, sails and hold buttons name their gain (${gain})`);
   await o.shot("desktop-en-1-ledger");
+  // #98: the first bounty is the newcomer's: one level above his badge, no escorts, never out of his own waters; the HUD and ledger show Ship Lv progress
+  const ned = await page.evaluate(() => {
+    resetLedgerPick(); renderPort();
+    const b = BOUNTIES[0], th = bountyThreat(b), lair = lairOf(b), e = { boss: "ned", lair, x: lair.x + 700, y: lair.y, alive: true };
+    const inward = bossTether({ ...e }, Math.PI, 1), away = bossTether(e, 0, 1), home = bossTether({ ...e, x: lair.x + 100 }, 0, 1), other = bossTether({ ...e, boss: "carey" }, 0, 1);
+    const mid = bossTether({ ...e, x: lair.x + 550 }, Math.PI, 1), back = bossTether({ ...e, x: lair.x + 450 }, 0, 1);   // turned back at 700: still home-bound at 550, free again at 450 (inside tether - 120)
+    const far = polarPt(b.ang, b.r + BOSS_TETHER);   // as far out as he may sail: still the Reef Straits, never the Navy Lanes
+    return { mid: !!mid, back, th, rec: bountyRecLv(b), esc: b.escorts.length, tether: b.tether, away: away && Math.round(Math.cos(away.desired) * 100), inward, home, other, seaFar: seaOfRing(ringAt(dist(far, PORT))).id,
+      hud: document.getElementById("lv").textContent, stat: document.getElementById("pStats").textContent, poster: document.querySelector("#wanted .poster").textContent, prog: lvProgress() };
+  });
+  check(ned.rec === ned.th + 1 && ned.esc === 0 && ned.rec === 3, `Red Ned: no escorts, asks one level above his badge (badge ${ned.th}, ready at ${ned.rec})`);
+  check(ned.mid && ned.back === null, `a tethered boss that has turned back keeps going home until 120 px inside the line, then chases again (${ned.mid}, ${ned.back})`);
+  check(ned.tether === 600 && ned.away === -100 && ned.inward === null && ned.home === null && ned.other === null && ned.seaFar === "reef", `Red Ned is tethered to his lair: turns back past ${ned.tether} px when heading out, not when heading in, the others are not tethered (${JSON.stringify({ away: ned.away, inward: ned.inward, home: ned.home, other: ned.other, sea: ned.seaFar })})`);
+  check(new RegExp(`^Ship Lv ${ned.prog.lv} · next ${ned.prog.pct}%$`).test(ned.hud) && /next \d+%/.test(ned.stat), `HUD and ledger show Ship Lv progress: "${ned.hud}" / "${ned.stat}"`);
+  check(/levels to go/.test(ned.poster) && /Cheapest way up/.test(ned.poster) && !/lair|badge at sea/.test(ned.poster), `the poster says how far short and what to buy first, in plain words: "${ned.poster}"`);
+  const upg = await page.evaluate(() => { save.gold = 500; deckSel = placeOf("left", 0); renderPort(); const b = document.querySelector('[data-act="gup"] .gain'); return { gain: b && b.textContent, dmg: [...document.querySelectorAll(".cpanel .ds")].map(x => x.textContent).join("|") }; });
+  check(/Damage \+15% · Ship Lv progress \+\d+%/.test(upg.gain || "") && /10 dmg → 11\.5/.test(upg.dmg), `a gun upgrade names its damage in decimals (+15%: 10 -> 11.5) and its Ship Lv progress: "${upg.gain}" / "${upg.dmg}"`);
+  await page.evaluate(() => { save.gold = 0; deckSel = null; renderPort(); });
 
   // spawning: record every quota spawn, then park the player in each ring for 30 simulated seconds
   await page.evaluate(() => {
@@ -95,7 +121,10 @@ console.log("Fresh campaign (desktop, en)");
   // (spawns come every 1.2 s); the rings around the player never may.
   check(rows.every(r => r.count.filter(n => n < 1).length <= 1 && r.nearMin >= 1),
     "the player's ring and its neighbours are always populated; at most one far ring is briefly empty");
-  check(rows.every(r => r.total <= 30 && r.nearShare >= 0.45), "near rings hold most of the ships (~60%)");
+  // a new captain (Ship Lv under NOVICE_LV) in the Shallows gets a thinner crowd around them: rings 1-2 only, ~25% of the sea (js/novice.js)
+  const calm = r => r.ring <= 2;
+  check(rows.every(r => r.total <= 30 && r.nearShare >= (calm(r) ? 0.2 : 0.45)), "near rings hold most of the ships (~60%; a new captain in the Shallows: ~25%)");
+  check(rows.filter(calm).every(r => r.count[0] + r.count[1] <= 9 && r.count[0] >= 3 && r.count[1] >= 3), "the Shallows hold a few ships each for a new captain, not the full crowd");
   await page.evaluate(() => { player.maxHp = yardVal("hull"); player.hp = player.maxHp; sendHome(), dock("return"); });
 
   // banner: sail from the Shallows into the Reef Straits

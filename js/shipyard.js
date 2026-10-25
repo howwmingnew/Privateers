@@ -8,14 +8,14 @@
 Object.assign(STR.en, {
   shipsOwned: "Your ships", shipsBuy: "Buy a ship", switchTo: "Switch", yardFull: "Yard full", shipNo: "{ship} #{n}",
   shipLvs: " · hull Lv {h}, sails Lv {s}, hold Lv {o}",
-  ownedHint: "Owned ×{n} · switch to it above, free", ownedCount: "Owned ×{n}", buyAnother: "Buy another {cost}",
+  ownedHint: "Owned ×{n} · switch to it above, free", ownedCount: "Owned ×{n}", buyAnother: "Buy another {cost}", buyShort: "Buy {n} (need {d} more)",
   switchedShip: "You are aboard the <em>{ship}</em>. Your cannons came with you.",
   switchedSpill: "You are aboard the <em>{ship}</em>. Your cannons came with you; <em>{n}</em> had no port and went back to the store.",
 });
 Object.assign(STR.zh, {
   shipsOwned: "已擁有的船", shipsBuy: "購買船隻", switchTo: "換上", yardFull: "船塢已滿", shipNo: "{ship} #{n}",
   shipLvs: " · 船體 Lv {h}、船帆 Lv {s}、貨艙 Lv {o}",
-  ownedHint: "已擁有 ×{n}・在上方免費換上", ownedCount: "已擁有 ×{n}", buyAnother: "再買一艘 {cost}",
+  ownedHint: "已擁有 ×{n}・在上方免費換上", ownedCount: "已擁有 ×{n}", buyAnother: "再買一艘 {cost}", buyShort: "購買 {n}（還差 {d}）",
   switchedShip: "你換到<em>{ship}</em>上了，火砲一起搬了過來。",
   switchedSpill: "你換到<em>{ship}</em>上了，火砲一起搬了過來；有 <em>{n}</em> 門砲沒有砲位，放回了庫存。",
 });

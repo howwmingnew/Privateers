@@ -9,7 +9,7 @@
 #seaBanner { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + min(24vh, 120px)); transform: translateX(-50%); z-index: 6; pointer-events: none;
   display: grid; justify-items: center; gap: 4px; text-align: center; width: max-content; max-width: calc(100vw - 32px); opacity: 0;
   color: var(--foam); text-shadow: 0 2px 10px rgba(0,0,0,.75), 0 0 2px rgba(0,0,0,.6); }
-#seaBanner.on { animation: seaIn 3.8s ease forwards; }
+#seaBanner.on { animation: seaIn var(--sea-ms, 3800ms) ease forwards; }
 #seaBanner small { font-size: 13px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: #f0c766; }
 #seaBanner b { font-family: var(--f-display); font-weight: 400; font-size: clamp(32px, 6vw, 54px); line-height: 1.05; padding: 4px 22px;
   border-block: 1px solid rgba(240,199,102,.55); text-wrap: balance; }
@@ -63,6 +63,11 @@
 #edgeMarks .ptr { position: absolute; left: 50%; top: 50%; width: 0; height: 0; border-left: calc(9px * var(--es)) solid rgba(246,241,227,.92);
   border-block: calc(6px * var(--es)) solid transparent; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
 #edgeMarks .em.boss .ptr { border-left-color: #f0c766; }
+/* a ship box is tinted by how hard that ship fights next to you (the chart's threat colours; the number is data-th, edgeThreat in js/edge-math.js) */
+#edgeMarks .em[data-th="2"] { border-color: #d9493a; color: #fff6ea; } #edgeMarks .em[data-th="2"] .ptr { border-left-color: #d9493a; }
+#edgeMarks .em[data-th="1"] { border-color: #e88a3a; } #edgeMarks .em[data-th="1"] .ptr { border-left-color: #e88a3a; }
+#edgeMarks .em[data-th="0"] { border-color: #e8c25a; } #edgeMarks .em[data-th="0"] .ptr { border-left-color: #e8c25a; }
+#edgeMarks .em[data-th="-1"] { border-color: #86c46f; } #edgeMarks .em[data-th="-1"] .ptr { border-left-color: #86c46f; }
 #edgeMarks .em.ally { border-color: #4cf0a8; }   /* an escort out of sight (js/escort-ai.js) */
 #edgeMarks .em.ally .ptr { border-left-color: #4cf0a8; }
 @media (prefers-reduced-motion: reduce) { #edgeMarks .em { transition: none; } }
@@ -155,3 +160,7 @@
   #seaBanner.on { animation-name: seaFade; }
   #achToast, #bossBar .bb i { transition: none; }
 }
+
+/* a bounty whose way (or whose own ship) is above the captain: red rim and pointer, and its label ends in "risky" (js/edge-marks.js) */
+#edgeMarks .em.boss.risky { border-color: #ff6a55; color: #ffe3dc; }
+#edgeMarks .em.boss.risky .ptr { border-left-color: #ff6a55; }
