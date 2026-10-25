@@ -3,6 +3,7 @@
 // ships don't wreck themselves on islands over and over. Pure formulas are in tests/unit-collision.mjs.
 // Usage: node tests/collision.mjs [url]     (exit 1 on any failed check or page error)
 import { chromium } from "playwright";
+import { stepper } from "./lib/stepper.mjs";
 const SLOW = +process.env.TEST_SLOW || 1;
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const fails = [], errors = [];
@@ -138,9 +139,11 @@ const fire = await page.evaluate(() => {
 });
 check(fire === 0, "a fireship's contact is not counted twice as a collision");
 
-// 8. AI avoidance: AI ships released beside islands, aimed straight at them, do not keep ramming them
+// 8. AI avoidance: AI ships released beside islands, aimed straight at them, do not keep ramming them.
+// 16 s of game time, hand-stepped (tests/lib/stepper.mjs): the last section, as the page cannot go on in real time after it.
 await page.evaluate(() => { window.think = window.__think; });
-const wreck = await page.evaluate(async () => {
+await page.evaluate(stepper);
+const wreck = await page.evaluate(() => {
   // ships far from the player are culled (js/world-seas.js), so the player sails to the islands first
   const open = islands.filter(i => !i.outpost && Math.hypot(i.x - PORT.x, i.y - PORT.y) > SAFE_R + 200);
   Object.assign(player, { x: open[0].x, y: open[0].y + open[0].r + 250, speed: 0 });
@@ -152,7 +155,7 @@ const wreck = await page.evaluate(async () => {
     list.push(e);
   });
   window.__land.length = 0;
-  await new Promise(r => setTimeout(r, 16000));
+  stepN(960);
   const out = list.map(e => ({ alive: e.alive, crashes: window.__land.filter(l => l.s === e && !l.src).length, shipHits: window.__land.filter(l => l.s === e && l.src).length, hp: e.hp / e.maxHp, burn: e.burnT, cls: e.cls }));
   __gone(list);
   return out;

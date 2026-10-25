@@ -127,7 +127,7 @@ const tank = page => ev(page, () => { player.maxHp = player.hp = 1e6; });
   const r1 = await ev(page, () => ({ rot: player.rot, sp: player.speed, fires: window.__fires }));
   ok("D / Left turn the bow, releasing turn keys never fires, speed holds", rD - r0 > 0.3 && rL < rD && r1.fires === 0 && r1.sp > 50, { r0, rD, rL, r1 });
   for (let i = 0; i < 3; i++) await page.keyboard.press("KeyS");
-  await page.waitForTimeout(2000 * SLOW);
+  await page.waitForFunction(() => sailLevel === 0 && player.speed < 5, null, { polling: 50, timeout: 6000 * SLOW }).catch(() => {});   // until at rest; the check says if it never got there
   ok("S back to stopped brings the ship to rest", await ev(page, () => sailLevel === 0 && player.speed < 5));
 
   // Space fires; clicking the HUD language button never lets Space toggle it again

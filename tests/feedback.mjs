@@ -23,10 +23,18 @@ const ready = async () => {
   await page.waitForFunction(() => docked, null, { timeout: 15000 * SLOW });
 };
 const saveWith = (extra = {}) => ({ v: 2, gold: 20000, sunk: 30, tutorialDone: true, seed: 424242, wrecks: [], campaign: { bounty: 3 }, store: [], ...extra });
+const seed = ([s, lang]) => { localStorage.clear(); localStorage.setItem("privateers-lang", lang); localStorage.setItem("privateers-save-v2", JSON.stringify(s)); localStorage.setItem("privateers-settings", JSON.stringify({ muted: true, shake: false })); };
+// The game reads the save only on boot. The first boot gets it from an init script (once per tab: it would run again on every
+// reload); after that it goes into the running page, with its loop put to sleep so nothing can persist() over it, and a reload.
 const boot = async (s, lang = "en") => {
-  await page.goto(url, { waitUntil: "load" }); await ready();
-  await page.evaluate(([s, lang]) => { localStorage.clear(); localStorage.setItem("privateers-lang", lang); localStorage.setItem("privateers-save-v2", JSON.stringify(s)); localStorage.setItem("privateers-settings", JSON.stringify({ muted: true, shake: false })); }, [s, lang]);
-  await page.reload({ waitUntil: "load" }); await ready();
+  if (page.url() === "about:blank") {
+    await page.addInitScript(`sessionStorage.getItem("__seeded") || (sessionStorage.setItem("__seeded", "1"), (${seed})(${JSON.stringify([s, lang])}))`);
+    await page.goto(url, { waitUntil: "load" });
+  } else {
+    await page.evaluate(() => S.game.loop.sleep()); await page.evaluate(seed, [s, lang]);
+    await page.reload({ waitUntil: "load" });
+  }
+  await ready();
   await page.waitForTimeout(500);   // the ledger ignores clicks in its first 350 ms (js/menu.js)
 };
 const ev = (fn, arg) => page.evaluate(fn, arg);
@@ -217,9 +225,12 @@ await ev(() => { lang = "en"; applyLang(); });
 {
   const mctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: "en-US" });
   const mp = await mctx.newPage(); mp.on("pageerror", e => errors.push("pageerror(touch): " + e.message));
+  await mctx.addInitScript(s => {   // in before the boot, once per tab
+    if (sessionStorage.getItem("__seeded")) return;
+    sessionStorage.setItem("__seeded", "1");
+    localStorage.clear(); localStorage.setItem("privateers-settings", JSON.stringify({ muted: true })); localStorage.setItem("privateers-save-v2", JSON.stringify(s));
+  }, saveWith({ gold: 99999, ship: "line", hull: 3 }));
   await mp.goto(url, { waitUntil: "load" });
-  await mp.evaluate(s => { localStorage.clear(); localStorage.setItem("privateers-settings", JSON.stringify({ muted: true })); localStorage.setItem("privateers-save-v2", JSON.stringify(s)); }, saveWith({ gold: 99999, ship: "line", hull: 3 }));
-  await mp.reload({ waitUntil: "load" });
   await mp.waitForFunction(() => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 * SLOW });
   await mp.evaluate(() => {
     save = fitMounts({ ...save, ship: "line", gold: 99999 });
