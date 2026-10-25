@@ -10,12 +10,14 @@ Object.assign(STR.en, {
   heatUp: "Navy heat {n}/5: bounties x{m}", heatUpHunt: "Navy heat {n}/5: bounties x{m}. Hunters are at sea!",
   heatCooled: "The Navy has lost your trail.", heatHunt: "A Navy hunting fleet is on your wake!",
   admiralSighted: "The Admiral's fleet! A flagship and her escort patrol these waters.",
+  heatWhy: "You sank a Navy ship, so the Navy now wants you: the stars (Wanted) show how hard. It cools if you keep clear of the Navy for a while, or at once in a harbor. More stars: richer Navy bounties, but hunters.",
 });
 Object.assign(STR.zh, {
   heat_lbl: "通緝", heat_aria: "海軍通緝熱度 {n} / 5 星，戰艦賞金 ×{m}",
   heatUp: "海軍通緝 {n}/5：賞金 ×{m}", heatUpHunt: "海軍通緝 {n}/5：賞金 ×{m}。追獵艦隊出海了！",
   heatCooled: "海軍丟失了你的蹤跡。", heatHunt: "海軍的追獵艦隊正咬著你的尾流！",
   admiralSighted: "上將艦隊！旗艦帶著護航艦在這片海域巡邏。",
+  heatWhy: "你擊沉了海軍的船，所以海軍開始通緝你，星星越多代表越被盯上。躲開海軍一陣子會慢慢消退，回港則立刻清零。星越多，海軍賞金越高，但追獵艦隊也越強。",
 });
 
 // ---------- Pure rules ----------
@@ -45,8 +47,9 @@ function heatReset() {
 }
 function heatAdd(n) {
   if (!heatOn() || !player || !player.alive) return;
-  const before = heatStars(heat);
+  const before = heatStars(heat), first = heat <= 0;
   heat = heatGain(heat, n * gearCut("heat")); heatQuiet = 0;   // a flag that draws less attention (js/gear-core.js)
+  if (first && typeof tipOnce === "function" && tipOnce("heat")) toast(t("heatWhy"), false, 7000);   // the first stars ever: why, and how to shake them (js/hull-alert.js)
   const st = heatStars(heat);
   if (st > before) {
     if (before < HEAT_HUNT_FROM && st >= HEAT_HUNT_FROM) huntT = HEAT_HUNT_FIRST;
@@ -113,6 +116,7 @@ function retireShips(ships) {
 // Hunters never lose the scent while the Navy is after the captain: keep them angry at the player and point them at him.
 function heatKeepHunting() {
   for (const e of hunters()) {
+    if (typeof noviceSpare === "function" && noviceSpare(e)) continue;   // a novice in the Shallows is not hunted by ships far above her (js/novice.js)
     e.attacker = player; e.angry = Math.max(e.angry, 5);
     if (!e.target && dist(e, player) < 1400 && !docked) { e.ignore.delete(player); e.target = player; e.chaseFrom = { x: e.x, y: e.y }; }
   }
@@ -130,7 +134,7 @@ function heatTick(dt) {
   if (st >= HEAT_HUNT_FROM) {
     huntT -= dt;
     if (huntT <= 0) {
-      const fresh = huntFleets().length < HEAT_HUNT_MAX[st] && !inSafe(player);
+      const fresh = huntFleets().length < HEAT_HUNT_MAX[st] && !inSafe(player) && !(typeof noviceZone === "function" && noviceZone());
       huntT = fresh && spawnHunters(st) ? HEAT_HUNT_EVERY[st] : 5;
     }
     if ((heatTickT -= dt) <= 0) { heatTickT = 0.5; heatKeepHunting(); }

@@ -24,7 +24,7 @@ export const MAP = [
   [/^js\/(rematch|run|daily)/, ["rematch", "daily-ports"]],
   [/^js\/(harbor|mooring|repair)/, ["harbor"]],
   [/^js\/(view|input|hud|options|settings|touch-sail|aground|hit-glow)/, ["scale", "platform", "shell"]],
-  [/^js\/(novice|aground|hit-glow|touch-sail|notify-order|world-seas|mooring|input)|^css\/safety/, ["safety"]],   // the new-captain safety net
+  [/^js\/(novice|aground|hit-glow|touch-sail|notify-order|world-seas|mooring|input|hull-alert|plate-spread)|^css\/safety/, ["safety", "feedback"]],   // the new-captain safety net
   [/^js\/(tutorial|onboard|howto|menu|title-attract|hall|logbook|achievements|ledger|notices|notify|chart-legend|roadmap)/, ["shell", "polish"]],
   [/^js\/(art|scenery|vfx|mini-marks|poster|harbor-art|disasters-art|gun-art)/, ["art-hits", "polish"]],
   [/^js\/(hooks|boot-guard|fonts-link)/, ["shell"]],
