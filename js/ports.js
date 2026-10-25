@@ -87,7 +87,7 @@ let feeCarry = 0, brokeShown = false, feePaid = 0, feeFrom = 0;   // feePaid: go
 function stationBill() {
   if (feePaid <= 0) return;
   toast(t("supplyPaid", { n: feePaid, p: Math.max(1, Math.round((player.hp / player.maxHp - feeFrom) * 100)) }));
-  feePaid = 0;
+  feePaid = 0; feeFrom = player.hp / player.maxHp;   // the next bill (the ring can mend a hull in two sittings) counts from here
 }
 function stationHeal(hb, dt) {
   const r = supplyStep(player.hp, player.maxHp, dt, save.gold, hb.ring, typeof gxDockK === "function" ? gxDockK() : 1);

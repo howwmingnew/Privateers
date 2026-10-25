@@ -170,7 +170,7 @@ function enterStep(n) {
 }
 function finish() {
   save.tutorialDone = true; save.tutorialStep = 0; persist();
-  tut.doneT = TUT_DONE_T;
+  tut.doneT = TUT_DONE_T; doneCache = { key: "", text: "" };
 }
 
 function tutorialTick(dt) {
@@ -197,10 +197,13 @@ function tutorialTick(dt) {
 }
 
 // What to do next, in words: the first bounty's goal level, where its captain lurks (the skull arrow points the way).
+let doneCache = { key: "", text: "" };
 function nextStepText() {
   const b = typeof activeBounty === "function" ? activeBounty() : null;
   if (!b || typeof bountyRecLv !== "function" || typeof dirWord !== "function" || typeof bossName !== "function") return t("tut_doneGen");
-  return t("tut_done", { lv: bountyRecLv(b), me: shipRating(), boss: bossName(b), dir: dirWord(b.ang) });
+  const key = lang + "|" + docked + "|" + save.campaign.bounty;   // the card is redrawn every frame; the goal level and rating only change in port
+  if (doneCache.key !== key) doneCache = { key, text: t("tut_done", { lv: bountyRecLv(b), me: shipRating(), boss: bossName(b), dir: dirWord(b.ang) }) };
+  return doneCache.text;
 }
 function coachText() {
   if (tut.doneT > 0) return nextStepText();
@@ -210,7 +213,7 @@ function coachText() {
     return t(!docked ? (rich ? "tut_buyMoor" : "tut_buySea") : rich ? "tut_buy" : "tut_poor", { n });
   }
   if (docked) return t("tut_docked");
-  return t("tut_" + at, { steer: t("ctl_steer_" + device), fire: t("ctl_fire_" + device), hold: device === "keys" || device === "desk" ? t("ctl_hold") : "" }).trim();   // Space only
+  return t("tut_" + at, { steer: t("ctl_steer_" + device), fire: t("ctl_fire_" + device), hold: SETTINGS.autoFire && (device !== "touch" && device !== "pad") ? t("ctl_hold") : "" }).trim();   // Space only
 }
 // The card floats over the sea, and moves into the ledger sheet while docked so it never covers the shop.
 function renderCoach() {

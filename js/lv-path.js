@@ -34,8 +34,18 @@ const lvGainHull = () => lvGainText({ hull: save.hull + 1 });
 // The upgrades (guns on the flagship, then the hull) bought one at a time, always the one that adds the most rating power per gold,
 // until the power of level `want` is reached: { gold, first: the first purchase ({ kind: "gun", gun } or { kind: "hull" }) or null if
 // nothing is needed }, or null when upgrades alone cannot get there.
+// Every state of the save it reads (ship, hull, each gun with its level and mods, the worn gear) goes into the memo key: renderPort asks every time
+// the ledger redraws, and the greedy walk below is hundreds of playerPower calls.
+let lvPathMemo = { sig: "", want: 0, out: null };
 function lvPath(want) {
+  const sig = JSON.stringify([save.ship, save.hull, MOUNTS.map(({ key }) => save[key]), save.gear && save.gear.worn]);
+  if (lvPathMemo.sig !== sig || lvPathMemo.want !== want) lvPathMemo = { sig, want, out: lvPathCalc(want) };
+  return lvPathMemo.out;
+}
+function lvPathCalc(want) {
   const goal = enemyPower(want), ports = MOUNTS.flatMap(({ key }) => save[key]).filter(Boolean), lv = new Map(ports.map(g => [g, g.lv]));
+  const top = playerPower({ gun: g => ({ ...g, lv: GUN_MAX }), hull: YARD.hull.max });
+  if (top < goal) return null;   // not even a full refit gets there: skip the walk
   let hull = save.hull, gold = 0, first = null;
   const power = (h = hull) => playerPower({ gun: g => (lv.has(g) ? { ...g, lv: lv.get(g) } : g), hull: h });
   for (let step = 0; step < 400; step++) {

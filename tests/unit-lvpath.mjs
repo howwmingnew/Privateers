@@ -119,6 +119,16 @@ test("lvPath: a level far beyond what upgrades can reach on this hull is null, a
   assert.match(g.run("lvShortHtml(3)"), /levels to go/);
 });
 
+test("lvPath: the result is memoised on the save it reads, and any change to guns or hull recomputes it", () => {
+  const g = boot();
+  assert.ok(g.run("lvPath(3) === lvPath(3)"), "same save, same answer object: no second walk");
+  const before = g.json("lvPath(3)");
+  g.run("save.left.concat(save.right, save.bow).filter(Boolean).forEach(x => { x.lv = 3; })");
+  const after = g.json("lvPath(3)");
+  assert.ok(!after || after.gold < before.gold, `upgraded guns change the plan (${before.gold} -> ${after && after.gold})`);
+  assert.equal(g.run("lvPath(30)"), null);
+});
+
 test("the poster's margin: a bounty can set its own (Red Ned asks one level), the rest keep boss + escort", () => {
   const g = boot();
   assert.equal(g.run("bountyMargin({ escorts: [], margin: 1 })"), 1);

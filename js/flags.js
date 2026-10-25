@@ -169,7 +169,8 @@ function renderFlagCard() {
 function flagChanged() { persist(); applyPlayerStats(false); renderPort(); }   // renderPort rebuilds the card and the gun-deck ship (js/deck-art.js)
 flagEl.addEventListener("click", ev => {
   const b = ev.target.closest("button"); if (!b || b.disabled) return;
-  if (b.dataset.flagFold) { flagOpen = !flagOpen; Snd.play("uiClick"); renderFlagCard(); b.blur(); flagEl.querySelector(".fold-h")?.focus({ preventScroll: true }); return; }
+  if (b.dataset.flagFold) { if (document.activeElement && document.activeElement.id === "shipNameIn") document.activeElement.blur();   // Safari leaves the field focused, and a focused field stops the redraw
+    flagOpen = !flagOpen; Snd.play("uiClick"); renderFlagCard(); b.blur(); flagEl.querySelector(".fold-h")?.focus({ preventScroll: true }); return; }
   if (b.dataset.flagReset) { save = { ...save, shipName: "" }; Snd.play("uiClick"); flagChanged(); return; }
   if (!b.dataset.flag) return;
   save = { ...save, flag: cleanFlag({ ...save.flag, [b.dataset.k]: b.dataset.id }) };

@@ -72,12 +72,16 @@ const BOUNTIES = [
 const LAIR_LEASH = 380;   // an idle boss (or escort) further than this from its lair heads back to it
 const ASSIST_MS = 20000;  // a boss someone else sinks still pays if the player hit it this recently
 const lairOf = b => polarPt(b.ang, b.r);
-// A bounty with a tether that is farther than that from its lair, on a course that takes it farther still, turns for the lair instead (js/ships.js think).
+const TETHER_BACK = 120;   // once turned back, a tethered boss only gives chase again inside tether - this, so it does not dither on the line
+// A bounty with a tether that is farther than that from its lair, on a course that takes it farther still, turns for the lair instead
+// (js/ships.js think) and stays turned (e.tethered) until it is back inside the line by TETHER_BACK.
 function bossTether(e, desired, thr) {
   const b = e.boss && e.lair && desired != null ? findBounty(e.boss) : null;
-  if (!b || !b.tether || dist(e, e.lair) < b.tether) return null;
-  const out = Math.atan2(e.y - e.lair.y, e.x - e.lair.x);
-  return Math.cos(angDiff(desired, out)) > 0 ? { desired: out + Math.PI, thr: 1 } : null;
+  if (!b || !b.tether) return null;
+  const d = dist(e, e.lair), out = Math.atan2(e.y - e.lair.y, e.x - e.lair.x);
+  if (e.tethered && d < b.tether - TETHER_BACK) e.tethered = false;
+  if (!e.tethered && d >= b.tether && Math.cos(angDiff(desired, out)) > 0) e.tethered = true;
+  return e.tethered ? { desired: out + Math.PI, thr } : null;
 }
 // Hull art for a spec class (js/art.js SHIP_ART; the man-o'-war has its own, bigger than anything the yard sells).
 const artClass = cls => SHIP_ART[cls] ? cls : "brig";
