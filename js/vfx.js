@@ -109,6 +109,14 @@ function vfxFrame(dt) {
   return 1;
 }
 const vfxSlowLeft = () => Math.max(0, slowT);
+// Wake foam (main.js: 1.5 s, still) is only laid where the camera can still get to before it fades: as far as the
+// flagship sails meanwhile (x1.3 headroom: currents, a legendary sail), plus a third of the view each way for photo
+// mode's widest zoom-out (0.6x, js/photo.js) over a frozen sea, plus the foam's own size. Further out nobody sees it.
+const WAKE_LIFE = 1.5;
+function wakePad() {
+  const v = S.cameras.main.worldView;
+  return ((player && player.maxSpeed) || 0) * 1.3 * WAKE_LIFE + Math.max(v.width, v.height) / 3 + 40;
+}
 function vfxShip(s, dt) {
   const a = s.art || SHIP_ART.sloop, c = Math.cos(s.rot), sn = Math.sin(s.rot), vis = onScreen(s.x, s.y, 100);
   s.wakeT -= dt;
@@ -116,7 +124,8 @@ function vfxShip(s, dt) {
   if (s.speed > 25 && s.wakeT <= 0) {
     s.wakeT = PERF_LOW && !vis ? 0.2 : 0.07;   // frames running long: off-screen wakes go sparser (nobody sees them form)
     const back = a.len * 0.46;
-    S.fx.wake.emitParticleAt(s.x - c * back, s.y - sn * back, 1);
+    // frames running long: none at all far off screen. Only then, since photo mode can pan to any ship, and its wake must already be there.
+    if (vis || !PERF_LOW || onScreen(s.x, s.y, wakePad())) S.fx.wake.emitParticleAt(s.x - c * back, s.y - sn * back, 1);
     if (vis && s.speed > s.maxSpeed * 0.4) {   // bow spray: foam peeling off both shoulders in a V
       const bx = s.x + c * a.len * 0.36, by = s.y + sn * a.len * 0.36, w = a.beam * 0.45;
       for (const sg of [-1, 1]) { FX.deg = toDeg(s.rot + Math.PI - sg * 0.55); FX.spray.emitParticleAt(bx - sn * w * sg, by + c * w * sg, 1); }
@@ -198,6 +207,7 @@ function vfxSink(s, killer) {
   const spr = s.spr, a = s.art || SHIP_ART.sloop, base = s.artScale || 1, vis = onScreen(s.x, s.y, 120);
   if (s.isPlayer) { vfxHitStop(0.12); camShake(220, 0.008); }
   else if (killer === player) { vfxHitStop(0.065); camShake(160, 0.0063); vfxPunch(0.035); if (vis && typeof magazineBurst === "function") magazineBurst(s); }
+  spr.cameraFilter = 0;   // js/cull.js only culls living hulls: one culled off screen must still be drawn going down
   spr.setTintFill(0xffffff);
   const side = Math.random() < 0.5 ? -1 : 1;
   // she lists (rolls: narrower from above), swings a little and darkens toward the sea colour as she goes down

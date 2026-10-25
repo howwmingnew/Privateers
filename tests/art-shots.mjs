@@ -35,7 +35,7 @@ async function open(vw, vh, dpr = 1, mobile = false) {
     window.clearSea = () => { for (const e of enemies) { e.spr.destroy(); e.badge?.destroy(); } enemies.length = 0; spawnT = 999; };
     window.playerAs = (cls, guns) => {
       save = fitMounts({ ...save, ship: cls, unlocked: { six: true, long12: true, carronade: true, fire: true } });
-      if (guns) ["left", "right"].forEach(k => save[k] = save[k].map((_, i) => guns[i % guns.length]));
+      if (guns) ["left", "right"].forEach(k => save[k] = save[k].map((_, i) => gunItem(guns[i % guns.length], 3)));
       applyPlayerStats(true);
       Object.assign(player, { x: arena.x, y: arena.y, rot: 0, speed: 0 }); player.spr.setPosition(player.x, player.y);
       S.cameras.main.centerOn(player.x, player.y);

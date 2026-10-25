@@ -60,8 +60,13 @@ function syncPorts() {
   for (const o of [...stationObjs, ...harborObjs, ...harborBeams]) o.setVisible(on);
   if (harborLabel) harborLabel.setVisible(on && !titleOpen);
 }
-// The station whose truce circle holds s (or null).
-const stationAt = (s, r = STATION_TRUCE_R) => portsOff() ? null : STATIONS.find(p => Math.hypot(s.x - p.x, s.y - p.y) < r) || null;
+// The station whose truce circle holds s (or null). A plain loop on squared distances: inSafe (js/ships.js) asks this in
+// every hostility check, many times a frame.
+const stationAt = (s, r = STATION_TRUCE_R) => {
+  if (portsOff()) return null;
+  for (const p of STATIONS) { const dx = s.x - p.x, dy = s.y - p.y; if (dx * dx + dy * dy < r * r) return p; }
+  return null;
+};
 // Pure: one step of a paid repair. Heals up to SUPPLY_HEAL of max hull per second, never more than the hull is missing, and
 // never more than the gold on hand pays for. Returns the new hp and the (fractional) gold it cost.
 function supplyStep(hp, maxHp, dt, gold, ring, k = 1) {   // k: a legendary supply hold mends faster (js/gear-fx.js)

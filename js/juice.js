@@ -73,9 +73,8 @@ function spar(x, y, a) {
 
 // ---------- the kill card: one big word at the hull, then its pay as one line that flies to the HUD ----------
 function popText(x, y, str, color, size) {
-  const txt = S.add.text(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 5 })
+  const txt = worldText(x, y, str, { fontFamily: UI_FONT, fontSize: size + "px", fontStyle: "700", color, stroke: "#0b2530", strokeThickness: 5 })
     .setOrigin(0.5).setDepth(10.2);
-  labelText(txt);
   const lk = txt.scaleX;
   txt.setScale(lk * 1.4);
   S.tweens.add({ targets: txt, scale: lk, duration: 160, ease: "Back.easeOut" });
@@ -151,8 +150,10 @@ onHook("frame", () => {
   if (!S || typeof crates === "undefined") return;
   for (const c of crates) if (!c.wreck && !glints.has(c) && c.spr.active) {
     c.spr.setScale(1.6);
-    glints.set(c, { g: S.add.image(c.x, c.y, "fx-soft").setDepth(2.05).setBlendMode(Phaser.BlendModes.ADD).setTint(0xffd36a),
-      r: S.add.image(c.x, c.y, "fx-ring").setDepth(1.95).setTint(0xf0c766), ph: rand(0, TAU) });
+    const o = { g: S.add.image(c.x, c.y, "fx-soft").setDepth(2.05).setBlendMode(Phaser.BlendModes.ADD).setTint(0xffd36a),
+      r: S.add.image(c.x, c.y, "fx-ring").setDepth(1.95).setTint(0xf0c766), ph: rand(0, TAU) };
+    glints.set(c, o);
+    if (typeof cullTrack === "function") cullTrack(o.g, o.r);   // not drawn while off screen (js/cull.js)
   }
   const now = S.time.now / 1000;
   for (const [c, o] of glints) {

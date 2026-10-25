@@ -6,10 +6,12 @@ import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 
 const SLOW = +process.env.TEST_SLOW || 1;
+// TEST_NOGPU=1: software WebGL (SwiftShader), what the GPU-less CI runners draw with, to time or debug the CI path locally
+const NOGPU = process.env.TEST_NOGPU === "1";
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const out = process.argv[3] || ".review/gunart";
 mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await chromium.launch({ channel: "chrome", headless: true, args: NOGPU ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] : [] });
 const errors = [], results = [];
 const ok = (name, pass, info) => { results.push({ name, pass: !!pass }); console.log(`${pass ? "ok  " : "FAIL"} ${name}${info !== undefined ? "  " + JSON.stringify(info) : ""}`); };
 const D = { width: 1280, height: 720 }, M = { width: 390, height: 844 };
@@ -19,9 +21,13 @@ async function open(viewport, { mobile = false, tag = "" } = {}) {
   const page = await ctx.newPage();
   page.on("pageerror", e => errors.push(`[${tag}] pageerror: ${e.message}`));
   page.on("console", m => { if (m.type() === "error" && !/favicon/i.test(m.text())) errors.push(`[${tag}] console: ${m.text()}`); });
+  // muted before any game script runs: one boot instead of boot, write, reload
+  await ctx.addInitScript(() => {
+    if (sessionStorage.getItem("__seeded")) return;
+    sessionStorage.setItem("__seeded", "1");
+    localStorage.clear(); localStorage.setItem("privateers-settings", JSON.stringify({ muted: true }));
+  });
   await page.goto(url, { waitUntil: "load" });
-  await page.evaluate(() => { localStorage.clear(); localStorage.setItem("privateers-settings", JSON.stringify({ muted: true })); });
-  await page.reload({ waitUntil: "load" });
   await page.waitForFunction(() => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 * SLOW });
   await page.waitForTimeout(300 * SLOW);
   return { ctx, page };
@@ -40,7 +46,11 @@ const toSea = () => {
   for (let a = 0; a < 64; a++) { const x = PORT.x + Math.cos(a) * 1700, y = PORT.y + Math.sin(a) * 1700; if (!islands.some(i => Math.hypot(i.x - x, i.y - y) < i.r + 650)) { ax = x; ay = y; break; } }
   Object.assign(player, { x: ax, y: ay, rot: -Math.PI / 2, speed: 0, maxHp: 1e9, hp: 1e9 });
 };
-const stepper = `window.__g = S.game; __g.loop.sleep(); window.__now = performance.now(); window.__step = (n = 1) => { for (let i = 0; i < n; i++) { __now += 16.667; __g.step(__now, 16.667); } };`;
+// The checks read game state, not pixels: a frame runs the update (gaSync is a "frame" hook) and the camera's per-frame pass
+// (scroll and worldView, which onScreen() reads) but is not drawn: drawing is the slow part without a GPU (software WebGL on CI,
+// ~30x the update here). The frame-cost watch (js/tech.js) sees a quick frame, as on a GPU. __step(n, true) draws the last frame, for a screenshot.
+const stepper = `window.__g = S.game; __g.loop.sleep(); window.__now = performance.now(); window.__step = (n = 1, draw = false) => { for (let i = 0; i < n; i++) { __now += 16.667;
+  if (draw && i === n - 1) __g.step(__now, 16.667); else { __g.headlessStep(__now, 16.667); for (const c of S.cameras.cameras) if (c.visible && c.alpha > 0) c.preRender(); } } };`;
 
 // ---- the side and top views are five different pictures ----
 {
@@ -91,7 +101,7 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
   });
   ok("the ship of the line's 30 guns (bow, larboard, starboard, stern) are ONE extra sprite at rest, glued to the hull", a.mounts.length === 4 && a.resting === 1 && a.follow && a.depth, { mounts: a.mounts, sigs: a.sigs });
   ok("every one of the five gun types is on the deck", ["s", "l", "c", "k", "f"].every(ch => a.sigs.join("").includes(ch)) && a.sigs.join("").replace(/-/g, "").length === 30, { sigs: a.sigs });
-  await page.evaluate(() => { document.getElementById("hud") && 0; S.cameras.main.setZoom(2.4); __step(2); });
+  await page.evaluate(() => { document.getElementById("hud") && 0; S.cameras.main.setZoom(2.4); __step(2, true); });
   await page.screenshot({ path: `${out}/sea-line.png` });
 
   // swap: a gun in the save shows on the very next frame
@@ -117,7 +127,7 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
     return { kick: +kick.toFixed(2), shots, flashes, sprites, rightStill, settled: L.all.visible && !Object.values(L.img).some(im => im.visible) && Math.hypot(L.all.x - player.spr.x, L.all.y - player.spr.y) < 0.01, flashesLeft: gaFlash.length };
   });
   ok("a broadside kicks its own mount back (up to GUN_RECOIL_PX) and lights muzzle flashes, then settles back to one sprite", f.kick > 0.8 && f.kick <= 2.5 && f.shots === 12 && f.flashes >= 1 && f.sprites === 4 && f.rightStill && f.settled && f.flashesLeft === 0, f);
-  await page.evaluate(() => { for (const g of Object.values(player.guns).flat()) g.cd = 0; playerFire(["left"]); __step(14); });
+  await page.evaluate(() => { for (const g of Object.values(player.guns).flat()) g.cd = 0; playerFire(["left"]); __step(14, true); });
   await page.screenshot({ path: `${out}/sea-fire.png` });
 
   // AI ships carry what their guns say; a long-12 bow chaser on a cutter; a carronade boss
@@ -139,7 +149,7 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
     return { worst, rolled: +rolled.toFixed(3), hull: player.hl === Math.max(4, player.art.len / 2 - player.hw) };
   });
   ok("in a storm the guns roll with the hull (same angle and scale), and the hit capsule is untouched", roll.rolled > 0.01 && roll.worst < 1e-9 && roll.hull, roll);
-  await page.evaluate(() => { S.cameras.main.setZoom(2.4); __step(2); });
+  await page.evaluate(() => { S.cameras.main.setZoom(2.4); __step(2, true); });
   await page.screenshot({ path: `${out}/sea-storm.png` });
 
   // sinking: the layers fade with the hull and are gone with it

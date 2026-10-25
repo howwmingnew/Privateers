@@ -1,6 +1,7 @@
 # Checks on every pull request and on pushes to main.
 # Gate: font subset check + unit + smoke tests (tools/run-tests.mjs starts its own static servers). The longer Playwright suites in `npm run test:all` stay local: GitHub's runners
 # render without a GPU (~6-9 fps) and those suites' real-time waits time out there. Run `npm run test:quick` (or test:all) before a PR.
+# To time or debug this gate as the runner draws it (software WebGL, SwiftShader), run it locally with TEST_NOGPU=1 npm test.
 name: ci
 
 on:
@@ -24,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22   # the LTS used locally; 20 is past end of life and no longer in the runner's tool cache (downloaded every run)
           cache: npm
       - run: npm ci
       - name: Font subset is up to date

@@ -60,7 +60,7 @@ function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
   const e = makeShip(sc, "ship-" + faction, x, y);
   Object.assign(e, { L, ring: ringAt(Math.hypot(x - PORT.x, y - PORT.y)), faction, angry: 0, thinkT: 0, wander: null, target: null, chaseFrom: null,
     retarget: rand(0, 0.5), attacker: null, ignore: new Map() });
-  e.badge = sc.add.text(x, y - 36, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#1b1410", padding: { x: 5, y: 1 } })
+  e.badge = worldText(x, y - 36, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#1b1410", padding: { x: 5, y: 1 } })   // sc is S: worldText (js/art.js) draws into S
     .setOrigin(0.5).setDepth(9);
   outfitEnemy(e, cls);   // numbers, guns, and the class's art + hitbox via applyShipArt (js/art.js)
   if (typeof tameFirstVoyage === "function") tameFirstVoyage(e);   // no ▲▲ ship in the Shallows on a first voyage (js/notify-order.js)
@@ -70,12 +70,20 @@ function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
 }
 const LOOT_SEEN_R = 450;   // px from the player inside which an enemy's badge shows its plunder (about gun range)
 function refreshBadge(e) {
-  if (e.ally) { e.badge.setText("◆ " + e.allyName).setBackgroundColor(ALLY_COLOR).setColor("#0d2a1f"); return; }   // an escort's plate is its name (js/escort-ai.js)
+  // Phaser redraws and re-uploads the whole label on every setColor / setBackgroundColor, even to the colour it has, so the
+  // colours go straight into its style and it is drawn once. Compared with the label itself, not a remembered copy: js/flee.js adds its tag with setText.
+  const b = e.badge, paint = (text, bg, fg) => {
+    const st = b.style;
+    if (b.text === text && st.backgroundColor === bg && st.color === fg) return;
+    st.backgroundColor = bg; st.color = fg;
+    if (b.text !== text) b.setText(text); else b.updateText();
+  };
+  if (e.ally) return paint("◆ " + e.allyName, ALLY_COLOR, "#0d2a1f");   // an escort's plate is its name (js/escort-ai.js)
   const tier = threatTier(e.threatL ?? e.L), c = tier.color;   // glyph + colour (by how hard it fights, js/archetypes.js), readable without colour vision
   // the plunder aboard only reads through the spyglass, so a distant fleet is a tidy row of levels, not a price list
   // the number is how hard it fights (threatL), the same figure its colour and glyph compare with your Ship Lv
   const n = e.threatL ?? e.L, label = e.lootSeen ? t("badge", { n, g: fmt(e.loot + (e.stolen || 0)) }) : t("badgeLv", { n });
-  e.badge.setText(tier.glyph + " " + label).setBackgroundColor(c).setColor(c === "#d9493a" ? "#fff6ea" : "#1b1410");
+  paint(tier.glyph + " " + label, c, c === "#d9493a" ? "#fff6ea" : "#1b1410");
 }
 
 // ---------- Steering & AI ----------
@@ -103,13 +111,14 @@ function avoidIslands(s, desired) {
   const away = s.shoreAway;   // just rammed a rock (js/collision.js): head out from it for a moment
   if (away && away.until > S.time.now / 1000) return Math.atan2(s.y - away.y, s.x - away.x);
   const look = 120 + s.speed * 0.5, lx = s.x + Math.cos(s.rot) * look, ly = s.y + Math.sin(s.rot) * look;   // a faster hull needs more warning
-  for (const isl of islands) {
-    if (Math.hypot(isl.x - lx, isl.y - ly) < isl.r * 1.05 + 45 + (s.hw ?? 13)) {
+  for (const isl of islandsNear(lx, ly)) {   // only the rocks near the look-ahead point, in map order (js/ai-nav.js)
+    const dx = isl.x - lx, dy = isl.y - ly, R = isl.r * 1.05 + 45 + (s.hw ?? 13);
+    if (dx * dx + dy * dy < R * R) {
       const cross = Math.cos(s.rot) * (isl.y - s.y) - Math.sin(s.rot) * (isl.x - s.x);
       return s.rot - Math.sign(cross || 1) * 1.3;
     }
   }
-  for (const isl of islands) { const slid = slideOff(s, isl, desired); if (slid !== desired) return slid; }   // about to touch a rock: turn along it (js/ai-nav.js)
+  for (const isl of islandsNear(s.x, s.y)) { const slid = slideOff(s, isl, desired); if (slid !== desired) return slid; }   // about to touch a rock: turn along it (js/ai-nav.js)
   return desired;
 }
 // Who fights whom:
@@ -120,7 +129,8 @@ function avoidIslands(s, desired) {
 const LEASH = 900;          // an AI gives up once it has sailed this far from where the chase began and still cannot reach
 const GIVE_UP_DIST = 1300;  // ...or as soon as the target is this far away
 const IGNORE_TIME = 10;     // seconds an AI ignores a target it gave up on
-const inSafe = s => Math.hypot(s.x - PORT.x, s.y - PORT.y) < SAFE_R * 0.6 || inTruce(s);   // inTruce: the outpost, js/campaign.js
+const SAFE_IN2 = (SAFE_R * 0.6) ** 2;   // squared: inSafe runs in every hostility check, many times a frame
+const inSafe = s => { const dx = s.x - PORT.x, dy = s.y - PORT.y; return dx * dx + dy * dy < SAFE_IN2 || inTruce(s); };   // inTruce: the outpost, js/campaign.js
 function isHostile(e, o) {
   if (!o || o === e || !o.alive || e.struck) return false;   // a ship that struck her colours fights no more (js/strike.js)
   if (o.isPlayer && (docked || inSafe(o))) return false;
@@ -175,7 +185,7 @@ function think(e, dt) {
     const d = dist(e, tg), toT = Math.atan2(tg.y - e.y, tg.x - e.x);
     const range = e.range ?? 250;
     const cf = e.chaseFrom || (e.chaseFrom = { x: e.x, y: e.y });   // a target set without its chase origin must not stop the game loop
-    const chased = Math.hypot(e.x - cf.x, e.y - cf.y);
+    const chased = dist(e, cf);
     // an ordinary ship breaks off once its quarry has fled two or more rings shallower than the ring it calls home
     const shoal = tg === player && !e.boss && !e.escortOf && e.ring && ringAt(dist(player, PORT)) <= e.ring - 2;
     if ((chased > LEASH && d > range) || d > GIVE_UP_DIST || shoal) giveUp(e, tg, now);
@@ -197,7 +207,7 @@ function think(e, dt) {
   }
   if (desired == null) {
     e.thinkT -= dt;
-    if (!e.wander || e.thinkT <= 0 || Math.hypot(e.wander.x - e.x, e.wander.y - e.y) < 80) {
+    if (!e.wander || e.thinkT <= 0 || dist(e.wander, e) < 80) {
       // idle ships roam their own level's ring, so stronger ships don't drift in toward the harbor
       const { r0, r1 } = e.ring ? ringBand(e.ring) : ringOf(e.L), r = rand(r0, r1);   // by home ring: level != ring once the war escalates
       const a = Math.atan2(e.y - PORT.y, e.x - PORT.x) + rand(-1, 1) * 600 / r;
@@ -209,7 +219,7 @@ function think(e, dt) {
     const tc = truceCentre(e); if (tc) { desired = Math.atan2(e.y - tc.y, e.x - tc.x); thr = 0.7; }   // an idle ship inside the truce circle sails out of it
   }
   // stay out of the harbor's safe waters
-  const dPort = Math.hypot(e.x - PORT.x, e.y - PORT.y);
+  const dPort = dist(e, PORT);
   if (dPort < SAFE_R + 60 && !e.ally) { desired = Math.atan2(e.y - PORT.y, e.x - PORT.x); thr = 0.8; }
   desired = avoidIslands(e, desired);
   steer(e, desired, thr, dt);
@@ -223,14 +233,15 @@ function move(s, dt) {
   s.vx = Math.cos(s.rot) * s.speed * wm + dp.x; s.vy = Math.sin(s.rot) * s.speed * wm + dp.y;   // a wave's shove counts as speed, so a hull driven onto a rock is hurt by it (js/collision.js)
   s.x = clamp(s.x + (s.vx + lee.x) * dt, 60, W - 60); s.y = clamp(s.y + (s.vy + lee.y) * dt, 60, H - 60);
   // islands are solid to the whole hull: the hit capsule (s.hl / s.hw, cutter to man-o'-war) is kept off the rock
-  const solid = portsOff() ? islands : islands.concat([{ x: PORT.x, y: PORT.y, r: PORT_ISLAND_R / 0.9, harbor: true }]);   // no harbor island in the daily sea (js/ports.js)
   const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28, hw = s.hw ?? 13;
-  for (const isl of solid) {
-    const R = isl.r * 0.9 + hw + 5, ix = isl.x - s.x, iy = isl.y - s.y;
-    if (Math.abs(ix) > R + hl || Math.abs(iy) > R + hl) continue;
-    const k = clamp(ix * c + iy * sn, -hl, hl), qx = s.x + c * k - isl.x, qy = s.y + sn * k - isl.y, d = Math.hypot(qx, qy);
-    if (d < R && d > 0.01) { crashIsland(s, isl, -qx / d, -qy / d); s.x += qx / d * (R - d); s.y += qy / d * (R - d); s.speed *= 0.9; }   // damage by the speed it arrived at (js/collision.js)
-  }
+  for (const isl of islandsNear(s.x, s.y)) pushOffRock(s, isl, c, sn, hl, hw);   // the rocks near it, in map order (js/ai-nav.js)
+  if (!portsOff()) pushOffRock(s, HARBOR_ROCK, c, sn, hl, hw);   // the harbor island last, as before; none in the daily sea (js/ports.js)
+}
+function pushOffRock(s, isl, c, sn, hl, hw) {
+  const R = isl.r * 0.9 + hw + 5, ix = isl.x - s.x, iy = isl.y - s.y;
+  if (Math.abs(ix) > R + hl || Math.abs(iy) > R + hl) return;
+  const k = clamp(ix * c + iy * sn, -hl, hl), qx = s.x + c * k - isl.x, qy = s.y + sn * k - isl.y, d = Math.sqrt(qx * qx + qy * qy);
+  if (d < R && d > 0.01) { crashIsland(s, isl, -qx / d, -qy / d); s.x += qx / d * (R - d); s.y += qy / d * (R - d); s.speed *= 0.9; }   // damage by the speed it arrived at (js/collision.js)
 }
 // Radius two hulls keep between them (half capsule length + beam): 20 px for the old one-size hull, more for big ships.
 const shipRadius = s => ((s.hl ?? 28) + (s.hw ?? 13)) / 2;

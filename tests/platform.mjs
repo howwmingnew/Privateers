@@ -170,7 +170,8 @@ try {
   // ---- 5. Engine blocked (offline / CDN down): readable message, Retry works once it is reachable ----
   {
     let blocked = true;
-    const { ctx, page } = await open(browser, { route: p => p.route(/cdnjs\.cloudflare\.com|fonts\.(googleapis|gstatic)\.com/, r => blocked ? r.abort() : r.continue()) });
+    // tools/run-tests.mjs serves its cached copies of the engine (and fonts) from /__vendor/: block those as well
+    const { ctx, page } = await open(browser, { route: p => p.route(/cdnjs\.cloudflare\.com|fonts\.(googleapis|gstatic)\.com|\/__vendor\//, r => blocked ? r.abort() : r.continue()) });
     await page.waitForSelector("#bootFail", { timeout: 5000 * SLOW }).catch(() => {});
     const text = await failPanel(page);
     check(text && /game engine/i.test(text) && /遊戲引擎/.test(text) && /Try again/.test(text), "blocked CDN shows the bilingual engine message", text);

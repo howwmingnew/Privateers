@@ -93,8 +93,8 @@ function drawMoor(still, dt) {
   if (!armed || !still) return;
   const cam = S.cameras.main, px = (typeof VIEW !== "undefined" ? VIEW.dpr : 1) / cam.zoom;
   const r = shipRadius(player) + 22 * px, k = clamp(moor.t / MOOR_T, 0, 1), a0 = -Math.PI / 2;
-  moorG.lineStyle(6 * px, 0x08222d, 0.55); moorG.strokeCircle(player.x, player.y, r);
-  moorG.lineStyle(4 * px, 0xf0c766, 0.95); moorG.beginPath(); moorG.arc(player.x, player.y, r, a0, a0 + k * TAU); moorG.strokePath();
+  moorG.lineStyle(6 * px, 0x08222d, 0.55); strokeRing(moorG, player.x, player.y, r);
+  moorG.lineStyle(4 * px, 0xf0c766, 0.95); strokeArc(moorG, player.x, player.y, r, a0, a0 + k * TAU);
 }
 // The ledger (or the title) ends the visit; a pause only hides the ring and the prompt, and the count picks up after it.
 onHook("frame", () => {

@@ -211,11 +211,12 @@ const forcedRoll = (page, fn, arg) => ev(page, ([src, arg]) => {
   await page.tap('#photoBar [data-ph="zin"]'); await page.waitForTimeout(100);
   ok("photo (phone): the + button zooms", await ev(page, () => photo.f > 1.1));
   await ev(page, () => { window.__shared = null; navigator.canShare = o => !!(o && o.files); navigator.share = async o => { window.__shared = o.files.map(f => [f.name, f.type, f.size]); }; });
-  await page.tap("#photoBar .ph-save"); await page.waitForTimeout(1500);
+  await page.tap("#photoBar .ph-save");
+  await page.waitForFunction(() => window.__shared, null, { polling: 50, timeout: 4500 }).catch(() => {});   // the picture is made and shared; the check says if it never was
   const sh = await ev(page, () => window.__shared);
   ok("postcard (phone): goes to the share sheet as a PNG file when the phone has one", !!sh && sh.length === 1 && sh[0][1] === "image/png" && sh[0][2] > 5000, sh);
   await ev(page, () => { navigator.canShare = undefined; navigator.share = undefined; });
-  await page.waitForTimeout(1800);
+  await page.waitForFunction(() => !document.querySelector("#photoBar .ph-save").disabled, null, { polling: 50, timeout: 5400 }).catch(() => {});   // the button takes presses again 1.6 s after its "Saved" (js/postcard.js)
   const dl = page.waitForEvent("download", { timeout: 15000 }).catch(() => null);
   await page.tap("#photoBar .ph-save");
   const d = await dl;
@@ -235,7 +236,7 @@ const forcedRoll = (page, fn, arg) => ev(page, ([src, arg]) => {
   ok("postcard: a pause takes the offer away", !(await chip()));
   await ev(page, () => { paused = false; });
   await ev(page, () => { const b = makeEnemy(S, player.x + 300, player.y, 1, "pirate"); b.boss = "ned"; b.mine = true; sink(b, player); });
-  await page.waitForTimeout(2400);
+  await page.waitForFunction(() => { const c = document.getElementById("postcardChip"); return !!c && !c.hidden; }, null, { polling: 50, timeout: 7200 }).catch(() => {});   // offered 1.8 s after the boss card
   ok("postcard: sinking a boss offers one after its card", await chip());
   await ev(page, () => { showVictory(); });
   ok("postcard: the victory screen carries the button", await ev(page, () => !!document.querySelector("#victory .v-card") && document.querySelector("#victory .v-card").textContent.length > 0));

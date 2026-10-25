@@ -79,7 +79,7 @@ function releaseVolley(s, key, v, guns) {
     let ang = Math.atan2(aim.y - m.y, aim.x - m.x) + aim.err;
     if (m.a != null) ang = m.a + clamp(angDiff(ang, m.a), -ARC_FIRE, ARC_FIRE);   // a gun only trains so far
     const p = s.fixed ? fortMuzzle(s, ang) : m, life = g.range * 1.08 / g.speed;
-    balls.push({ spr: S.add.image(p.x, p.y, "ball").setDepth(7), x: p.x, y: p.y, vx: Math.cos(ang) * g.speed, vy: Math.sin(ang) * g.speed,
+    balls.push({ spr: ballSpr(p.x, p.y), x: p.x, y: p.y, vx: Math.cos(ang) * g.speed, vy: Math.sin(ang) * g.speed,
       life, life0: life, dmg: g.dmg * (s.ally && typeof gxRally === "function" ? gxRally() : 1), burn: g.burn || 0, chain: !!g.chain, fromPlayer: false, friendly: !!s.ally, owner: s });   // an escort's guns may burn or tear rigging
     vfxMuzzle(p.x, p.y, ang, !plan[i].loud);
     if (!s.fixed) gunFired(s, key, i, n);
@@ -95,8 +95,8 @@ function releaseVolley(s, key, v, guns) {
 function drawVolleyGlow(g, s, key, k, atMe) {
   const guns = s.guns[key], n = guns.length, pulse = 0.6 + 0.4 * Math.sin(S.time.now / 45);
   if (key === "turret") {
-    g.lineStyle(atMe ? 4 : 2, 0xff3b24, (atMe ? 0.35 : 0.15) + 0.5 * k); g.strokeCircle(s.x, s.y, 32 + 10 * k);
-    if (atMe) { g.fillStyle(0xff2a10, (0.06 + 0.14 * k) * pulse); g.fillCircle(s.x, s.y, 32 + 10 * k); }
+    g.lineStyle(atMe ? 4 : 2, 0xff3b24, (atMe ? 0.35 : 0.15) + 0.5 * k); strokeRing(g, s.x, s.y, 32 + 10 * k);   // circles cut to their screen size (js/view.js)
+    if (atMe) { g.fillStyle(0xff2a10, (0.06 + 0.14 * k) * pulse); fillDisc(g, s.x, s.y, 32 + 10 * k); }
     return;
   }
   const a0 = enemyMuzzle(s, key, 0, n), a1 = enemyMuzzle(s, key, n - 1, n), a = a0.a, c = Math.cos(a), sn = Math.sin(a);
@@ -109,8 +109,8 @@ function drawVolleyGlow(g, s, key, k, atMe) {
   }
   for (let i = 0; i < n; i++) {
     const m = enemyMuzzle(s, key, i, n);
-    g.fillStyle(0xff2a10, ((atMe ? 0.3 : 0.15) + 0.35 * k) * pulse); g.fillCircle(m.x, m.y, 5 + 5 * k);
-    g.fillStyle(0xffd0b0, (atMe ? 0.7 : 0.4) + 0.3 * k); g.fillCircle(m.x, m.y, 2 + 1.5 * k);
+    g.fillStyle(0xff2a10, ((atMe ? 0.3 : 0.15) + 0.35 * k) * pulse); fillDisc(g, m.x, m.y, 5 + 5 * k);
+    g.fillStyle(0xffd0b0, (atMe ? 0.7 : 0.4) + 0.3 * k); fillDisc(g, m.x, m.y, 2 + 1.5 * k);
   }
 }
 function drawVolleyWarnings(g) {

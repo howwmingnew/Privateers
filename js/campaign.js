@@ -202,7 +202,7 @@ const OUTPOST = polarPt(Math.PI / 8, ringEdge(7));
 const TRUCE_R = 300;
 const PORT_DOCK = { x: PORT.x, y: PORT.y, outpost: false }, OUTPOST_DOCK = { x: OUTPOST.x, y: OUTPOST.y, outpost: true };
 // The centre of the truce circle that holds s: the outpost's (once open) or a supply station's / trade port's (js/ports.js); else null.
-const truceCentre = s => save.campaign.outpost && Math.hypot(s.x - OUTPOST.x, s.y - OUTPOST.y) < TRUCE_R ? OUTPOST : stationAt(s);
+const truceCentre = s => save.campaign.outpost && dist(s, OUTPOST) < TRUCE_R ? OUTPOST : stationAt(s);
 const inTruce = s => !!truceCentre(s);
 // An idle ship's wander point is never rolled inside any truce circle (js/ai-nav.js).
 const clearOfTruces = pt => (portsOff() ? [] : STATIONS).reduce((p, st) => clearOfCircle(p, st, STATION_TRUCE_R), save.campaign.outpost ? clearOfCircle(pt, OUTPOST, TRUCE_R) : pt);
