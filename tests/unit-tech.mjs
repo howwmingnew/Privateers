@@ -3,14 +3,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { fontsHref, glyphs } from "../tools/font-subset.mjs";
+import { fontsHref, glyphs, currentHref } from "../tools/font-subset.mjs";
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
 test("the &text= font link in index.html covers every character in the scripts, styles and page", () => {
-  const m = html.match(/<link id="fonts" rel="stylesheet" href="([^"]*)">/);
-  assert.ok(m, 'index.html has <link id="fonts">');
-  const href = m[1].replace(/&amp;/g, "&");
+  assert.match(html, /<script src="js\/fonts-link\.js"><\/script>/, "index.html loads js/fonts-link.js (classic, not deferred: it writes the link)");
+  const href = currentHref();
+  assert.ok(href, "js/fonts-link.js carries the link");
   const text = new URL(href).searchParams.get("text") || "";
   const missing = [...glyphs()].filter(ch => !text.includes(ch));
   assert.deepEqual(missing, [], "new characters: run `node tools/font-subset.mjs --write`");
