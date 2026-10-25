@@ -7,22 +7,22 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 // CI runners render without a GPU (~10 fps, game time runs at half speed): TEST_SLOW stretches every wait.
 const SLOW = +process.env.TEST_SLOW || 1;
+// TEST_NOGPU=1: software WebGL (SwiftShader) like those runners, to time or debug the CI path locally
+const NOGPU = process.env.TEST_NOGPU === "1";
 
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const out = process.argv[3] || ".review/smoke";
 mkdirSync(out, { recursive: true });
 
 const errors = [];
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await chromium.launch({ channel: "chrome", headless: true, args: NOGPU ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] : [] });
 
 async function run(name, viewport, isMobile) {
   const ctx = await browser.newContext({ viewport, isMobile, hasTouch: isMobile, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   page.on("pageerror", e => errors.push(`[${name}] pageerror: ${e.message}`));
   page.on("console", m => { if (m.type() === "error" && !/favicon/i.test(m.text())) errors.push(`[${name}] console: ${m.text()}`); });
-  await page.goto(url, { waitUntil: "load" });
-  await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
-  await page.reload({ waitUntil: "load" });
+  await page.goto(url, { waitUntil: "load" });   // a new context starts with empty storage: a first-time player, no clear and reload needed
   await page.waitForFunction(() => typeof player !== "undefined" && player && typeof save !== "undefined", null, { timeout: 15000 * SLOW });
   await page.waitForTimeout(800 * SLOW);
   await page.screenshot({ path: join(out, `${name}-1-boot.png`) });
@@ -57,7 +57,10 @@ async function run(name, viewport, isMobile) {
   });
   for (let i = 0; i < 10; i++) { await page.keyboard.press("Space"); await page.waitForTimeout(400 * SLOW); }
   await page.screenshot({ path: join(out, `${name}-3-combat.png`) });
-  const state = await page.evaluate(() => ({ alive: player.alive, hp: Math.round(player.hp), enemies: enemies.length, gold: save.gold }));
+  const state = await page.evaluate(() => {   // gl: what drew it (a GPU, SwiftShader, or no WebGL at all: Phaser's canvas renderer)
+    const gl = S.game.renderer.gl, info = gl && gl.getExtension("WEBGL_debug_renderer_info");
+    return { alive: player.alive, hp: Math.round(player.hp), enemies: enemies.length, gold: save.gold, gl: gl ? (info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : "webgl") : "canvas" };
+  });
   console.log(`[${name}] ok`, JSON.stringify(state));
   await ctx.close();
 }
