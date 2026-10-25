@@ -1,0 +1,47 @@
+// Which browser tests cover which files, for `npm run test:quick` (tools/run-tests.mjs quick).
+// Every matching row adds its tests. Add a row when you add a module;
+// a changed file that matches no row (and is not documentation) pulls in the CORE set instead.
+export const CORE = ["shell", "harbor", "phase1", "campaign", "polish", "collision"];
+
+// [pattern on the repo-relative path, tests]
+export const MAP = [
+  [/^js\/(gun|deck-art|volley|powder|arsenal)/, ["gundeck", "phase1b"]],
+  [/^js\/(heat|ports|world-seas|forts)/, ["heat", "ports", "daily-ports"]],
+  [/^js\/(escort|fleet)/, ["escorts", "fleet"]],
+  [/^js\/(boarding|grapple)/, ["boarding"]],
+  [/^js\/(disasters|weather|sea-fx)/, ["disasters", "weather"]],
+  [/^js\/audio/, ["audio"]],
+  [/^js\/(campaign|bounty|victory|postcard|sharecard)/, ["campaign"]],
+  [/^js\/replay/, ["replay"]],
+  [/^js\/(collision|ships|combat|strike|ai-nav|ambush|sea-guard)/, ["collision", "phase1"]],
+  [/^js\/(plunder|ai-plunder)/, ["aiplunder"]],
+  [/^js\/(ship-lines|shipyard)/, ["shiplines", "shipyard"]],
+  [/^js\/flags/, ["flags"]],
+  [/^js\/(rematch|run|daily)/, ["rematch", "daily-ports"]],
+  [/^js\/(harbor|mooring|repair)/, ["harbor"]],
+  [/^js\/(view|input|hud|options|settings)/, ["scale", "platform", "shell"]],
+  [/^js\/(tutorial|onboard|howto|menu|title-attract|hall|logbook|achievements|ledger|notices|notify|chart-legend|roadmap)/, ["shell", "polish"]],
+  [/^js\/(art|scenery|vfx|mini-marks|poster|harbor-art|disasters-art|gun-art)/, ["art-hits", "polish"]],
+  [/^js\/(hooks|boot-guard|fonts-link)/, ["shell"]],
+  [/^css\//, ["shell", "polish", "scale"]],
+  [/^index\.html$/, ["shell", "platform"]],
+];
+// Changes that need no browser test at all.
+const IGNORE = [/\.md$/, /^roadmap\//, /^og\.png$/, /^\.github\//, /^\.gitignore$/, /^tools\/(og|roadmap)/, /^tools\/.*\.html$/];
+
+export function browserTestsFor(files, { available = [] } = {}) {
+  const tests = new Set();
+  let core = false;
+  for (const f of files) {
+    const own = f.match(/^tests\/([^/]+)\.mjs$/);
+    if (own) { if (!/^unit/.test(own[1])) tests.add(own[1]); continue; }   // unit tests run anyway
+    if (IGNORE.some(re => re.test(f))) continue;
+    const hits = MAP.filter(([re]) => re.test(f));
+    if (!hits.length) { core = true; continue; }
+    for (const [, ts] of hits) for (const t of ts) tests.add(t);
+  }
+  if (core) for (const t of CORE) tests.add(t);
+  // ignore names with no tests/<name>.mjs (a renamed test must not break the quick run)
+  const out = [...tests].filter(t => !available.length || available.includes(t));
+  return { tests: out, core, files };
+}
