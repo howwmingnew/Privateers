@@ -79,69 +79,12 @@ function bay(lang = "en") {
     navigator: { language: "en-US" }, document: dom, window: dom, matchMedia: () => ({ matches: false, addEventListener() {} }), console, setTimeout, clearTimeout,
   });
   for (const [f, code] of BAY_SRC) vm.runInContext(code, ctx, { filename: f });
-  vm.runInContext(`var portMsg = null;`, ctx);   // js/harbor.js owns it
-  vm.runInContext(`save = { ...save, gold: 100000, bow: [gunItem("six", 2), gunItem("long12", 1)], store: [gunItem("chain", 1)] }; deckSel = null; swapping = false;`, ctx);
+  vm.runInContext(`var portMsg = null; var renderPort = () => {};`, ctx);   // js/harbor.js owns them
+  vm.runInContext(`save = { ...save, gold: 100000, bow: [gunItem("six", 2), gunItem("long12", 1)], store: [gunItem("chain", 1)] }; deckSel = null; gunNote = null;`, ctx);
   return { run: code => vm.runInContext(code, ctx), json: code => JSON.parse(vm.runInContext(`JSON.stringify(${code})`, ctx)) };
 }
 const bowIds = g => g.json("save.bow.map(x => x && x.g)");
 const tap = (g, side, i) => g.run(`gunAct(${side === "store" ? '"store"' : '"slot"'}, { side: "${side}", i: "${i}" })`);
-
-test("gun bay: tapping a second gun only moves the pick, it never swaps", () => {
-  const g = bay();
-  tap(g, "bow", 0); tap(g, "bow", 1);
-  assert.deepEqual(bowIds(g), ["six", "long12"]);
-  assert.deepEqual(g.json("deckSel"), { side: "bow", i: 1 });
-  tap(g, "store", 0);
-  assert.deepEqual(bowIds(g), ["six", "long12"]);
-  assert.deepEqual(g.json("save.store.map(x => x.g)"), ["chain"]);
-});
-
-test("gun bay: after Swap position, the next tap on another port swaps the two guns and ends the swap", () => {
-  const g = bay();
-  tap(g, "bow", 0);
-  assert.equal(g.run(`gunAct("swap", {})`), "uiClick");
-  assert.equal(g.run("swapping"), true);
-  assert.equal(tap(g, "bow", 1), "reload");
-  assert.deepEqual(bowIds(g), ["long12", "six"]);
-  assert.equal(g.run("swapping"), false);
-  assert.equal(g.run("deckSel"), null);
-});
-
-test("gun bay: a swap with the store trades the gun for the stored one", () => {
-  const g = bay();
-  tap(g, "bow", 1); g.run(`gunAct("swap", {})`); tap(g, "store", 0);
-  assert.deepEqual(bowIds(g), ["six", "chain"]);
-  assert.deepEqual(g.json("save.store.map(x => x.g)"), ["long12"]);
-});
-
-test("gun bay: Swap position pressed again, or a tap on the picked gun, cancels with nothing moved", () => {
-  const g = bay();
-  tap(g, "bow", 0); g.run(`gunAct("swap", {})`); g.run(`gunAct("swap", {})`);
-  assert.equal(g.run("swapping"), false);
-  g.run(`gunAct("swap", {})`); tap(g, "bow", 0);
-  assert.equal(g.run("swapping"), false);
-  assert.deepEqual(g.json("deckSel"), { side: "bow", i: 0 }, "the gun stays picked");
-  assert.deepEqual(bowIds(g), ["six", "long12"]);
-});
-
-test("gun bay: swapping never trades two stored guns or two empty ports, and needs a gun picked", () => {
-  const g = bay();
-  assert.equal(g.run(`gunAct("swap", {})`), null, "nothing picked");
-  g.run(`save = { ...save, store: [gunItem("chain", 1), gunItem("six", 1)] }`);
-  tap(g, "store", 0);
-  assert.equal(g.run("swapPlaces(deckSel).some(p => p.side === 'store')"), false);
-  g.run(`save = { ...save, ...Object.fromEntries(MOUNTS.map(({ key }) => [key, save[key].map(() => null)])), store: [] }; deckSel = { side: "bow", i: 0 }`);
-  assert.equal(g.run("canSwap()"), false);
-  assert.equal(g.run(`gunAct("swap", {})`), null);
-});
-
-test("gun bay: buying and unloading end a pending swap", () => {
-  const g = bay();
-  tap(g, "bow", 0); g.run(`gunAct("swap", {})`); g.run(`gunAct("unload", {})`);
-  assert.equal(g.run("swapping"), false);
-  g.run(`gunAct("swap", {})`); g.run(`gunAct("buy", { id: "six" })`);
-  assert.equal(g.run("swapping"), false);
-});
 
 test("gun bay: the upgrade button names the next level and its price, in both languages", () => {
   const en = bay("en"), zh = bay("zh");
@@ -159,15 +102,6 @@ test("gun bay: too little gold shows the shortfall and disables the button; max 
   g.run(`save.bow[0] = gunItem("six", GUN_MAX)`);
   assert.match(g.run("gunCardHtml()"), /class="btn max" type="button" disabled>Max level/);
   assert.match(bay("zh").run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", GUN_MAX); gunCardHtml()`), /disabled>已滿級/);
-});
-
-test("gun bay: the swap button, its on state and the hint show while swapping", () => {
-  const g = bay();
-  g.run(`deckSel = { side: "bow", i: 0 }`);
-  assert.match(g.run("gunCardHtml()"), /data-act="swap" aria-pressed="false" >Swap position/);
-  g.run("swapping = true");
-  const html = g.run("gunCardHtml()");
-  assert.match(html, /gcard swapping/); assert.match(html, /aria-pressed="true"[^>]*>Cancel swap/); assert.match(html, /Esc cancels/);
 });
 
 // ---------- #33: letter of marque, level warning (js/bounty-rec.js) ----------

@@ -4,7 +4,7 @@
 function dock(kind, prior = { sold: 0, bonus: 0 }) {
   const svc = serviceOf(kind);   // js/ports.js: a supply station neither buys nor sells, a trade port does not mend
   runHook("dock", kind, svc.sell ? cargo : 0);   // kind "outpost" docks at the Hulk Outpost (js/campaign.js)
-  paused = true; docked = true; deckSel = null;
+  paused = true; docked = true; deckSel = null; gunNote = null;
   const tally = { sunk: streak, cargo: Math.round(cargo) };
   const sale = svc.sell ? sellHold(kind) : { sold: 0, bonus: 0 };   // the hold sells at the sortie's plunder-streak price (js/plunder.js)
   const sold = sale.sold + prior.sold, bonus = Math.max(sale.bonus, prior.bonus);
@@ -99,7 +99,9 @@ function renderPort() {
 }
 
 document.getElementById("port").addEventListener("click", ev => {
-  const b = ev.target.closest("[data-act]"); if (!b || b.disabled) return;
+  const b = ev.target.closest("[data-act]");
+  if (!b && typeof cancelGunPick === "function" && !ev.target.closest("#gunSel, button, a, input, select, label")) { cancelGunPick(); return; }   // a blank spot puts the picked gun down (js/gunbay.js)
+  if (!b || b.disabled) return;
   const act = b.dataset.act;
   let snd = act === "ship" || act === "switch" ? "buy" : act === "yard" ? "upgrade" : "uiClick";
   if (GUN_ACTS.includes(act)) {   // picking, swapping, buying and upgrading guns (js/gunbay.js)
@@ -144,7 +146,9 @@ document.getElementById("port").addEventListener("click", ev => {
   // shorter, so focus falls back to the stored gun before it, or the port it went to
   const sel = act === "slot" ? `[data-act="slot"][data-side="${b.dataset.side}"][data-i="${b.dataset.i}"]`
     : act === "store" ? [`#bay [data-i="${b.dataset.i}"]`, `#bay [data-i="${b.dataset.i - 1}"]`, "#deck .slot"]
-    : act === "swap" ? '#gunSel [data-act="swap"]'
+    : act === "gup" || act === "gup5" ? [`#gunSel [data-act="${act}"]:not(:disabled)`, '#gunSel [data-act="gup"]:not(:disabled)', "#gunSel .gcard"]
+    : act === "unload" || act === "tostore" ? ["#bay .slots .slot:last-child:not(.put)", "#deck .slot"]
+    : act === "gundo" ? "#deck .slot"
     : act === "ship" || act === "switch" ? `#ships [data-act="${act}"]:not(:disabled), #ships [data-act="ship"]:not(:disabled), #sail` : null;
   if (sel) [].concat(sel).map(q => document.querySelector(q)).find(Boolean)?.focus();
 });

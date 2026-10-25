@@ -65,10 +65,11 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
   const g1 = await page.evaluate(() => ({ gold: save.gold, lv: save.left[0].lv }));
   ok(`${name}: the card's upgrade levels that gun and spends gold`, g1.lv === g0.lv + 1 && g1.gold < g0.gold, { g0, g1 });
   await page.screenshot({ path: `${out}/${name}-card.png` });
-  await page.locator('#gunSel [data-act="swap"]').click();   // main: moving a gun needs "Swap position" first
+  await page.locator('#gunSel [data-act="unload"]').click();   // #68: Unload to the store, pick it there, then tap the empty port to mount it
+  await page.locator('#bay [data-act="store"]').last().scrollIntoViewIfNeeded(); await page.locator('#bay [data-act="store"]').last().click();
   await empty.scrollIntoViewIfNeeded(); await empty.click();
   const sw = await page.evaluate(() => ({ a: save.left[0], b: save.left[4] }));
-  ok(`${name}: tapping the empty port moves the gun there`, sw.a === null && sw.b && sw.b.g === g0.gun && sw.b.lv === g1.lv, sw);
+  ok(`${name}: tapping the empty port mounts the picked stored gun there`, sw.a === null && sw.b && sw.b.g === g0.gun && sw.b.lv === g1.lv, sw);
   await ctx.close();
 }
 

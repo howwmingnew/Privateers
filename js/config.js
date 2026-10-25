@@ -44,6 +44,7 @@ const MINI_UNIT_MIN = 0.35;   // a chart unit never draws smaller than this many
 
 // Sharing (js/sharecard.js) and the daily sea (js/daily.js, js/run.js). [PLACEHOLDER] loadout until playtested.
 const PLAYER_TURN = 2.5;   // rad/s the captain turns at before the hull's own turn factor (SHIPS[id].turn)
+const GUN_UP_BATCH = 5;   // levels the gun card's "Upgrade 5 levels" button buys at once (js/gunbay.js)
 const FLEET_MAX = 12;   // ships the yard keeps for one captain, the one you sail included (js/shipyard.js)
 const SHARE_URL = "https://howwmingnew.github.io/Privateers/";
 const DAILY_EPOCH = Date.UTC(2026, 9, 24);   // daily #1: 2026-10-24, UTC, so every device agrees on the day

@@ -112,3 +112,201 @@ test("#73 goldRoll eases from the old figure to the new one, spending or earning
   assert.ok(down < 500 && down > 0, "and the same going down (" + down + ")");
   assert.equal(run("Number.isInteger(goldRoll(7, 12, 0.33))"), true);
 });
+
+// ---------- #68: gun bay moves and Upgrade x5 (js/gunbay.js) ----------
+// (the #34 tests that still apply, the upgrade label and the shortfall, stay in tests/unit-phase1b.mjs)
+const BAY_FILES = ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/hooks.js", "js/data.js", "js/save.js", "js/gunbay.js"];
+const BAY_SRC = BAY_FILES.map(f => [f, readFileSync(new URL("../" + f, import.meta.url), "utf8")]);
+// A fresh page load in `lang`; the save gets two guns on the bow and one in the store.
+function bay(lang = "en") {
+  const store = new Map([["privateers-lang", lang]]);
+  const c = vm.createContext({
+    localStorage: { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) },
+    navigator: { language: "en-US" }, document: dom, window: dom, matchMedia: () => ({ matches: false, addEventListener() {} }), console, setTimeout, clearTimeout,
+  });
+  for (const [f, code] of BAY_SRC) vm.runInContext(code, c, { filename: f });
+  vm.runInContext(`var portMsg = null; var renderPort = () => {};`, c);   // js/harbor.js owns them
+  vm.runInContext(`save = { ...save, gold: 100000, bow: [gunItem("six", 2), gunItem("long12", 1)], store: [gunItem("chain", 1)] }; deckSel = null; gunNote = null;`, c);
+  return { run: code => vm.runInContext(code, c), json: code => JSON.parse(vm.runInContext(`JSON.stringify(${code})`, c)) };
+}
+const bowIds = g => g.json("save.bow.map(x => x && x.g)");
+const tap = (g, side, i) => g.run(`gunAct(${side === "store" ? '"store"' : '"slot"'}, { side: "${side}", i: "${i}" })`);
+
+test("gun bay (#68): tap the source, then the destination: a second port swaps the two guns, with no mode button", () => {
+  const g = bay();
+  assert.equal(tap(g, "bow", 0), "uiClick");
+  assert.deepEqual(g.json("deckSel"), { side: "bow", i: 0 });
+  assert.equal(tap(g, "bow", 1), "reload");
+  assert.deepEqual(bowIds(g), ["long12", "six"]);
+  assert.equal(g.run("deckSel"), null, "the source is put down after the move");
+  assert.deepEqual(g.json("gunNote.text"), ["movedSwap", { a: "Iron 6-pounder Lv 2", b: "Long 12-pounder Lv 1" }]);
+  assert.equal(g.run(`gunAct("swap", {})`), null, "the old Swap position action is gone");
+  assert.ok(!g.run("GUN_ACTS").includes("swap"));
+});
+
+test("gun bay (#68): a stored gun picked first mounts into an empty port; the store closes up", () => {
+  const g = bay();
+  g.run(`save = { ...save, left: [null], store: [gunItem("chain", 1), gunItem("six", 3)] }`);
+  tap(g, "store", 1);
+  assert.deepEqual(g.json("deckSel"), { side: "store", i: 1 });
+  assert.equal(tap(g, "left", 0), "reload");
+  assert.deepEqual(g.json("save.left.map(x => x && [x.g, x.lv])"), [["six", 3]]);
+  assert.deepEqual(g.json("save.store.map(x => x.g)"), ["chain"]);
+  assert.equal(g.json("gunNote.text[0]"), "movedMount");
+});
+
+test("gun bay (#68): a stored gun traded for a mounted one, in both directions", () => {
+  const a = bay();
+  tap(a, "bow", 1); tap(a, "store", 0);   // mounted first, then the stored one
+  assert.deepEqual(bowIds(a), ["six", "chain"]);
+  assert.deepEqual(a.json("save.store.map(x => x.g)"), ["long12"]);
+  const b = bay();
+  tap(b, "store", 0); tap(b, "bow", 1);   // stored first, then the mounted one
+  assert.deepEqual(bowIds(b), ["six", "chain"]);
+  assert.deepEqual(b.json("save.store.map(x => x.g)"), ["long12"]);
+});
+
+test("gun bay (#68): tapping the source again, Esc or a blank spot puts it down with nothing moved", () => {
+  const g = bay();
+  tap(g, "bow", 0); tap(g, "bow", 0);
+  assert.equal(g.run("deckSel"), null);
+  assert.deepEqual(bowIds(g), ["six", "long12"]);
+  tap(g, "bow", 0);
+  assert.equal(g.run("cancelGunPick()"), true, "Esc / blank spot: a gun was picked");
+  assert.equal(g.run("deckSel"), null);
+  assert.equal(g.run("cancelGunPick()"), false, "nothing picked: Esc falls through to the ledger's own back");
+  assert.deepEqual(bowIds(g), ["six", "long12"]);
+});
+
+test("gun bay (#68): an empty port with nothing to mount changes nothing and says what to do; two stored guns never trade", () => {
+  const g = bay();
+  g.run(`save = { ...save, left: [null], store: [gunItem("chain", 1), gunItem("six", 1)] }`);
+  assert.equal(tap(g, "left", 0), "denied");   // nothing picked
+  assert.equal(g.run("deckSel"), null);
+  assert.equal(g.json("gunNote.tip"), "emptyTip");
+  tap(g, "bow", 0);   // a mounted gun picked: it does not walk to an empty port either
+  assert.equal(tap(g, "left", 0), "denied");
+  assert.deepEqual(g.json("deckSel"), { side: "bow", i: 0 }, "the pick stays");
+  assert.deepEqual(bowIds(g), ["six", "long12"]);
+  g.run("deckSel = null");
+  tap(g, "store", 0); tap(g, "store", 1);   // the second stored gun only moves the pick
+  assert.deepEqual(g.json("deckSel"), { side: "store", i: 1 });
+  assert.deepEqual(g.json("save.store.map(x => x.g)"), ["chain", "six"]);
+});
+
+test("gun bay (#68): Unload sends the gun to the store; a full store refuses and loses nothing", () => {
+  const g = bay();
+  tap(g, "bow", 1);
+  assert.equal(g.run(`gunAct("unload", {})`), "uiClick");
+  assert.deepEqual(g.json("save.bow.map(x => x && x.g)"), ["six", null]);
+  assert.deepEqual(g.json("save.store.map(x => x.g)"), ["chain", "long12"]);
+  assert.equal(g.json("gunNote.text[0]"), "movedUnload");
+  const f = bay();
+  f.run(`save = { ...save, store: Array.from({ length: MAX_STORE }, () => gunItem("six", 1)) }`);
+  tap(f, "bow", 1);
+  assert.equal(f.run(`gunAct("unload", {})`), null);
+  assert.equal(f.run(`gunAct("tostore", {})`), null);
+  assert.equal(f.run("save.store.length"), 200);
+  assert.deepEqual(bowIds(f), ["six", "long12"], "nothing was dropped");
+  assert.match(f.run("gunCardHtml()"), /data-act="unload" disabled/);
+  assert.match(f.run("gunCardHtml()"), /store is full \(200\)/);
+  assert.ok(!f.run("renderGunBay.toString()").includes("undefined"));
+  // a full store still lets a mounted gun trade with a stored one: that does not grow the store
+  assert.equal(tap(f, "store", 0), "reload");
+  assert.equal(f.run("save.store.length"), 200);
+});
+
+test("gun bay (#68): Undo takes back only the latest move, and a purchase or upgrade clears it", () => {
+  const g = bay();
+  tap(g, "bow", 0); tap(g, "bow", 1);
+  assert.deepEqual(bowIds(g), ["long12", "six"]);
+  assert.equal(g.run(`gunAct("gundo", {})`), "uiClick");
+  assert.deepEqual(bowIds(g), ["six", "long12"]);
+  assert.deepEqual(g.json("save.store.map(x => x.g)"), ["chain"]);
+  assert.equal(g.run(`gunAct("gundo", {})`), null, "one step only");
+  tap(g, "store", 0); tap(g, "bow", 0);   // stored chain traded in
+  assert.deepEqual(bowIds(g), ["chain", "long12"]);
+  g.run(`gunAct("gundo", {})`);
+  assert.deepEqual(g.json("[save.bow.map(x => x.g), save.store.map(x => x.g)]"), [["six", "long12"], ["chain"]], "the store comes back too");
+  tap(g, "bow", 0); tap(g, "bow", 1);
+  tap(g, "bow", 0); g.run(`gunAct("gup", {})`);
+  assert.equal(g.run("gunNote"), null, "an upgrade spends gold: nothing left to undo");
+  tap(g, "bow", 0); tap(g, "bow", 1); g.run(`gunAct("buy", { id: "six" })`);
+  assert.equal(g.run("gunNote"), null, "a purchase is not a move");
+});
+
+test("gun bay (#68): Undo is for the ship it was made on", () => {
+  const g = bay();
+  tap(g, "bow", 0); tap(g, "bow", 1);
+  g.run(`save = { ...save, shipId: "s9" }`);
+  assert.equal(g.run(`gunAct("gundo", {})`), null);
+  assert.deepEqual(bowIds(g), ["long12", "six"]);
+});
+
+test("gun bay (#68): the places a picked gun can go are exactly the outlined ones", () => {
+  const g = bay();
+  g.run(`save = { ...save, left: [null, gunItem("six", 1)], store: [gunItem("chain", 1), gunItem("six", 2)] }`);
+  const places = "[...MOUNTS.flatMap(({ key }) => save[key].map((_, i) => [key, i])), ...save.store.map((_, i) => ['store', i])]";
+  const dest = () => g.json(`${places}.filter(([s, i]) => isDest(s, i))`), all = g.json(places);
+  tap(g, "store", 0);
+  assert.deepEqual(dest(), all.filter(([s]) => s !== "store"), "stored gun: every port, empty or not, and no stored gun");
+  tap(g, "store", 0); tap(g, "bow", 0);
+  const empty = g.json(`${places}.filter(([s, i]) => s !== 'store' && !save[s][i])`);
+  assert.deepEqual(dest(), all.filter(([s, i]) => !(s === "bow" && i === 0) && !empty.some(([es, ei]) => es === s && ei === i)),
+    "a mounted gun: the other loaded ports and every stored gun, never an empty port");
+});
+
+test("gun bay (#68): the picked gun's card has no Swap position button, only upgrade, upgrade x5 and Unload", () => {
+  const g = bay();
+  g.run(`deckSel = { side: "bow", i: 0 }`);
+  const html = g.run("gunCardHtml()");
+  assert.doesNotMatch(html, /data-act="swap"/); assert.doesNotMatch(html, /Swap position/);
+  assert.match(html, /data-act="gup"/); assert.match(html, /data-act="gup5"/); assert.match(html, /data-act="unload"/);
+  g.run(`deckSel = { side: "store", i: 0 }`);
+  assert.doesNotMatch(g.run("gunCardHtml()"), /data-act="unload"/, "a stored gun has nothing to unload");
+});
+
+test("gun bay (#68): Upgrade x5 prices the five levels in all, in both languages", () => {
+  const en = bay("en"), zh = bay("zh");
+  for (const g of [en, zh]) g.run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", 2)`);
+  const total = en.run("[0,1,2,3,4].reduce((n, j) => n + gunUpCost(gunItem('six', 2 + j)), 0)");
+  assert.deepEqual(en.json("gunUpPlan(save.bow[0], 1e9)"), { n: 5, cost: total, short: 0 });
+  assert.ok(en.run("gunCardHtml()").includes(`Upgrade 5 levels (${en.run("fmt")(total)} gold total)`));
+  assert.ok(zh.run("gunCardHtml()").includes(`升級 5 級（總價 ${en.run("fmt")(total)} 金幣）`));
+  en.run(`gunAct("gup5", {})`);
+  assert.deepEqual(en.json("[save.bow[0].lv, save.gold]"), [7, 100000 - total]);
+});
+
+test("gun bay (#68): near the cap Upgrade x5 shows the real number of levels; one level left hides it; the cap stops at Max", () => {
+  const g = bay();
+  g.run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", GUN_MAX - 3)`);
+  assert.equal(g.json("gunUpPlan(save.bow[0], 1e9).n"), 3);
+  assert.match(g.run("gunCardHtml()"), /data-act="gup5" >Upgrade 3 levels \(/);
+  g.run(`gunAct("gup5", {})`);
+  assert.equal(g.run("save.bow[0].lv"), g.run("GUN_MAX"));
+  g.run(`save.bow[0] = gunItem("six", GUN_MAX - 1)`);
+  assert.doesNotMatch(g.run("gunCardHtml()"), /data-act="gup5"/);
+  g.run(`save.bow[0] = gunItem("six", GUN_MAX)`);
+  assert.doesNotMatch(g.run("gunCardHtml()"), /data-act="gup5"/);
+  assert.equal(g.run(`gunAct("gup5", {})`), null);
+});
+
+test("gun bay (#68): too little gold disables Upgrade x5 and shows the shortfall; no partial upgrade is made", () => {
+  const g = bay();
+  g.run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", 2)`);
+  const plan = g.json("gunUpPlan(save.bow[0], 0)");
+  g.run(`save.gold = ${plan.cost - 25}`);
+  assert.match(g.run("gunCardHtml()"), /data-act="gup5" disabled>Upgrade 5 levels \(\d[\d,]* gold total, 25 short\)/);
+  assert.equal(g.run(`gunAct("gup5", {})`), null);
+  assert.deepEqual(g.json("[save.bow[0].lv, save.gold]"), [2, plan.cost - 25], "no levels bought, no gold taken");
+  assert.match(bay("zh").run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", 2); save.gold = 0; gunCardHtml()`), /disabled>升級 5 級（總價 [\d,]+ 金幣，還差 [\d,]+）/);
+});
+
+test("gun bay (#68): the guns' strings exist in both languages and the old swap strings are gone", () => {
+  const g = bay();
+  for (const k of ["toStoreDest", "pickHintPort", "pickHintStore", "emptyTip", "storeFullWhy", "movedMount", "movedSwap", "movedUnload", "gunUndo", "gunUndone", "upN", "upNShort", "toStore"])
+    assert.ok(g.run(`STR.en.${k} && STR.zh.${k}`), k);
+  for (const k of ["swapGun", "swapCancel", "swapHint", "selHint", "selEmpty"]) assert.equal(g.run(`STR.en.${k} === undefined && STR.zh.${k} === undefined`), true, k);
+  assert.equal(g.run("STR.zh.toStore"), "卸下");
+});
+

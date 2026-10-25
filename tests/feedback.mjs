@@ -147,6 +147,111 @@ for (const kind of ["supply", "trade", "outpost"]) {
 }
 await page.setViewportSize({ width: 1280, height: 720 });
 
+// ---------- #68: gun bay, tap the source then the destination, Undo, Upgrade x5 ----------
+console.log("#68 gun bay");
+await boot(saveWith({ gold: 50000 }));
+const bayState = () => ev(() => ({ bow: save.bow.map(x => x && x.g + x.lv).join(","), left: save.left.map(x => x && x.g + x.lv).join(","), right: save.right.map(x => x && x.g + x.lv).join(","), store: save.store.map(x => x.g + x.lv).join(","),
+  sel: deckSel && deckSel.side + deckSel.i, gold: save.gold, note: (document.querySelector("#gunSel .gnote") || {}).textContent || "", acts: [...document.querySelectorAll("#gunSel [data-act]")].map(b => b.dataset.act + (b.disabled ? "!" : "")).join(" ") }));
+await ev(() => { save.bow = [gunItem("six", 1)]; save.left = [gunItem("long12", 3)]; save.right = [null]; save.store = [gunItem("chain", 1)]; deckSel = null; gunNote = null; renderPort(); });
+const S1 = (side, i) => `#deck [data-act="slot"][data-side="${side}"][data-i="${i}"]`;
+await page.locator(S1("bow", 0)).scrollIntoViewIfNeeded();
+await tap('[data-act="buy"][data-id="carronade"]'); await page.waitForTimeout(100);
+let g68 = await bayState();
+check(/store/.test(g68.sel || "") && g68.store.includes("carronade"), `a gun bought in the armory lands in the store already picked (${g68.sel})`);
+await tap(S1("right", 0));
+g68 = await bayState();
+check(g68.right === "carronade1" && g68.sel === null && /Mounted/.test(g68.note), `then one tap on the empty port mounts it (${g68.right}); the line says "${g68.note}"`);
+check(!g68.acts.includes("swap") && g68.acts.includes("gundo") && !(await ev(() => !!document.querySelector('[data-act="swap"]'))), "there is no Swap position button anywhere; Undo is offered");
+await page.screenshot({ path: `${out}/gunbay-mounted-desktop.png` });
+await tap('#gunSel [data-act="gundo"]');
+g68 = await bayState();
+check(g68.right === "null" || g68.right === "" || g68.right === "0" || !g68.right.includes("carronade"), "Undo takes the mounted gun back out");
+check(g68.store.includes("carronade") && g68.store.includes("chain"), `and it is back in the store (${g68.store})`);
+await tap(S1("bow", 0)); await tap(S1("left", 0));
+g68 = await bayState();
+check(g68.bow === "long123" && g68.left === "six1" && /Swapped/.test(g68.note), `a port tapped, then another: swapped at once (${g68.bow} / ${g68.left})`);
+await tap('#gunSel [data-act="gundo"]');
+g68 = await bayState();
+check(g68.bow === "six1" && g68.left === "long123", "Undo puts the two guns back; it only ever undoes one step");
+await tap(S1("bow", 0)); await tap('#bay [data-act="store"][data-i="0"]');
+g68 = await bayState();
+check(g68.bow.startsWith("carronade") || g68.bow.startsWith("chain"), `a port, then a stored gun: they trade places (${g68.bow}; store ${g68.store})`);
+await tap('#gunSel [data-act="gundo"]');
+// pad / Esc / blank cancel
+await tap(S1("bow", 0));
+await ev(() => goBack());   // the pad's back button and Esc both come here (js/menu.js)
+check((await bayState()).sel === null, "the pad's back button (goBack) puts the picked gun down");
+await tap(S1("bow", 0)); await page.keyboard.press("Escape");
+check((await bayState()).sel === null, "Esc puts it down");
+// unload; a full store refuses and never drops a gun
+await tap(S1("bow", 0)); await tap('#gunSel [data-act="unload"]');
+g68 = await bayState();
+check(g68.bow === "" || g68.bow === "null" || !g68.bow.includes("six"), "Unload moves the gun out of the port") ;
+check(g68.store.includes("six1") && /Unloaded/.test(g68.note), `into the store, with the line "${g68.note}"`);
+await tap('#gunSel [data-act="gundo"]');
+await ev(() => { save.store = Array.from({ length: MAX_STORE }, () => gunItem("six", 1)); renderPort(); });
+await tap(S1("left", 0));
+g68 = await bayState();
+check(g68.acts.includes("unload!") && /full/.test(await ev(() => document.querySelector("#gunSel .hint-s").textContent)), "a full store: Unload is disabled and the card says why");
+await ev(() => { save.store = [gunItem("chain", 1)]; deckSel = null; renderPort(); });
+// Upgrade x5
+await tap(S1("bow", 0));
+const up = await ev(() => { const gun = save.bow[0], plan = gunUpPlan(gun, save.gold), b = document.querySelector('#gunSel [data-act="gup5"]'); let sum = 0; for (let j = 0; j < 5; j++) sum += gunUpCost({ ...gun, lv: gun.lv + j }); return { label: b.textContent, sum, plan, gold: save.gold, dis: b.disabled }; });
+check(up.plan.n === 5 && up.plan.cost === up.sum && !up.dis && up.label.includes(up.sum.toLocaleString("en-US")), `Upgrade x5 shows the five levels' total (${up.label})`);
+await tap('#gunSel [data-act="gup5"]');
+g68 = await bayState();
+check(g68.bow === "six6" && g68.gold === up.gold - up.sum, `buying it: Lv 1 -> 6 for exactly ${up.sum} gold`);
+const near = await ev(() => { save.bow[0] = gunItem("six", GUN_MAX - 2); renderPort(); return document.querySelector('#gunSel [data-act="gup5"]').textContent; });
+check(/Upgrade 2 levels/.test(near), `two levels from the cap it says so (${near})`);
+const poor = await ev(() => { save.bow[0] = gunItem("six", 3); save.gold = 10; renderPort(); const b = document.querySelector('#gunSel [data-act="gup5"]'); return { t: b.textContent, d: b.disabled }; });
+check(poor.d && /short/.test(poor.t), `without the gold it is disabled and shows the shortfall (${poor.t})`);
+await tap('#gunSel [data-act="gup5"]').catch(() => {});
+check((await bayState()).bow === "six3", "pressing it anyway buys nothing: no partial upgrade");
+await page.screenshot({ path: `${out}/gunbay-upgrade5-desktop.png` });
+await ev(() => { lang = "zh"; applyLang(); save.gold = 50000; renderPort(); });
+const zhUp = await ev(() => document.querySelector('#gunSel [data-act="gup5"]').textContent + "|" + document.querySelector('#gunSel [data-act="unload"]').textContent);
+check(/^升級 5 級（總價 [\d,]+ 金幣）\|卸下$/.test(zhUp), `Chinese: ${zhUp}`);
+await ev(() => { lang = "en"; applyLang(); });
+
+// touch on a phone, and the compact 30-gun deck
+{
+  const mctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: "en-US" });
+  const mp = await mctx.newPage(); mp.on("pageerror", e => errors.push("pageerror(touch): " + e.message));
+  await mp.goto(url, { waitUntil: "load" });
+  await mp.evaluate(s => { localStorage.clear(); localStorage.setItem("privateers-settings", JSON.stringify({ muted: true })); localStorage.setItem("privateers-save-v2", JSON.stringify(s)); }, saveWith({ gold: 99999, ship: "line", hull: 3 }));
+  await mp.reload({ waitUntil: "load" });
+  await mp.waitForFunction(() => typeof player !== "undefined" && player && typeof titleOpen !== "undefined" && titleOpen, null, { timeout: 15000 * SLOW });
+  await mp.evaluate(() => {
+    save = fitMounts({ ...save, ship: "line", gold: 99999 });
+    const kinds = ["six", "long12", "carronade", "chain", "fire"];
+    for (const { key } of MOUNTS) save[key] = save[key].map((_, i) => (i % 5 === 4 ? null : gunItem(kinds[i % 5], 1 + (i % 4))));
+    save.store = [gunItem("six", 2)];
+    applyPlayerStats(true); titleOpen = false; const ti = document.getElementById("title"); if (ti) ti.hidden = true;
+    paused = true; dock("welcome"); document.getElementById("port").hidden = false;
+  });
+  await mp.waitForTimeout(700 * SLOW);
+  const ports = await mp.evaluate(() => ({ n: document.querySelectorAll("#deck .slot").length, minH: Math.round(Math.min(...[...document.querySelectorAll("#deck .slot")].map(b => b.getBoundingClientRect().height))), dense: document.getElementById("deck").classList.contains("dense") }));
+  check(ports.n === 30 && ports.dense && ports.minH >= 30, `phone, 30 guns: compact deck, every port at least 30px tall (${ports.minH}px)`);
+  const L = i => `#deck [data-act="slot"][data-side="left"][data-i="${i}"]`;
+  const lg = () => mp.evaluate(() => save.left.slice(0, 4).map(x => x && x.g + x.lv).join(","));
+  const before = await lg();
+  await mp.locator(L(0)).scrollIntoViewIfNeeded(); await mp.tap(L(0));
+  await mp.screenshot({ path: `${out}/gunbay-picked-30guns-phone.png` });
+  await mp.locator(L(1)).scrollIntoViewIfNeeded(); await mp.tap(L(1));
+  const after = await lg();
+  check(before !== after && after.split(",")[0] === before.split(",")[1] && after.split(",")[1] === before.split(",")[0], `touch: tap a port, tap another: swapped (${before} -> ${after})`);
+  await mp.screenshot({ path: `${out}/gunbay-swapped-30guns-phone.png` });
+  await mp.tap('#gunSel [data-act="gundo"]');
+  check(await lg() === before, "touch: Undo");
+  // a tap on a stored gun and the empty fifth port of a side mounts it
+  await mp.locator('#bay [data-act="store"]').first().scrollIntoViewIfNeeded(); await mp.tap('#bay [data-act="store"]');
+  await mp.locator(L(4)).scrollIntoViewIfNeeded(); await mp.tap(L(4));
+  check(await mp.evaluate(() => save.left[4] && save.left[4].g === "six" && save.store.length === 0), "touch: stored gun, then an empty port: mounted");
+  const sticky = await mp.evaluate(() => { const c = document.querySelector("#gunSel"); const r = c.getBoundingClientRect(); return { bottom: Math.round(r.bottom), vh: innerHeight, h: Math.round(r.height) }; });
+  check(sticky.bottom <= sticky.vh, `the status line stays on screen (${JSON.stringify(sticky)})`);
+  await mctx.close();
+}
+
 // ---- END OF SECTIONS ----
 check(errors.length === 0, `0 page errors${errors.length ? " -> " + errors.join(" | ") : ""}`);
 await browser.close();
