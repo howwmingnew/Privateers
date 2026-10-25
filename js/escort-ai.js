@@ -76,13 +76,13 @@ function escortRetarget(e, now) {
   }
   if (best !== e.target) { e.target = best; if (best) e.chaseFrom = { x: e.x, y: e.y }; }
 }
-// Station keeping: called from fleetSteer for an "escort" fleet. null = let the class's battle plan steer (it is fighting inside its leash).
+// Station keeping: called from fleetSteer for an "escort" fleet. null = let the class's battle plan steer (it is fighting inside its leash, ESCORT_LEASH from its slot).
 function escortSteer(e, f, tg, d, toT, now) {
   const lead = f.lead;
   if (!lead.alive || docked) return null;
-  const P = ESCORT_STANCE[e.stance] || ESCORT_STANCE.normal, away = dist(e, lead);
+  const s = slotOf(f, e), home = s ? slotWorld(fleetFrame(f), s) : lead, away = dist(e, home);   // measured from its own slot, so an outer slot is not always "too far"
   e.retreat = e.stance === "passive" && e.hp < e.maxHp * ESCORT_RETREAT;   // a hurt passive escort keeps to the flagship and does not chase
-  if (e.retreat || away > P.leash || !tg) return holdStation(e, f);
+  if (e.retreat || away > ESCORT_LEASH || !tg) return holdStation(e, f);
   return null;
 }
 // Twice a second: claw off a rock, and put an escort that fell far behind out of sight back on its station.

@@ -158,8 +158,9 @@ const ESCORT_SPEED_K = 1.08;         // the crews hold station well: this much f
 const ESCORT_LOST = 1500;            // an escort this far from the flagship and out of sight is set back on its station
 const ESCORT_RETREAT = 0.3;          // a passive escort under this share of hull breaks off and keeps to the flagship
 // Per attack stance: aggro = how close an enemy must be to the escort to be engaged (px for active, a multiple of the escort's gun range for normal), reach = how far from the flagship it
-// may fight, leash = how far from the flagship it may stray before it rejoins the formation.
-const ESCORT_STANCE = { active: { aggro: 800, reach: 1000, leash: 1300 }, normal: { aggro: 1.2, reach: 620, leash: 760 }, passive: { aggro: 0, reach: 420, leash: 330 } };
+// may fight. The stance picks targets only: every escort fights from its station and never strays more than ESCORT_LEASH from it (owner's call).
+const ESCORT_STANCE = { active: { aggro: 800, reach: 1000 }, normal: { aggro: 1.2, reach: 620 }, passive: { aggro: 0, reach: 420 } };
+const ESCORT_LEASH = 120;            // px (about 60 m, EDGE_M_PER_PX) an escort may stray from its formation slot before it turns back to it
 // Wind, weather and the hour of day (js/weather-core.js is the maths, js/weather.js the sea). Every number here is gameplay:
 // the same for every player whatever the weather-effects setting says, so a daily sea plays the same everywhere.
 const WIND = { tail: 0.20, head: 0.25, full: 0.6 };   // speed gained running before the wind, lost beating into it, at wind strength >= full (a calm gives less)
