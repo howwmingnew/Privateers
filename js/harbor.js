@@ -20,6 +20,7 @@ function dock(kind, prior = { sold: 0, bonus: 0, cargo: 0, sunk: 0 }) {
   else if (kind === "supply") portMsg = ["supplyMsg"];
   else if (kind === "trade") portMsg = sold > 0 ? (bonus > 0 ? ["tradeSoldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["tradeSold", { n: fmt(sold) }]) : ["tradeEmpty"];
   else portMsg = sold > 0 ? (bonus > 0 ? ["soldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["sold", { n: fmt(sold) }]) : ["empty"];
+  setVisitBills(kind, portMsg);   // what the visit took from the purse, itemised under the message (js/ledger-gold.js)
   renderPort();
   document.getElementById("port").hidden = false;
   paintGunDeck();   // the ship needs the shown layout; the deck's ResizeObserver only fires on the next rendered frame
@@ -49,14 +50,14 @@ function resetEnemies(sc) {
 }
 
 let portMsg = ["welcome"];
-// Buying a ship costs its full price, so the button needs a second tap within a few seconds.
-let shipArmed = null, shipArmedAt = 0, shipArmTimer;
+// Buying a ship costs its full price, so the button needs a second tap; the armed state has no timer (js/escort-ui.js twoTap, disarm).
+let shipArmed = null, shipArmedAt = 0;
 // A model you cannot pay for yet says how much is missing (like the upgrade buttons, js/gunbay.js upgradeLabel).
 const buyLabel = id => save.gold < SHIPS[id].cost ? t("buyShort", { n: fmt(SHIPS[id].cost), d: fmt(SHIPS[id].cost - save.gold) })
   : t(ownedShips().some(e => e.ship === id) ? "buyAnother" : "buy", { n: fmt(SHIPS[id].cost), cost: fmt(SHIPS[id].cost) });
 function renderPort() {
   const $ = id => document.getElementById(id);
-  $("pMsg").innerHTML = t(...portMsg);
+  $("pMsg").innerHTML = t(...portMsg) + visitBillsHtml();
   $("pGold").textContent = fmt(save.gold);
   const rate = lvProgress();   // Ship Lv and the share of the way to the next (js/lv-path.js)
   $("pStats").innerHTML = `<span><b>${t("s_" + save.ship)}</b></span><span>${t("statLvP", { n: rate.lv, p: rate.pct })}</span><span><b>${YARD.hull.show(yardVal("hull"))}</b></span>` +
@@ -68,6 +69,7 @@ function renderPort() {
 
 document.getElementById("port").addEventListener("click", ev => {
   const b = ev.target.closest("[data-act]");
+  if (!(b && b.hasAttribute("data-armed")) && disarm()) renderPort();   // a tap anywhere but the armed button puts the purchase down
   if (!b && typeof cancelGunPick === "function" && !ev.target.closest("#ctx, .gcard, button, a, input, select, label")) { cancelLedgerPick() || cancelGunPick(); if (typeof cancelGearPick === "function") cancelGearPick(); return; }   // a blank spot puts the picked hull, gun or part down (js/ledger-tabs.js, js/gunbay.js, js/gear-ui.js)
   if (!b || b.disabled) return;
   const act = b.dataset.act;
@@ -93,14 +95,8 @@ document.getElementById("port").addEventListener("click", ev => {
     const id = b.dataset.id;
     if (shipLock(id)) return;
     if (shipArmed === id && performance.now() - shipArmedAt < 400) return;   // a double-click is not a second tap
-    clearTimeout(shipArmTimer);
     if (shipArmed !== id) {
-      shipArmed = id; shipArmedAt = performance.now();
-      shipArmTimer = setTimeout(() => {
-        shipArmed = null;   // relabel in place rather than re-render, so keyboard focus stays put
-        const el = document.querySelector(`[data-act="ship"][data-id="${id}"]`);
-        if (el) { el.textContent = buyLabel(id); el.removeAttribute("data-armed"); el.removeAttribute("style"); }
-      }, ARM_MS);
+      disarm(); shipArmed = id; shipArmedAt = performance.now();
       renderPort(); document.querySelector(`[data-act="ship"][data-id="${id}"]`)?.focus();
       Snd.play("uiClick");
       return;

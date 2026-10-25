@@ -83,6 +83,7 @@ function supplyStep(hp, maxHp, dt, gold, ring, k = 1) {   // k: a legendary supp
 
 // ---------- At sea: the ring's service (called from js/mooring.js) ----------
 let feeCarry = 0, brokeShown = false, feePaid = 0, feeFrom = 0;   // feePaid: gold taken on this visit; feeFrom: the hull share it started from
+let visitFee = 0;   // all the gold the ring took since the ship came in: the ledger lists it among the charges (js/ledger-gold.js)
 // Says what the visit cost, once, so gold never leaves without a reason.
 function stationBill() {
   if (feePaid <= 0) return;
@@ -94,7 +95,7 @@ function stationHeal(hb, dt) {
   player.hp = r.hp;
   feeCarry += r.cost;
   const whole = Math.min(Math.floor(feeCarry), save.gold);
-  if (whole > 0) { save.gold -= whole; feeCarry -= whole; feePaid += whole; hud(true); }
+  if (whole > 0) { save.gold -= whole; feeCarry -= whole; feePaid += whole; visitFee += whole; hud(true); }
   if (player.hp >= player.maxHp) stationBill();   // the hull is whole: the bill comes now, not only when the ship leaves
   if (r.cost <= 0 && player.hp < player.maxHp && save.gold < 1 && !brokeShown) { brokeShown = true; toast(t("supplyBroke")); sfx("denied"); }
 }
@@ -104,7 +105,7 @@ function stationGreet(hb, kind) {
   const x = player.x, y = player.y - 40;
   floatText(x, y - 22, t("stationName_" + kind), "#f6f1e3", 15);
   const sound = player.hp >= player.maxHp;
-  feePaid = 0; feeFrom = player.hp / player.maxHp;
+  feePaid = 0; visitFee = 0; feeFrom = player.hp / player.maxHp;
   if (kind === "supply" && !sound && save.gold >= 1) toast(t("supplyAuto", { n: supplyFee(hb.ring) }));
   floatText(x, y, kind === "supply" ? t(sound ? "fSupplyFull" : "fSupplyIn", { n: supplyFee(hb.ring) }) : t("fTradeIn"), "#9fe0a0", 15);
   if (kind === "trade" && cargo <= 0) toast(t("tradeEmpty"));

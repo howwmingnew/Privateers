@@ -13,3 +13,16 @@
 .bar.hp.mend { border-color: #9fe0a0; box-shadow: 0 0 8px 1px rgba(159,224,160,.55); animation: mend-glow 1.4s ease-in-out infinite; }
 @keyframes mend-glow { 50% { box-shadow: 0 0 12px 3px rgba(159,224,160,.85); } }
 @media (prefers-reduced-motion: reduce) { .bar.hp.mend { animation: none; } }
+/* the escorts' hull under the Ship Lv label, in the chart's own column (js/escort-hud.js): a slim bar each, green to red, grey once sunk */
+#escHud { display: grid; gap: 3px; width: var(--mini-w, 124px); justify-self: end; }
+#escHud[hidden] { display: none; }
+.eh { position: relative; height: calc(15px * var(--ts, 1)); overflow: hidden; border-radius: 3px; background: rgba(8,34,45,.75); border: 1px solid rgba(246,241,227,.25);
+  display: flex; justify-content: space-between; align-items: center; padding: 0 5px; box-sizing: border-box; font-size: calc(10px * var(--ts, 1)); font-weight: 700; letter-spacing: .03em;
+  line-height: 1; white-space: nowrap; text-shadow: 0 1px 2px #000; font-variant-numeric: tabular-nums; }
+.eh i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(#6fbf68, #3f8a45); opacity: .85; transition: width .2s; }
+.eh span, .eh b { position: relative; }
+.eh.low i { background: linear-gradient(#e8745a, #b3321f); }
+.eh.low { border-color: #e2553f; }
+.eh.sunk { opacity: .6; }
+.eh.sunk i { width: 0 !important; }
+@media (prefers-reduced-motion: reduce) { .eh i { transition: none; } }

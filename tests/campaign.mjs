@@ -74,7 +74,7 @@ console.log("Fresh campaign (desktop, en)");
   check(fold.has && fold.closed === (fold.open.length > 0) && (fold.open.length > 0 || fold.hint) && fold.inside && !fold.loose && /Not unlocked yet \(\d+\)/.test(fold.summary) && !fold.open.includes("schooner"), `locked ships fold away: "${fold.summary}", on sale: ${fold.open}`);
   // the next level's gain sits on every hull upgrade button
   const gain = await page.evaluate(() => [...document.querySelectorAll('#yard [data-act="yard"] .gain')].map(g => g.textContent));
-  check(gain.length === 3 && /^Hull \+\d+%( · Ship Lv (progress \+\d+%|→ \d+))?$/.test(gain[0]) && /^Speed \+\d+%$/.test(gain[1]) && /^Hold \+\d+%$/.test(gain[2]), `hull, sails and hold buttons name their gain (${gain})`);
+  check(gain.length === 3 && /^→ Hull \+\d+%( · Ship Lv (progress \+\d+%|→ \d+))?$/.test(gain[0]) && /^→ Speed \+\d+%$/.test(gain[1]) && /^→ Hold \+\d+%$/.test(gain[2]), `hull, sails and hold buttons name their gain (${gain})`);
   await o.shot("desktop-en-1-ledger");
   // #98: the first bounty is the newcomer's: one level above his badge, no escorts, never out of his own waters; the HUD and ledger show Ship Lv progress
   const ned = await page.evaluate(() => {

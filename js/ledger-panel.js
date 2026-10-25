@@ -54,7 +54,7 @@ function yardRows(e) {   // hull, sails, hold of ship `e` (a yard entry or the f
     if (lv >= y.max) { btn = `<button class="btn max" type="button" disabled>${t("max")}</button>`; ds = `<b>${cur}</b>`; }
     else { const c = y.cost(lv, sh), p = Math.round((yardVal(k, lv + 1, sh) / yardVal(k, lv, sh) - 1) * 100);   // what the next level adds, for the price
       const lvUp = k === "hull" && e.id === save.shipId && typeof lvGainHull === "function" ? lvGainHull() : "";   // the flagship's hull is part of Ship Lv (js/lv-path.js)
-      btn = `<button class="btn" type="button" data-act="yard" data-k="${k}" data-id="${e.id}" ${save.gold < c ? "disabled" : ""}>${t("upgrade", { n: fmt(c) })}<span class="gain">${t("gain_" + k, { p })}${lvUp ? " · " + lvUp : ""}</span></button>`;
+      btn = `<button class="btn" type="button" data-act="yard" data-k="${k}" data-id="${e.id}" ${save.gold < c ? "disabled" : ""}>${t("upgrade", { n: fmt(c) })}${gainLine(t("gain_" + k, { p }) + (lvUp ? " · " + lvUp : ""))}</button>`;
       ds = `<b>${cur}</b> <span class="up">→ ${y.show(yardVal(k, lv + 1, sh))}</span>`; }
     return `<div class="item"><div class="nm">${t("y_" + k)}<small>Lv ${lv}</small></div>${btn}<div class="ds">${ds}</div></div>`;
   }).join("");
@@ -84,8 +84,9 @@ function saleRows(slot, vs) {
     const key = slot < 0 ? null : `eship${slot}:${id}`, arm = slot < 0 ? shipArmed === id : armedTap(key);
     const act = slot < 0 ? `data-act="ship" data-id="${id}"` : `data-act="escBuyShip" data-id="${slot}" data-type="${id}"`;
     const label = arm ? t("shipArm") : buyLabel(id);
+    const gain = slot < 0 ? lvGainShip(id) : t("lvGainEsc");   // what it does to Ship Lv: the guns come along to a ship you sail, an escort starts bare (js/lv-path.js)
     const btn = lock ? `<button class="btn" type="button" ${act} disabled>${t("locked")}</button>` : full ? `<button class="btn" type="button" ${act} disabled>${t("yardFull")}</button>`
-      : `<button class="btn" type="button" ${act} ${save.gold < sh.cost ? "disabled" : ""}${arm ? armAttrs(slot < 0 ? shipArmedAt : armAt) : ""}>${label}</button>`;
+      : `<button class="btn" type="button" ${act} ${save.gold < sh.cost ? "disabled" : ""}${arm ? armAttrs() : ""}>${label}${gainLine(gain)}</button>`;
     return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${shipDs(sh, 1, 1, 1)}${lock ? `<span class="lock">${lock}</span>` : count[id] ? `<span class="own up">${t(slot < 0 ? "ownedHint" : "ownedCount", { n: count[id] })}</span>` : ""}</div>${shipCmpHtml(sh, SHIPS[vs.ship], vs.ship)}</div>`;
   };
   // Per line: the models you already own first, then the ones on sale; the ones a Letter of Marque has not opened fold into one closed list at the end.
@@ -101,9 +102,13 @@ function saleRows(slot, vs) {
 
 // ---------- the panels ----------
 const xBtn = () => `<button class="x" type="button" data-act="ctxclose" aria-label="${t("ctxClose")}">×</button>`;
+// Which ship the panel edits, in its title: "Flagship" or "Escort 2" (the tab's own role label), so a tap on the wrong tab shows at once.
+const roleTag = () => `<span class="rtag">${tab === 0 ? t("tabFlag") : t("tabEsc", { n: tab })}</span>`;
+// The tip at the top of a panel while the ship has empty ports: a gun in an empty port is the cheapest firepower there is.
+const emptyTipHtml = () => { const n = typeof emptyPortsOf === "function" ? emptyPortsOf(tab) : 0; return n > 0 ? `<p class="hint-s emptyfirst">${t("emptyFirst", { n })}</p>` : ""; };
 function hullPanelHtml() {
   const e = tabShipOf(tab), slot = tab - 1, idle = idleRows(slot < 0 ? -1 : slot);
-  return `<div class="cpanel hullp">${xBtn()}<h3>${t("hullHead", { ship: shipNameOf(e) })}</h3><p class="sub">${t("hullSub")}</p>
+  return `<div class="cpanel hullp">${xBtn()}<h3>${roleTag()}${t("hullHead", { ship: shipNameOf(e) })}</h3><p class="sub">${t("hullSub")}</p>${emptyTipHtml()}
     <div class="list" id="yard">${yardRows(e)}</div>
     <h4>${t("changeHead")}</h4><p class="hint-s">${t(slot < 0 ? "shipsHint" : "escSwapHint")}</p>
     <div class="list" id="ships"><p class="hint-s">${t("shipsOwned")}</p>${idle || `<p class="hint-s">${t("idleNone")}</p>`}<p class="hint-s">${t("shipsBuy")}</p>${saleRows(slot < 0 ? -1 : slot, e)}</div>
@@ -131,8 +136,8 @@ function swapListHtml() {
 }
 function gunPanelHtml() {
   const p = deckSel, gun = gunAt(p), y = p.e != null ? escortShipOf(save, save.escorts[p.e]) : activeShip(save);
-  return `<div class="cpanel gunp">${xBtn()}<h3>${t("portHead", { side: sideLabel(p.side), n: `<span class="n">${p.i + 1}</span>` })}${gun ? " · " + t("gf_" + gun.g) : ""}</h3><p class="sub">${t("portOn", { ship: y ? shipNameOf(y) : "" })}</p>
-    ${gunNoteHtml()}${gun ? gunCardHtml() : `<p class="hint-s">${t("emptyPortTip")}</p>`}
+  return `<div class="cpanel gunp">${xBtn()}<h3>${roleTag()}${t("portHead", { side: sideLabel(p.side), n: `<span class="n">${p.i + 1}</span>` })}${gun ? " · " + t("gf_" + gun.g) : ""}</h3><p class="sub">${t("portOn", { ship: y ? shipNameOf(y) : "" })}</p>
+    ${emptyTipHtml()}${gunNoteHtml()}${gun ? gunCardHtml() : `<p class="hint-s">${t("emptyPortTip")}</p>`}
     <h4>${t("swapHead")}</h4>${swapListHtml()}
     <h4>${t("buyHead")}</h4><div class="list" id="armory">${armoryHtml()}</div></div>`;
 }

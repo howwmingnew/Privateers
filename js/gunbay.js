@@ -207,7 +207,8 @@ function gunCardHtml(p = deckSel, cand = false) {
 }
 // "Upgrade to Lv 4 (310 gold)"; with too little gold the same label says how much is missing (the button is disabled then).
 // `gain` (a text) goes under it as a second line: what the upgrade buys (#97), so the price can be weighed against it.
-const gainLine = gain => (gain ? `<span class="gain">${gain}</span>` : "");
+// The arrow is real text (not CSS), so a screen reader or a copied label reads "(12 gold) → Damage +15%", not "(12 gold)Damage +15%".
+const gainLine = gain => (gain ? `<span class="gain"><span class="gsep">→ </span>${gain}</span>` : "");
 const upgradeLabel = (n, cost, short, gain = "") => t(short > 0 ? "upShort" : "upTo", { n, cost: fmt(cost), d: fmt(Math.max(0, short)) }) + gainLine(gain);
 // What `n` upgrade levels do to a gun: its damage, and (a gun on the flagship) the share of the way to the next Ship Lv (js/lv-path.js).
 const gunGain = (gun, n) => { const lv = typeof lvGainGun === "function" ? lvGainGun(gun, n) : "";
@@ -216,10 +217,12 @@ const pctUp = (from, to) => Math.round((to / from - 1) * 100);   // 1.15x per gu
 // The armory sells Lv 1 guns one at a time; how many of each the captain has is shown beside the name.
 function armoryHtml() {
   const full = save.store.length >= MAX_STORE && !(deckSel && deckSel.side !== "store" && !gunAt(deckSel));   // a gun bought into an empty port needs no room in the store
+  const mounted = deckSel && deckSel.side !== "store", mine = !mounted || deckSel.e == null;   // a gun bought for an escort's port does not count in the flagship's Ship Lv
   return GUN_ORDER.map(id => {
     const G = GUNS[id], n = allGuns().filter(x => x.g === id).length;
+    const gain = mine && typeof lvGainNewGun === "function" ? lvGainNewGun(id, mounted ? deckSel : null) : "";   // js/lv-path.js
     return `<div class="item"><div class="nm">${gunIcon(id)}${t("gf_" + id)}<small>${t("owned", { n })}</small></div>
-      <button class="btn" type="button" data-act="buy" data-id="${id}" ${save.gold < G.cost || full ? "disabled" : ""}>${t("buy", { n: fmt(G.cost) })}</button>
+      <button class="btn" type="button" data-act="buy" data-id="${id}" ${save.gold < G.cost || full ? "disabled" : ""}>${t("buy", { n: fmt(G.cost) })}${gainLine(gain)}</button>
       <div class="ds">${gunStats(id, 1)} · ${t("range", { n: G.range })} · ${t("rpm", { n: G.rpm })}${G.chain ? t("chainFx", { n: CHAIN_T }) : ""} · ${t("gn_" + id)}</div></div>`;
   }).join("");
 }
