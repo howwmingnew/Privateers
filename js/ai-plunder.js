@@ -14,7 +14,7 @@ const aipOn = e => e.alive && !e.boss && !e.escortOf && !e.merchant && !e.fixed 
   !(typeof runActive === "function" && runActive() && runKind() === "daily");
 // Loot a ship may take: floating cargo, not the captain's wreck and not a fort's treasure chest, and not inside the safe harbor waters.
 const aipTreasure = c => typeof fortSites !== "undefined" && fortSites.some(f => f.crate === c);
-const aipFree = c => !c.wreck && c.value > 0 && !aipTreasure(c) && Math.hypot(c.x - PORT.x, c.y - PORT.y) > SAFE_R + 80;
+const aipFree = c => !c.wreck && c.value > 0 && !aipTreasure(c) && dist(c, PORT) > SAFE_R + 80;
 
 // From think() (js/ships.js) when nothing else steers the ship: course for the best loose crate, or null.
 // d = distance to its target (0 = none). A ship gives up on a crate it has chased for AIP_PATIENCE s.
@@ -23,8 +23,8 @@ function aipSeek(e, d, dt) {
   const now = S.time.now / 1000, skip = e.aipSkip || (e.aipSkip = new Map());
   let best = null, bs = 0;
   for (const c of crates) {
-    if (!aipFree(c) || (skip.get(c) || 0) > now) continue;
-    const cd = dist(e, c); if (cd > AIP_SEEK_R) continue;
+    const cd = dist(e, c);   // the cheap test first: most crates are out of reach
+    if (cd > AIP_SEEK_R || !aipFree(c) || (skip.get(c) || 0) > now) continue;
     const sc = c.value / (cd + 120);   // rich and near first
     if (sc > bs) { best = c; bs = sc; }
   }
@@ -35,10 +35,11 @@ function aipSeek(e, d, dt) {
 }
 // Per frame: a ship on a crate takes it all.
 function aipScoop() {
+  if (!crates.length || (typeof runActive === "function" && runActive() && runKind() === "daily")) return;   // the daily sea: aipOn is false for every ship
   for (const e of enemies) {
     if (!aipOn(e)) continue;
     for (const c of crates) {
-      if (!aipFree(c) || dist(e, c) > AIP_PICK_R) continue;
+      if (dist(e, c) > AIP_PICK_R || !aipFree(c)) continue;   // distance first: a ship x crate pair is nearly always far apart
       const n = c.value; c.value = 0; e.stolen = (e.stolen || 0) + n; aipGrow(e);
       if (typeof refreshBadge === "function") refreshBadge(e);
       if (onScreen(e.x, e.y)) { floatText(e.x, e.y - 52, t("aipLoot", { n: fmt(n) }), "#f0c766", 14); sfx("pickup", { x: e.x, y: e.y }); }

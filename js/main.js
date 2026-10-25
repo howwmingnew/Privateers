@@ -75,7 +75,7 @@ function step(dt) {
     if (a.fixed || b.fixed) continue;   // shore batteries aren't shoved; their island keeps ships off
     const dx = b.x - a.x, dy = b.y - a.y;
     if (dx > 120 || dx < -120 || dy > 120 || dy < -120) continue;   // wider than any two hulls' radii: no shove
-    const d = Math.hypot(dx, dy), r = shipRadius(a) + shipRadius(b);   // sized per hull
+    const d = Math.sqrt(dx * dx + dy * dy), r = shipRadius(a) + shipRadius(b);   // sized per hull
     if (d < r && d > 0.01) {
       crashShips(a, b, dx / d, dy / d);
       const p = (r - d) / 2, wa = b.isPlayer && a.ally ? 2 : a.isPlayer && b.ally ? 0 : 1, wb = 2 - wa;   // an escort gives way to the flagship, never the other way round
@@ -119,12 +119,12 @@ function step(dt) {
     const friend = b.fromPlayer || b.friendly;   // the flagship's and the escorts' shot pass through their own side
     if (!friend && player.alive && hitShip(player, b.x, b.y)) hit = player;
     if (!hit) for (const e of living) if (e !== b.owner && e.alive && !sameFleet(b.owner, e) && !(friend && e.ally) && !bossFeud(b.owner, e) && hitShip(e, b.x, b.y)) { hit = e; break; }
-    const onRock = !hit && islands.some(isl => Math.hypot(isl.x - b.x, isl.y - b.y) < isl.r * 0.9);
+    const onRock = !hit && islandsNear(b.x, b.y).some(isl => { const dx = isl.x - b.x, dy = isl.y - b.y, R = isl.r * 0.9; return dx * dx + dy * dy < R * R; });   // only the rocks near it (js/ai-nav.js)
     if (hit) { vfxHit(b.x, b.y); hurt(hit, b.dmg, b.burn, b.owner, b); }
     if (hit || onRock || b.life <= 0) {
       if (!hit) vfxSplash(b.x, b.y, onRock);
       if (!hit && !onRock) Snd.play("splash", { x: b.x, y: b.y });
-      b.spr.destroy(); balls.splice(i, 1);
+      ballFree(b); balls.splice(i, 1);
     }
   }
   // --- plunder crates ---

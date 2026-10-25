@@ -124,11 +124,11 @@ function fleetRoom(lead) {
 const fleetFrame = f => ({ x: f.lead.x, y: f.lead.y, rot: f.hdg ?? f.lead.rot });
 const slotOf = (f, e) => formationSlots(f.formation, wingmen(f).length, f.gap)[wingmen(f).indexOf(e)];   // f.gap: the escorts' wider spacing (js/escort-ai.js)
 // A slot may not sit on an island: pull it toward the lead until it is clear of the rock.
+const slotOnRock = (p, isl) => { const dx = isl.x - p.x, dy = isl.y - p.y, R = isl.r * 1.05 + 50; return dx * dx + dy * dy < R * R; };
 function safeSlot(p, lead) {
   p = { x: clamp(p.x, 160, W - 160), y: clamp(p.y, 160, H - 160) };   // a slot over the map's edge would pin its ship to the border
-  const rocks = islands.concat([{ x: PORT.x, y: PORT.y, r: PORT_ISLAND_R / 0.9 }]);   // the harbor island is solid too
-  for (let k = 0; k < 3; k++) {
-    if (!rocks.some(isl => Math.hypot(isl.x - p.x, isl.y - p.y) < isl.r * 1.05 + 50)) return p;
+  for (let k = 0; k < 3; k++) {   // p moves each round: the rocks near it are asked for afresh (js/ai-nav.js); the harbor island is solid too
+    if (!islandsNear(p.x, p.y).some(isl => slotOnRock(p, isl)) && !slotOnRock(p, HARBOR_ROCK)) return p;
     p = { x: (p.x + lead.x) / 2, y: (p.y + lead.y) / 2 };
   }
   return { x: lead.x - Math.cos(lead.rot) * 70, y: lead.y - Math.sin(lead.rot) * 70 };

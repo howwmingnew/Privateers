@@ -3,7 +3,7 @@
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const angDiff = (a, b) => { let d = (a - b) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; };
-const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const dist = (a, b) => { const dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy); };   // not Math.hypot: a builtin call V8 won't inline, and the AI asks this hundreds of times a frame
 const rand = (a, b) => a + Math.random() * (b - a);
 // Generation RNG: who spawns where and as what. Math.random until a daily or seeded run (js/run.js) points it at a seeded
 // stream, so the same sea comes out the same on every device. Purely visual effects keep using rand / Math.random.
