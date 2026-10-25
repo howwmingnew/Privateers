@@ -12,7 +12,7 @@ function hud(force) {
   if (force || !hud.lv) {
     const lv = shipRating();
     if (hud.lv && lv > hud.lv && typeof lvBanner === "function") lvBanner(lv);   // a purchase raised it (js/juice-ui.js)
-    hud.lv = lv; $("lv").textContent = lvLabelText(); $("lv").title = t("lvHow");   // js/bounty-rec.js: what Ship Lv is and how it rises
+    hud.lv = lv; $("lv").innerHTML = lvLabelHtml(); $("lv").title = t("lvHow");   // js/bounty-rec.js: what Ship Lv is and how it rises
   }
 }
 const mini = document.getElementById("mini"), mctx = mini.getContext("2d");

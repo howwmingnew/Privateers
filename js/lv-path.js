@@ -4,19 +4,21 @@
 // moves it: the HUD, the ledger and every upgrade button show the share of the way to the next level instead, and the poster says how far
 // short you are and what to buy first. All of it works on previews of the save (playerPower's `what`); nothing here changes it.
 Object.assign(STR.en, {
-  shipLvP: "Ship Lv {n} · next {p}%", statLvP: "Ship <b>Lv {n}</b> · next {p}%",
+  shipLvP: "Ship Lv {n} · next {p}%", shipLvN: "Ship Lv {n}", lvNext: " · next {p}%", statLvP: "Ship <b>Lv {n}</b> · next {p}%",
   lvGainUp: "Ship Lv → {n}", lvGainPct: "Ship Lv progress +{p}%",
   pRecGap: "About {x} levels to go.", pRecPath: "Cheapest way up: upgrade {what} first; about {gold} gold of upgrades in all.",
   pRecPathBig: "Upgrades alone will not get there: look at a bigger ship.", pRecWhatHull: "the hull",
 });
 Object.assign(STR.zh, {
-  shipLvP: "船艦 Lv {n} · 下一級 {p}%", statLvP: "船艦 <b>Lv {n}</b> · 下一級 {p}%",
+  shipLvP: "船艦 Lv {n} · 下一級 {p}%", shipLvN: "船艦 Lv {n}", lvNext: " · 下一級 {p}%", statLvP: "船艦 <b>Lv {n}</b> · 下一級 {p}%",
   lvGainUp: "船艦 Lv → {n}", lvGainPct: "船艦 Lv 進度 +{p}%",
   pRecGap: "還差約 {x} 級。", pRecPath: "最省的補法：先升級{what}，全部補齊約再花 {gold} 金幣。",
   pRecPathBig: "光靠升級補不到：考慮換更大的船。", pRecWhatHull: "船體",
 });
 
 const lvLabelText = () => { const r = lvProgress(); return t("shipLvP", { n: r.lv, p: r.pct }); };
+// The HUD label: the progress part in its own span, so a very short screen can drop it (css/style.css) and keep the level.
+const lvLabelHtml = () => { const r = lvProgress(); return `${t("shipLvN", { n: r.lv })}<span class="lvp">${t("lvNext", { p: r.pct })}</span>`; };
 // "Ship Lv progress +4%" for the what-if `what` (playerPower), "Ship Lv → 3" when it crosses a level, "" when it changes nothing.
 function lvGainText(what) {
   const a = lvProgress(), b = lvProgress(what);
