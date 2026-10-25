@@ -109,7 +109,17 @@ await tabTo(4); t = await stage();
 check(/Sink bounty 4 to unlock · 5,000 gold/.test(t), "slot 4 says what unlocks it and for how much");
 await tabTo(1);
 await page.click('#stage [data-act="escBuy"][data-id="0"]');
-check(await ev(() => save.gold === 500 && save.escorts.length === 0) && /Press again.*to buy/.test(await stage()), "the first tap on a slot only arms the button");
+check(await ev(() => save.gold === 500 && save.escorts.length === 0) && /Confirm purchase\?/.test(await stage()), "the first tap on a slot only arms the button");
+// #107: the armed state has no timer; a tap elsewhere or Esc puts it down, only the second tap on the button buys
+const armedNow = () => ev(() => !!document.querySelector('#stage [data-act="escBuy"][data-armed]'));
+await page.waitForTimeout(6500 * SLOW);
+check(await armedNow() && await ev(() => save.gold === 500), "the armed button does not run out (still armed after 6.5 s)");
+await page.click("#pMsg");
+check(!(await armedNow()) && /Buy slot/.test(await stage()) && await ev(() => save.gold === 500 && save.escorts.length === 0), "a tap anywhere else puts the purchase down");
+await page.click('#stage [data-act="escBuy"][data-id="0"]'); await page.waitForTimeout(450);
+await page.keyboard.press("Escape");
+check(!(await armedNow()) && await ev(() => save.gold === 500 && docked), "Esc puts it down too, and stays in the ledger");
+await page.click('#stage [data-act="escBuy"][data-id="0"]');
 await page.waitForTimeout(500);
 await page.click('#stage [data-act="escBuy"][data-id="0"]');
 check(await ev(() => save.gold === 300 && save.escorts.length === 1 && save.escorts[0].id === "" && save.escorts[0].stance === "normal"), "the second tap buys slot 1 for 200 (stance Normal by default)");

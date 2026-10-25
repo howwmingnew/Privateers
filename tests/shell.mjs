@@ -424,6 +424,60 @@ for (const dpr of [1, 2]) {
   ok("tutorial: a picked-up crate on 'keep firing' advances to 'sell' without a kill of its own", await ev(page, () => tut.step >= 5));
   await ctx.close();
 }
+{   // #106: the card names Safe Harbor, says what a supply station / trade port can do, teaches the right mouse button, never skips on a sinking or flickers between two lines
+  const { ctx, page } = await open(D, { tag: "tut-106" });
+  await toSea(page);
+  const txt = (step, dev, dk, kind) => ev(page, ([n, d, k, kd]) => {
+    const keep = { dev: device, dk: docked, kind: dockKind, step: tut.step };
+    device = d; docked = k; if (kd) dockKind = kd; tut.step = n; tut.plan = ""; tut.sold = false;
+    if (n >= 5) cargo = Math.max(cargo, 20);   // set in the same tick as the read: a live frame between two calls (a sinking wipes the hold) must not turn the sell step into "again"
+    const s = coachText(); device = keep.dev; docked = keep.dk; dockKind = keep.kind; tut.step = keep.step; return s;
+  }, [step, dev, dk, kind]);
+  const aim = await txt(1, "mouse", false), out = await txt(0, "mouse", false), outKeys = await txt(0, "keys", false);
+  ok("tutorial: the aim step says 'gold-ringed', never 'green-tagged ship', and that green only means weaker than you",
+    /gold-ringed/.test(aim) && /weaker than you/.test(aim) && !/green-tagged/.test(aim), { aim });
+  ok("tutorial: a mouse player is taught the right button to steer and the left to fire (a keyboard player is not)",
+    /right button/.test(out) && /left-click fires/.test(out) && !/right button/.test(outKeys), { out, outKeys });
+  await ev(page, () => { cargo = 20; save.gold = 999; });
+  const sell = await txt(5, "keys", false), buySea = await txt(6, "keys", false), buyDock = await txt(6, "keys", true, "return");
+  ok("tutorial: the sell and buy steps name Safe Harbor", [sell, buySea, buyDock].every(s => /Safe Harbor/.test(s)), { sell, buySea, buyDock });
+  const wrongSupply = await txt(6, "keys", true, "supply"), wrongTrade = await txt(6, "keys", true, "trade"), sellSupply = await txt(5, "keys", true, "supply");
+  ok("tutorial: docked at a supply station or trade port, the card says what it cannot do and points back to Safe Harbor",
+    /Supply Station only mends/.test(wrongSupply) && /Trade Port only buys/.test(wrongTrade) && /sell your cargo/.test(sellSupply) &&
+    [wrongSupply, wrongTrade, sellSupply].every(s => /Safe Harbor/.test(s)), { wrongSupply, wrongTrade, sellSupply });
+  const arrow = await ev(page, () => { enterStep(5); tut.plan = ""; cargo = 20; const g = guideTarget(0); return { label: g && g.label, x: g && g.x === PORT.x }; });
+  ok("tutorial: with cargo aboard the gold arrow points at Safe Harbor and is labelled with its name", arrow.label === "Safe Harbor" && arrow.x, arrow);
+
+  // a sinking (the 1.7 s before the ledger, then the sea again) moves the card nowhere, even with a hold or a picked-up crate in the books
+  await ev(page, () => { player.x = PORT.x + DOCK_R + 220; player.y = PORT.y; cargo = 0; enterStep(2); sink(player, null); cargo = 12; tut.looted = true; });
+  await page.waitForTimeout(500 * SLOW);
+  ok("tutorial: while the ship is going down the card does not advance", await ev(page, () => tut.step === 2));
+  await until(page, () => docked);
+  await page.click("#sail");
+  await until(page, () => !docked && !paused);
+  await page.waitForTimeout(800 * SLOW);
+  ok("tutorial: after a sinking on step 3 the card is still on step 3 and saved there (no jump to 'sell')", await ev(page, () => tut.step === 2 && save.tutorialStep === 2), await ev(page, () => ({ step: tut.step, saved: save.tutorialStep })));
+
+  // one answer for the card and the arrow: an empty hold with no crate asks for a new ship; a crate drifting up later does not flip the text back and forth
+  await ev(page, () => { for (const c of [...crates]) { c.spr.destroy(); c.label?.destroy(); crates.splice(crates.indexOf(c), 1); } cargo = 0; enterStep(5); player.x = PORT.x + DOCK_R + 220; player.y = PORT.y; });
+  await page.waitForTimeout(300 * SLOW);
+  const flip = await ev(page, () => new Promise(res => {
+    const seen = [document.getElementById("coachTxt").textContent];
+    const c = addCrate(player.x + 600, player.y, 10, null);
+    let n = 0;
+    const iv = setInterval(() => {
+      const s = document.getElementById("coachTxt").textContent;
+      if (seen[seen.length - 1] !== s) seen.push(s);
+      if (++n === 4) { crates.splice(crates.indexOf(c), 1); c.spr.destroy(); }   // the crate is gone again before the hold time is up
+      if (n === 8) { clearInterval(iv); res(seen); }
+    }, 100);
+  }));
+  ok("tutorial: a crate that appears and vanishes inside the hold time never changes the card text", flip.length === 1 && /plunder is gone/i.test(flip[0]), { flip });
+  await ev(page, () => { addCrate(player.x + 600, player.y, 10, null); });
+  await page.waitForTimeout(1500 * SLOW);
+  ok("tutorial: a crate that stays afloat turns the card to 'scoop it up' once, and the arrow points at the crate", await ev(page, () => /crate/i.test(document.getElementById("coachTxt").textContent) && guideTarget(0).r === 24));
+  await ctx.close();
+}
 {   // docking mid-card never sends the captain back to step 1 of the card ("sail out"): the sea gets a fresh mark and the chase restarts at "find the ship" or later (also on a replay, where a kill is already on the books)
   for (const replay of [false, true]) {
     const { ctx, page } = await open(D, { tag: "tut-dock" });

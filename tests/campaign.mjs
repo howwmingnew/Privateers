@@ -74,21 +74,21 @@ console.log("Fresh campaign (desktop, en)");
   check(fold.has && fold.closed === (fold.open.length > 0) && (fold.open.length > 0 || fold.hint) && fold.inside && !fold.loose && /Not unlocked yet \(\d+\)/.test(fold.summary) && !fold.open.includes("schooner"), `locked ships fold away: "${fold.summary}", on sale: ${fold.open}`);
   // the next level's gain sits on every hull upgrade button
   const gain = await page.evaluate(() => [...document.querySelectorAll('#yard [data-act="yard"] .gain')].map(g => g.textContent));
-  check(gain.length === 3 && /^Hull \+\d+%( · Ship Lv (progress \+\d+%|→ \d+))?$/.test(gain[0]) && /^Speed \+\d+%$/.test(gain[1]) && /^Hold \+\d+%$/.test(gain[2]), `hull, sails and hold buttons name their gain (${gain})`);
+  check(gain.length === 3 && /^→ Hull \+\d+%( · Ship Lv (progress \+\d+%|→ \d+))?$/.test(gain[0]) && /^→ Speed \+\d+%$/.test(gain[1]) && /^→ Hold \+\d+%$/.test(gain[2]), `hull, sails and hold buttons name their gain (${gain})`);
   await o.shot("desktop-en-1-ledger");
   // #98: the first bounty is the newcomer's: one level above his badge, no escorts, never out of his own waters; the HUD and ledger show Ship Lv progress
   const ned = await page.evaluate(() => {
     resetLedgerPick(); renderPort();
     const b = BOUNTIES[0], th = bountyThreat(b), lair = lairOf(b), e = { boss: "ned", lair, x: lair.x + 700, y: lair.y, alive: true };
     const inward = bossTether({ ...e }, Math.PI, 1), away = bossTether(e, 0, 1), home = bossTether({ ...e, x: lair.x + 100 }, 0, 1), other = bossTether({ ...e, boss: "carey" }, 0, 1);
-    const mid = bossTether({ ...e, x: lair.x + 550 }, Math.PI, 1), back = bossTether({ ...e, x: lair.x + 450 }, 0, 1);   // turned back at 700: still home-bound at 550, free again at 450 (inside tether - 120)
+    const mid = bossTether({ ...e, x: lair.x + 550 }, Math.PI, 1), back = bossTether({ ...e, x: lair.x + 300 }, 0, 1);   // turned back at 700: still home-bound at 550, free again at 300 (inside tether - 120)
     const far = polarPt(b.ang, b.r + BOSS_TETHER);   // as far out as he may sail: still the Reef Straits, never the Navy Lanes
     return { mid: !!mid, back, th, rec: bountyRecLv(b), esc: b.escorts.length, tether: b.tether, away: away && Math.round(Math.cos(away.desired) * 100), inward, home, other, seaFar: seaOfRing(ringAt(dist(far, PORT))).id,
       hud: document.getElementById("lv").textContent, stat: document.getElementById("pStats").textContent, poster: document.querySelector("#wanted .poster").textContent, prog: lvProgress() };
   });
   check(ned.rec === ned.th + 1 && ned.esc === 0 && ned.rec === 3, `Red Ned: no escorts, asks one level above his badge (badge ${ned.th}, ready at ${ned.rec})`);
   check(ned.mid && ned.back === null, `a tethered boss that has turned back keeps going home until 120 px inside the line, then chases again (${ned.mid}, ${ned.back})`);
-  check(ned.tether === 600 && ned.away === -100 && ned.inward === null && ned.home === null && ned.other === null && ned.seaFar === "reef", `Red Ned is tethered to his lair: turns back past ${ned.tether} px when heading out, not when heading in, the others are not tethered (${JSON.stringify({ away: ned.away, inward: ned.inward, home: ned.home, other: ned.other, sea: ned.seaFar })})`);
+  check(ned.tether === 480 && ned.away === -100 && ned.inward === null && ned.home === null && ned.other === null && ned.seaFar === "reef", `Red Ned is tethered to his lair: turns back past ${ned.tether} px when heading out, not when heading in, the others are not tethered (${JSON.stringify({ away: ned.away, inward: ned.inward, home: ned.home, other: ned.other, sea: ned.seaFar })})`);
   check(new RegExp(`^Ship Lv ${ned.prog.lv} · next ${ned.prog.pct}%$`).test(ned.hud) && /next \d+%/.test(ned.stat), `HUD and ledger show Ship Lv progress: "${ned.hud}" / "${ned.stat}"`);
   check(/levels to go/.test(ned.poster) && /Cheapest way up/.test(ned.poster) && !/lair|badge at sea/.test(ned.poster), `the poster says how far short and what to buy first, in plain words: "${ned.poster}"`);
   const upg = await page.evaluate(() => { save.gold = 500; deckSel = placeOf("left", 0); renderPort(); const b = document.querySelector('[data-act="gup"] .gain'); return { gain: b && b.textContent, dmg: [...document.querySelectorAll(".cpanel .ds")].map(x => x.textContent).join("|") }; });

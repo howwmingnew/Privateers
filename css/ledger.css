@@ -52,7 +52,14 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 
 /* ---- the fleet: a tab per ship, the picked ship's gun deck, one context panel (js/ledger-tabs.js, js/ledger-panel.js) ---- */
 #fleet { min-width: 0; }
-.tabs { display: flex; gap: 6px; overflow-x: auto; min-width: 0; padding: 2px 2px 0; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+/* the tabs stay under the sticky header while the sheet scrolls (#107): tapping a gun port scrolls its panel into view, and the ship tabs must not leave with the deck */
+.tabs { display: flex; gap: 6px; overflow-x: auto; min-width: 0; padding: 2px 2px 0; scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+  position: sticky; top: calc(min(70px * var(--ts), 18vw) - 20px); z-index: 3; background: var(--parch); }
+.tabs[hidden] { display: none; }
+/* which ship a panel edits, in its title */
+.cpanel h3 .rtag { display: inline-block; margin-right: 8px; padding: 0 8px; border-radius: 9px; background: var(--brass); color: #1b1410; font: 700 calc(12px * var(--ts))/1.6 var(--f-ui); letter-spacing: .04em; vertical-align: .15em; }
+.cpanel .emptyfirst { color: #8a5d0c; font-weight: 700; }
+.bills { display: block; margin-top: 2px; color: #9c2218; font-weight: 600; }
 .tab { flex: 1 0 calc(108px * var(--ts)); min-width: calc(108px * var(--ts)); display: flex; align-items: center; gap: 8px; position: relative; font: inherit; color: var(--ink); text-align: left; cursor: pointer;
   background: var(--parch-2); border: 2px solid rgba(42,29,16,.5); border-bottom: 0; border-radius: 10px 10px 0 0; padding: 6px 8px; opacity: .85; }
 .tab:hover { opacity: 1; }
@@ -150,7 +157,7 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 
 /* ---- ship rows: the owned/locked note on its own line, locked models folded away, a gain line under an upgrade button (js/ledger-panel.js) ---- */
 .item .ds .own, .item .ds .lock { display: block; margin-top: 2px; }
-.item .btn .gain { display: block; margin-top: 1px; font-size: .78em; font-weight: 600; opacity: .85; white-space: normal; }
+.btn .gain { display: block; margin-top: 1px; font-size: .78em; font-weight: 600; opacity: .85; white-space: normal; }
 .lockedships { margin: 6px 0 0; }
 .lockedships > summary { cursor: pointer; font-weight: 700; color: var(--ink-soft); padding: 4px 0; font-size: calc(13px * var(--ts)); }
 .lockedships .item { opacity: .75; }
@@ -176,10 +183,8 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
   #port #fleet + section { order: -1; }
   #port .sheet > footer { order: 99; }
 }
-/* a purchase waiting for its second tap: a bar under the label drains over the time left (js/escort-ui.js armAttrs) */
-.btn[data-armed] { position: relative; overflow: hidden; }
-.btn[data-armed]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: currentColor; opacity: .7; transform-origin: left; animation: armdrain linear forwards; }
-@keyframes armdrain { to { transform: scaleX(0); } }
+/* a purchase waiting for its second tap (js/escort-ui.js armAttrs): it does not expire, so the button just stays marked until it is bought or put down */
+.btn[data-armed] { background: #e8b84a; color: #1b1410; outline: 3px solid var(--blood, #a32c1f); outline-offset: 1px; font-weight: 800; }
 #port { --pz: 1; }   /* the zoom css/style.css gives #port on big screens, for the sticky column's height */
 @media (min-width: 1500px) and (min-height: 900px) { #port { --pz: 1.25; } }
 @media (min-width: 2400px) and (min-height: 1300px) { #port { --pz: 1.5; } }

@@ -69,6 +69,8 @@ function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
   return e;
 }
 const LOOT_SEEN_R = 450;   // px from the player inside which an enemy's badge shows its plunder (about gun range)
+// The plate's colour and glyph say how strong a ship is next to you; this icon says whose it is (the Navy's sinking makes you Wanted).
+const factionIcon = e => e.merchant || e.faction === "merchant" ? "$ " : e.faction === "navy" ? "⚓ " : e.faction === "pirate" ? "☠ " : "";
 function refreshBadge(e) {
   // Phaser redraws and re-uploads the whole label on every setColor / setBackgroundColor, even to the colour it has, so the
   // colours go straight into its style and it is drawn once. Compared with the label itself, not a remembered copy: js/flee.js adds its tag with setText.
@@ -83,7 +85,7 @@ function refreshBadge(e) {
   // the plunder aboard only reads through the spyglass, so a distant fleet is a tidy row of levels, not a price list
   // the number is how hard it fights (threatL), the same figure its colour and glyph compare with your Ship Lv
   const n = e.threatL ?? e.L, label = e.lootSeen ? t("badge", { n, g: fmt(e.loot + (e.stolen || 0)) }) : t("badgeLv", { n });
-  paint(tier.glyph + " " + label, c, c === "#d9493a" ? "#fff6ea" : "#1b1410");
+  paint(factionIcon(e) + tier.glyph + " " + label, c, c === "#d9493a" ? "#fff6ea" : "#1b1410");
 }
 
 // ---------- Steering & AI ----------

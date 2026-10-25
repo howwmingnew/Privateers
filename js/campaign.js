@@ -55,8 +55,8 @@ Object.assign(STR.zh, {
 // finale to a refitted ship of the line rated ~13 (5/6). The deep-water classes carry more hull than the stand-ins
 // these multipliers were first set against, so the late ones are lower.
 // #98: the first bounty is the newcomer's: Red Ned asks only one level above his badge (b.margin, js/bounty-rec.js), and a hurt Ned sheers
-// off no farther than b.tether from his lair, so chasing him never leads into the Navy Lanes (the lair is mid-ring 3: 600 px out is still the Reef Straits).
-const BOSS_TETHER = 600;
+// off no farther than b.tether from his lair, so chasing him never leads into the Navy Lanes (the lair is mid-ring 3: 480 px out ends 320 px short of the Navy Lanes, #105).
+const BOSS_TETHER = 480;
 // Lair: polar from the harbor (screen y points south), placed mid-ring so its level is the bounty's level.
 // Escort `guns`/`hpMul` were stand-ins from before the archetypes; js/archetypes.js campaignOutfit gives each escort
 // its real class (the fire-raiders are fireships), so only `cls` matters now.
@@ -101,6 +101,13 @@ let bossShip = null, bossTag = null, bossSeen = false, bossHitAt = -1e9, storyKe
 // The hunt toast is news: a bounty not announced yet, or one the player has not been near for HUNT_REMIND_MS.
 // On the first voyage the bounty waits until the tutorial is done (bountyHeld), so it never crosses the lesson.
 const HUNT_REMIND_MS = 5 * 60 * 1000;
+// A hurt bounty keeps his wounds while the page stays open (#105): after the captain's death or a return to harbor he sails again
+// with the hull share he had, mended by BOSS_MEND of it. Not saved: a reload is a fresh start. Keyed by bounty id.
+const BOSS_MEND = 0.2;
+let bossHpFrac = {};
+const bossHpReset = () => { bossHpFrac = {}; };   // a new game, a wiped save or New Game+ starts the bounties whole
+const keepsWounds = b => b === BOUNTIES[0];   // only Red Ned, the newcomer's duel (#98), keeps his wounds; the later captains sail whole each time
+const bossMended = (frac, mend = BOSS_MEND) => frac === undefined ? 1 : Math.min(1, Math.max(0, frac) + mend);
 let huntSeenAt = {}, bountyHeld = false;
 function makeSkullTex(sc) {
   if (sc.textures.exists("skull")) return;
@@ -150,6 +157,7 @@ function spawnBounty() {
   if (!b) return;
   const boss = spawnCaptain(b);
   if (!boss) { console.warn(`Bounty "${b.id}": no room at the lair; it sails next time.`); return; }
+  if (!runActive() && keepsWounds(b)) boss.hp = boss.maxHp * Math.max(0.05, bossMended(bossHpFrac[b.id]));   // campaignOutfit keeps this share (js/archetypes.js)
   bossShip = boss; bossTag = makeBossTag(bossName(b));
   const now = performance.now(), last = huntSeenAt[b.id];
   if (last === undefined || now - last > HUNT_REMIND_MS) {
@@ -189,12 +197,14 @@ onHook("sunk", (s, killer) => {
   if (!s.boss || s !== bossShip) return;
   const b = findBounty(s.boss);
   const paid = killer === player || S.time.now - bossHitAt < ASSIST_MS;
+  bossHpFrac = { ...bossHpFrac, [s.boss]: undefined };
   clearBoss();
   if (runActive() && b === runBounty()) { runBossSunk(paid); return; }   // the daily captain pays no chest (js/run.js)
   if (paid) claimBounty(b, s); else toast(t("bossEscaped", { name: bossName(b) }));
 });
 onHook("frame", () => {
   if (bossShip && !bossShip.alive) clearBoss();
+  if (bossShip && bossShip.maxHp > 0 && !runActive() && keepsWounds(findBounty(bossShip.boss)) && bossHpFrac[bossShip.boss] !== bossShip.hp / bossShip.maxHp) bossHpFrac = { ...bossHpFrac, [bossShip.boss]: bossShip.hp / bossShip.maxHp };
   placeBossTag();
   if (paused || docked) return;
   for (const e of enemies) {   // idle bosses and escorts keep to their lair
@@ -303,5 +313,6 @@ function startNewGamePlus() {
   persist();
   dock("welcome");
   storyKey = "ngStory"; renderPort(); hud(true);
+  bossHpReset();
   runHook("newGamePlus", save.ngPlus);
 }

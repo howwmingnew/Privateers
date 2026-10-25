@@ -109,9 +109,9 @@ test("gun bay: each upgrade button names its gain (one level 15%, five levels co
   const g = bay();
   g.run(`deckSel = { side: "bow", i: 0 }; save.gold = 1e6`);
   const en = g.run("gunCardHtml()");
-  assert.match(en, /data-act="gup" >Upgrade to Lv 3 \(\d[\d,]* gold\)<span class="gain">Damage \+15%<\/span>/);
-  assert.match(en, /Upgrade 5 levels[^<]*<span class="gain">Damage \+101%<\/span>/);
-  assert.match(bay("zh").run(`deckSel = { side: "bow", i: 0 }; save.gold = 1e6; gunCardHtml()`), /<span class="gain">火力 \+15%<\/span>/);
+  assert.match(en, /data-act="gup" >Upgrade to Lv 3 \(\d[\d,]* gold\)<span class="gain"><span class="gsep">→ <\/span>Damage \+15%<\/span>/);
+  assert.match(en, /Upgrade 5 levels[^<]*<span class="gain"><span class="gsep">→ <\/span>Damage \+101%<\/span>/);
+  assert.match(bay("zh").run(`deckSel = { side: "bow", i: 0 }; save.gold = 1e6; gunCardHtml()`), /<span class="gain"><span class="gsep">→ <\/span>火力 \+15%<\/span>/);
 });
 
 // ---------- #33: letter of marque, level warning (js/bounty-rec.js) ----------

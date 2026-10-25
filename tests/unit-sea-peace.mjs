@@ -34,6 +34,17 @@ test("sea ahead: warns once within the edge distance, for a dangerous sea only",
   assert.equal(g.run("seaAheadDue(100, true, true)"), false, "once per approach");
 });
 
+test("#105: until the first bounty the Navy spares the captain anywhere; pirates and boss ships are not spared", () => {
+  const g = boot(["js/novice.js"]);
+  g.run("spare = { bounty: false, shallows: false, navy: true, cap: 2 }");
+  assert.equal(g.run("noviceSpare({ faction: 'navy', L: 8 })"), true, "a Lv 8 Navy ship leaves a newcomer alone, in any sea");
+  assert.equal(g.run("noviceSpare({ faction: 'pirate', L: 8 })"), false, "pirates still attack");
+  assert.equal(g.run("noviceSpare({ faction: 'navy', L: 8, boss: 'hale' })"), false);
+  assert.equal(g.run("noviceSpare({ faction: 'navy', L: 8, fixed: true })"), false, "a shore battery is not a patrol");
+  g.run("spare = { bounty: false, shallows: false, navy: false, cap: 2 }");
+  assert.equal(g.run("noviceSpare({ faction: 'navy', L: 8 })"), false, "after the first bounty the Navy hunts as usual");
+});
+
 test("noviceSpare: bosses and escorts are never spared; ordinary ships follow the zone", () => {
   const g = boot(["js/novice.js"]);
   g.run("spare = { bounty: true, shallows: false, cap: 2 }");
@@ -71,4 +82,11 @@ test("plate spread: overlapping plates are lifted clear, separate ones stay", ()
   assert.deepEqual(g.json("spreadPlates([{ x: 0, y: 0, w: 60, h: 18 }, { x: 300, y: 2, w: 60, h: 18 }])"), [0, 2], "far apart: untouched");
   const three = g.json("spreadPlates([{ x: 0, y: 100, w: 60, h: 18 }, { x: 5, y: 102, w: 60, h: 18 }, { x: -5, y: 101, w: 60, h: 18 }])");
   for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) assert.ok(Math.abs(three[i] - three[j]) >= 18, `plates ${i}/${j} clear: ${three}`);
+});
+
+test("a Navy ship the captain has shot at is no longer spared, for the rest of the voyage", () => {
+  const g = boot(["js/novice.js"]);
+  g.run("spare = { bounty: false, shallows: false, navy: true, cap: 2 }; var a = { faction: 'navy', L: 8 }, b = { faction: 'navy', L: 8 }; provoked.add(a)");
+  assert.equal(g.run("noviceSpare(a)"), false, "the provoked ship is hostile again");
+  assert.equal(g.run("noviceSpare(b)"), true, "its neighbours are still spared");
 });

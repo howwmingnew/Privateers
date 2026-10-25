@@ -121,8 +121,8 @@ body.scale-preview #title, body.scale-preview #pause { opacity: 0; pointer-event
   background: rgba(8,34,45,.9); color: var(--foam); border: 1px solid rgba(240,199,102,.5); border-left: 4px solid #f0c766; border-radius: 3px;
   padding: 5px 12px 6px; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
 /* the card hops to the top while the ship it points at is in the lower half (js/tutorial.js drawGuide) */
-#coach.up { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + max(140px, 28px + 96px * var(--ts))); }
-@media (max-width: 700px) { #coach.up { top: calc(env(safe-area-inset-top, 0px) + max(178px, 28px + 134px * var(--ts))); } }   /* a phone's compass and chart reach lower */
+#coach.up { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + min(max(140px, 28px + 96px * var(--ts)), 38vh)); }   /* never lower than 38% of the screen: a huge UI size on a short window must not push it off the bottom half */
+@media (max-width: 700px) { #coach.up { top: calc(env(safe-area-inset-top, 0px) + min(max(178px, 28px + 134px * var(--ts)), 38vh)); } }   /* a phone's compass and chart reach lower */
 #coach .coach-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
 #coach .eyebrow { color: #f0c766; font-size: min(calc(11px * var(--ts)), 4.4vh); }
 #coach p { white-space: pre-line; margin: 1px 0 0; font-size: min(calc(14px * var(--ts)), 5.6vh); line-height: 1.35; }   /* short screens: the card must not climb into the bars */

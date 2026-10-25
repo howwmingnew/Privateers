@@ -116,12 +116,12 @@ function enemyPower(L) {
 const gearMul = k => (typeof gx === "function" ? 1 + gx(k) : 1), gearCut = k => (typeof gx === "function" ? 1 - gx(k) : 1);
 const gunBoost = gun => (typeof gunMods === "function" ? 1 + gunMods(gun).gdmg : 1);
 const gunReload = gun => (typeof gunMods === "function" ? 1 + gunMods(gun).greload : 1);
-// what (for "what if" previews, nothing is changed): { gun: gun => the gun to count in its place, hull: a hull level to count instead of the ship's }
+// what (for "what if" previews, nothing is changed): { gun: gun => the gun to count in its place, hull: a hull level to count instead of the ship's, extra: guns to count besides the mounted ones }
 function playerPower(what = {}) {
   let dps = 0, fireRate = 0, fireDps = 0;
-  for (const { key } of MOUNTS) for (const port of save[key]) {
-    if (!port) continue;   // an empty port
-    const gun = what.gun ? what.gun(port) : port, g = GUNS[gun.g], m = gunLvMul(gun.lv) * gunBoost(gun), rate = g.rpm / 60 * MOUNT_UPTIME * gunReload(gun);
+  const guns = MOUNTS.flatMap(({ key }) => save[key].filter(Boolean).map(port => (what.gun ? what.gun(port) : port))).concat(what.extra || []);   // an empty port holds nothing
+  for (const gun of guns) {
+    const g = GUNS[gun.g], m = gunLvMul(gun.lv) * gunBoost(gun), rate = g.rpm / 60 * MOUNT_UPTIME * gunReload(gun);
     dps += g.dmg * m * rate * shipGunK();
     if (g.burn) { fireRate += rate; fireDps = Math.max(fireDps, g.burn * m * shipGunK()); }
   }

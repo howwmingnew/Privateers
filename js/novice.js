@@ -7,10 +7,12 @@
 Object.assign(STR.en, {
   seaWarnTag: "Danger", seaWarn: "Ships here far out-fight your Lv {n}. Turn back toward the harbor, or be ready to run.",
   seaAhead: "Warning: {sea} lies just ahead, and its ships far out-fight you. Turn back now.",
+  navyAim: "That is a Navy ship (the ⚓ on its plate). Sinking Navy ships gets you Wanted. It will not attack you first for now.",
 });
 Object.assign(STR.zh, {
   seaWarnTag: "危險", seaWarn: "這裡的船遠比你的 Lv {n} 強。建議掉頭回港，或做好逃跑的準備。",
   seaAhead: "警告：前方就是{sea}，那裡的船遠比你強。現在掉頭還來得及。",
+  navyAim: "這是海軍（標籤上有 ⚓）。攻擊海軍會被通緝；在你領第 1 張懸賞前，牠不會先攻擊你。",
 });
 
 const NOVICE_LV = 4;          // a Ship Lv under this still counts as a novice
@@ -24,15 +26,20 @@ const noviceCap = rating => rating + NOVICE_OVER;
 const seaWarnGap = (seaLv, rating) => seaLv - rating >= SEA_WARN_GAP;
 
 // Peace for a newcomer (#102). Red Ned's lair: until the first bounty is claimed, no ship but Ned himself joins a fight within
-// PEACE_R of it unless the captain shot at it first, so the first bounty is a duel, not a brawl. In the Shallows, a novice is not
-// hunted by Navy ships rated over noviceCap. The later bounties keep their crowds: the difficulty bands are untouched.
+// PEACE_R of it unless the captain shot at it first, so the first bounty is a duel, not a brawl. Until that first bounty is claimed the
+// Navy leaves the captain alone anywhere unless shot at first (#105): a ship's colour is its strength, not its side, and a newcomer
+// who cannot yet tell Navy from pirate must not be hunted for it. In the Shallows, a novice is also spared by every Navy ship rated over noviceCap. The later bounties keep their crowds: the difficulty bands are untouched.
 const PEACE_R = 1100, SEA_AHEAD_R = 380;
 const bountyPeace = (claimed, dLair) => claimed === 0 && dLair < PEACE_R;
-let spare = { bounty: false, shallows: false, cap: 0 }, aheadShown = false;
+let spare = { bounty: false, shallows: false, navy: false, cap: 0 }, aheadShown = false, navyTipShown = false;
+// Navy ships the captain has shot at this voyage stay hostile (cleared on sail): provoking one ends its peace for good, not for 8 s.
+let provoked = new WeakSet();
+onHook("hurt", (s, dmg, src) => { if (src === player && s.faction === "navy" && !s.isPlayer) provoked.add(s); });
+const NAVY_NOTE_R = 460;   // the first Navy ship this close to the captain explains itself (once, tipOnce js/hull-alert.js)
 // May e leave the captain alone this frame? (read by isHostile, js/ships.js, and the hunters, js/heat.js)
 function noviceSpare(e) {
-  if (e.boss || e.escortOf || e.ally) return false;
-  if (spare.bounty) return true;
+  if (e.boss || e.escortOf || e.ally || e.fixed || provoked.has(e)) return false;
+  if (spare.bounty || (spare.navy && e.faction === "navy")) return true;
   return spare.shallows && e.faction === "navy" && (e.threatL ?? e.L) > spare.cap;
 }
 const noviceZone = () => spare.shallows;
@@ -43,8 +50,12 @@ function noviceTick() {
   const r = live ? curRating() : 99;
   spare = {
     bounty: !!(live && typeof bossShip !== "undefined" && bossShip && bossShip.alive && bossShip.lair && bountyPeace(save.campaign.bounty, dist(player, bossShip.lair))),
-    shallows: !!live && noviceAt(r, ringAt(dist(player, PORT))), cap: noviceCap(r),
+    shallows: !!live && noviceAt(r, ringAt(dist(player, PORT))), navy: !!live && save.campaign.bounty === 0 && !save.ngPlus && !(typeof heat === "number" && heat > 0), cap: noviceCap(r),
   };
+  if (live && spare.navy && !navyTipShown && typeof tipOnce === "function" && enemies.some(e => e.alive && !e.fixed && e.faction === "navy" && dist(e, player) < NAVY_NOTE_R)) {
+    navyTipShown = true;   // a memory flag: tipOnce reads storage, and a blocked store must not toast every frame
+    if (tipOnce("navyAim")) toast(t("navyAim"), false, 6000);
+  }
   if (!live || typeof seaIsDanger !== "function") return;
   const last = SEAS[SEAS.length - 1], edge = ringEdge(last.L0) - dist(player, PORT);
   if (aheadShown && edge > SEA_AHEAD_R * 2.5) aheadShown = false;   // sailed well clear: it may warn again
@@ -54,7 +65,7 @@ function noviceTick() {
   }
 }
 onHook("frame", () => { if (!paused) noviceTick(); });
-onHook("sail", () => { aheadShown = false; });
+onHook("sail", () => { aheadShown = false; provoked = new WeakSet(); });
 
 // shipRating() walks every gun and the power table: the ring quotas ask for it every frame, so it is read twice a second.
 let ratingNow = 1, ratingT = 0;

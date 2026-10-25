@@ -23,6 +23,23 @@ function rollGold(el, from, to) {
   };
   tick();
 }
+// ---------- what a visit took out of the purse, itemised under the ledger's message ----------
+// The sale line only says what came in. The escorts' repair bills (js/escort-ai.js, paid in the dock hook before the sale), a supply station's repair fee
+// (js/ports.js) and the escorts' unpaid balance would otherwise just make the purse lower than the sale says (#107). The list belongs to the message it
+// was made for: a later message (a purchase) drops it, so a stale bill never sits under a new line.
+Object.assign(STR.en, { billsHead: "Paid out: ", billSep: "; ", billEnd: ".", billEsc: "escort repairs −{n} gold", billFee: "repair fee at the supply station −{n} gold", billOwed: "{n} gold of escort repairs still owed" });
+Object.assign(STR.zh, { billsHead: "已扣款：", billSep: "；", billEnd: "。", billEsc: "隨從修理費 −{n} 金", billFee: "補給站修船費 −{n} 金", billOwed: "隨從修理費還欠 {n} 金" });
+let visitBills = [], visitBillsFor = null, billSeen = null;
+// Pure: the bill lines [{ key, n }] for the escort report (js/escort-ai.js escortReport: { paid }), a station fee and the escorts' unpaid total; empty ones left out.
+const billLines = (report, fee, owed) => [["billEsc", report ? report.paid : 0], ["billFee", fee], ["billOwed", owed]].filter(([, n]) => n > 0).map(([key, n]) => ({ key, n: Math.round(n) }));
+function setVisitBills(kind, msg) {
+  const report = typeof escortReport !== "undefined" && escortReport !== billSeen ? escortReport : null;   // only a report made by this dock's own hook
+  if (typeof escortReport !== "undefined") billSeen = escortReport;
+  const fee = kind === "supply" && typeof visitFee !== "undefined" ? visitFee : 0, owed = (save.escorts || []).reduce((n, e) => n + (e.owed || 0), 0);
+  visitBills = billLines(report, fee, report || fee ? owed : 0); visitBillsFor = msg;
+  if (typeof visitFee !== "undefined") visitFee = 0;   // read once: a later message must not list the same fee again
+}
+const visitBillsHtml = () => (visitBills.length && visitBillsFor === portMsg ? ` <span class="bills">${t("billsHead")}${visitBills.map(b => t(b.key, { n: fmt(b.n) })).join(t("billSep"))}${t("billEnd")}</span>` : "");
 onHook("dock", () => { shownGold = null; });   // a fresh visit starts from the real figure, not from last visit's
 onHook("renderPort", () => {
   const el = goldEl(); if (!el) return;
