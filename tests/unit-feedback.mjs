@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
 const FILES = ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/hooks.js", "js/data.js", "js/save.js", "js/save-campaign.js",
-  "js/archetypes.js", "js/ledger-gold.js"];
+  "js/archetypes.js", "js/ledger-gold.js", "js/grapple.js", "js/boarding.js"];
 const SRC = FILES.map(f => [f, readFileSync(new URL("../" + f, import.meta.url), "utf8")]);
 const dom = new Proxy(function () {}, { get: (_, k) => (k === Symbol.toPrimitive ? () => "" : dom), apply: () => dom, set: () => true, construct: () => dom });
 const ctx = vm.createContext({
@@ -15,6 +15,7 @@ const ctx = vm.createContext({
   navigator: { language: "en-US" }, document: dom, window: dom, matchMedia: () => ({ matches: false, addEventListener() {} }),
   console: { log() {}, warn() {}, error: (...a) => { throw new Error(a.join(" ")); } }, setTimeout, clearTimeout, performance,
 });
+vm.runInContext("const shipRadius = s => ((s.hl ?? 28) + (s.hw ?? 13)) / 2; var crates = [], enemies = [], player = null, tut = { target: null };", ctx);   // the game provides it (js/ships.js)
 for (const [f, code] of SRC) vm.runInContext(code, ctx, { filename: f });
 const run = code => vm.runInContext(code, ctx);
 
@@ -308,5 +309,108 @@ test("gun bay (#68): the guns' strings exist in both languages and the old swap 
     assert.ok(g.run(`STR.en.${k} && STR.zh.${k}`), k);
   for (const k of ["swapGun", "swapCancel", "swapHint", "selHint", "selEmpty"]) assert.equal(g.run(`STR.en.${k} === undefined && STR.zh.${k} === undefined`), true, k);
   assert.equal(g.run("STR.zh.toStore"), "卸下");
+});
+
+// ---------- #69: the grapple's spring (js/grapple.js) ----------
+// The flagship (hull circle radius 20.5) and a prize at the origin; shipRadius of both = 20.5, so gap = distance - 41.
+const GR = "({ hl: 28, hw: 13 })";
+const sim = (setup, secs, { steer, dt = 1 / 60 } = {}) => run(`(() => {
+  const e = { ...${GR}, x: 0, y: 0, vx: 0, vy: 0 }, p = { ...${GR}, maxSpeed: 150, ...${setup} };
+  let pv = { x: 0, y: 0 }, strain = 0, board = 0, snapped = null, t = 0, minGap = 1e9;
+  while (t < ${secs} && snapped === null) {
+    ${steer || ""}
+    pv = grapplePull(pv, p, e, ${dt}); strain = grappleStrain(strain, p, e, ${dt});
+    p.x += (p.vx + pv.x) * ${dt}; p.y += (p.vy + pv.y) * ${dt};
+    if (grappleParts(strain, p, e)) snapped = t;
+    const near = dist(p, e) < shipRadius(p) + shipRadius(e) + BOARD_GAP && Math.hypot(p.vx + pv.x - e.vx, p.vy + pv.y - e.vy) < BOARD_REL_V;
+    board = near ? board + ${dt} : Math.max(0, board - ${dt} * BOARD_DECAY);
+    minGap = Math.min(minGap, grappleGap(p, e));
+    t += ${dt};
+  }
+  return { snapped, board, strain, gap: grappleGap(p, e), pv, t, minGap };
+})()`);
+
+test("#69 canHook: near and not racing past hooks; far or fast does not", () => {
+  assert.equal(run(`canHook({ ...${GR}, x: 80, y: 0, vx: 0, vy: 0 }, { ...${GR}, x: 0, y: 0, vx: 0, vy: 0 })`), true, "gap 39 at rest");
+  assert.equal(run(`canHook({ ...${GR}, x: 400, y: 0, vx: 0, vy: 0 }, { ...${GR}, x: 0, y: 0, vx: 0, vy: 0 })`), false, "far");
+  assert.equal(run(`canHook({ ...${GR}, x: 80, y: 0, vx: 0, vy: 400 }, { ...${GR}, x: 0, y: 0, vx: 0, vy: 0 })`), false, "racing past");
+});
+
+test("#69 the pull points at the prize, grows with the stretch, and never passes BOARD_PULL_MAX", () => {
+  const at = d => run(`(() => { let pv = { x: 0, y: 0 }; const e = { ...${GR}, x: 0, y: 0, vx: 0, vy: 0 }, p = { ...${GR}, x: ${d}, y: 0, vx: 0, vy: 0, maxSpeed: 150 };
+    for (let i = 0; i < 300; i++) pv = grapplePull(pv, p, e, 1 / 60); return pv.x; })()`);
+  assert.ok(at(100) < 0, "toward the prize (it is at x = 0)");
+  assert.ok(Math.abs(at(120)) > Math.abs(at(80)), "more stretch, more pull");
+  assert.ok(Math.abs(at(5000)) <= run("BOARD_PULL_MAX") + 1e-9, "capped");
+  assert.ok(Math.abs(at(41 + run("BOARD_REST"))) < 1e-6, "no pull at the slack length");
+  assert.equal(run("grapplePull({ x: 0, y: 0 }, { x: 5000, y: 0, vx: 0, vy: 0, hl: 28, hw: 13 }, { x: 0, y: 0, vx: 0, vy: 0, hl: 28, hw: 13 }, 1 / 60).y"), 0);
+});
+
+test("#69 the pull eases in: one frame never jumps to the cap", () => {
+  const first = run(`grapplePull({ x: 0, y: 0 }, { ...${GR}, x: 5000, y: 0, vx: 0, vy: 0 }, { ...${GR}, x: 0, y: 0, vx: 0, vy: 0 }, 1 / 60).x`);
+  assert.ok(Math.abs(first) < run("BOARD_PULL_MAX") * 0.2, "eased: " + first);
+});
+
+test("#69 a ship sailing slowly past the prize is pulled alongside and finishes the 2 s boarding without steering", () => {
+  const r = sim("{ x: 100, y: 60, vx: 0, vy: -60 }", 8);   // starts 59 px off her beam, drifting past at 60 px/s
+  assert.equal(r.snapped, null, "the rope holds");
+  assert.ok(r.board >= run("BOARD_T"), "progress reached " + r.board.toFixed(2) + " s");
+});
+
+test("#69 a ship that drifts straight at the prize is reeled in and held at the slack length", () => {
+  const r = sim("{ x: 90, y: 0, vx: -30, vy: 0 }", 8, { steer: "p.vx *= 0.96;" });   // she coasts to a stop
+  assert.ok(Math.abs(r.gap - run("BOARD_REST")) < 8, "settles near the slack length: " + r.gap.toFixed(1));
+  assert.ok(r.board >= run("BOARD_T"));
+});
+
+test("#69 full speed straight away parts the rope after about BOARD_SNAP_T seconds, and the cut is not instant", () => {
+  const steer = "p.vx = 150; p.vy = 0;";   // dead away at full speed (150 of maxSpeed 150)
+  const r = sim("{ x: 60, y: 0, vx: 150, vy: 0 }", 10, { steer });
+  assert.ok(r.snapped !== null, "it parts");
+  assert.ok(r.snapped >= run("BOARD_SNAP_T") - 0.05 && r.snapped < run("BOARD_SNAP_T") + 0.4, "after ~" + run("BOARD_SNAP_T") + " s, here " + r.snapped.toFixed(2));
+});
+
+test("#69 slow sails never part the rope: the flagship is reeled back instead", () => {
+  const steer = "p.vx = 60; p.vy = 0;";   // 40% of full speed, dead away
+  const r = sim("{ x: 60, y: 0, vx: 60, vy: 0 }", 30, { steer });
+  assert.equal(r.snapped, null, "still hooked after 30 s");
+  assert.ok(r.gap < run("BOARD_ROPE_MAX"), "held inside the rope: gap " + r.gap.toFixed(0));
+});
+
+test("#69 sailing away at 70% (below the strain share) builds no strain and holds for a good while; 85% parts it", () => {
+  const slow = sim(`{ x: 60, y: 0, vx: 105, vy: 0 }`, 6, { steer: "p.vx = 105; p.vy = 0;" });
+  assert.equal(slow.snapped, null, "70% of full speed: still hooked after 6 s");
+  assert.equal(slow.strain, 0, "and no strain at all");
+  const fast = sim(`{ x: 60, y: 0, vx: 127.5, vy: 0 }`, 6, { steer: "p.vx = 127.5; p.vy = 0;" });
+  assert.ok(fast.snapped !== null, "85% of full speed parts it");
+});
+
+test("#69 even a slow retreat parts the rope in the end, once it has stretched past BOARD_ROPE_MAX", () => {
+  const r = sim(`{ x: 60, y: 0, vx: 105, vy: 0 }`, 30, { steer: "p.vx = 105; p.vy = 0;" });
+  assert.ok(r.snapped !== null && r.strain === 0, "parted by length, not by strain: " + JSON.stringify({ at: r.snapped, strain: r.strain }));
+});
+
+test("#69 strain eases off when she stops pulling away, so short bursts do not add up", () => {
+  const strained = run(`(() => { const e = { ...${GR}, x: 0, y: 0, vx: 0, vy: 0 }, away = { ...${GR}, x: 60, y: 0, vx: 150, vy: 0, maxSpeed: 150 }, calm = { ...away, vx: 0 };
+    let s = 0; for (let i = 0; i < 60; i++) s = grappleStrain(s, away, e, 1 / 60);   // one second of full speed away
+    const peak = s; for (let i = 0; i < 60; i++) s = grappleStrain(s, calm, e, 1 / 60); return [peak, s]; })()`);
+  assert.ok(Math.abs(strained[0] - 1) < 1e-6 && strained[1] === 0, JSON.stringify(strained));
+});
+
+test("#69 a rope stretched past BOARD_ROPE_MAX parts at any speed", () => {
+  assert.equal(run(`grappleParts(0, { ...${GR}, x: ${41 + 421}, y: 0, vx: 0, vy: 0 }, { ...${GR}, x: 0, y: 0, vx: 0, vy: 0 })`), true);
+  assert.equal(run(`grappleParts(0, { ...${GR}, x: 300, y: 0, vx: 0, vy: 0 }, { ...${GR}, x: 0, y: 0, vx: 0, vy: 0 })`), false);
+});
+
+test("#69 the pull counts toward alongside's relative speed, and the old two-argument form is unchanged", () => {
+  const near = `{ ...${GR}, x: 41, y: 0, vx: 100, vy: 0 }`, prize = `{ ...${GR}, x: 0, y: 0, vx: 0, vy: 0 }`;
+  assert.equal(run(`alongside(${near}, ${prize})`), false, "drifting past at 100 px/s: too fast");
+  assert.equal(run(`alongside(${near}, ${prize}, { x: -40, y: 0 })`), true, "the rope slows her to 60 px/s: boarding counts");
+});
+
+test("#69 the grapple's strings, sounds and constants exist", () => {
+  assert.ok(run("STR.en.fHook && STR.zh.fHook && STR.en.fSnap && STR.zh.fSnap"));
+  for (const k of ["BOARD_HOOK_GAP", "BOARD_HOOK_V", "BOARD_REST", "BOARD_PULL_K", "BOARD_PULL_MAX", "BOARD_PULL_MATCH", "BOARD_PULL_RESP", "BOARD_SNAP_FRAC", "BOARD_SNAP_T", "BOARD_STRAIN_DECAY", "BOARD_ROPE_MAX", "BOARD_REHOOK_S"])
+    assert.ok(run(`typeof ${k} === "number" && ${k} > 0`), k);
 });
 

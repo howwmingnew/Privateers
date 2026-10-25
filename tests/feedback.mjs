@@ -252,6 +252,62 @@ await ev(() => { lang = "en"; applyLang(); });
   await mctx.close();
 }
 
+// ---------- #69: the grapple's spring pull ----------
+console.log("#69 grapple pull");
+await boot(saveWith({ gold: 500, ship: "brig", hull: 3 }));
+await rig(); await sail();
+await ev(() => {
+  window.think = () => {}; window.spawnEnemy = () => null;   // the test steers every ship itself
+  __gone(enemies.slice()); save.tutorialDone = true; tutorialReset(); document.getElementById("coach") && (document.getElementById("coach").hidden = true);
+  window.__hurtP = 0; onHook("hurt", s => { if (s.isPlayer) __hurtP++; });
+  window.__prize = () => {   // a struck merchant at (1500, 1500)
+    const e = makeEnemy(S, 1500, 1500, 3, "merchant", "fluyt"); Object.assign(e, { rot: 0, speed: 0, loot: 100 });
+    e.hp = e.maxHp * 0.3; hurt(e, 1, 0, player, null); window.E = e; return e;
+  };
+  window.__place = (gap, rot, lvl) => {   // the flagship off her beam, `gap` px between the hulls, heading `rot`, sail level `lvl`
+    const d = shipRadius(player) + shipRadius(E) + gap;
+    Object.assign(player, { x: 1500 + d, y: 1500, rot, speed: 0, hp: player.maxHp, alive: true, vx: 0, vy: 0 });
+    setSailLevel(lvl); board = freshBoard(null); rehookAt = 0; boardLog.hooks = boardLog.snaps = 0; __hurtP = 0;
+  };
+  window.__run = (n, stopWhen, keepT) => { let hit = null; for (let i = 0; i < n; i++) { E.x = 1500; E.y = 1500; E.speed = 0; E.vx = E.vy = 0; E.spr.setPosition(1500, 1500); stepN(1); if (keepT) board.t = 0; if (stopWhen && stopWhen()) { hit = i; break; } } return hit; };
+  window.__info = () => ({ hooked: board.hooked, t: +board.t.toFixed(2), strain: +board.strain.toFixed(2), gap: Math.round(grappleGap(player, E)), pv: Math.round(Math.hypot(board.pv.x, board.pv.y)), boarded: !!E.boarded, alive: E.alive,
+    hooks: boardLog.hooks, snaps: boardLog.snaps, hurtP: __hurtP, spd: Math.round(player.speed), max: Math.round(player.maxSpeed) });
+});
+// A: approaching a struck ship at half sail from 70 px off her beam hooks, reels alongside and boards in a few seconds, with no steering
+await ev(() => { __prize(); __place(70, Math.PI, 1); });
+let r69 = await ev(() => { const first = __run(120, () => board.hooked), caught = board.hooked, hooksThen = boardLog.hooks; __run(900, () => E.boarded || !E.alive); return { first, caught, hooksThen, ...__info() }; });
+check(r69.caught && r69.first !== null && r69.hooksThen === 1, `the hooks catch within 2 s of coming near (frame ${r69.first})`);
+check(r69.boarded && r69.hurtP === 0 && r69.snaps === 0, `she is boarded with no steering, the rope never parts, and the flagship took no collision damage (${r69.hurtP} hits)`);
+check(!r69.hooked && r69.pv === 0, "boarding done: the grapple is released");
+await ev(() => { if (E.alive) __gone([E]); });
+// B: sailing away slowly only drags the flagship back (boarding progress held at 0 so the grapple stays on)
+await ev(() => { __prize(); __place(40, 0, 1); });
+r69 = await ev(() => { __run(60, null, true); const early = __info(); __run(480, null, true); return { early, ...__info() }; });
+check(r69.hooked && r69.snaps === 0 && r69.strain === 0, `slow sails away for 9 s: still hooked, never cut, no strain (${JSON.stringify({ gap: r69.gap, spd: r69.spd + "/" + r69.max })})`);
+check(r69.gap < 90 && r69.early.gap < 90, `and she is held close: gap ${r69.early.gap}px at 1 s, ${r69.gap}px at 9 s`);
+await ev(() => { if (E.alive) __gone([E]); });
+// C: full speed straight away parts it after about a second of strain, with the sound and the whipping halves
+await ev(() => { __prize(); __place(30, 0, 3); });
+r69 = await ev(() => { __run(120, null, true); const pre = __info(); window.__g0 = S.children.list.filter(o => o.type === "Graphics" && o.name === "ropeSnap").length; const at = __run(600, () => boardLog.snaps > 0, true); const snapInfo = __info();
+  const g1 = S.children.list.filter(o => o.type === "Graphics" && o.name === "ropeSnap").length; return { pre, at, snapInfo, g1 }; });
+check(r69.pre.strain > 0 && r69.pre.hooked && r69.pre.spd >= 0.8 * r69.pre.max || r69.at !== null, `full sails away build strain on the hooked rope (strain ${r69.pre.strain} s at ${r69.pre.spd}/${r69.pre.max} px/s)`);
+check(r69.at !== null && r69.snapInfo.snaps === 1 && !r69.snapInfo.hooked && !r69.snapInfo.boarded && r69.snapInfo.alive, `it parts under a full-speed run (after ${120 + (r69.at || 0)} frames), with the crack, and she is not boarded`);
+check(r69.g1 === 1, `the parted halves are drawn (${r69.g1} rope graphic alive just after the snap)`);
+await page.screenshot({ path: `${out}/grapple-snap.png` });
+await ev(() => { S.game.loop.wake(); }); await page.waitForTimeout(900 * SLOW);   // real time: the fade is a tween, which stepN does not advance
+const later = await ev(() => { S.game.loop.sleep(); return { tw: [], g: S.children.list.filter(o => o.type === "Graphics" && o.name === "ropeSnap").length, ...__info() }; });
+check(later.g === 0 && later.snaps === 1, `the halves fade and are cleaned up (${later.g} left), and the hooks do not re-bite in the next seconds (${later.hooks} hooks in all)`);
+await ev(() => { if (E.alive) __gone([E]); });
+// D: a hooked prize that sinks lets go at once
+await ev(() => { __prize(); __place(40, 0, 0); });
+r69 = await ev(() => { __run(30, null, true); const hooked = board.hooked; hurt(E, 1e9, 0, player, null); stepN(2); const x0 = player.x, y0 = player.y; __run(60); return { hooked, after: board.hooked, moved: Math.round(Math.hypot(player.x - x0, player.y - y0)), alive: E.alive }; });
+check(r69.hooked && !r69.after && !r69.alive && r69.moved < 3, `the prize sinks: the grapple lets go and the flagship is no longer pulled (${JSON.stringify(r69)})`);
+// E: a ship that is not a prize is never grappled
+await ev(() => { const m = makeEnemy(S, 1500, 1500, 3, "merchant", "fluyt"); m.rot = 0; m.speed = 0; window.E = m; __place(30, Math.PI, 0); });
+r69 = await ev(() => { __run(120); return __info(); });
+check(!r69.hooked && r69.t === 0 && r69.hooks === 0, "a ship that has not struck her colours is never grappled");
+await ev(() => { __gone([E]); });
+
 // ---- END OF SECTIONS ----
 check(errors.length === 0, `0 page errors${errors.length ? " -> " + errors.join(" | ") : ""}`);
 await browser.close();
