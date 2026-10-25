@@ -13,6 +13,7 @@
 // disaster spray (the effects themselves are gameplay and stay); the effects quality level (js/vfx.js fxLevel, FXQ in js/config.js: low / mid / high, auto by device and frame time) scales every count.
 const VN = { pool: null, fog: [], loud: [], last: 0 };
 const VN_TAU = Math.PI * 2, VN_ADD = Phaser.BlendModes.ADD, VN_NORMAL = Phaser.BlendModes.NORMAL;
+const VN_ADD_DZ = 0.0005;   // far under the closest two depths in use (8.95 / 8.96), so nothing else lands between
 const VN_FIRE = [0xffffff, 0xfff0a0, 0xffb040, 0xff6a2a, 0xa02a14, 0x2a2420];
 const VN_FLAME = [0xffe58a, 0xffa23a, 0xff6a2a, 0xa02a14, 0x3a2420];   // no white start: additive white vanishes on a bright sea
 const VN_SMOKE = [0x6a625a, 0x4a443f, 0x8a8479];
@@ -30,7 +31,7 @@ const vnL = (c, s) => s * c.p.dur;   // a lifetime in seconds
 
 class VnPool {
   constructor(sc) {
-    this.sc = sc; this.ps = []; this.free = {};   // free sprites by depth: setDepth queues a re-sort of the whole display list, so a sprite keeps the depth it was made with
+    this.sc = sc; this.ps = []; this.free = {};   // free sprites by depth and blend (see add): setDepth queues a re-sort of the whole display list, so a sprite keeps the depth it was made with
     this.ps = this.ps; this.timers = []; this.draws = []; this.t = 0; this.tags = {}; this.widths = {};
     this.g = sc.add.graphics().setDepth(8.9); this.ga = sc.add.graphics().setDepth(9.3).setBlendMode(VN_ADD);
   }
@@ -38,11 +39,13 @@ class VnPool {
   add(o) {   // x y vx vy ax ay drag life s0 s1 (px) a0 a1 tint|ramp tex add rot vr depth fn delay tag face sx sy
     if (this.ps.length >= this.cap || (o.tag && (this.tags[o.tag] || 0) >= (VN_TAGMAX[o.tag] || 1e9))) return null;
     const v = this.view, cu = vnQ().cull; if (v && !o.fn && (o.x < v.x - cu || o.x > v.right + cu || o.y < v.y - cu || o.y > v.bottom + cu)) return null;   // far off screen: not made
-    const fl = this.free[o.depth ?? 9] || (this.free[o.depth ?? 9] = []);
-    const im = fl.pop() || Object.assign(this.sc.add.image(0, 0, "fx-soft").setDepth(o.depth ?? 9), { vnKey: o.depth ?? 9 });
     const p = Object.assign({ vx: 0, vy: 0, ax: 0, ay: 0, drag: 0, a0: 1, a1: 0, s0: 20, s1: 20, tex: "fx-soft", add: true, rot: 0, vr: 0, depth: 9, age: 0, life: 1, tint: 0xffffff, delay: 0 }, o);
+    // a sprite keeps its blend too, and additive ones sit VN_ADD_DZ above the normal ones of their depth: a blend switch
+    // flushes the batch, so each depth draws as two runs (normal under additive) instead of flipping sprite by sprite
+    const key = (o.depth ?? 9) + (p.add ? VN_ADD_DZ : 0), fl = this.free[key] || (this.free[key] = []);
+    const im = fl.pop() || Object.assign(this.sc.add.image(0, 0, "fx-soft").setDepth(key).setBlendMode(p.add ? VN_ADD : VN_NORMAL), { vnKey: key });
     p.im = im; p.w = this.widths[p.tex] || (this.widths[p.tex] = this.sc.textures.get(p.tex).getSourceImage().width);
-    im.setTexture(p.tex).setBlendMode(p.add ? VN_ADD : VN_NORMAL).setVisible(false).setActive(true);
+    im.setTexture(p.tex).setVisible(false).setActive(true);
     if (!p.ramp) im.setTint(p.tint);   // a ramp re-tints every frame; a fixed tint is set once
     if (p.tag) this.tags[p.tag] = (this.tags[p.tag] || 0) + 1;
     this.ps.push(p); return p;
