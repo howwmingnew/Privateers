@@ -233,6 +233,7 @@ function guideTarget(dt) {
       tut.pickT = 0.5;
       const mine = shipRating();
       tut.target = enemies.filter(e => e.alive && e.L <= mine && dist(e, player) < 1600).sort((a, b) => dist(a, player) - dist(b, player))[0] || null;
+      if (!tut.target) tut.target = forgivingSpawn();   // a step walked back with nothing qualifying near: a fresh slow mark, so the ring and arrow have something to point at
     }
     return tut.target ? { x: tut.target.x, y: tut.target.y, r: 46 } : null;
   }
@@ -243,15 +244,16 @@ function guideTarget(dt) {
 function drawGuide(dt) {
   if (!tut.g) tut.g = S.add.graphics().setDepth(9);
   const g = tut.g; g.clear();
-  if (docked || paused) return;
+  const coachUp = on => { if (on !== tut.up) { tut.up = on; tutEl("coach").classList.toggle("up", on); } };
+  if (docked || paused) { coachUp(false); return; }
   const tg = guideTarget(dt);
-  if (!tg) return;
+  if (!tg) { coachUp(false); return; }   // nothing to point at: the card goes back to its place, it must not stay up top
   // px = CSS pixels on screen in world units (camera zoom includes the device pixel ratio, js/view.js)
   const cam = S.cameras.main, v = cam.worldView, px = (typeof VIEW !== "undefined" ? VIEW.dpr : 1) / cam.zoom, now = S.time.now / 1000;
   // the card sits at the bottom, and hops to the top while the thing to go for is in the lower part of the screen (a gap between
   // the two thresholds keeps it from flickering); it never covers what it is pointing at
   const fy = (tg.y - v.y) / v.height, up = fy > 0.55 ? true : fy < 0.4 ? false : tut.up;
-  if (up !== tut.up) { tut.up = up; tutEl("coach").classList.toggle("up", up); }
+  coachUp(up);
   if (tg.r) { g.lineStyle(3 * px, 0xf0c766, 0.9); strokeRing(g, tg.x, tg.y, tg.r + Math.sin(now * 4) * 4); }
   // keep the arrow clear of the HUD strip at the top
   const L = v.x + 48 * px, R = v.right - 48 * px, T = v.y + 130 * px, B = v.bottom - 56 * px;

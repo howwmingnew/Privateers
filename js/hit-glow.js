@@ -9,7 +9,9 @@ const glowLayer = document.createElement("div");
 glowLayer.id = "hitGlow"; glowLayer.setAttribute("aria-hidden", "true");
 const glowMarks = Array.from({ length: GLOW_SECTORS }, (_, i) => {
   const el = document.createElement("i");
-  el.style.setProperty("--a", (i / GLOW_SECTORS * 360).toFixed(2) + "deg");
+  const turn = i / GLOW_SECTORS * TAU;
+  el.style.setProperty("--a", (turn * 180 / Math.PI).toFixed(2) + "deg");
+  el.style.setProperty("--cx", Math.cos(turn).toFixed(4)); el.style.setProperty("--cy", Math.sin(turn).toFixed(4));   // the bearing's unit vector, worked out here: CSS cos()/sin() is not in older browsers
   glowLayer.append(el);
   return el;
 });

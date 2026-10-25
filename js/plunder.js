@@ -11,12 +11,16 @@ Object.assign(STR.en, {
   streakChip: "Plunder streak {k} · hold sells +{p}%", streakTip: "Each ship you sink in a row raises what your hold sells for. Losing your ship ends the streak.", fStreak: "Streak +{p}%", fBounty: "+{n} gold bounty",
   soldStreak: "Sold the hold for <em>{n} gold</em>, plunder streak +{p}% included. Hull repaired.",
   toastSunkHalf: "Your ship went down. Half the cargo waits at the wreck; the streak is lost.",
+  toastSunkLoss: "Your ship went down. The hold was empty, but the streak and salvage are lost.",
+  sunkLoss: "The crew swam ashore and the shipwright patched the hull for free. Your hold was empty, but your plunder streak and any salvage went down with the ship.",
   sunkWreckHalf: "The crew swam ashore and the shipwright patched the hull for free. Half the hold was lost and your plunder streak with it; <em>{n} cargo</em> waits at the wreck (red ✕ on the map) until you recover it, even if you close the game.",
 });
 Object.assign(STR.zh, {
   streakChip: "連續劫掠 {k} · 貨艙售價 +{p}%", streakTip: "連續擊沉的船越多，貨艙賣出的價錢越高；船沉了就中斷。", fStreak: "連勝 +{p}%", fBounty: "+{n} 金幣賞金",
   soldStreak: "貨艙賣得 <em>{n} 金幣</em>，已含連續劫掠加成 +{p}%。船體已修好。",
   toastSunkHalf: "你的船沉了。一半貨物留在殘骸那裡，連續劫掠也中斷了。",
+  toastSunkLoss: "你的船沉了。貨艙是空的，但連續劫掠和打撈品都沒了。",
+  sunkLoss: "船員游上了岸，造船廠免費修好了船體。貨艙是空的，但連續劫掠加成和打撈品隨船沉沒了。",
   sunkWreckHalf: "船員游上了岸，造船廠免費修好了船體。貨艙損失了一半，連續劫掠加成也沒了；<em>{n} 貨物</em>留在殘骸那裡（地圖上的紅色 ✕），直到你撈回來，關掉遊戲也不會消失。",
 });
 

@@ -61,7 +61,7 @@ function readEdgeKeepouts(dt) {   // the HUD strip (as one top limit) and the bo
   edgeKeepT = 0.4;
   const box = el => el && !el.hidden && el.getBoundingClientRect().width > 0 ? el.getBoundingClientRect() : null;
   const top = Math.max(0, ...[...document.querySelectorAll("#hud .side, #hud .bars")].map(el => el.getBoundingClientRect().bottom));
-  return (edgeKeep = { top, bottom: ["bossBar", "hint"].map(id => box(document.getElementById(id))).filter(Boolean).map(r => [r.left, r.right]) });
+  return (edgeKeep = { top, bottom: ["bossBar", "hint", "touchSail"].map(id => box(document.getElementById(id))).filter(Boolean).map(r => [r.left, r.right]) });
 }
 function updateEdgeMarks(dt) {
   if (edgeHidden()) { edgeLayer.hidden = true; edgeShowsBoss = false; for (const [, m] of edgeEls) m.el.remove(); edgeEls.clear(); return; }

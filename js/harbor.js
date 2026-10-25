@@ -16,7 +16,7 @@ function dock(kind, prior = { sold: 0, bonus: 0, cargo: 0, sunk: 0 }) {
   persist();
   // keep the message as a key so it re-renders when the language changes
   if (kind === "welcome") portMsg = [save.sunk === 0 ? "welcome" : "welcomeBack"];
-  else if (kind === "sunk") portMsg = lastLost > 0 ? ["sunkWreckHalf", { n: fmt(lastLost) }] : ["sunkMsg"];
+  else if (kind === "sunk") portMsg = lastLost > 0 ? ["sunkWreckHalf", { n: fmt(lastLost) }] : [lastLostExtra ? "sunkLoss" : "sunkMsg"];
   else if (kind === "supply") portMsg = ["supplyMsg"];
   else if (kind === "trade") portMsg = sold > 0 ? (bonus > 0 ? ["tradeSoldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["tradeSold", { n: fmt(sold) }]) : ["tradeEmpty"];
   else portMsg = sold > 0 ? (bonus > 0 ? ["soldStreak", { n: fmt(sold), p: Math.round(bonus * 100) }] : ["sold", { n: fmt(sold) }]) : ["empty"];

@@ -4,7 +4,7 @@
 /* Hit glow: a red bar on the screen edge toward the shooter; one per 22.5 degrees, each flashes and fades */
 #hitGlow { position: fixed; inset: 0; z-index: 7; pointer-events: none; overflow: hidden; }
 #hitGlow i { position: absolute; left: 50%; top: 50%; width: 14px; height: min(26vh, 150px); margin: calc(min(26vh, 150px) / -2) 0 0 -7px;
-  border-radius: 8px; opacity: 0; transform: translate(calc(cos(var(--a)) * (50vw - 18px)), calc(sin(var(--a)) * (50vh - 18px))) rotate(var(--a));   /* on the screen edge, along the bearing */
+  border-radius: 8px; opacity: 0; transform: translate(calc(var(--cx) * (50vw - 18px)), calc(var(--cy) * (50vh - 18px))) rotate(var(--a));   /* on the screen edge, along the bearing */
   background: radial-gradient(ellipse at 50% 50%, rgba(255,70,50,.95), rgba(255,70,50,.55) 55%, rgba(255,70,50,0) 100%); filter: drop-shadow(0 0 6px rgba(255,60,40,.8)); }
 #hitGlow i.on { animation: glowFlash 1.1s ease-out; }
 @keyframes glowFlash { 0% { opacity: 1; } 30% { opacity: .9; } 100% { opacity: 0; } }

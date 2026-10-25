@@ -148,7 +148,7 @@ function pressReset() {
 function wipeProgress() {
   save = defaultSave(); persist();
   for (let i = crates.length - 1; i >= 0; i--) if (crates[i].wreck) { crates[i].spr.destroy(); crates[i].label?.destroy(); crates.splice(i, 1); }
-  cargo = 0; lastLost = 0;
+  cargo = 0; lastLost = 0; lastLostExtra = false;
   applyPlayerStats(true); hud(true);
   tutorialReset();
 }

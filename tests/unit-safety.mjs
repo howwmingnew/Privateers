@@ -68,6 +68,14 @@ test("aground: nothing asked, a gentle sail step that is met, or a ship making w
   assert.equal(run(150, 5), true);
 });
 
+test("aground: pinned with no rock within reach (an enemy hull, the map edge, a grapple) is not aground; nearRock sees islands", () => {
+  const g = boot(["js/config.js", "js/aground.js"]);
+  assert.equal(g.run("(() => { let st = { t: 0, on: false }; for (let i = 0; i < 600; i++) st = groundStep(st, 150, 0, 150, 1 / 60, false); return st.on; })()"), false);
+  g.run("var islandsNear = () => [{ x: 100, y: 100, r: 50 }];");
+  assert.equal(g.run("nearRock(100, 150)"), true, "touching the rock");
+  assert.equal(g.run("nearRock(100, 400)"), false, "open water");
+});
+
 test("aground: the speed readout uses the ship yard's knots", () => {
   const g = boot(["js/config.js", "js/aground.js"]);
   assert.equal(g.run("SPEED_KN_PX"), 15);

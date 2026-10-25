@@ -11,13 +11,22 @@ const GROUND_ASK = 0.2;     // the helm must ask for at least this share of top 
 const GROUND_RATIO = 0.25;  // ...and the hull move less than this share of what it asks for
 const GROUND_T = 0.9;       // s of that before the ship counts as aground
 const GROUND_FREE = 0.15;   // once aground it stays so until the timer has run back down to this
+const GROUND_REACH = 30;    // px past the hull's own reach (half length + the rock's solid edge isl.r * 0.9 + beam, js/ships.js) that still counts as touching
 const SPEED_KN_PX = 15;     // px/s per knot (YARD.sails.show, js/data.js)
 
-// One tick of the aground timer. st { t, on }; ask / moved in px/s. Returns the new state.
-function groundStep(st, ask, moved, maxSpeed, dt) {
-  const stuck = ask > GROUND_ASK * maxSpeed && moved < ask * GROUND_RATIO;
+// One tick of the aground timer. st { t, on }; ask / moved in px/s; onRock: a rock is within reach (a hull held by an
+// enemy hull, the map edge or a grapple is not aground). Returns the new state.
+function groundStep(st, ask, moved, maxSpeed, dt, onRock = true) {
+  const stuck = onRock && ask > GROUND_ASK * maxSpeed && moved < ask * GROUND_RATIO;
   const t = stuck ? st.t + dt : Math.max(0, st.t - dt * 3);
   return { t, on: st.on ? t > GROUND_FREE : t >= GROUND_T };
+}
+
+// A rock close enough to be what holds the hull: the islands near it, or the harbor island (js/ai-nav.js, js/ports.js).
+function nearRock(x, y, hl = 28) {
+  const hit = isl => Math.hypot(isl.x - x, isl.y - y) < isl.r * 0.9 + hl + GROUND_REACH;
+  if (typeof islandsNear === "function" && islandsNear(x, y).some(hit)) return true;
+  return typeof HARBOR_ROCK !== "undefined" && !(typeof portsOff === "function" && portsOff()) && hit(HARBOR_ROCK);
 }
 
 const speedEl = document.getElementById("speedInd"), speedTxt = document.getElementById("speedTxt");
@@ -33,7 +42,7 @@ onHook("frame", dt => {
   const moved = Math.hypot(player.x - last.x, player.y - last.y) / dt;
   if (moved > player.maxSpeed * 3) { gnd = { t: 0, on: false }; return; }   // a respawn or a jump, not sailing
   gndSpeed += (moved - gndSpeed) * Math.min(1, dt * 6);
-  gnd = groundStep(gnd, (player.wantThr || 0) * player.maxSpeed, moved, player.maxSpeed, dt);
+  gnd = groundStep(gnd, (player.wantThr || 0) * player.maxSpeed, moved, player.maxSpeed, dt, nearRock(player.x, player.y, player.hl ?? 28));
   const kn = (gndSpeed < 0.4 ? 0 : gndSpeed / SPEED_KN_PX).toFixed(1);
   if (kn !== gndKn) { gndKn = kn; speedTxt.textContent = t("u_kn", { n: kn }); }
   speedEl.classList.toggle("stuck", gnd.on);
