@@ -68,6 +68,10 @@ body.on-pause #hint, body.on-pause #joy { display: none !important; }
 .sg { display: grid; gap: 8px; padding-bottom: 4px; }
 .srow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; font-size: calc(15px * var(--ts)); font-weight: 600; }
 label.srow { grid-template-columns: minmax(0, 1fr) minmax(120px, 46%) 3.2em; }
+.srow.fxq { grid-template-columns: 1fr; }   /* four choices: the label above, the buttons below, wrapping two by two when the text is large or the screen narrow */
+.srow.fxq .seg { display: flex; flex-wrap: wrap; }
+.srow.fxq .seg button { flex: 1 1 22%; min-width: 0; }
+@media (max-width: 420px) { .srow.fxq .seg button { flex-basis: 40%; } }
 .srow output { font-variant-numeric: tabular-nums; text-align: right; color: var(--ink-soft); font-size: calc(13px * var(--ts)); }
 .srow input[type="range"] { width: 100%; accent-color: var(--blood); min-height: 32px; }
 .seg { display: inline-flex; border: 1.5px solid var(--ink); border-radius: 3px; overflow: hidden; }

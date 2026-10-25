@@ -36,7 +36,9 @@ await ev(() => {
   stepN(5);
   window.tex = key => VN.pool.ps.filter(p => p.tex === key).length;
 });
+check(await ev(() => SETTINGS.fxq === "auto"), "settings saved before the quality option existed default to auto");
 check(await ev(() => !!(VN.pool && VN.pool.cap > 0)), "the new pool is up");
+await ev(() => saveSettings({ fxq: "high" }));   // the rest of the run is at the full look
 check(await ev(() => vnK() <= 1 && vnK() > 0), "vnK is a sane share");
 
 // 1. the chain blast, and damage in the same call
@@ -106,6 +108,50 @@ const fog = await ev(() => {
 check(fog.on > 5 && fog.far, "fog puffs circle at the edge of sight, clear of the middle", fog);
 check(fog.off < fog.on, "weather effects off thins the fog puffs", fog);
 check(fog.gone === 0, "no fog puffs once the fog clears", fog);
+// 5b. effects quality: low < mid < high in what a blast and a salvo make; saved in privateers-settings; auto steps down on slow frames
+const q = {};
+for (const lv of ["low", "mid", "high"]) {
+  q[lv] = await ev(l => {
+    saveSettings({ fxq: l }); VN.pool.clear(); VN.loud = [];
+    const e = enemies.find(x => x.alive) || (() => { const n = makeEnemy(S, player.x + 250, player.y, 3, "merchant"); n.x = player.x + 250; n.y = player.y; n.speed = 0; n.maxHp = n.hp = 500; enemies.push(n); return n; })();
+    e.x = player.x + 250; e.y = player.y; e.spr.setPosition(e.x, e.y);
+    let peak = 0; magazineBurst(e); for (let i = 0; i < 40; i++) { stepN(1); peak = Math.max(peak, VN.pool.ps.length); }
+    VN.pool.clear(); VN.loud = [];
+    for (let i = 0; i < 6; i++) vfxMuzzle(player.x + i * 10, player.y - 30, -Math.PI / 2, false);
+    stepN(1);
+    return { blast: peak, level: fxLevel(), cap: VN.pool.cap, haze: VN.pool.tags.haze || 0, salvo: VN.pool.ps.length, stored: JSON.parse(localStorage.getItem("privateers-settings")).fxq };
+  }, lv);
+}
+check(q.low.blast < q.mid.blast && q.mid.blast < q.high.blast, "blast particle count rises low < mid < high", q);
+check(q.low.salvo < q.high.salvo, "a salvo's smoke is thinner at low than at high", q);
+check(q.low.haze === 0 && q.high.haze > 0, "no lingering haze bank at low, one at high", q);
+check(q.low.cap < q.mid.cap && q.mid.cap < q.high.cap, "the pool cap follows the level", q);
+check(q.low.stored === "low" && q.mid.stored === "mid" && q.high.stored === "high", "the choice is saved in privateers-settings", q);
+check(q.low.level === 0 && q.mid.level === 1 && q.high.level === 2, "levels map to 0 / 1 / 2", q);
+const auto = await ev(() => {   // auto: steps down on a run of slow frames; an explicit level never does
+  saveSettings({ fxq: "auto" }); fxqDrop = 0; fxqEma = 16.7; fxqSlow = 0; fxqCool = 0; const start = fxLevel(), dev = FXQ_DEVICE;
+  let t = 1e6; fxqLast = t; for (let i = 0; i < 400; i++) { t += 40; fxqTick(40, t); }   // 16 s of 40 ms frames
+  const slow = fxLevel();
+  saveSettings({ fxq: "high" }); fxqDrop = 0; fxqEma = 16.7; for (let i = 0; i < 400; i++) { t += 40; fxqTick(40, t); }
+  const fixed = fxLevel(); saveSettings({ fxq: "auto" }); fxqDrop = 0; fxqEma = 16.7;
+  return { start, dev, slow, fixed };
+});
+check(auto.dev === 0 ? auto.slow === 0 : auto.slow < auto.start, "auto steps down a level when frames stay slow", auto);
+check(auto.fixed === 2, "an explicit High never steps down", auto);
+// the settings row: picks a level, and the panel does not push out of a 390x844 phone at the biggest UI size
+await ev(() => { saveSettings({ fxq: "auto", uiPct: 250 }); applyUiScale(); });
+await page.setViewportSize({ width: 390, height: 844 });
+await page.click("#pauseBtn"); await page.click("#pause [data-menu=settings]");
+await page.click('[data-set="fxq"][data-v="mid"]');
+const row = await ev(() => {
+  const panel = document.getElementById("p-settings"), r = panel.getBoundingClientRect(), bs = [...document.querySelectorAll('[data-set="fxq"]')].map(b => b.getBoundingClientRect());
+  return { fxq: SETTINGS.fxq, pressed: document.querySelector('[data-set="fxq"][data-v="mid"]').getAttribute("aria-pressed"), overflowX: panel.scrollWidth - panel.clientWidth, inside: bs.every(b => b.left >= r.left - 1 && b.right <= r.right + 1), buttons: bs.length, note: !!document.querySelector('[data-i18n="set_fxqNote"]').textContent };
+});
+check(row.fxq === "mid" && row.pressed === "true" && row.buttons === 4, "the settings row picks a level (Auto / Low / Medium / High)", row);
+check(row.overflowX <= 1 && row.inside && row.note, "the quality row fits a 390x844 phone at 250% UI size", row);
+await ev(() => { saveSettings({ fxq: "high", uiPct: 100 }); applyUiScale(); });
+await page.setViewportSize({ width: 1280, height: 720 });
+await ev(() => { paused = false; document.getElementById("pause").hidden = true; document.getElementById("p-settings").hidden = true; });
 // 6. the pool never passes its cap, whatever is running
 check(await ev(() => VN.pool.ps.length <= VN.pool.cap), "pool within cap at the end");
 await ev(() => { dock("test"); });

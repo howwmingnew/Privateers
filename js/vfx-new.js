@@ -10,8 +10,8 @@
 //   vnSpill(x, y)               the oil an incendiary ball splashes on the water, burning (js/arsenal.js onHit)
 //   vnSwirl / vnWall / vnCrest / vnBolt*  the disasters (js/disasters-art.js); the fog circles in vnFogFrame()
 // All of it is looks: no hit, damage or sight rule is read or changed here. "Weather effects" off or reduced motion thin the
-// disaster spray (the effects themselves are gameplay and stay); VFX_LOW (phones) halves every count.
-const VN = { pool: null, fog: [], loud: [] };
+// disaster spray (the effects themselves are gameplay and stay); the effects quality level (js/vfx.js fxLevel, FXQ in js/config.js: low / mid / high, auto by device and frame time) scales every count.
+const VN = { pool: null, fog: [], loud: [], last: 0 };
 const VN_TAU = Math.PI * 2, VN_ADD = Phaser.BlendModes.ADD, VN_NORMAL = Phaser.BlendModes.NORMAL;
 const VN_FIRE = [0xffffff, 0xfff0a0, 0xffb040, 0xff6a2a, 0xa02a14, 0x2a2420];
 const VN_FLAME = [0xffe58a, 0xffa23a, 0xff6a2a, 0xa02a14, 0x3a2420];   // no white start: additive white vanishes on a bright sea
@@ -21,23 +21,28 @@ const vnRnd = (a, b) => a + Math.random() * (b - a), vnPick = a => a[(Math.rando
 const vnMix = (a, b, k) => { const ch = s => Math.round(((a >> s) & 255) * (1 - k) + ((b >> s) & 255) * k) << s; return ch(16) | ch(8) | ch(0); };
 const vnRamp = (arr, k) => { const n = arr.length - 1, f = Math.min(Math.max(k, 0), 0.9999) * n, i = f | 0; return vnMix(arr[i], arr[i + 1], f - i); };
 const vnReduced = () => typeof wxReduced !== "undefined" && wxReduced;
-const vnK = () => (VFX_LOW ? 0.5 : 1) * (PERF_LOW ? 0.7 : 1) * (vnReduced() ? 0.6 : 1);
-const vnDisK = () => vnK() * (typeof wxFx === "function" && !wxFx() ? 0.5 : 1);   // disaster spray: thinner when weather effects are off
+const vnQ = () => FXQ[fxLevel()];   // the current level's row (reduced motion already caps the level at mid)
+const vnK = () => vnQ().k * (PERF_LOW ? 0.7 : 1);
+const vnDisK = () => (typeof wxFx === "function" && !wxFx() ? FXQ[0].k : vnQ().k) * (PERF_LOW ? 0.7 : 1);   // disaster spray: the low level's share when weather effects are off
 const vnCtx = (o, k = vnK()) => ({ p: o, k });
 const vnN = (c, base) => Math.max(1, Math.round(base * c.p.count * c.k));
 const vnL = (c, s) => s * c.p.dur;   // a lifetime in seconds
 
 class VnPool {
   constructor(sc) {
-    this.sc = sc; this.cap = vfxCap(VFX_POOL_MAX); this.ps = []; this.free = []; this.timers = []; this.draws = []; this.t = 0; this.tags = {}; this.widths = {};
+    this.sc = sc; this.ps = []; this.free = {};   // free sprites by depth: setDepth queues a re-sort of the whole display list, so a sprite keeps the depth it was made with
+    this.ps = this.ps; this.timers = []; this.draws = []; this.t = 0; this.tags = {}; this.widths = {};
     this.g = sc.add.graphics().setDepth(8.9); this.ga = sc.add.graphics().setDepth(9.3).setBlendMode(VN_ADD);
   }
+  get cap() { return Math.round(VFX_POOL_MAX * vnQ().k); }   // live: the level can change at any time
   add(o) {   // x y vx vy ax ay drag life s0 s1 (px) a0 a1 tint|ramp tex add rot vr depth fn delay tag face sx sy
     if (this.ps.length >= this.cap || (o.tag && (this.tags[o.tag] || 0) >= (VN_TAGMAX[o.tag] || 1e9))) return null;
-    const im = this.free.pop() || this.sc.add.image(0, 0, "fx-soft");
+    const v = this.view, cu = vnQ().cull; if (v && !o.fn && (o.x < v.x - cu || o.x > v.right + cu || o.y < v.y - cu || o.y > v.bottom + cu)) return null;   // far off screen: not made
+    const fl = this.free[o.depth ?? 9] || (this.free[o.depth ?? 9] = []);
+    const im = fl.pop() || Object.assign(this.sc.add.image(0, 0, "fx-soft").setDepth(o.depth ?? 9), { vnKey: o.depth ?? 9 });
     const p = Object.assign({ vx: 0, vy: 0, ax: 0, ay: 0, drag: 0, a0: 1, a1: 0, s0: 20, s1: 20, tex: "fx-soft", add: true, rot: 0, vr: 0, depth: 9, age: 0, life: 1, tint: 0xffffff, delay: 0 }, o);
     p.im = im; p.w = this.widths[p.tex] || (this.widths[p.tex] = this.sc.textures.get(p.tex).getSourceImage().width);
-    im.setTexture(p.tex).setBlendMode(p.add ? VN_ADD : VN_NORMAL).setDepth(p.depth).setVisible(false).setActive(true);
+    im.setTexture(p.tex).setBlendMode(p.add ? VN_ADD : VN_NORMAL).setVisible(false).setActive(true);
     if (!p.ramp) im.setTint(p.tint);   // a ramp re-tints every frame; a fixed tint is set once
     if (p.tag) this.tags[p.tag] = (this.tags[p.tag] || 0) + 1;
     this.ps.push(p); return p;
@@ -45,17 +50,18 @@ class VnPool {
   at(ms, fn) { this.timers.push({ t: this.t + ms / 1000, fn }); }
   draw(fn, ms) { this.draws.push({ fn, t0: this.t, dur: ms / 1000 }); }   // fn(g, ga, k 0..1, dt) each frame for ms
   update(dt) {
-    this.t += dt;
+    this.t += dt; const v = this.view = this.sc.cameras.main.worldView, cu = vnQ().cull;
     for (let i = this.timers.length - 1; i >= 0; i--) if (this.t >= this.timers[i].t) { const f = this.timers[i].fn; this.timers.splice(i, 1); f(); }
     for (let i = this.ps.length - 1; i >= 0; i--) {
       const p = this.ps[i], im = p.im;
       if (p.delay > 0) { p.delay -= dt; continue; }
       p.age += dt;
       const k = p.age / p.life;
-      if (k >= 1) { im.setVisible(false).setActive(false); this.free.push(im); this.ps.splice(i, 1); if (p.tag) this.tags[p.tag]--; continue; }
+      if (k >= 1) { im.setVisible(false).setActive(false); this.free[im.vnKey].push(im); this.ps.splice(i, 1); if (p.tag) this.tags[p.tag]--; continue; }
       if (p.fn) p.fn(p, dt, k);
       const dr = Math.max(0, 1 - p.drag * dt);
       p.vx = (p.vx + p.ax * dt) * dr; p.vy = (p.vy + p.ay * dt) * dr; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+      if (p.x < v.x - cu || p.x > v.right + cu || p.y < v.y - cu || p.y > v.bottom + cu) { if (im.visible) im.visible = false; continue; }   // off screen: still lives and moves, is not drawn
       const fade = k < 0.08 ? k / 0.08 : 1, sz = (p.s0 + (p.s1 - p.s0) * k) / p.w;
       if (p.ramp) im.setTint(vnRamp(p.ramp, k));
       im.x = p.x; im.y = p.y; im.scaleX = p.sx ? sz * p.sx : sz; im.scaleY = p.sy ? sz * p.sy : sz;   // plain assignments: cheaper than the chained setters at hundreds of sprites
@@ -68,7 +74,7 @@ class VnPool {
       d.fn(this.g, this.ga, k, dt);
     }
   }
-  clear() { for (const p of this.ps) { p.im.setVisible(false).setActive(false); this.free.push(p.im); } this.ps = []; this.timers = []; this.draws = []; this.tags = {}; spillN = 0; }
+  clear() { for (const p of this.ps) { p.im.setVisible(false).setActive(false); this.free[p.im.vnKey].push(p.im); } this.ps = []; this.timers = []; this.draws = []; this.tags = {}; spillN = 0; }
 }
 
 function vnBake(sc) {
@@ -92,6 +98,7 @@ function vnBake(sc) {
 }
 onHook("ready", () => { vnBake(S); VN.pool = new VnPool(S); });
 onHook("frame", dt => {
+  const now = performance.now(); fxqTick(now - VN.last, now); VN.last = now;   // the auto level's frame-time watch (js/vfx.js)
   if (!VN.pool || paused) return;
   VN.pool.update(dt * (typeof vfxSlowLeft === "function" && vfxSlowLeft() > 0 ? slowK : 1));
   vnFogFrame(dt);
@@ -135,8 +142,8 @@ function vnBlast(s) {
       const a = vnRnd(0, VN_TAU), v = vnRnd(0.4, 1) * 200 * m;
       P.add({ tex: "fx-plank", add: false, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 1.4, s0: 11, s1: 8, rot: vnRnd(0, VN_TAU), vr: vnRnd(-9, 9), life: vnL(c, vnRnd(0.8, 1.6)), a0: 1, a1: 0, tint: 0x6b4a2a, depth: 8.9 });
     }
-    for (let i = 0; i < vnN(c, 30); i++) P.add({ x: x + vnRnd(-60, 60) * m, y: y - vnRnd(10, 80) * m, vx: vnRnd(-20, 20), vy: vnRnd(-30, 10), ay: 90, drag: 0.4, s0: 6, s1: 2, life: vnL(c, vnRnd(0.9, 1.9)), tint: vnPick([0xffb347, 0xff7a2a, 0xffd27a]), a0: 1, a1: 0, delay: vnRnd(0, 0.4), depth: 8.9 });   // ember rain
-    for (let i = 0; i < vnN(c, 6); i++) P.add({ x: x + vnRnd(-1, 1) * len * 0.4, y: y + vnRnd(-10, 10), s0: 28 * m, s1: 6, life: vnL(c, 3), ramp: VN_FLAME.slice(0, 3), a0: 0.9, a1: 0, delay: vnRnd(0, 0.6), depth: 2.8 });   // burning flotsam on the water
+    for (let i = 0; i < Math.round(vnN(c, 30) * vnQ().embers); i++) P.add({ x: x + vnRnd(-60, 60) * m, y: y - vnRnd(10, 80) * m, vx: vnRnd(-20, 20), vy: vnRnd(-30, 10), ay: 90, drag: 0.4, s0: 6, s1: 2, life: vnL(c, vnRnd(0.9, 1.9)), tint: vnPick([0xffb347, 0xff7a2a, 0xffd27a]), a0: 1, a1: 0, delay: vnRnd(0, 0.4), depth: 8.9 });   // ember rain
+    for (let i = 0; i < Math.round(vnN(c, 6) * vnQ().flotsam); i++) P.add({ x: x + vnRnd(-1, 1) * len * 0.4, y: y + vnRnd(-10, 10), s0: 28 * m, s1: 6, life: vnL(c, 3), ramp: VN_FLAME.slice(0, 3), a0: 0.9, a1: 0, delay: vnRnd(0, 0.6), depth: 2.8 });   // burning flotsam on the water
     vnSmokeColumn(c, x, y, vnN(c, 10), 30 * m, m, 200, 2.6);
   });
   return true;
@@ -149,13 +156,14 @@ function vnMuzzle(x, y, a, lite) {
   const c = { ...vnCtx(VFX_NEW.muzzle), pool: P }, m = c.p.size, ca = Math.cos(a), sa = Math.sin(a), now = S.time.now;
   if (!lite) { VN.loud = VN.loud.filter(t => now - t < 300); if (VN.loud.length >= VFX_MUZZLE_LOUD) lite = true; else VN.loud.push(now); }
   if (lite) {
+    if (Math.random() > vnQ().lite) return true;   // small puffs thin out at lower levels; the muzzle flash itself is untouched
     for (let j = 0; j < vnN(c, 1); j++) vnPuff(c, x + ca * 8, y + sa * 8, { vx: ca * vnRnd(20, 60) * m + 20, vy: sa * vnRnd(20, 60) * m, drag: 0.9, s0: 12 * m, s1: vnRnd(34, 50) * m, life: vnL(c, vnRnd(1, 1.6)), a0: 0.7, a1: 0, tint: vnPick([0xb3a998, 0xcfc4ae]), depth: 8 });
     return true;
   }
   vnGlow(c, x + ca * 12, y + sa * 12, 56 * m, 80, 0xffc060);
-  for (let j = 0; j < vnN(c, 5); j++) { const sp = vnRnd(30, 110) * m / c.p.dur;
+  for (let j = 0; j < vnN(c, 4); j++) { const sp = vnRnd(30, 110) * m / c.p.dur;
     vnPuff(c, x, y, { vx: ca * sp + 20, vy: sa * sp * 0.6 - 4, drag: 0.9, s0: 16 * m, s1: vnRnd(50, 80) * m, life: vnL(c, vnRnd(1.2, 2)), a0: 0.8, a1: 0, tint: vnPick([0xb3a998, 0x8a8479, 0xcfc4ae]), depth: 8 }); }
-  for (let j = 0; j < vnN(c, 2); j++) vnPuff(c, x + vnRnd(-6, 6), y - 10, { vx: vnRnd(14, 34), vy: vnRnd(-6, 2), drag: 0.15, s0: 30 * m, s1: vnRnd(90, 130) * m, life: vnL(c, vnRnd(3, 4.2)), a0: 0.4, a1: 0, tint: 0xcfc9bb, depth: 7.9, tag: "haze" });
+  for (let j = 0, nh = Math.round(vnN(c, 2) * vnQ().haze); j < nh; j++) vnPuff(c, x + vnRnd(-6, 6), y - 10, { vx: vnRnd(14, 34), vy: vnRnd(-6, 2), drag: 0.15, s0: 30 * m, s1: vnRnd(90, 130) * m, life: vnL(c, vnRnd(3, 4.2)), a0: 0.4, a1: 0, tint: 0xcfc9bb, depth: 7.9, tag: "haze" });
   return true;
 }
 
@@ -163,7 +171,7 @@ function vnMuzzle(x, y, a, lite) {
 function vnFlame(x, y) {
   const P = VN.pool; if (!P) return false;
   const m = VFX_NEW.fire.size;
-  P.add({ tex: "vn-flame", x, y, vx: vnRnd(-6, 6), vy: -vnRnd(24, 50) * m, drag: 0.6, s0: 22 * m, s1: 8 * m, sy: 1.4, life: vnRnd(0.35, 0.7) * VFX_NEW.fire.dur, ramp: VN_FLAME, a0: 1, a1: 0, depth: 8.2 });
+  P.add({ tex: "vn-flame", x, y, vx: vnRnd(-6, 6), vy: -vnRnd(24, 50) * m, drag: 0.6, s0: 26 * m, s1: 9 * m, sy: 1.4, life: vnRnd(0.35, 0.7) * VFX_NEW.fire.dur, ramp: VN_FLAME, a0: 1, a1: 0, depth: 8.2 });
   return true;
 }
 function vnSmoke(x, y) {
@@ -193,12 +201,13 @@ function vnSwirl(g, ev, c, dt) {
   if (spout) {   // a grey cloud heart, white spray arms spun up and out
     g.fillStyle(0x37454d, 0.5 * f); g.fillCircle(ev.x, ev.y, 65 * m); g.fillStyle(0x1f2b31, 0.5 * f); g.fillCircle(ev.x, ev.y, 20 * m);
   } else {   // rings that darken toward the middle, foam arms running inward
-    for (let i = 0; i < 7; i++) { g.fillStyle(vnMix(0x2a8ab0, 0x020c14, i / 6), 0.3 * f); g.fillCircle(ev.x, ev.y, (95 - i * 12) * m * f); }
+    const rn = vnQ().rings, an4 = vnQ().arms;
+    for (let i = 0; i < rn; i++) { g.fillStyle(vnMix(0x2a8ab0, 0x020c14, i / (rn - 1)), 0.34 * f); g.fillCircle(ev.x, ev.y, (95 - i * 80 / rn) * m * f); }
     g.lineStyle(3, 0xdff6ff, 0.65 * f);
-    for (let a = 0; a < 4; a++) { g.beginPath(); for (let i = 0; i <= 20; i++) { const u = i / 20, r = (92 - u * 80) * m * f, an = a * VN_TAU / 4 + tt * 2.4 + u * 5, px = ev.x + Math.cos(an) * r, py = ev.y + Math.sin(an) * r; i ? g.lineTo(px, py) : g.moveTo(px, py); } g.strokePath(); }
+    for (let a = 0; a < an4; a++) { g.beginPath(); for (let i = 0; i <= 20; i += an4 < 4 ? 2 : 1) { const u = i / 20, r = (92 - u * 80) * m * f, an = a * VN_TAU / an4 + tt * 2.4 + u * 5, px = ev.x + Math.cos(an) * r, py = ev.y + Math.sin(an) * r; i ? g.lineTo(px, py) : g.moveTo(px, py); } g.strokePath(); }
   }
   ev.vnAcc = (ev.vnAcc || 0) + dt;
-  const gap = 1 / (28 * Math.sqrt(Math.min(m, 4)) * o.count * vnDisK() * Math.max(f, 0.05));
+  const gap = 1 / (22 * Math.sqrt(Math.min(m, 4)) * o.count * vnDisK() * Math.max(f, 0.05));
   const ps = Math.sqrt(Math.min(m, 4));
   for (; ev.vnAcc >= gap; ev.vnAcc -= gap) {
     const a0 = vnRnd(0, VN_TAU), life = vnRnd(spout ? 1.1 : 1.4, spout ? 2 : 2.2) * o.dur, r0 = spout ? vnRnd(0.15, 0.28) * R : vnRnd(0.75, 1.05) * R, r1 = spout ? 0.95 * R : 0.04 * R, spin = spout ? 5.5 : 3.2;
@@ -247,7 +256,7 @@ const vnStroke = (g, pts, w, col, a) => { g.lineStyle(w, col, a); g.beginPath();
 function vnBoltPlan(ev) {   // the bolt's shape is fixed once per event, so the flickers and the stroke are one bolt
   if (ev.vnBolt) return ev.vnBolt;
   const main = vnJag(ev.x, ev.y - 700, ev.x, ev.y, 34), forks = [];
-  for (let i = 0; i < 3; i++) { const s = main[1 + ((Math.random() * (main.length - 3)) | 0)], a = Math.PI / 2 + vnRnd(-1, 1) * 0.8, len = vnRnd(60, 160); forks.push(vnJag(s.x, s.y, s.x + Math.cos(a) * len, s.y + Math.sin(a) * len * 0.8, 12)); }
+  for (let i = 0; i < vnQ().forks; i++) { const s = main[1 + ((Math.random() * (main.length - 3)) | 0)], a = Math.PI / 2 + vnRnd(-1, 1) * 0.8, len = vnRnd(60, 160); forks.push(vnJag(s.x, s.y, s.x + Math.cos(a) * len, s.y + Math.sin(a) * len * 0.8, 12)); }
   return (ev.vnBolt = { main, forks });
 }
 function vnBoltFlicker(top, ev, left) {   // warn state, last 0.35 s: two faint flickers of the coming bolt
@@ -263,7 +272,7 @@ function vnBoltDraw(top, ev, age) {   // live state, the first 0.35 s
       const c = { ...vnCtx(VFX_NEW.storm), pool: P }, m = c.p.size;
       vnGlow(c, ev.x, ev.y, 200 * m, 300, 0xffffff); vnRing(c, ev.x, ev.y, 8, 120 * m, 520, 0xd8c8ff, 6, 0.9); vnSparks(c, ev.x, ev.y, vnN(c, 28), 230 * m, 0.8, [0xffffff, 0xd8c8ff, 0xfff2a0], 90);
       P.add({ x: ev.x, y: ev.y, s0: 30 * m, s1: 80 * m, life: 0.8 * c.p.dur, a0: 1, a1: 0, tint: 0xa890ff, depth: 8.95 });   // the violet ball
-      for (let i = 0; i < vnN(c, 8); i++) vnPuff(c, ev.x + vnRnd(-12, 12), ev.y, { vy: -vnRnd(24, 44), vx: vnRnd(-8, 8), s0: 12 * m, s1: 44 * m, life: 1.6 * c.p.dur, a0: 0.5, a1: 0, tint: 0xe9eef2, delay: vnRnd(0, 0.4), depth: 8.5 });   // steam
+      for (let i = 0; i < vnN(c, 8) * vnQ().steam; i++) vnPuff(c, ev.x + vnRnd(-12, 12), ev.y, { vy: -vnRnd(24, 44), vx: vnRnd(-8, 8), s0: 12 * m, s1: 44 * m, life: 1.6 * c.p.dur, a0: 0.5, a1: 0, tint: 0xe9eef2, delay: vnRnd(0, 0.4), depth: 8.5 });   // steam
     }
     if (typeof screenFlash === "function" && !vnReduced()) screenFlash();
   }
@@ -272,7 +281,7 @@ function vnBoltDraw(top, ev, age) {   // live state, the first 0.35 s
 }
 function vnFogFrame(dt) {   // fog puffs swirl round the player at the edge of sight; the veil and the sight rule are js/disasters*.js's, untouched
   const lvl = typeof dis !== "undefined" && dis.fog > 0.01 && player && player.alive && !docked ? dis.fog : 0;
-  const want = lvl ? Math.round(VFX_FOG_PUFFS * VFX_NEW.storm.count * vnDisK()) : 0;
+  const want = lvl ? Math.round(VFX_FOG_PUFFS * VFX_NEW.storm.count * vnDisK() * (typeof wxFx === "function" && !wxFx() ? 0 : vnQ().fog)) : 0;
   while (VN.fog.length > want) { const q = VN.fog.pop(); q.im.destroy(); }
   while (VN.fog.length < want) VN.fog.push({ im: S.add.image(0, 0, "vn-puff" + (VN.fog.length % 3)).setDepth(12.1).setTint(0xd6e0e4), a: vnRnd(0, VN_TAU), w: vnRnd(0.08, 0.2) * (Math.random() < 0.5 ? -1 : 1), ph: vnRnd(0, VN_TAU), s: vnRnd(150, 220) });
   if (!want) return;
