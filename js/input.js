@@ -6,7 +6,7 @@
 //   kept for shooting (the usual desktop split). Q / E fire only the larboard / starboard broadside.
 // Gamepad (Phaser plugin): left stick points the bow, A or RT fires, D-pad up/down steps the sail, Start pauses.
 Object.assign(STR.en, {
-  hintDesk: "WASD or hold a mouse button to steer · Space or left-click to fire · Esc pause",
+  hintDesk: "WASD or hold the right mouse button to steer · Space or left-click to fire · Esc pause",
   hint_keys: "A/D turn · W/S sail · Space fire (Q/E one side) · Esc pause",
   hint_mouse: "Hold right (or left) button to steer · left-click or let go of left to fire · Esc pause",
   hint_pad: "Left stick steer · D-pad sail · A / RT fire · Start pause",
@@ -18,7 +18,7 @@ Object.assign(STR.en, {
   welcome: "Sail out, find a ship and turn until your aim lines point at it, then fire. Sink ships, scoop up their plunder, and bring it back here to sell. Deeper waters hold richer and deadlier ships. The controls are under How to play.",
 });
 Object.assign(STR.zh, {
-  hintDesk: "WASD 或按住滑鼠轉向 · 空白鍵或左鍵開火 · Esc 暫停",
+  hintDesk: "WASD 或按住滑鼠右鍵轉向 ·空白鍵或左鍵開火 · Esc 暫停",
   hint_keys: "A/D 轉向 · W/S 升降帆 · 空白鍵開火（Q/E 單舷）· Esc 暫停",
   hint_mouse: "按住右鍵（或左鍵）轉向 · 點左鍵或放開左鍵開火 · Esc 暫停",
   hint_pad: "左搖桿轉向 · 十字鍵升降帆 · A／RT 開火 · Start 暫停",
