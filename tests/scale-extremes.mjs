@@ -33,6 +33,12 @@ const COMBOS = [
 ];
 const pick = (list, env, key) => (env ? list.filter(x => env.split(",").includes(x[0])) : list);
 const vps = pick(VIEWPORTS, process.env.VP), combos = pick(COMBOS, process.env.COMBO);
+// tools/run-tests.mjs runs one VP per process (read from the VIEWPORTS rows above): a name that matches nothing must fail, not pass 0 of 0
+for (const [key, list, got] of [["VP", VIEWPORTS, vps], ["COMBO", COMBOS, combos]]) {
+  const want = process.env[key] ? process.env[key].split(",") : [];
+  const bad = want.filter(w => !list.some(x => x[0] === w));
+  if (bad.length || !got.length) { console.log(`${key}=${process.env[key]}: no such ${bad.join(", ")} (have ${list.map(x => x[0]).join(", ")})`); process.exit(2); }
+}
 
 // ---------- the audit, run inside the page ----------
 // Looks at everything on screen right now. `top` is the selector of the layer in front (a sheet, a menu, the photo bar):

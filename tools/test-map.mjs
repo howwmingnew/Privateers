@@ -25,11 +25,14 @@ export const MAP = [
   [/^js\/(tutorial|onboard|howto|menu|title-attract|hall|logbook|achievements|ledger|notices|notify|chart-legend|roadmap)/, ["shell", "polish"]],
   [/^js\/(art|scenery|vfx|mini-marks|poster|harbor-art|disasters-art|gun-art)/, ["art-hits", "polish"]],
   [/^js\/(hooks|boot-guard|fonts-link)/, ["shell"]],
+  // off-screen markers: phase1b and ports check them, escorts and campaign (boss frame) used to get them through CORE
+  [/^js\/edge-(marks|math)/, ["phase1b", "ports", "escorts", "campaign"]],
   [/^css\//, ["shell", "polish", "scale"]],
   [/^index\.html$/, ["shell", "platform"]],
+  [/^tests\/lib\//, ["phase1b", "ports", "collision"]],   // helpers shared by browser tests
 ];
-// Changes that need no browser test at all.
-const IGNORE = [/\.md$/, /^roadmap\//, /^og\.png$/, /^\.github\//, /^\.gitignore$/, /^tools\/(og|roadmap)/, /^tools\/.*\.html$/];
+// Changes that need no browser test at all (.claude/ and .vscode/ hold editor and agent settings, e.g. an untracked launch.json).
+const IGNORE = [/\.md$/, /^roadmap\//, /^og\.png$/, /^\.github\//, /^\.gitignore$/, /^\.claude\//, /^\.vscode\//, /^tools\/(og|roadmap)/, /^tools\/.*\.html$/];
 
 export function browserTestsFor(files, { available = [] } = {}) {
   const tests = new Set();

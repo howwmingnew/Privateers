@@ -1,5 +1,6 @@
 // Runs a set of browser tests N times under the same load as a real run and prints a pass-rate table.
 //   node tools/flake-check.mjs 5 art-hits shell gundeck [--jobs 4]
+// A sharded test counts per shard: `scale-extremes` gives a row per viewport, `scale-extremes@390x844` checks just that one.
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -19,5 +20,6 @@ for (let i = 1; i <= rounds; i++) {
   writeFileSync(`${root}.review/flake/round${i}.log`, r.stdout);
   console.log(`round ${i}/${rounds}: ${Object.entries(pass).map(([k, v]) => `${k}=${v[v.length - 1] ? "ok" : "FAIL"}`).join(" ")}`);
 }
-console.log("\n測試              通過/次數   平均耗時");
-for (const [k, v] of Object.entries(pass)) console.log(`${k.padEnd(16)} ${v.filter(Boolean).length}/${v.length}      ${(secs[k].reduce((a, b) => a + b, 0) / v.length).toFixed(1)}s`);
+const pad = Math.max(16, ...Object.keys(pass).map(k => k.length));
+console.log(`\n${"測試".padEnd(pad - 2)}  通過/次數   平均耗時`);
+for (const [k, v] of Object.entries(pass)) console.log(`${k.padEnd(pad)} ${v.filter(Boolean).length}/${v.length}      ${(secs[k].reduce((a, b) => a + b, 0) / v.length).toFixed(1)}s`);
