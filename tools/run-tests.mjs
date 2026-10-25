@@ -31,6 +31,8 @@ const TESTS = join(ROOT, "tests");
 const SMOKE = ["smoke", "gunart"];
 // Not run by default: perf benchmarks and screenshot / page dump tools. Everything else in tests/ is a browser test.
 const EXCLUDED = [/^unit/, /-perf$/, /^art-(perf|shots|page)$/];
+// Roughly the slowest browser tests, slowest last (measured: scale-extremes 270s, phase1b 250s, ports 115s ...). Only an ordering hint.
+const SLOW = ["feedback", "campaign", "ports", "phase1b", "scale-extremes"];
 const TIMEOUT_MS = 8 * 60 * 1000;
 
 export function discover() {
@@ -54,8 +56,18 @@ function serve() {
     res.writeHead(200, { "content-type": MIME[extname(file)] || "application/octet-stream", "cache-control": "no-store", "content-length": st.size });
     if (req.method === "HEAD") res.end(); else createReadStream(file).pipe(res);
   });
-  return new Promise(ok => server.listen({ port: 0, host: "127.0.0.1", backlog: 511 }, () =>
-    ok({ url: `http://127.0.0.1:${server.address().port}/index.html`, close: () => new Promise(r => { server.closeAllConnections?.(); server.close(r); }) })));
+  // Not port 0: the OS can hand out a port Chrome refuses to open (ERR_UNSAFE_PORT: 6665-6669, 6000, 4045 ... all below 10080).
+  // So pick from 20000-59999 and try the next on EADDRINUSE.
+  const close = () => new Promise(r => { server.closeAllConnections?.(); server.close(r); });
+  return new Promise((ok, fail) => {
+    let tries = 0;
+    const attempt = () => {
+      const port = 20000 + Math.floor(Math.random() * 40000);
+      server.once("error", e => (e.code === "EADDRINUSE" && ++tries < 50 ? attempt() : fail(e)));
+      server.listen({ port, host: "127.0.0.1", backlog: 511 }, () => { server.removeAllListeners("error"); ok({ url: `http://127.0.0.1:${port}/index.html`, close }); });
+    };
+    attempt();
+  });
 }
 
 function run(args, label) {
@@ -128,7 +140,7 @@ async function main() {
   };
 
   const servers = await Promise.all(Array.from({ length: jobs }, serve));
-  const queue = [...browserTests];
+  const queue = [...browserTests].sort((a, b) => SLOW.indexOf(b) - SLOW.indexOf(a));   // longest first: the slow ones set the wall-clock floor
   const failed = [];
   const worker = async server => {
     for (let name; (name = queue.shift());) {

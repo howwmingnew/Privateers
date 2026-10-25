@@ -55,6 +55,8 @@ npm run fonts          # 重新產生 js/fonts-link.js（字型子集）
 
 **測試怎麼加**：放一個檔案就好，不用改 `package.json`。`tests/unit*.mjs` 是單元測試（`node --test`）；`tests/<name>.mjs` 是瀏覽器測試，網址從 `argv[2]` 讀、失敗時以非 0 結束，`test:all` 會自動跑到。檔名以 `-perf` 結尾，或是 `art-perf`／`art-shots`／`art-page`，屬於效能與截圖工具，預設不跑，要手動執行。要讓 `test:quick` 認得新模組，在 `tools/test-map.mjs` 加一行對應（沒對應到的檔案會改跑核心測試組）。單支測試：`node tools/run-tests.mjs gundeck heat`。
 
+`node tools/flake-check.mjs 5 shell heat --jobs 4` 把指定測試連跑 N 次並列出通過率（失敗輸出存在 `.review/flake/`），修不穩定測試時用。
+
 `node tools/run-tests.mjs [unit|smoke|browser|quick|all|ci] [--jobs N] [--no-retry] [--list]`：每個 worker 自己開一個靜態伺服器和埠；失敗的測試會單獨重跑一次，重跑後通過會標示「重跑後通過」（不算失敗，但請去修那支測試）。
 
 **開 PR 與合併 main 之後**：字型清單和測試清單不再是固定衝突點。
