@@ -31,11 +31,14 @@ const seaWarnGap = (seaLv, rating) => seaLv - rating >= SEA_WARN_GAP;
 // who cannot yet tell Navy from pirate must not be hunted for it. In the Shallows, a novice is also spared by every Navy ship rated over noviceCap. The later bounties keep their crowds: the difficulty bands are untouched.
 const PEACE_R = 1100, SEA_AHEAD_R = 380;
 const bountyPeace = (claimed, dLair) => claimed === 0 && dLair < PEACE_R;
-let spare = { bounty: false, shallows: false, navy: false, cap: 0 }, aheadShown = false;
+let spare = { bounty: false, shallows: false, navy: false, cap: 0 }, aheadShown = false, navyTipShown = false;
+// Navy ships the captain has shot at this voyage stay hostile (cleared on sail): provoking one ends its peace for good, not for 8 s.
+let provoked = new WeakSet();
+onHook("hurt", (s, dmg, src) => { if (src === player && s.faction === "navy" && !s.isPlayer) provoked.add(s); });
 const NAVY_NOTE_R = 460;   // the first Navy ship this close to the captain explains itself (once, tipOnce js/hull-alert.js)
 // May e leave the captain alone this frame? (read by isHostile, js/ships.js, and the hunters, js/heat.js)
 function noviceSpare(e) {
-  if (e.boss || e.escortOf || e.ally || e.fixed) return false;
+  if (e.boss || e.escortOf || e.ally || e.fixed || provoked.has(e)) return false;
   if (spare.bounty || (spare.navy && e.faction === "navy")) return true;
   return spare.shallows && e.faction === "navy" && (e.threatL ?? e.L) > spare.cap;
 }
@@ -47,9 +50,12 @@ function noviceTick() {
   const r = live ? curRating() : 99;
   spare = {
     bounty: !!(live && typeof bossShip !== "undefined" && bossShip && bossShip.alive && bossShip.lair && bountyPeace(save.campaign.bounty, dist(player, bossShip.lair))),
-    shallows: !!live && noviceAt(r, ringAt(dist(player, PORT))), navy: !!live && save.campaign.bounty === 0, cap: noviceCap(r),
+    shallows: !!live && noviceAt(r, ringAt(dist(player, PORT))), navy: !!live && save.campaign.bounty === 0 && !save.ngPlus && !(typeof heat === "number" && heat > 0), cap: noviceCap(r),
   };
-  if (live && typeof tipOnce === "function" && enemies.some(e => e.alive && !e.fixed && e.faction === "navy" && dist(e, player) < NAVY_NOTE_R) && tipOnce("navyAim")) toast(t("navyAim"), false, 6000);
+  if (live && spare.navy && !navyTipShown && typeof tipOnce === "function" && enemies.some(e => e.alive && !e.fixed && e.faction === "navy" && dist(e, player) < NAVY_NOTE_R)) {
+    navyTipShown = true;   // a memory flag: tipOnce reads storage, and a blocked store must not toast every frame
+    if (tipOnce("navyAim")) toast(t("navyAim"), false, 6000);
+  }
   if (!live || typeof seaIsDanger !== "function") return;
   const last = SEAS[SEAS.length - 1], edge = ringEdge(last.L0) - dist(player, PORT);
   if (aheadShown && edge > SEA_AHEAD_R * 2.5) aheadShown = false;   // sailed well clear: it may warn again
@@ -59,7 +65,7 @@ function noviceTick() {
   }
 }
 onHook("frame", () => { if (!paused) noviceTick(); });
-onHook("sail", () => { aheadShown = false; });
+onHook("sail", () => { aheadShown = false; provoked = new WeakSet(); });
 
 // shipRating() walks every gun and the power table: the ring quotas ask for it every frame, so it is read twice a second.
 let ratingNow = 1, ratingT = 0;

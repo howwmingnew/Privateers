@@ -83,3 +83,10 @@ test("plate spread: overlapping plates are lifted clear, separate ones stay", ()
   const three = g.json("spreadPlates([{ x: 0, y: 100, w: 60, h: 18 }, { x: 5, y: 102, w: 60, h: 18 }, { x: -5, y: 101, w: 60, h: 18 }])");
   for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) assert.ok(Math.abs(three[i] - three[j]) >= 18, `plates ${i}/${j} clear: ${three}`);
 });
+
+test("a Navy ship the captain has shot at is no longer spared, for the rest of the voyage", () => {
+  const g = boot(["js/novice.js"]);
+  g.run("spare = { bounty: false, shallows: false, navy: true, cap: 2 }; var a = { faction: 'navy', L: 8 }, b = { faction: 'navy', L: 8 }; provoked.add(a)");
+  assert.equal(g.run("noviceSpare(a)"), false, "the provoked ship is hostile again");
+  assert.equal(g.run("noviceSpare(b)"), true, "its neighbours are still spared");
+});

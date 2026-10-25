@@ -151,4 +151,5 @@ function wipeProgress() {
   cargo = 0; lastLost = 0; lastLostExtra = false;
   applyPlayerStats(true); hud(true);
   tutorialReset();
+  if (typeof bossHpReset === "function") bossHpReset();
 }

@@ -91,3 +91,10 @@ test("the new strings exist in both languages", () => {
     assert.ok(g.run(`STR.en.${k} && STR.zh.${k}`), k);
   assert.equal(g.run("STR.zh.shipArm"), "確認購買？");
 });
+
+test("stackFit never lifts a box past the top of the screen", () => {
+  const g = boot();
+  assert.equal(g.run("stackFit(100, 500)"), 100, "room to spare");
+  assert.equal(g.run("stackFit(300, 120)"), 120 - 8, "capped at the top margin");
+  assert.equal(g.run("stackFit(50, 4)"), 0, "no room at all");
+});

@@ -105,6 +105,8 @@ const HUNT_REMIND_MS = 5 * 60 * 1000;
 // with the hull share he had, mended by BOSS_MEND of it. Not saved: a reload is a fresh start. Keyed by bounty id.
 const BOSS_MEND = 0.2;
 let bossHpFrac = {};
+const bossHpReset = () => { bossHpFrac = {}; };   // a new game, a wiped save or New Game+ starts the bounties whole
+const keepsWounds = b => b === BOUNTIES[0];   // only Red Ned, the newcomer's duel (#98), keeps his wounds; the later captains sail whole each time
 const bossMended = (frac, mend = BOSS_MEND) => frac === undefined ? 1 : Math.min(1, Math.max(0, frac) + mend);
 let huntSeenAt = {}, bountyHeld = false;
 function makeSkullTex(sc) {
@@ -155,7 +157,7 @@ function spawnBounty() {
   if (!b) return;
   const boss = spawnCaptain(b);
   if (!boss) { console.warn(`Bounty "${b.id}": no room at the lair; it sails next time.`); return; }
-  if (!runActive()) boss.hp = boss.maxHp * Math.max(0.05, bossMended(bossHpFrac[b.id]));   // campaignOutfit keeps this share (js/archetypes.js)
+  if (!runActive() && keepsWounds(b)) boss.hp = boss.maxHp * Math.max(0.05, bossMended(bossHpFrac[b.id]));   // campaignOutfit keeps this share (js/archetypes.js)
   bossShip = boss; bossTag = makeBossTag(bossName(b));
   const now = performance.now(), last = huntSeenAt[b.id];
   if (last === undefined || now - last > HUNT_REMIND_MS) {
@@ -202,7 +204,7 @@ onHook("sunk", (s, killer) => {
 });
 onHook("frame", () => {
   if (bossShip && !bossShip.alive) clearBoss();
-  if (bossShip && bossShip.maxHp > 0 && !runActive() && bossHpFrac[bossShip.boss] !== bossShip.hp / bossShip.maxHp) bossHpFrac = { ...bossHpFrac, [bossShip.boss]: bossShip.hp / bossShip.maxHp };
+  if (bossShip && bossShip.maxHp > 0 && !runActive() && keepsWounds(findBounty(bossShip.boss)) && bossHpFrac[bossShip.boss] !== bossShip.hp / bossShip.maxHp) bossHpFrac = { ...bossHpFrac, [bossShip.boss]: bossShip.hp / bossShip.maxHp };
   placeBossTag();
   if (paused || docked) return;
   for (const e of enemies) {   // idle bosses and escorts keep to their lair
@@ -311,5 +313,6 @@ function startNewGamePlus() {
   persist();
   dock("welcome");
   storyKey = "ngStory"; renderPort(); hud(true);
+  bossHpReset();
   runHook("newGamePlus", save.ngPlus);
 }

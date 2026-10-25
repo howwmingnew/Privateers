@@ -16,6 +16,9 @@ const armedTap = key => armKey === key;
 function disarm() { const was = armKey !== null || (typeof shipArmed !== "undefined" && shipArmed !== null); armKey = null; if (typeof shipArmed !== "undefined") shipArmed = null; return was; }
 // Esc (js/menu.js goBack): an armed button is put down before anything else closes.
 function cancelArm() { if (!disarm()) return false; renderPort(); return true; }
+// A confirm that was armed in one visit must not wait, still armed, in the next: docking and sailing both put it down (no re-render needed).
+onHook("dock", disarm);
+onHook("sail", disarm);
 function twoTap(key) {   // true on the confirming second tap
   if (armKey === key && performance.now() - armAt < 400) return false;   // a double-click is not a second tap
   if (armKey !== key) {

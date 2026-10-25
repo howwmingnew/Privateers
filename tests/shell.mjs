@@ -429,7 +429,8 @@ for (const dpr of [1, 2]) {
   await toSea(page);
   const txt = (step, dev, dk, kind) => ev(page, ([n, d, k, kd]) => {
     const keep = { dev: device, dk: docked, kind: dockKind, step: tut.step };
-    device = d; docked = k; if (kd) dockKind = kd; tut.step = n; tut.plan = "";
+    device = d; docked = k; if (kd) dockKind = kd; tut.step = n; tut.plan = ""; tut.sold = false;
+    if (n >= 5) cargo = Math.max(cargo, 20);   // set in the same tick as the read: a live frame between two calls (a sinking wipes the hold) must not turn the sell step into "again"
     const s = coachText(); device = keep.dev; docked = keep.dk; dockKind = keep.kind; tut.step = keep.step; return s;
   }, [step, dev, dk, kind]);
   const aim = await txt(1, "mouse", false), out = await txt(0, "mouse", false), outKeys = await txt(0, "keys", false);

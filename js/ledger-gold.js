@@ -37,6 +37,7 @@ function setVisitBills(kind, msg) {
   if (typeof escortReport !== "undefined") billSeen = escortReport;
   const fee = kind === "supply" && typeof visitFee !== "undefined" ? visitFee : 0, owed = (save.escorts || []).reduce((n, e) => n + (e.owed || 0), 0);
   visitBills = billLines(report, fee, report || fee ? owed : 0); visitBillsFor = msg;
+  if (typeof visitFee !== "undefined") visitFee = 0;   // read once: a later message must not list the same fee again
 }
 const visitBillsHtml = () => (visitBills.length && visitBillsFor === portMsg ? ` <span class="bills">${t("billsHead")}${visitBills.map(b => t(b.key, { n: fmt(b.n) })).join(t("billSep"))}${t("billEnd")}</span>` : "");
 onHook("dock", () => { shownGold = null; });   // a fresh visit starts from the real figure, not from last visit's

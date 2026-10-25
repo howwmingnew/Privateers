@@ -159,7 +159,7 @@ function tutorialSkip() {
   save.tutorialDone = true; persist();
   tut.active = false; renderCoach();
 }
-function tutorialReset() { Object.assign(tut, { active: false, step: 0, target: null, doneT: 0, html: "" }); renderCoach(); }
+function tutorialReset() { Object.assign(tut, { active: false, step: 0, target: null, doneT: 0, html: "" }); if (typeof bossHpReset === "function") bossHpReset(); renderCoach(); }
 const tutorialRunning = () => tut.active && tut.doneT <= 0;
 // Up to the first scoop only the tutorial's mark may pick a fight with the player (js/ships.js pickTarget), and the
 // volley tip stays quiet (js/volley.js): the first kill and its crate are uncontested.
@@ -300,7 +300,8 @@ function drawGuide(dt) {
   if (!tut.g) tut.g = S.add.graphics().setDepth(9);
   const g = tut.g; g.clear();
   if (tut.lbl && tut.lbl.visible) tut.lbl.setVisible(false);
-  const coachUp = on => { if (on !== tut.up) { tut.up = on; tutEl("coach").classList.toggle("up", on); } };
+  // .up pins top: a stale inline bottom (js/hud-stack.js) would stretch the card, so it is dropped
+  const coachUp = on => { if (on !== tut.up) { tut.up = on; const el = tutEl("coach"); el.classList.toggle("up", on); if (on) el.style.removeProperty("bottom"); } };
   if (docked || paused) { coachUp(false); return; }
   const tg = guideTarget(dt);
   if (!tg) { coachUp(false); return; }   // nothing to point at: the card goes back to its place, it must not stay up top

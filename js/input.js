@@ -18,7 +18,7 @@ Object.assign(STR.en, {
   welcome: "Sail out, find a ship and turn until your aim lines point at it, then fire. Sink ships, scoop up their plunder, and bring it back here to sell. Deeper waters hold richer and deadlier ships. The controls are under How to play.",
 });
 Object.assign(STR.zh, {
-  hintDesk: "WASD 或按住滑鼠右鍵轉向 ·空白鍵或左鍵開火 · Esc 暫停",
+  hintDesk: "WASD 或按住滑鼠右鍵轉向 · 空白鍵或左鍵開火 · Esc 暫停",
   hint_keys: "A/D 轉向 · W/S 升降帆 · 空白鍵開火（Q/E 單舷）· Esc 暫停",
   hint_mouse: "按住右鍵（或左鍵）轉向 · 點左鍵或放開左鍵開火 · Esc 暫停",
   hint_pad: "左搖桿轉向 · 十字鍵升降帆 · A／RT 開火 · Start 暫停",
