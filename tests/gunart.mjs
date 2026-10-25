@@ -71,11 +71,11 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
   const { ctx, page } = await open(vp, { mobile, tag: "harbor-" + name });
   await page.evaluate(`(${armLine})(); save.store = ["six", "long12", "carronade", "chain", "fire"].map(g => gunItem(g, 2)); titleOpen = false; const ti = document.getElementById("title"); if (ti) ti.hidden = true; paused = true; dock("welcome"); document.getElementById("port").hidden = false;`);
   await page.waitForTimeout(700 * SLOW);
+  await page.locator('#deck [data-act="port"]').first().scrollIntoViewIfNeeded(); await page.locator('#deck [data-act="port"]').first().click();   // a port picked: the panel lists the armory and the store
   const info = await page.evaluate(() => ({
-    armory: document.querySelectorAll("#armory .item .gsv").length, store: document.querySelectorAll("#bay .slot .gsv").length, dkCanvas: !!document.querySelector("#deck canvas.dk-art"),
+    armory: document.querySelectorAll("#armory .item .gsv").length, store: document.querySelectorAll("#ctx .cgrp .slot .gsv").length, dkCanvas: !!document.querySelector("#deck canvas.dk-art"),
     over: document.querySelector(".sheet").scrollWidth - document.querySelector(".sheet").clientWidth }));
-  await page.locator('#bay .slot').first().scrollIntoViewIfNeeded(); await page.locator('#bay .slot').nth(2).click();
-  const card = await page.evaluate(() => { const i = document.querySelector("#gunSel .gcard .gsv"); return i ? { w: Math.round(i.getBoundingClientRect().width), h: Math.round(i.getBoundingClientRect().height), loaded: i.complete && i.naturalWidth > 0 } : null; });
+  const card = await page.evaluate(() => { const i = document.querySelector("#ctx .gcard .gsv"); return i ? { w: Math.round(i.getBoundingClientRect().width), h: Math.round(i.getBoundingClientRect().height), loaded: i.complete && i.naturalWidth > 0 } : null; });
   ok(`${name}: the armory shows 5 side views, the store 5, the picked gun's card 1, and the page does not scroll sideways`, info.armory === 5 && info.store === 5 && card && card.loaded && card.w >= 40 && info.over <= 1, { ...info, card });
   await page.screenshot({ path: `${out}/${name}-card.png` });
   // a swap repaints the deck art (the key carries the loadout)

@@ -4,7 +4,7 @@
 function dock(kind, prior = { sold: 0, bonus: 0 }) {
   const svc = serviceOf(kind);   // js/ports.js: a supply station neither buys nor sells, a trade port does not mend
   runHook("dock", kind, svc.sell ? cargo : 0);   // kind "outpost" docks at the Hulk Outpost (js/campaign.js)
-  paused = true; docked = true; deckSel = null; gunNote = null;
+  paused = true; docked = true; deckSel = null; gunNote = null; if (typeof resetLedgerPick === "function") resetLedgerPick();   // js/ledger-tabs.js: tab, hull panel, candidate card
   const tally = { sunk: streak, cargo: Math.round(cargo) };
   const sale = svc.sell ? sellHold(kind) : { sold: 0, bonus: 0 };   // the hold sells at the sortie's plunder-streak price (js/plunder.js)
   const sold = sale.sold + prior.sold, bonus = Math.max(sale.bonus, prior.bonus);
@@ -57,50 +57,14 @@ function renderPort() {
   $("pGold").textContent = fmt(save.gold);
   $("pStats").innerHTML = `<span><b>${t("s_" + save.ship)}</b></span><span>${t("statLv", { n: shipRating() })}</span><span><b>${YARD.hull.show(yardVal("hull"))}</b></span>` +
     `<span><b>${YARD.sails.show(yardVal("sails"))}</b></span><span>${t("statHold", { n: fmt(yardVal("hold")) })}</span><span>${t("statSunk", { n: save.sunk })}</span>`;
-  renderGunBay();   // the picked gun's card and the gun store (js/gunbay.js), before the deck so a picked port shows lit
-  renderDeck($("deck"));   // gun deck: the ship bow-up with each gun port beside its muzzle (js/deck-art.js)
-  $("armory").innerHTML = armoryHtml();
-  // shipwright
-  $("yard").innerHTML = Object.entries(YARD).map(([k, y]) => {
-    const lv = save[k], cur = y.show(yardVal(k));
-    let btn, ds;
-    if (lv >= y.max) { btn = `<button class="btn max" type="button" disabled>${t("max")}</button>`; ds = `<b>${cur}</b>`; }
-    else { const c = y.cost(lv); btn = `<button class="btn" type="button" data-act="yard" data-k="${k}" ${save.gold < c ? "disabled" : ""}>${t("upgrade", { n: fmt(c) })}</button>`;
-      ds = `<b>${cur}</b> <span class="up">→ ${y.show(yardVal(k, lv + 1))}</span>`; }
-    return `<div class="item"><div class="nm">${t("y_" + k)}<small>Lv ${lv}</small></div>${btn}<div class="ds">${ds}</div></div>`;
-  }).join("");
-  // ships: the ones bought (switch free), then every model the yard sells (js/shipyard.js)
-  const owned = ownedShips(), count = {};
-  for (const e of owned) count[e.ship] = (count[e.ship] || 0) + 1;
-  const shipDs = (sh, h, s, o) => t("shipDs", { b: sh.slots.bow, s: sh.slots.left, t: sh.slots.stern,
-    hp: YARD.hull.show(yardVal("hull", h, sh)), kn: YARD.sails.show(yardVal("sails", s, sh)), cargo: fmt(yardVal("hold", o, sh)) }) + (sh.gunK ? t("gunK", { k: sh.gunK }) : "") +
-    t("shipGuns", { n: shipGuns(sh) }) + (sh.turn && sh.turn !== 1 ? t("shipTurn", { k: sh.turn }) : "");   // js/ship-lines.js
-  const mine = owned.map(e => {
-    const sh = SHIPS[e.ship], me = e.id === save.shipId, nm = count[e.ship] > 1 ? t("shipNo", { ship: t("s_" + e.ship), n: idNum(e.id) }) : t("s_" + e.ship);
-    const tag = sh.line ? `<small>${t("lineTag_" + sh.line)}</small>` : "";   // fast or heavy line (js/ship-lines.js)
-    const label = e.name ? `${esc(e.name)}<small>${nm}</small>${tag}` : nm + tag;   // the ship's own name (js/flags.js)
-    const btn = me ? `<button class="btn max" type="button" disabled>${t("yourShip")}</button>` : `<button class="btn" type="button" data-act="switch" data-id="${e.id}">${t("switchTo")}</button>`;
-    return `<div class="item"><div class="nm">${label}</div>${btn}<div class="ds">${shipDs(sh, e.hull, e.sails, e.hold)}${t("shipLvs", { h: e.hull, s: e.sails, o: e.hold })}</div></div>`;
-  }).join("");
-  const full = owned.length >= FLEET_MAX;
-  // a model already in the yard is switched to above for nothing; buying it again is a second hull, so the button says "another" (#72)
-  const saleRow = id => {
-    const sh = SHIPS[id], lock = shipLock(id);   // Letters of Marque gate (js/campaign.js): null, or why not yet
-    const btn = lock ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("locked")}</button>`
-      : full ? `<button class="btn" type="button" data-act="ship" data-id="${id}" disabled>${t("yardFull")}</button>`
-      : `<button class="btn" type="button" data-act="ship" data-id="${id}" ${save.gold < sh.cost ? "disabled" : ""}>${shipArmed === id ? t("shipArm") : buyLabel(id)}</button>`;
-    return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${shipDs(sh, 1, 1, 1)}${lock ? `<span class="lock">${lock}</span>` : count[id] ? `<span class="up">${t("ownedHint", { n: count[id] })}</span>` : ""}</div>${shipCmpHtml(sh, SHIPS[save.ship], save.ship)}</div>`;
-  };
-  // two lines side by side in tiers: fast, then heavy (js/ship-lines.js)
-  const sale = SHIP_LINE_KEYS.map(line => `<p class="hint-s line-${line}">${t("line_" + line)}</p>` +
-    SHIP_ORDER.filter(id => forSale(id) && SHIPS[id].line === line).map(saleRow).join("")).join("");
-  $("ships").innerHTML = `<p class="hint-s">${t("shipsOwned")}</p>${mine}<p class="hint-s">${t("shipsBuy")}</p>${sale}`;
+  renderGunBay();   // drops a pick whose place is gone (js/gunbay.js), before the fleet is drawn
+  renderFleet();   // the ship tabs, the picked ship's gun deck and the context panel (js/ledger-tabs.js)
   runHook("renderPort");   // wanted poster, outpost layout (js/campaign.js)
 }
 
 document.getElementById("port").addEventListener("click", ev => {
   const b = ev.target.closest("[data-act]");
-  if (!b && typeof cancelGunPick === "function" && !ev.target.closest("#gunSel, .gcard, button, a, input, select, label")) { cancelGunPick(); if (typeof cancelGearPick === "function") cancelGearPick(); return; }   // a blank spot puts the picked gun or part down (js/gunbay.js, js/gear-ui.js)
+  if (!b && typeof cancelGunPick === "function" && !ev.target.closest("#ctx, .gcard, button, a, input, select, label")) { cancelLedgerPick() || cancelGunPick(); if (typeof cancelGearPick === "function") cancelGearPick(); return; }   // a blank spot puts the picked hull, gun or part down (js/ledger-tabs.js, js/gunbay.js, js/gear-ui.js)
   if (!b || b.disabled) return;
   const act = b.dataset.act;
   let snd = act === "ship" || act === "switch" ? "buy" : act === "yard" ? "upgrade" : "uiClick";
@@ -109,12 +73,18 @@ document.getElementById("port").addEventListener("click", ev => {
     if (!snd) return;
   } else if (GEAR_ACTS.includes(act)) {   // worn parts, spares, compare, re-roll, lock, break down (js/gear-ui.js)
     snd = gearAct(act, b.dataset);
+    if (snd) gunNote = null;   // the gun Undo's snapshot predates this edit: undoing it would bring back a gun scrapped, re-rolled or locked since
     if (!snd) { if (gearNote && gearNote.tip) { renderPort(); Snd.play("denied"); } return; }
-  } else if (ESC_ACTS.includes(act)) {   // escort slots, ships, guns and stance (js/escort-ui.js)
+  } else if (ESC_ACTS.includes(act)) {   // escort slots, ships, stance and the bill (js/escort-ui.js)
     snd = escortAct(act, b.dataset);
     if (!snd) return;
-  } else if (act === "yard") {
-    const k = b.dataset.k; save.gold -= YARD[k].cost(save[k]); save[k]++;
+  } else if (TAB_ACTS.includes(act)) {   // the ship tabs, a picked port or hull, closing the panel (js/ledger-tabs.js)
+    snd = tabAct(act, b.dataset);
+    if (!snd) return;
+  } else if (act === "yard") {   // one level of the picked ship's hull, sails or hold: the flagship's own, or a yard ship's (js/shipyard.js)
+    const next = upgradeShipPart(save, b.dataset.id || save.shipId, b.dataset.k);
+    if (!next) return;
+    save = next;
   } else if (act === "ship") {
     const id = b.dataset.id;
     if (shipLock(id)) return;
@@ -134,26 +104,20 @@ document.getElementById("port").addEventListener("click", ev => {
     shipArmed = null;
     const bought = buyShip(save, id);
     if (!bought) return;
-    save = bought; deckSel = null;
+    save = bought; resetLedgerPick();
     portMsg = ["boughtShip", { ship: t("s_" + id) }];
   } else if (act === "switch") {   // a ship from the yard, free; guns that don't fit go back to the store
     const before = save.store.length, next = switchShip(save, b.dataset.id);
     if (!next) return;
     const spill = next.store.length - before;
-    save = next; deckSel = null;
+    save = next; resetLedgerPick();
     portMsg = [spill > 0 ? "switchedSpill" : "switchedShip", { ship: t("s_" + save.ship), n: spill }];
   }
   applyPlayerStats(true); persist(); renderPort(); hud(true);
   Snd.play(snd, { big: act === "ship" || act === "switch" });
-  // keep focus on the same control after re-render (keyboard users); a stored gun that moved aboard leaves the store
-  // shorter, so focus falls back to the stored gun before it, or the port it went to
-  const sel = act === "slot" ? `[data-act="slot"][data-side="${b.dataset.side}"][data-i="${b.dataset.i}"]`
-    : act === "store" ? [`#bay [data-i="${b.dataset.i}"]`, `#bay [data-i="${b.dataset.i - 1}"]`, "#deck .slot"]
-    : act === "gup" || act === "gup5" ? [`#gunSel [data-act="${act}"]:not(:disabled)`, '#gunSel [data-act="gup"]:not(:disabled)', "#gunSel .gcard"]
-    : act === "unload" || act === "tostore" ? ["#bay .slots .slot:last-child:not(.put)", "#deck .slot"]
-    : act === "gundo" ? "#deck .slot"
-    : act === "ship" || act === "switch" ? `#ships [data-act="${act}"]:not(:disabled), #ships [data-act="ship"]:not(:disabled), #sail` : null;
-  if (sel) [].concat(sel).map(q => document.querySelector(q)).find(Boolean)?.focus();
+  // keyboard focus: a closed panel hands it back to what it was about; any other control the page rebuilt is found again by its data-* (js/ledger-nav.js)
+  if (ledgerFocus) { document.querySelector(ledgerFocus)?.focus(); ledgerFocus = null; }
+  if (act === "port" || act === "hull") document.getElementById("ctx").scrollIntoView({ block: "nearest" });   // the panel opens under the deck: bring it into view
 });
 // Not enough gold: a disabled button never receives a click, so listen for the press itself.
 document.getElementById("port").addEventListener("pointerdown", ev => { const b = ev.target.closest("[data-act]"); if (b && b.disabled) Snd.play("denied"); });

@@ -69,7 +69,9 @@ function gunLvMul(lv) { return 1.15 ** (lv - 1); }
 // whole-ship unlock, so arming a big hull costs more than a sloop but not fourteen times the old price.
 const gunItem = (g, lv = 1) => ({ g, lv });
 function gunUpCost(gun) { return Math.round(GUNS[gun.g].upBase * 1.55 ** (gun.lv - 1)); }
-function allGuns(s = save) { return MOUNTS.flatMap(({ key }) => s[key] || []).concat(s.store || []).filter(Boolean); }
+// Every gun you own: the flagship's ports, the store, and the ports of each escort (js/escorts.js: save.escorts[i].guns).
+const escortGuns = e => (e && e.guns ? MOUNTS.flatMap(({ key }) => (Array.isArray(e.guns[key]) ? e.guns[key] : [])) : []);
+function allGuns(s = save) { return MOUNTS.flatMap(({ key }) => s[key] || []).concat(s.store || [], Array.isArray(s.escorts) ? s.escorts.flatMap(escortGuns) : []).filter(Boolean); }
 
 // Enemy base stats by level L (the brig; js/archetypes.js scales them per class). Merchants are tankier, nearly
 // unarmed and richer. Enemy guns fire a side together after VOLLEY_WARN s of warning (js/volley.js). Every crew aims

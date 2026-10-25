@@ -44,7 +44,8 @@ const rig = () => ev(() => {
   window.clearSea = () => { for (const e of enemies) { e.alive = false; e.spr.destroy(); e.badge?.destroy(); } enemies.length = 0; fleets = []; escortLive = []; spawnT = 1e9; };
   window.park = p => { Object.assign(player, { x: p.x, y: p.y, rot: 0, speed: 0, maxHp: 1e9, hp: 1e9, alive: true }); player.spr.setPosition(p.x, p.y); joyVec = { x: 0, y: 0, m: 0 }; const c = S.cameras.main; c.centerOn(p.x, p.y); c.preRender(); };   // the camera is there at once, as onScreen() tests read it
   window.depart = () => { spawnT = 0; document.getElementById("port").hidden = true; docked = false; paused = false; canDock = false; if (typeof tut !== "undefined") tut.active = false; save.tutorialDone = true; };
-  window.cfg = (id, extra = {}) => ({ id, on: true, stance: "normal", gun: "six", owed: 0, ...extra });
+  // a slot injected into the live save: every port of its ship holds a new 6-pounder unless `guns` says otherwise
+  window.cfg = (id, extra = {}) => { const y = save.fleet.find(x => x.id === id), guns = emptyGuns(y ? y.ship : ""); for (const k in guns) guns[k] = guns[k].map(() => gunItem("six")); return { id, on: true, stance: "normal", owed: 0, guns, ...extra }; };
   window.hurts = { player: 0, escort: 0 };
   onHook("hurt", (s, dmg) => { if (s.isPlayer) hurts.player++; else if (s.ally) hurts.escort++; });
   // an idle punching bag: hostile, armed with nothing, never picks a target, never moves
@@ -58,61 +59,97 @@ const rig = () => ev(() => {
     } return best; };
   window.sailOut = (escorts, at = 5) => { Object.assign(save, { escorts }); const p = typeof at === "number" ? openAt(at, 700) : at; park(p); depart(); clearSea(); deployEscorts(); return escortLive.map(x => x.e); };
 });
-const clickAct = async (act, id, k) => { await page.click(`#escorts [data-act="${act}"][data-id="${id}"]${k ? `[data-k="${k}"]` : ""}`); };
-const texts = () => ev(() => document.getElementById("escorts").innerText);
-const cfg = (id, extra = {}) => ({ id, on: true, stance: "normal", gun: "six", owed: 0, ...extra });
+const stage = () => ev(() => document.getElementById("stage").innerText);
+// The ports of each yard ship type (js/data.js SHIPS), and every one of them holding `g` at level `lv`: an escort's guns are items now (js/escorts.js).
+const SLOTS = { sloop: [1, 1, 1, 0], schooner: [1, 2, 2, 0], brig: [1, 3, 3, 0], frigate: [2, 7, 7, 1] };
+const full = (ship, g = "six", lv = 1) => Object.fromEntries(["bow", "left", "right", "stern"].map((k, i) => [k, Array.from({ length: SLOTS[ship][i] }, () => ({ g, lv }))]));
+// A slot for a save: no guns given, so loading arms it with new Lv 1 6-pounders (the migration); pass `guns` to choose.
+const cfg = (id, extra = {}) => ({ id, on: true, stance: "normal", owed: 0, ...extra });
 
-console.log("Ledger: unlock, buy, assign");
+console.log("Ledger: tabs, unlock, buy, assign, arm");
 await boot(saveWith({ campaign: { bounty: 0 }, escorts: [] }));
-check(await ev(() => document.getElementById("escorts").closest("section").hidden), "no Escorts page before bounty 1");
+check(await ev(() => document.getElementById("tabs").hidden && document.getElementById("tabs").children.length === 0), "no escort tabs before bounty 1: only the flagship's deck");
+check(await ev(() => !!document.querySelector('#deck [data-act="port"]') && document.getElementById("shead").innerText.includes("Flagship")), "...and the flagship's gun deck is there as always");
 await boot(saveWith({ campaign: { bounty: 1 }, gold: 500, escorts: [] }));
-check(await ev(() => !document.getElementById("escorts").closest("section").hidden), "the Escorts page appears once bounty 1 is claimed");
-let t = await texts();
-check(/Buy slot · 200/.test(t) && /Sink bounty 2 to unlock · 800 gold/.test(t) && /Sink bounty 4 to unlock · 5,000 gold/.test(t), `slot 1 costs 200, slots 2-4 say what unlocks them (${t.replace(/\s+/g, " ").slice(0, 120)})`);
-await clickAct("escBuy", 0);
-check(await ev(() => save.gold === 500 && save.escorts.length === 0), "the first tap on a slot only arms the button");
+check(await ev(() => !document.getElementById("tabs").hidden && document.querySelectorAll("#tabs [data-act=tab]").length === 5), "the tabs appear once bounty 1 is claimed: the flagship and four escort slots");
+let t = await ev(() => document.getElementById("tabs").innerText);
+check(/Flagship/.test(t) && /Escort 1\s+200 gold/.test(t) && (t.match(/Locked/g) || []).length === 3, `slot 1 shows its price, slots 2-4 are locked (${t.replace(/\s+/g, " ")})`);
+const tabTo = i => page.click(`#tabs [data-act="tab"][data-i="${i}"]`);
+await tabTo(1);
+t = await stage();
+check(/Buy slot · 200/.test(t), `slot 1 offers to be bought for 200 (${t.replace(/\s+/g, " ").slice(0, 80)})`);
+await tabTo(2); t = await stage();
+check(/Sink bounty 2 to unlock · 800 gold/.test(t), "slot 2 says what unlocks it");
+await tabTo(4); t = await stage();
+check(/Sink bounty 4 to unlock · 5,000 gold/.test(t), "slot 4 says what unlocks it and for how much");
+await tabTo(1);
+await page.click('#stage [data-act="escBuy"][data-id="0"]');
+check(await ev(() => save.gold === 500 && save.escorts.length === 0) && /Press again to buy/.test(await stage()), "the first tap on a slot only arms the button");
 await page.waitForTimeout(500);
-await clickAct("escBuy", 0);
+await page.click('#stage [data-act="escBuy"][data-id="0"]');
 check(await ev(() => save.gold === 300 && save.escorts.length === 1 && save.escorts[0].id === "" && save.escorts[0].stance === "normal"), "the second tap buys slot 1 for 200 (stance Normal by default)");
 check(await ev(() => JSON.parse(localStorage.getItem("privateers-save-v2")).escorts.length === 1), "the purchase is saved");
-await clickAct("escShip", 0);
-const first = await ev(() => save.escorts[0].id);
-check(first === "s1", `Change picks the first spare yard ship (${first})`);
-await clickAct("escShip", 0); await clickAct("escShip", 0); await clickAct("escShip", 0); await clickAct("escShip", 0);
-check(await ev(() => save.escorts[0].id) === "", "Change cycles through the spare ships and back to none");
-await clickAct("escShip", 0);
-await clickAct("escStance", 0, "passive");
-check(await ev(() => save.escorts[0].stance) === "passive" && await ev(() => !!document.querySelector('#escorts [data-k="passive"].on')), "a stance button sets and shows the stance");
-await clickAct("escStance", 0, "active");
+t = await stage();
+check(/assign from the yard/i.test(t) && /buy a new ship for this escort/i.test(t) && await ev(() => !!document.querySelector('#stage [data-act="escAssign"]') && !!document.querySelector('#stage [data-act="escBuyShip"]')),
+  "a bought, empty slot shows the two choices: assign an idle ship, or buy a new one");
+await page.click('#stage [data-act="escAssign"][data-id="0"][data-ship="s1"]');
+check(await ev(() => save.escorts[0].id === "s1" && Object.values(save.escorts[0].guns).flat().length === 3 && Object.values(save.escorts[0].guns).flat().every(x => x === null)), "Assign posts the sloop; its three ports start empty");
+check(/No guns aboard/.test(await ev(() => document.getElementById("shead").innerText)) && await ev(() => !escortReady(save, 0)), "with no guns the ledger says why it will not sail, and it does not");
+await page.click('#deck [data-act="port"][data-side="bow"][data-i="0"][data-e="0"]');
+check(await ev(() => deckSel && deckSel.e === 0 && !!document.querySelector('#ctx [data-act="buy"][data-id="six"]')), "tapping an escort's empty port opens the panel with the armory");
+await page.click('#ctx [data-act="buy"][data-id="six"]');
+check(await ev(() => save.escorts[0].guns.bow[0] && save.escorts[0].guns.bow[0].g === "six" && save.store.length === 1 && escortReady(save, 0)), "a gun bought there is mounted on the escort's port (the store is untouched) and the escort is ready to sail");
+await page.click('#ctx [data-act="gfrom"][data-side="store"]');
+check(await ev(() => save.escorts[0].guns.bow[0].g === "long12" && save.escorts[0].guns.bow[0].lv === 4 && save.store[0].g === "six"), "picking the stored Long 12 for that port trades it with the six");
+await page.click('#ctx [data-act="gup"]');
+check(await ev(() => save.escorts[0].guns.bow[0].lv === 5), "the card upgrades the gun on the escort's port");
+await page.click('#ctx [data-act="ctxclose"]');
+check(await ev(() => !deckSel && !document.querySelector("#ctx .cpanel") && /Tap a gun port/.test(document.getElementById("ctx").innerText)), "closing the panel leaves the one hint line");
+await page.click('#deck [data-act="hull"]');
+check(await ev(() => hullOpen && !!document.querySelector('#yard [data-act="yard"][data-k="hull"][data-id="s1"]') && !!document.querySelector('#ctx [data-act="escEvict"]')), "the escort's hull panel has its own yard rows and a free-the-slot button");
+const hull0 = await ev(() => save.fleet.find(x => x.id === "s1").hull);
+await ev(() => { save.gold += 1000; renderPort(); });
+await page.click('#yard [data-act="yard"][data-k="hull"]');
+check(await ev(([h]) => save.fleet.find(x => x.id === "s1").hull === h + 1 && save.hull === 3, [hull0]), "upgrading the hull upgrades the escort's yard ship, not the flagship");
+await page.click('#ctx [data-act="escEvict"]');
+check(await ev(() => save.escorts[0].id === "" && save.fleet.some(x => x.id === "s1") && save.store.length === 2 && !hullOpen), "freeing the slot returns the ship to the yard and the gun to the store");
+await page.click('#stage [data-act="escAssign"][data-id="0"][data-ship="s1"]');
+await page.click('#shead [data-act="escStance"][data-id="0"][data-k="passive"]');
+check(await ev(() => save.escorts[0].stance) === "passive" && await ev(() => !!document.querySelector('#shead [data-k="passive"].on')), "a stance button sets and shows the stance");
+await page.click('#shead [data-act="escStance"][data-id="0"][data-k="active"]');
 check(await ev(() => save.escorts[0].stance) === "active", "...and Active too");
-await clickAct("escGun", 0);
-check(await ev(() => save.escorts[0].gun) === "long12", "Guns cycles the types you own (6-pounder, Long 12)");
-t = await texts();
-check(/Long 12 Lv 4/.test(t), "the page shows the gun at the best level you own");
-await clickAct("escOn", 0);
-check(await ev(() => save.escorts[0].on === false) && /Deploy/.test(await texts()), "Stand down keeps the ship in port; the button becomes Deploy");
-await clickAct("escOn", 0);
+await page.click('#shead [data-act="escOn"][data-id="0"][data-v="0"]');
+check(await ev(() => save.escorts[0].on === false && !!document.querySelector('#shead [data-v="0"].on[aria-pressed="true"]')), "Standby keeps the ship in port and shows it");
+await page.click('#shead [data-act="escOn"][data-id="0"][data-v="1"]');
 check(await ev(() => save.escorts[0].on === true), "Deploy puts it back");
-check(await ev(() => document.getElementById("escorts").querySelectorAll("[data-act]").length >= 6 && document.activeElement !== document.body), "focus is not lost when the page re-renders");
+check(await ev(() => document.querySelectorAll("#shead [data-act]").length >= 5 && document.activeElement !== document.body), "focus is not lost when the page re-renders");
 await boot(saveWith({ campaign: { bounty: 2 }, gold: 1000, escorts: [] }));
-check(/Buy slot 1 first/.test(await texts()), "slot 2 waits for slot 1");
+await tabTo(2);
+check(/Buy slot 1 first/.test(await stage()), "slot 2 waits for slot 1");
 await boot(saveWith({ campaign: { bounty: 1 }, gold: 100, escorts: [] }));
-check(await ev(() => document.querySelector('#escorts [data-act="escBuy"]').disabled), "not enough gold: the buy button is off");
+await tabTo(1);
+check(await ev(() => document.querySelector('#stage [data-act="escBuy"]').disabled), "not enough gold: the buy button is off");
 await boot(saveWith({ escorts: [cfg("s1"), cfg("s3", { owed: 40 }), cfg("")] }));
-await page.evaluate(() => document.getElementById("escorts").scrollIntoView());
+await tabTo(2);
+await page.evaluate(() => document.getElementById("fleet").scrollIntoView());
 await page.screenshot({ path: `${out}/ledger.png` });
-check(/Owes 40 gold/.test(await texts()) && /Repair · 40/.test(await texts()), "an escort that owes gold says so and offers Repair");
-await page.click('#escorts [data-act="escPay"]');
+t = await ev(() => document.getElementById("shead").innerText);
+check(/Owes 40 gold/.test(t) && /Repair · 40/.test(t), "an escort that owes gold says so and offers Repair");
+check(await ev(() => document.querySelector('#tabs [data-i="2"] .dot') && !document.querySelector('#tabs [data-i="2"] .dot.on') && document.querySelector('#tabs [data-i="1"] .dot.on')), "the tabs show who sails (green dot) and who waits");
+await page.click('#shead [data-act="escPay"]');
 check(await ev(() => save.escorts[1].owed === 0 && save.gold === 19960), "paying the debt takes exactly what was owed");
+await tabTo(3);
+check(/Escort slot 3: no ship/.test(await stage()), "a bought slot with no ship shows its berth");
 await boot(saveWith({ escorts: [cfg("s1")] }), "zh");
-t = await texts();
-check(/隨從船位 1/.test(t) && /攻擊傾向/.test(t) && /主動/.test(t) && !/undefined|\{/.test(t), "the page reads in Traditional Chinese, no raw keys");
+await tabTo(1);
+t = await ev(() => document.getElementById("shead").innerText + document.getElementById("tabs").innerText);
+check(/隨從 1/.test(t) && /攻擊傾向|主動/.test(t) && /主動/.test(t) && /待命/.test(t) && !/undefined|\{/.test(t), "the page reads in Traditional Chinese, no raw keys");
 await page.screenshot({ path: `${out}/ledger-zh.png` });
-const strs = await ev(() => { const en = Object.keys(STR.en).filter(k => /^(esc|st_|stn_)/.test(k)), zh = Object.keys(STR.zh).filter(k => /^(esc|st_|stn_)/.test(k)); return { miss: [...en.filter(k => !(k in STR.zh)), ...zh.filter(k => !(k in STR.en))], n: en.length }; });
-check(strs.miss.length === 0 && strs.n > 30, `every escort string exists in both languages (${strs.n}; missing: ${strs.miss})`);
+const strs = await ev(() => { const en = Object.keys(STR.en), zh = Object.keys(STR.zh); return { miss: [...en.filter(k => !(k in STR.zh)), ...zh.filter(k => !(k in STR.en))], n: en.filter(k => /^(esc|st_|stn_)/.test(k)).length }; });
+check(strs.miss.length === 0 && strs.n > 25, `every string exists in both languages (${strs.n} escort strings; missing: ${strs.miss})`);
 
 console.log("The sortie: who sails, and with what");
-await boot(saveWith({ escorts: [cfg("s1"), cfg("s3", { stance: "active" }), cfg("s4", { gun: "long12" }), cfg("s5", { on: false })] }));
+await boot(saveWith({ escorts: [cfg("s1"), cfg("s3", { stance: "active" }), cfg("s4", { guns: full("frigate", "long12", 4) }), cfg("s5", { on: false })] }));
 await rig();
 let r = await ev(() => { depart(); setSail(); stepN(3); const es = enemies.filter(e => e.ally);
   return { n: es.length, live: escortLive.length, ships: es.map(e => e.cls), names: es.map(e => e.badge.text), hp: es.map(e => e.maxHp), want: [save.fleet[0], save.fleet[1], save.fleet[2]].map(y => yardVal("hull", y.hull, SHIPS[y.ship])),
@@ -138,6 +175,21 @@ await boot(saveWith({ escorts: [cfg("s1")] }));
 await rig();
 const census = await ev(() => { depart(); setSail(); spawnT = 0; for (let i = 0; i < 60; i++) { stepN(10); } const withE = seaCensus().total; save.escorts = []; setSail(); spawnT = 0; for (let i = 0; i < 60; i++) { stepN(10); } return { withE, without: seaCensus().total, max: ENEMY_COUNT }; });
 check(Math.abs(census.withE - census.without) <= 1 && census.withE <= census.max && census.withE >= 28, `the sea holds the same ${census.withE} ships with and without an escort (not stronger, not fewer) ${JSON.stringify(census)}`);
+
+console.log("The guns are the escort's own");
+await boot(saveWith({ escorts: [cfg("s1", { guns: { bow: [{ g: "long12", lv: 3 }], left: [null], right: [{ g: "carronade", lv: 2 }], stern: [] } }), cfg("s3", { guns: { bow: [null], left: [null, null], right: [null, null], stern: [] } }), cfg("s4", { gun: "carronade" })] }));
+await rig();
+r = await ev(() => { depart(); setSail(); stepN(3); const es = enemies.filter(e => e.ally), sloop = es.find(e => e.cls === "sloop"), fr = es.find(e => e.cls === "frigate");
+  const sh = ["bow", "left", "right", "stern"].map(k => sloop.guns[k].map(g => g.gt));
+  return { cls: es.map(e => e.cls).sort().join(), sh, bowDmg: sloop.guns.bow[0].dmg, carrDmg: sloop.guns.right[0].dmg, bowRange: sloop.guns.bow[0].range, carrRange: sloop.guns.right[0].range,
+    frig: Object.values(fr.guns).flat().length, frigSix: Object.values(fr.guns).flat().every(g => g.gt === "six"), vol: Object.keys(sloop.vol).sort().join() }; });
+check(r.cls === "frigate,sloop", `an escort with every port empty does not sail; the armed ones do (${r.cls})`);
+check(JSON.stringify(r.sh) === JSON.stringify([["long12"], [], ["carronade"], []]), `the battery is built port by port from the gun items; an empty port fires nothing (${JSON.stringify(r.sh)})`);
+check(Math.abs(r.bowDmg - 18 * 1.15 ** 2) < 1e-6 && Math.abs(r.carrDmg - 32 * 1.15) < 1e-6 && r.bowRange === 400 && r.carrRange === 200, `each gun keeps its own type's damage, level and range (${r.bowDmg.toFixed(2)} / ${r.carrDmg.toFixed(2)})`);
+check(r.vol === "bow,right", `only the sides that hold a gun get a volley (${r.vol})`);
+check(r.frig === 17 && r.frigSix, "an old save's escort (a shared gun type, no guns) came out armed with a new 6-pounder in each of the frigate's 17 ports");
+await ev(() => { dock("return"); tab = 2; renderPort(); });
+check(/No guns aboard/.test(await ev(() => document.getElementById("shead").innerText)), "and the ledger tells the unarmed one why it stayed in port");
 
 console.log("Following in formation, and no collision bill");
 await boot(saveWith({ escorts: [cfg("s1"), cfg("s3"), cfg("s4")] }));
@@ -177,7 +229,7 @@ const stanceRows = await ev(() => {
   for (const stance of ["active", "normal", "passive"]) {
     rows[stance] = {};
     for (const kind of ["far", "near", "hunter", "attacker"]) {
-      const es = sailOut([{ id: "s1", on: true, stance, gun: "six", owed: 0 }], 4), e = es[0];
+      const es = sailOut([cfg("s1", { stance })], 4), e = es[0];
       const fw = a => ({ x: player.x + Math.cos(a) * 600, y: player.y + Math.sin(a) * 600 });
       let d;
       if (kind === "far") d = dummy(fw(0).x, fw(0).y);                       // 600 from the flagship, ~700 from the escort, idle
@@ -196,9 +248,10 @@ for (const st of ["active", "normal", "passive"]) {
   const got = Object.fromEntries(Object.entries(stanceRows[st]).map(([k, v]) => [k, v.tgt ? 1 : 0]));
   check(JSON.stringify(got) === JSON.stringify(want[st]), `${st}: engages ${JSON.stringify(got)} (far idle, near idle, hunting the flagship, bearing down on it)${JSON.stringify(got) === JSON.stringify(want[st]) ? "" : " " + JSON.stringify(stanceRows[st].hunter.dbg)}`);
 }
-check(stanceRows.active.far.hit && stanceRows.normal.near.hit && stanceRows.passive.attacker.hit && !stanceRows.passive.near.hit && !stanceRows.normal.far.hit, `and only the engaged ones fire (${JSON.stringify(Object.fromEntries(Object.entries(stanceRows).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([q, x]) => [q, x.hit ? 1 : 0]))])))})`);
+// active still picks the far idle ship but no longer leaves its station (ESCORT_LEASH) to reach gun range, so it is not asked to fire there
+check(stanceRows.active.near.hit && stanceRows.normal.near.hit && stanceRows.passive.attacker.hit && !stanceRows.passive.near.hit && !stanceRows.normal.far.hit, `and only the engaged ones fire (${JSON.stringify(Object.fromEntries(Object.entries(stanceRows).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([q, x]) => [q, x.hit ? 1 : 0]))])))})`);
 const retreat = await ev(() => {
-  const es = sailOut([{ id: "s4", on: true, stance: "passive", gun: "six", owed: 0 }], 4), e = es[0];
+  const es = sailOut([cfg("s4", { stance: "passive" })], 4), e = es[0];
   const d = dummy(e.x + 300, e.y, e); d.angry = 1e6; e.hp = e.maxHp * 0.2;
   let far = 0; for (let i = 0; i < 600; i++) { stepN(1); d.target = e; far = Math.max(far, dist(e, player)); }
   return { retreat: !!e.retreat, far: Math.round(far), now: Math.round(dist(e, player)) };
@@ -268,7 +321,7 @@ check(bill.gone.dead && bill.gone.c && !bill.gone.inEnemies && !bill.gone.target
 check(bill.paid === 30 + 60 + 300 && bill.owed.every(o => o === 0), `the bill after the sortie: sunk sloop 30, sunk schooner 60, frigate half-damaged 300 = ${bill.paid} gold`);
 check(bill.report && bill.report.paid === 390 && bill.report.lost.length === 2, "the ledger reports the bill and who was lost");
 check(bill.ids.join() === "s1,s3,s4" && bill.fleet.length === 4 && bill.live === 0, "nothing is lost for ever: ships, slots and guns all still there");
-check(/390 gold in repairs/.test(await ev(() => { renderPort(); return document.getElementById("escorts").innerText; })), "the Escorts page shows last sortie's bill");
+check(/390 gold in repairs/.test(await ev(() => { renderPort(); return document.getElementById("escRep").innerText; })), "the ledger shows last sortie's bill");
 r = await ev(() => { document.getElementById("sail").click(); stepN(3); return { n: enemies.filter(e => e.ally && e.alive).length, full: enemies.filter(e => e.ally).every(e => e.hp === e.maxHp) }; });
 check(r.n === 3 && r.full, `the next sortie sails all three again, hulls full ${JSON.stringify(r)}`);
 const poor = await ev(() => {
@@ -277,13 +330,15 @@ const poor = await ev(() => {
   dock("return");
   const owed = save.escorts.find(e => e.id === "s3").owed, gold = save.gold; renderPort();
   setSail(); stepN(2); const sails = escortLive.map(x => x.e.cls);
-  return { owed, gold, sails, text: document.getElementById("escorts").innerText };
+  dock("return"); tab = 2; renderPort();
+  return { owed, gold, sails, text: document.getElementById("shead").innerText };
 });
 check(poor.gold === 0 && poor.owed === 50 && poor.sails.join() === "sloop,frigate", `short of gold the rest stays owed (${poor.owed}) and that escort waits in port; the others sail (${poor.sails})`);
 check(/Owes 50 gold/.test(poor.text), "the ledger asks for the 50 gold");
 await ev(() => { dock("return"); save.gold = 500; renderPort(); });
 await page.waitForTimeout(500);
-await page.click('#escorts [data-act="escPay"]');
+await ev(() => { tab = 2; renderPort(); });
+await page.click('#shead [data-act="escPay"]');
 r = await ev(() => { setSail(); stepN(2); return { gold: save.gold, live: escortLive.map(x => x.e.cls).sort().join() }; });
 check(r.gold <= 450 + 400 && /schooner/.test(r.live) && r.live.split(",").length === 3, `pay the debt and it sails again (${r.live})`);
 
@@ -313,7 +368,7 @@ check(solo.after === 2 && solo.kept === 2, "back on the real sea they sail again
 console.log("Old saves");
 await boot({ v: 2, gold: 120, ship: "sloop", hull: 2, bow: ["six"], left: ["six"], right: ["six"], sunk: 3 });
 check(await ev(() => Array.isArray(save.escorts) && save.escorts.length === 0 && save.gold === 120), "a save from before escorts loads with none, everything else intact");
-check(await ev(() => document.getElementById("escorts").closest("section").hidden), "and the page stays out of the way until bounty 1");
+check(await ev(() => document.getElementById("tabs").hidden), "and the tabs stay out of the way until bounty 1");
 
 console.log("Chart and edge marks");
 await boot(saveWith({ escorts: [cfg("s3"), cfg("s4")] }));

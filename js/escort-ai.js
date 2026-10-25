@@ -14,8 +14,8 @@ let escortT = 0;
 
 const escortName = entry => entry.name || t("s_" + entry.ship);
 
-// Give a freshly made enemy the numbers of yard ship `entry` carrying `gun` at level `lv`.
-function outfitAlly(e, entry, slotNo, stance, gun, lv) {
+// Give a freshly made enemy the numbers of yard ship `entry` carrying the gun items `guns` ({ bow, left, right, stern }, the slot's own ports).
+function outfitAlly(e, entry, slotNo, stance, guns) {
   const sh = SHIPS[entry.ship], st = enemyStats(ESCORT_AIM_L, false);
   Object.assign(e, { ally: true, slot: slotNo, stance, yardId: entry.id, allyName: escortName(entry), loot: 0, stolen: 0, merchant: false, fixed: false,
     arch: entry.ship, A: { plan: ESCORT_PLAN[entry.ship] || "circle" }, angry: 0, target: null, boss: undefined, escortOf: undefined });
@@ -23,7 +23,7 @@ function outfitAlly(e, entry, slotNo, stance, gun, lv) {
   e.maxSpeed = yardVal("sails", entry.sails, sh) * ESCORT_SPEED_K;
   e.turnRate = 1.7 * (ESCORT_TURN[entry.ship] || 1);
   e.aim = st.aim; e.aimLead = st.lead; e.aimLeadErr = st.leadErr; e.aimTurn = st.turn; e.aimSpread = st.spread;
-  e.guns = { ...escortBattery(entry.ship, gun, lv), turret: [] };
+  e.guns = { ...escortBattery(entry.ship, guns), turret: [] };
   e.vol = {};
   for (const m in e.guns) if (e.guns[m].length) e.vol[m] = { cd: rand(0.4, 1.8), warn: 0, aims: null };
   e.range = Math.max(0, ...["left", "right", "bow", "stern"].flatMap(k => e.guns[k].map(g => g.range))) || 250;
@@ -43,10 +43,10 @@ function deployEscorts() {
   for (const id of SHIP_ORDER) shipArt(id, "ally", {}, S);   // baked now, not mid-fight
   const slots = formationSlots("wedge", picks.length, ESCORT_GAP), ships = [];
   picks.forEach((i, k) => {
-    const entry = escortShipOf(save, save.escorts[i]), cfg = save.escorts[i], gun = escortGunOf(save, cfg), p = safeSlot(slotWorld(player, slots[k]), player);
+    const entry = escortShipOf(save, save.escorts[i]), cfg = save.escorts[i], p = safeSlot(slotWorld(player, slots[k]), player);
     const e = makeEnemy(S, p.x, p.y, ESCORT_AIM_L, "ally", "brig");
     e.rot = player.rot;
-    outfitAlly(e, entry, i, cfg.stance, gun, escortGunLv(save, gun));
+    outfitAlly(e, entry, i, cfg.stance, cfg.guns);
     ships.push(e); escortLive.push({ slot: i, e });
   });
   const f = makeFleet("escort", [player, ...ships], { formation: "wedge", power: ESCORT_FIRE });

@@ -50,14 +50,68 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 @keyframes hdPop { 0% { transform: scale(1.55); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { #hitDirs .hd.pop b { animation: none; } #hitDirs .hd { transition: none; } }
 
-/* ---- Escorts page of the ledger (js/escort-ui.js) ---- */
-.item.esc .esc-row { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: calc(14px * var(--ts)); }
-.item.esc .esc-l { min-width: 5.2em; font-weight: 700; color: var(--ink-soft); }
-.item.esc .esc-v { flex: 1 1 8em; min-width: 0; }
-.item.esc .esc-v small { font-weight: 600; font-size: calc(12px * var(--ts)); color: var(--ink-soft); margin-left: 6px; }
-.item.esc .esc-row .btn { grid-row: auto; grid-column: auto; min-width: 0; padding: 5px 11px; font-size: calc(13px * var(--ts)); }
-.item.esc .esc-row .btn.on { background: var(--ink); color: var(--parch); box-shadow: 0 0 0 2px var(--brass); }
-.item.esc .esc-note { grid-column: 1 / -1; }
+/* ---- the fleet: a tab per ship, the picked ship's gun deck, one context panel (js/ledger-tabs.js, js/ledger-panel.js) ---- */
+#fleet { min-width: 0; }
+.tabs { display: flex; gap: 6px; overflow-x: auto; min-width: 0; padding: 2px 2px 0; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+.tab { flex: 1 0 calc(108px * var(--ts)); min-width: calc(108px * var(--ts)); display: flex; align-items: center; gap: 8px; position: relative; font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+  background: var(--parch-2); border: 2px solid rgba(42,29,16,.5); border-bottom: 0; border-radius: 10px 10px 0 0; padding: 6px 8px; opacity: .85; }
+.tab:hover { opacity: 1; }
+.tab.sel { background: var(--parch); opacity: 1; border-color: var(--brass); box-shadow: 0 -3px 0 var(--brass) inset; }
+.tab .mini { width: 20px; height: 30px; flex: none; fill: var(--ink-soft); stroke: var(--ink); stroke-width: 1.2; }
+.tab.empty .mini { fill: none; stroke-dasharray: 3 2; }
+.tab.lock { opacity: .55; }
+.tab .tl { display: block; font-size: calc(11px * var(--ts)); color: var(--ink-soft); line-height: 1.1; }
+.tab .tn { display: block; font-weight: 700; font-size: calc(14px * var(--ts)); line-height: 1.2; white-space: nowrap; }
+.tab .dot { position: absolute; top: 6px; right: 7px; width: 10px; height: 10px; border-radius: 50%; background: #9a9078; border: 1px solid var(--ink); }
+.tab .dot.on { background: #4f9a4a; }
+.stage { background: rgba(224,204,156,.3); border: 2px solid var(--brass); border-radius: 0 0 8px 8px; padding: 10px 12px 12px; }
+#tabs[hidden] + .stage { border-radius: 8px; }
+.shead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; border-bottom: 1px dashed var(--ink-soft); padding-bottom: 8px; margin-bottom: 10px; }
+.shead .role, .berth .role { font-size: calc(12px * var(--ts)); letter-spacing: .1em; color: var(--ink-soft); font-weight: 700; margin: 0; }
+.shead .sname { font-family: var(--f-display); font-size: calc(22px * var(--ts)); line-height: 1.15; }
+.shead .sname small { font-family: var(--f-ui); font-size: calc(13px * var(--ts)); font-weight: 600; color: var(--ink-soft); margin-left: 8px; }
+.shead .ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.shead .estatus { flex: 1 0 100%; margin: 0; font-size: calc(13px * var(--ts)); color: var(--ink-soft); }
+.shead .estatus .lock { color: var(--blood); font-weight: 700; }
+.shead .ctl .btn { grid-row: auto; grid-column: auto; min-width: 0; padding: 5px 11px; font-size: calc(13px * var(--ts)); }
+.seg { display: inline-flex; border: 2px solid var(--ink-soft); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-weight: 600; font-size: calc(13px * var(--ts)); color: var(--ink); background: var(--parch-2); border: 0; padding: 5px 11px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--ink-soft); }
+.seg button.on { background: var(--ink); color: var(--parch); }
+.seg button.on.go { background: #3f6b2a; }
+.sfoot { justify-content: center; margin-top: 8px; }
+.stage .dk-ship { appearance: none; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; border-radius: 40% / 12%; }
+.stage .dk-ship:hover { background: rgba(240,199,102,.18); }
+.stage .dk-ship.sel { box-shadow: 0 0 0 3px var(--brass); background: rgba(240,199,102,.22); }
+/* the empty or unbought slot: choices instead of a deck */
+.berth { border: 3px dashed var(--ink-soft); border-radius: 12px; padding: 12px; background: rgba(224,204,156,.35); }
+.berth .lock { color: var(--blood); font-weight: 700; margin: 6px 0 0; }
+.berth .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.berth .card { background: var(--parch); border: 2px solid rgba(42,29,16,.45); border-radius: 10px; padding: 10px; min-width: 0; }
+.berth .card h3 { margin: 0 0 2px; font-family: var(--f-display); font-weight: 400; font-size: calc(18px * var(--ts)); }
+.berth .card .sub, .cpanel .sub { margin: 0 0 6px; font-size: calc(12px * var(--ts)); color: var(--ink-soft); }
+.berth .card > .btn { grid-row: auto; grid-column: auto; margin-top: 4px; }
+/* the context panel */
+.ctx:empty { display: none; }
+.ctx { margin-top: 12px; }
+.chint { margin: 0; padding: 8px 12px; text-align: center; color: var(--ink-soft); border: 2px dashed rgba(42,29,16,.35); border-radius: 10px; font-size: calc(14px * var(--ts)); }
+.cpanel { position: relative; padding: 10px 14px 12px; border: 2px solid var(--ink-soft); border-radius: 12px; background: var(--parch); box-shadow: 0 4px 14px rgba(42,29,16,.25); }
+.cpanel h3 { margin: 0 28px 2px 0; font-family: var(--f-display); font-weight: 400; font-size: calc(19px * var(--ts)); }
+.cpanel h4 { margin: 12px 0 4px; font-size: calc(13px * var(--ts)); letter-spacing: .08em; color: var(--ink-soft); }
+.cpanel .x { position: absolute; top: 4px; right: 8px; width: 32px; height: 32px; border: 0; background: none; font-size: 24px; line-height: 1; color: var(--ink-soft); cursor: pointer; }
+.cpanel .gcard { margin-top: 8px; }
+.cpanel .gnote { margin-top: 8px; }
+.cpanel .evict { grid-column: auto; margin-top: 10px; width: 100%; }
+.cgrp { margin: 4px 0 8px; }
+.cgrp .sub { margin-bottom: 4px; font-weight: 700; }
+.cgrp .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(92px * var(--ts)), 1fr)); gap: 6px; }
+@media (max-width: 700px) { .berth .cols { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+  /* a phone: the panel is a bottom sheet over the page, above the Set sail bar; the sheet gets room under it so nothing is hidden */
+  .ctx.open { position: sticky; bottom: calc(44px + 30px * var(--ts));   /* the Set sail bar's height */ z-index: 2; max-height: 52vh; overflow-y: auto; margin-inline: -4px; }
+  .ctx.open .cpanel { border-radius: 16px 16px 0 0; border-width: 3px 2px 0; border-color: var(--brass); box-shadow: 0 -6px 18px rgba(42,29,16,.35); }
+  .tab { flex-basis: calc(112px * var(--ts)); min-width: calc(112px * var(--ts)); }
+}
 .poster .p-rec .speed { display: block; margin-top: 2px; color: var(--ink-soft); font-style: italic; }
 
 /* ---- the purse stays in view: the ledger's header sticks to the top of the scrolling sheet (js/ledger-gold.js, #73) ---- */
@@ -76,3 +130,10 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
   #port .sheet > header h1 { font-size: min(calc(26px * var(--ts)), 7vw); margin: 0; }
   #port .gold-big b { font-size: min(calc(24px * var(--ts)), 7vw); }
 }
+/* a replace-list candidate: the tile mounts it, the small (i) opens its card (js/ledger-panel.js) */
+.cand { position: relative; min-width: 0; }
+.cand .slot { width: 100%; }
+.cand .cinfo { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 1.5px solid var(--ink-soft); background: var(--parch); color: var(--ink); font: italic 700 13px/1 var(--f-display, serif); cursor: pointer; }
+.cand .cinfo[aria-pressed="true"], .cand.prev .slot { box-shadow: 0 0 0 3px var(--brass); }
+.candcard { margin: 6px 0 4px; }
+.candcard .gcard { margin-top: 0; }

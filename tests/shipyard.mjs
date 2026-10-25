@@ -37,19 +37,24 @@ async function open(lang = "en") {
   await ready(page);
   return { ctx, page };
 }
-const snap = page => page.evaluate(() => ({ gold: save.gold, ship: save.ship, id: save.shipId, hull: save.hull, sails: save.sails, hold: save.hold, fleet: save.fleet,
+// The ships and the yard's rows are in the hull's panel (js/ledger-panel.js): open it before reading or pressing them.
+const openHull = page => page.evaluate(() => { if (!hullOpen) { resetLedgerPick(); hullOpen = true; renderPort(); } });
+const snap = async page => { await openHull(page); return page.evaluate(() => ({ gold: save.gold, ship: save.ship, id: save.shipId, hull: save.hull, sails: save.sails, hold: save.hold, fleet: save.fleet,
   items: [...document.querySelectorAll("#ships .item")].map(el => ({ nm: el.querySelector(".nm").textContent, btn: el.querySelector(".btn").textContent, act: el.querySelector(".btn").dataset.act })),
-  msg: document.getElementById("pMsg").textContent }));
+  msg: document.getElementById("pMsg").textContent })); };
 const buy = async (page, id) => {   // two taps: arm, then confirm
+  await openHull(page);
   await page.click(`#ships [data-act="ship"][data-id="${id}"]`); await page.waitForTimeout(500 * SLOW);
   await page.click(`#ships [data-act="ship"][data-id="${id}"]`); await page.waitForTimeout(200 * SLOW);
 };
 
 {
   const { ctx, page } = await open();
-  const heading = await page.evaluate(() => document.querySelector("#ships").closest("section").querySelector("h2").textContent);
-  check(heading === "Switch ship", `ledger section is titled "${heading}"`);
-  const hint = await page.evaluate(() => document.querySelector("#ships").closest("section").querySelector(".hint-s").textContent);
+  await page.click('#deck [data-act="hull"]');   // the real tap on the hull opens the panel with the yard and the ships
+  check(await page.evaluate(() => hullOpen && !!document.querySelector('#ctx #yard') && !!document.querySelector('#ctx #ships')), "tapping the hull opens its panel: the yard rows and the ships");
+  const heading = await page.evaluate(() => document.querySelector("#ctx h4").textContent);
+  check(heading === "Change ship", `the ships list is titled "${heading}"`);
+  const hint = await page.evaluate(() => document.querySelector("#ctx h4 + .hint-s").textContent);
   check(!/60%|Lv 1 again|start again/i.test(hint), "the trade-in / reset text is gone from the hint");
 
   check(await page.evaluate(() => !document.querySelector('#ships [data-act="ship"][data-id="sloop"]')), "the free sloop is not for sale");
@@ -93,7 +98,8 @@ const buy = async (page, id) => {   // two taps: arm, then confirm
 }
 {
   const { ctx, page } = await open("zh");
-  const heading = await page.evaluate(() => document.querySelector("#ships").closest("section").querySelector("h2").textContent);
+  await openHull(page);
+  const heading = await page.evaluate(() => document.querySelector("#ctx h4").textContent);
   check(heading === "換船", `zh heading "${heading}"`);
   await buy(page, "schooner");
   const s = await snap(page);

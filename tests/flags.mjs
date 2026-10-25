@@ -103,6 +103,7 @@ console.log("Ledger: change the flag and the name");
   // names live on the ship, the flag on the captain: buy a brig (unnamed, same flag), name it, switch back
   await page.evaluate(() => { save.gold = 99999; save.campaign = { ...save.campaign, bounty: 4, ships: SHIP_ORDER.slice() }; renderPort(); });
   await page.waitForTimeout(500 * SLOW);
+  await page.evaluate(() => { resetLedgerPick(); hullOpen = true; renderPort(); });   // the ships are in the hull's panel
   await page.click('#ships [data-act="ship"][data-id="brig"]'); await page.waitForTimeout(500 * SLOW);
   await page.click('#ships [data-act="ship"][data-id="brig"]'); await page.waitForTimeout(200 * SLOW);
   check(await page.evaluate(() => save.ship === "brig" && save.shipName === ""), "a bought ship starts unnamed");
@@ -110,6 +111,7 @@ console.log("Ledger: change the flag and the name");
   check((await flag(page)).emblem === "skull", "the flag stays with the captain");
   await page.fill("#shipNameIn", "Iron Maiden"); await page.press("#shipNameIn", "Enter");
   check(await page.evaluate(() => save.shipName === "Iron Maiden" && save.fleet.some(e => e.name === "Dread Queen")), "the brig is named and the sloop keeps her own name");
+  await page.evaluate(() => { resetLedgerPick(); hullOpen = true; renderPort(); });
   check(await page.evaluate(() => document.querySelector("#ships .item .nm").textContent.includes("Dread Queen")), "the yard lists the parked ship by name");
   await page.click('#ships [data-act="switch"]'); await page.waitForTimeout(200 * SLOW);
   check(await page.evaluate(() => save.ship === "sloop" && save.shipName === "Dread Queen" && save.fleet.some(e => e.name === "Iron Maiden")), "switching back shows that ship's name");

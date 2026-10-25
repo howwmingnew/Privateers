@@ -124,7 +124,7 @@ wantedEl.addEventListener("click", ev => {
   ngArmed = false; clearTimeout(ngArmT); startNewGamePlus();
 });
 onHook("renderPort", () => {
-  for (const id of ["deck", "gear", "armory", "yard", "ships"]) { const sec = document.getElementById(id)?.closest("section"); if (sec) sec.hidden = atOutpost; }
+  for (const id of ["deck", "gear"]) { const sec = document.getElementById(id)?.closest("section"); if (sec) sec.hidden = atOutpost; }
   document.getElementById("portTitle").textContent = t(atOutpost ? dockTitleKey() : "harbor");
   renderWanted();
 });

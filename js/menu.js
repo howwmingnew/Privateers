@@ -240,7 +240,8 @@ function goBack() {
   if (modal) { if (modal.id === "logbook" && typeof closeLog === "function") closeLog(); else if (modal.id === "challenge") closeChallenge(); return; }   // victory: its own buttons
   if (pauseOpen) return resumeGame();
   if (titleOpen && !$m("tConfirm").hidden) return menuAction("new-no");
-  if (docked && typeof cancelGunPick === "function" && cancelGunPick()) return;   // a gun picked up in the ledger is put down first (js/gunbay.js)
+  if (docked && typeof cancelLedgerPick === "function" && cancelLedgerPick()) return;   // an open hull panel closes first (js/ledger-tabs.js)
+  if (docked && typeof cancelGunPick === "function" && cancelGunPick()) return;   // a gun port picked in the ledger is put down next (js/gunbay.js)
   if (docked && typeof cancelGearPick === "function" && cancelGearPick()) return;   // so is a gear part (js/gear-ui.js)
   if (docked) $m("sail").focus({ preventScroll: true });   // from the ledger, "back" heads for Set sail
 }

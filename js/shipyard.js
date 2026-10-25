@@ -8,14 +8,14 @@
 Object.assign(STR.en, {
   shipsOwned: "Your ships", shipsBuy: "Buy a ship", switchTo: "Switch", yardFull: "Yard full", shipNo: "{ship} #{n}",
   shipLvs: " · hull Lv {h}, sails Lv {s}, hold Lv {o}",
-  ownedHint: "Owned ×{n} · switch to it above, free", buyAnother: "Buy another {cost}",
+  ownedHint: "Owned ×{n} · switch to it above, free", ownedCount: "Owned ×{n}", buyAnother: "Buy another {cost}",
   switchedShip: "You are aboard the <em>{ship}</em>. Your cannons came with you.",
   switchedSpill: "You are aboard the <em>{ship}</em>. Your cannons came with you; <em>{n}</em> had no port and went back to the store.",
 });
 Object.assign(STR.zh, {
   shipsOwned: "已擁有的船", shipsBuy: "購買船隻", switchTo: "換上", yardFull: "船塢已滿", shipNo: "{ship} #{n}",
   shipLvs: " · 船體 Lv {h}、船帆 Lv {s}、貨艙 Lv {o}",
-  ownedHint: "已擁有 ×{n}・在上方免費換上", buyAnother: "再買一艘 {cost}",
+  ownedHint: "已擁有 ×{n}・在上方免費換上", ownedCount: "已擁有 ×{n}", buyAnother: "再買一艘 {cost}",
   switchedShip: "你換到<em>{ship}</em>上了，火砲一起搬了過來。",
   switchedSpill: "你換到<em>{ship}</em>上了，火砲一起搬了過來；有 <em>{n}</em> 門砲沒有砲位，放回了庫存。",
 });
@@ -36,7 +36,8 @@ function boardShip(s, entry, patch = {}) {
   const parked = activeShip(s);
   const next = fitMounts({ ...s, ...patch, shipId: entry.id, ship: entry.ship, hull: entry.hull, sails: entry.sails, hold: entry.hold, shipName: entry.name || "",
     fleet: s.fleet.filter(e => e.id !== entry.id).concat(parked) });
-  return typeof fitGear === "function" ? fitGear(next) : next;   // the gear follows you: parts the new hull cannot wear go back to the bag (js/gear-save.js)
+  const geared = typeof fitGear === "function" ? fitGear(next) : next;   // the gear follows you: parts the new hull cannot wear go back to the bag (js/gear-save.js)
+  return typeof fitEscorts === "function" ? fitEscorts(geared) : geared;   // an escort whose ship you now sail has none: its guns go to the store (js/escorts.js)
 }
 // Buy a new ship of `type` at full price and sail it (hull, sails and hold at Lv 1). Returns the save, or null if it can't.
 function buyShip(s, type) {
@@ -48,6 +49,16 @@ function buyShip(s, type) {
 function switchShip(s, id) {
   const entry = s.fleet.find(e => e.id === id);
   return entry ? boardShip(s, entry) : null;
+}
+// Raise one part (hull, sails, hold) of a ship you own by a level at the yard price for that ship: the flagship's own fields, or its yard entry.
+// Returns the save, or null at the cap, with too little gold, or for a ship you do not have.
+function upgradeShipPart(s, id, k) {
+  const e = id === s.shipId ? activeShip(s) : s.fleet.find(x => x.id === id);
+  if (!Object.hasOwn(YARD, k) || !e || e[k] >= YARD[k].max) return null;
+  const cost = YARD[k].cost(e[k], SHIPS[e.ship]);
+  if (s.gold < cost) return null;
+  const gold = s.gold - cost;
+  return id === s.shipId ? { ...s, gold, [k]: s[k] + 1 } : { ...s, gold, fleet: s.fleet.map(x => (x.id === id ? { ...x, [k]: x[k] + 1 } : x)) };
 }
 
 SAVE_SANITIZERS.push(s => {

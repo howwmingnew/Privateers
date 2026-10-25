@@ -57,17 +57,19 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
   // pick a port, level it from the card, then move it into an empty port
   const first = page.locator('#deck .slot[data-side="left"][data-i="0"]'), empty = page.locator('#deck .slot[data-side="left"][data-i="4"]');
   await first.scrollIntoViewIfNeeded(); await first.click();
-  const card = await page.evaluate(() => { const c = document.querySelector("#gunSel .gcard"); if (!c) return null; const r = c.getBoundingClientRect();
+  const card = await page.evaluate(() => { const c = document.querySelector("#ctx .gcard"); if (!c) return null; const r = c.getBoundingClientRect();
     return { top: Math.round(r.top), bottom: Math.round(r.bottom), vh: innerHeight }; });
   ok(`${name}: tapping a port shows its gun card, inside the screen`, card && card.top >= 0 && card.bottom <= card.vh + 1, card);
   const g0 = await page.evaluate(() => ({ gold: save.gold, lv: save.left[0].lv, gun: save.left[0].g }));
-  await page.locator('#gunSel [data-act="gup"]').click();
+  await page.locator('#ctx [data-act="gup"]').click();
   const g1 = await page.evaluate(() => ({ gold: save.gold, lv: save.left[0].lv }));
   ok(`${name}: the card's upgrade levels that gun and spends gold`, g1.lv === g0.lv + 1 && g1.gold < g0.gold, { g0, g1 });
   await page.screenshot({ path: `${out}/${name}-card.png` });
-  await empty.scrollIntoViewIfNeeded(); await empty.click();   // #68: the picked gun, then an empty port: it moves there
+  await page.locator('#ctx [data-act="unload"]').click();   // the gun goes to the store (the last place in it) ...
+  await empty.scrollIntoViewIfNeeded(); await empty.click();   // ... and an empty port picked lists the store: that gun mounts there
+  await page.locator('#ctx [data-act="gfrom"][data-side="store"]').last().click();
   const sw = await page.evaluate(() => ({ a: save.left[0], b: save.left[4] }));
-  ok(`${name}: tapping the empty port moves the picked gun there`, sw.a === null && sw.b && sw.b.g === g0.gun && sw.b.lv === g1.lv, sw);
+  ok(`${name}: unloading a gun and mounting it on an empty port moves it there`, sw.a === null && sw.b && sw.b.g === g0.gun && sw.b.lv === g1.lv, sw);
   await ctx.close();
 }
 
