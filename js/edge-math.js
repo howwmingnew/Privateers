@@ -3,12 +3,16 @@
 // A target beyond the screen edge but within EDGE_RANGE screen widths gets a small box on the screen edge, on the line from
 // the middle of the screen toward it, showing its icon and "about N m". These functions work on plain numbers.
 
-Object.assign(STR.en, { edgeDist: "~{n} m" });
-Object.assign(STR.zh, { edgeDist: "約 {n} 公尺" });
+Object.assign(STR.en, { edgeDist: "~{n} m", edgeRisky: "risky" });
+Object.assign(STR.zh, { edgeDist: "約 {n} 公尺", edgeRisky: "危險" });
 
 // World px -> metres, rounded to the nearest EDGE_ROUND_M (never shown as 0).
 function edgeMeters(px) { return Math.max(EDGE_ROUND_M, Math.round(px * EDGE_M_PER_PX / EDGE_ROUND_M) * EDGE_ROUND_M); }
-const edgeLabel = px => t("edgeDist", { n: edgeMeters(px) });
+const edgeLabel = (px, risky = false) => t("edgeDist", { n: edgeMeters(px) }) + (risky ? " · " + t("edgeRisky") : "");
+// A bounty's box warns when the way there is above the captain: the boss itself 2+ levels over the rating, or the sea it
+// lies in (its weakest ship) 1+ over. The route runs through that water, and nothing else tells a new captain so.
+const EDGE_RISK_BOSS = 2, EDGE_RISK_SEA = 1;
+const edgeRisky = (bossLv, seaLv, rating) => bossLv - rating >= EDGE_RISK_BOSS || seaLv - rating >= EDGE_RISK_SEA;
 // Where the ray from the middle of rect {l,t,r,b} toward (dx, dy) leaves it, and through which side.
 function edgePoint(rect, dx, dy) {
   const cx = (rect.l + rect.r) / 2, cy = (rect.t + rect.b) / 2, hx = (rect.r - rect.l) / 2, hy = (rect.b - rect.t) / 2;

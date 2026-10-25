@@ -28,6 +28,22 @@ function slideOff(s, isl, desired) {
   return Math.abs(angDiff(desired, left)) <= Math.abs(angDiff(desired, right)) ? left : right;
 }
 
+// ---------- Gliding along the shore ----------
+// A hull pushed off a rock keeps the way it has along the shore and loses only what drove it into the rock (the old flat
+// x0.9 per frame ate all speed within a second, so a ship leaning on an island sat stuck at 0.1 kn). The player's bow is
+// also eased toward the nearer tangent, so a helm held toward the island makes the ship run along it instead of pinning it.
+const SLIDE_DRAG = 0.3;    // share of speed lost per frame at a head-on push (scaled by into^2: a graze loses next to nothing)
+const SLIDE_TURN = 6;      // rad/s the player's bow is eased along the rock at a head-on push
+const SLIDE_SKIN = 8;      // px past the rock's solid edge in which the bow still eases along it
+// (nx, ny): unit vector from the hull to the rock; rot: its heading. Returns { keep, turn }: the speed share kept this
+// frame and the heading change per second (signed; 0 when the bow is not pointed at the rock).
+function slideAlong(rot, nx, ny) {
+  const c = Math.cos(rot), sn = Math.sin(rot), into = c * nx + sn * ny;
+  if (into <= 0) return { keep: 1, turn: 0 };
+  const side = c * ny - sn * nx >= 0 ? 1 : -1;   // the tangent the bow already leans toward (the left one when dead on)
+  return { keep: 1 - SLIDE_DRAG * into * into, turn: -side * SLIDE_TURN * (0.35 + 0.65 * into) };   // the floor keeps a grazing bow turning too
+}
+
 // ---------- Rocks near a point ----------
 // Every ship (avoidIslands, slideOff, move), ball and fleet slot used to test all ~85 islands every frame, though a point
 // at sea is near two at most (js/world-seas.js keeps them r1 + r2 + 160 apart). The sea is cut into ISLE_CELL squares,

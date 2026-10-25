@@ -32,3 +32,7 @@
   #hud button, #coach #coachSkip { min-width: 44px; min-height: 44px; }
   #coachSkip { padding: 0 10px; }
 }
+
+/* the card that hops to the top gives way to the sale tally and the sea banner (both land in the same strip): it fades while they show */
+#coach.up { transition: opacity .2s; }
+body:has(#tally.on) #coach.up, body:has(#seaBanner.on) #coach.up { opacity: 0; }

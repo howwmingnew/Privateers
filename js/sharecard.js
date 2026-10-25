@@ -165,7 +165,8 @@ function shareOffer(getSpec, ms = POSTCARD_OFFER_MS, home = false) {
   shareChip.hidden = false;
   clearTimeout(shareChipTimer); shareChipTimer = setTimeout(() => { shareChip.hidden = true; }, ms);
 }
-onHook("frame", () => { if (shareChip && !shareChip.hidden && (docked || paused || titleOpen || leftSpot(shareChipHome) || !player.alive)) shareChip.hidden = true; });
+onHook("frame", () => { if (shareChip && !shareChip.hidden && (docked || paused || titleOpen || dockingNow() || leftSpot(shareChipHome) || !player.alive)) shareChip.hidden = true; });
+onHook("dock", () => { if (shareChip) { shareChip.hidden = true; clearTimeout(shareChipTimer); } });
 const portShareEl = () => document.getElementById("pShare");
 function mountPortShare() {
   let p = portShareEl();

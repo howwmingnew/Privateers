@@ -234,14 +234,20 @@ function move(s, dt) {
   s.x = clamp(s.x + (s.vx + lee.x) * dt, 60, W - 60); s.y = clamp(s.y + (s.vy + lee.y) * dt, 60, H - 60);
   // islands are solid to the whole hull: the hit capsule (s.hl / s.hw, cutter to man-o'-war) is kept off the rock
   const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28, hw = s.hw ?? 13;
-  for (const isl of islandsNear(s.x, s.y)) pushOffRock(s, isl, c, sn, hl, hw);   // the rocks near it, in map order (js/ai-nav.js)
-  if (!portsOff()) pushOffRock(s, HARBOR_ROCK, c, sn, hl, hw);   // the harbor island last, as before; none in the daily sea (js/ports.js)
+  for (const isl of islandsNear(s.x, s.y)) pushOffRock(s, isl, c, sn, hl, hw, dt);   // the rocks near it, in map order (js/ai-nav.js)
+  if (!portsOff()) pushOffRock(s, HARBOR_ROCK, c, sn, hl, hw, dt);   // the harbor island last, as before; none in the daily sea (js/ports.js)
 }
-function pushOffRock(s, isl, c, sn, hl, hw) {
+function pushOffRock(s, isl, c, sn, hl, hw, dt) {
   const R = isl.r * 0.9 + hw + 5, ix = isl.x - s.x, iy = isl.y - s.y;
   if (Math.abs(ix) > R + hl || Math.abs(iy) > R + hl) return;
   const k = clamp(ix * c + iy * sn, -hl, hl), qx = s.x + c * k - isl.x, qy = s.y + sn * k - isl.y, d = Math.sqrt(qx * qx + qy * qy);
-  if (d < R && d > 0.01) { crashIsland(s, isl, -qx / d, -qy / d); s.x += qx / d * (R - d); s.y += qy / d * (R - d); s.speed *= 0.9; }   // damage by the speed it arrived at (js/collision.js)
+  if (d < R && d > 0.01) {
+    crashIsland(s, isl, -qx / d, -qy / d);   // damage by the speed it arrived at (js/collision.js)
+    s.x += qx / d * (R - d); s.y += qy / d * (R - d);
+    const sl = slideAlong(s.rot, -qx / d, -qy / d);   // glide along the shore: only the speed that drove into the rock is lost (js/ai-nav.js)
+    s.speed *= sl.keep;
+    if (s.isPlayer) s.rot += sl.turn * dt;
+  } else if (s.isPlayer && d < R + SLIDE_SKIN && d > 0.01) s.rot += slideAlong(s.rot, -qx / d, -qy / d).turn * dt;   // the bow keeps turning along the rock while it hugs the shore
 }
 // Radius two hulls keep between them (half capsule length + beam): 20 px for the old one-size hull, more for big ships.
 const shipRadius = s => ((s.hl ?? 28) + (s.hw ?? 13)) / 2;

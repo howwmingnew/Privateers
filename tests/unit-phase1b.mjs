@@ -266,3 +266,31 @@ test("edge markers: the bounty comes first, then stronger ships, then places, ne
   assert.deepEqual(pair, ["b", "a"], "same danger: the nearer first");
   assert.deepEqual(g.json("edgePick([])"), []);
 });
+
+// ---------- #99: gliding along the shore, and the bounty box's warning ----------
+test("slideAlong: a graze keeps almost all its speed, a head-on push loses the most, a bow turned away loses nothing", () => {
+  const g = boot();
+  const graze = g.json("slideAlong(0, 0.2, 0.98)"), head = g.json("slideAlong(0, 1, 0)"), away = g.json("slideAlong(Math.PI, 1, 0)");
+  assert.ok(graze.keep > 0.98, JSON.stringify(graze));
+  assert.ok(Math.abs(head.keep - 0.7) < 1e-9, JSON.stringify(head));
+  assert.deepEqual(away, { keep: 1, turn: 0 });
+  assert.ok(graze.keep > head.keep);
+});
+
+test("slideAlong: the bow is eased toward the tangent it already leans to, away from the rock", () => {
+  const g = boot();
+  // rock to the starboard (positive y) of an eastward bow: the bow turns to port (negative)
+  assert.ok(g.run("slideAlong(0, 0.5, 0.87).turn") < 0);
+  assert.ok(g.run("slideAlong(0, 0.5, -0.87).turn") > 0);
+  assert.notEqual(g.run("slideAlong(0, 1, 0).turn"), 0, "dead on still picks a side");
+});
+
+test("edgeRisky: a bounty far above the captain, or lying in a sea above them, warns; a fair one does not", () => {
+  const g = edge("en");
+  assert.equal(g.run("edgeRisky(4, 1, 2)"), true);    // the boss itself 2 levels over
+  assert.equal(g.run("edgeRisky(3, 3, 2)"), true);    // the Reef Straits (Lv 3+) for a Lv 2 captain
+  assert.equal(g.run("edgeRisky(3, 2, 2)"), false);
+  assert.equal(g.run("edgeRisky(2, 1, 4)"), false);
+  assert.equal(g.run("edgeLabel(640, true)"), "~320 m · risky");
+  assert.equal(edge("zh").run("edgeLabel(640, true)"), "約 320 公尺 · 危險");
+});

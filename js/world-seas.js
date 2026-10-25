@@ -163,7 +163,8 @@ function seaHere() { const d = dist(player, PORT); return d < SAFE_R ? null : se
 const SEA_LINES = () => [SAFE_R, ...SEAS.slice(1).map(s => ringEdge(s.L0))];
 const seaDepth = d => Math.min(...SEA_LINES().map(r => Math.abs(d - r)));   // px to the nearest sea border
 // A sea far above the captain's rating (SEA_WARN_GAP, js/novice.js) is announced in red, with what to do about it.
-const seaIsDanger = id => { const s = SEAS.find(x => x.id === id); return seaWarnGap(s.L0 + levelBonus() + warLevels(s.L0), shipRating()); };
+const seaLowLv = id => { const s = SEAS.find(x => x.id === id); return s.L0 + levelBonus() + warLevels(s.L0); };   // the weakest ship level the sea makes now
+const seaIsDanger = id => seaWarnGap(seaLowLv(id), shipRating());
 const SEA_BANNER_MS = 3800, SEA_WARN_MS = 6500;
 function renderSeaBanner(id) {
   const s = SEAS.find(x => x.id === id), b = levelBonus(), danger = seaIsDanger(id);
