@@ -406,39 +406,37 @@ const VFXLAB = (() => {
     C(c) { strike(c, "C"); c.pool.at(400, () => fogBanks(c, 2, 56)); },   // bolt + hull arcs, then dense fog
   };
 
-  const mk = (cat, ver, name, desc, fn, extra) => ({ cat, ver, name, desc, play: fn, id: cat + "-" + ver, ...extra });
+  const mk = (cat, ver, fn, extra) => ({ cat, ver, play: fn, id: cat + "-" + ver, ...extra });
   const EFFECTS = [
-    mk(1, "cur", "目前遊戲版本", "橘色火花與火焰噴出、一個平的黃色閃光圓盤、一道黑煙柱。", blast.cur, { fixed: 1 }),
-    mk(1, "A", "A 火球膨脹", "白閃光後火球先膨脹（白→黃→橘→暗紅→黑煙），再爆出橘色碎片、木板與一圈白色衝擊環，最後升起煙柱。", blast.A),
-    mk(1, "B", "B 衝擊波主導", "刺眼白閃、雙層衝擊環、放射狀光芒，海面被壓暗一圈，再拋出火星與木板。重點在「震」。", blast.B),
-    mk(1, "C", "C 連環爆", "船身先連爆三小下，接著大爆炸、火星雨從天而降、水面殘骸繼續燃燒。重點在「炸穿整艘船」。", blast.C),
-    mk(2, "cur", "目前遊戲版本", "一道貼著砲管的閃光、5 團圓形白煙、幾顆火星。", muzzleFx.cur, { fixed: 1 }),
-    mk(2, "A", "A 蓬鬆白煙", "每門砲噴出一簇不規則、會膨脹飄散的雲團，約 2 秒慢慢淡掉；火星少量。", muzzleFx.A),
-    mk(2, "B", "B 噴流煙環", "高速煙柱順著砲管射出再張開成錐形，前端帶一個擴散的煙環，俐落短促。", muzzleFx.B),
-    mk(2, "C", "C 火藥黑煙與煙帶", "偏髒的灰黃火藥煙，連續齊射後在船側留下一條被風吹長的煙帶，並噴出餘燼。", muzzleFx.C),
-    mk(3, "cur", "目前遊戲版本", "船身上方冒出一團團小火球與深色煙；沒有燃燒地面。", fireFx.cur, { fixed: 1 }),
-    mk(3, "A", "A 火舌煙柱", "尖頂火舌（白黃橘紅漸變）加一根會被風吹彎的高煙柱；前方水面有一灘小火。", fireFx.A),
-    mk(3, "B", "B 燃燒地面", "水面一圈尖刺狀火焰，底下有焦黑與發光的橘色光斑，餘燼上飄；船身只冒煙悶燒。", fireFx.B),
-    mk(3, "C", "C 油火", "黑色油膜上伸出放射狀火指，火星迸跳；船甲板火更旺、濃黑煙。", fireFx.C),
-    mk(4, "cur", "目前遊戲版本", "灰色圓底加 3 條螺旋曲線。", spoutFx.cur, { fixed: 1 }),
-    mk(4, "A", "A 螺旋水柱", "灰雲核心、白色浪花沿螺旋被甩起來，外圈一環環水波往外散。", spoutFx.A),
-    mk(4, "B", "B 風旋殘影", "多層環繞的風線弧、轉速各不同，水珠沿切線被甩出去，像看得見的風。", spoutFx.B),
-    mk(4, "C", "C 能量漩渦", "青藍色發光的螺旋臂加亮核心，光點被吸進中心再往上飄，帶點魔法感。", spoutFx.C),
-    mk(5, "cur", "目前遊戲版本", "深藍圓底加 4 條藍色螺旋曲線。", vortexFx.cur, { fixed: 1 }),
-    mk(5, "A", "A 吸入漏斗", "一圈圈由淺到深的水環像漏斗往下陷，白色泡沫螺旋臂向中心流入。", vortexFx.A),
-    mk(5, "B", "B 能量漩渦", "藍紫色發光螺旋臂、閃光點被吸入、中間一顆跳動的亮眼。最像參考庫的能量漩渦。", vortexFx.B),
-    mk(5, "C", "C 層層水環", "多層泡沫環以不同速度反向旋轉，越靠近中心越暗越慢，中心冒出氣泡。", vortexFx.C),
-    mk(6, "cur", "目前遊戲版本", "一條深色帶加 3 條晃動的白線，掃過整個海面。", waveFx.cur, { fixed: 1 }),
-    mk(6, "A", "A 泡沫牆", "浪頭沿線翻出大量白色泡沫團，水花往前噴，後面拖著一道白色退潮水。", waveFx.A),
-    mk(6, "B", "B 潮汐衝湧", "青綠色半透明水層一階一階堆在浪頭後面，浪尖有彎曲的白線與水霧。", waveFx.B),
-    mk(6, "C", "C 瘋狗浪弧", "一道高高彎起的單一浪弧，撞上船時炸出水花與一圈漣漪。", waveFx.C),
-    mk(7, "cur", "目前遊戲版本", "一條折線閃電、落點一個白圓；濃霧是中間清楚、外圍灰牆。", stormFx.cur, { fixed: 1 }),
-    mk(7, "A", "A 分叉閃電＋層霧", "主閃電帶三條分叉，全螢幕閃一下，落點迸火花；接著一層層霧團緩緩飄進來。", stormFx.A),
-    mk(7, "B", "B 預閃＋紫電球＋繞霧", "先閃兩下預告，再一擊落下，落點出現紫色電球與蒸氣；霧繞著船旋轉。", stormFx.B),
-    mk(7, "C", "C 船身電弧＋濃霧", "閃電擊中後，一道道電弧沿船身亂竄；之後濃霧較厚、被閃光照亮。", stormFx.C),
+    mk(1, "cur", blast.cur, { fixed: 1 }),
+    mk(1, "A", blast.A),
+    mk(1, "B", blast.B),
+    mk(1, "C", blast.C),
+    mk(2, "cur", muzzleFx.cur, { fixed: 1 }),
+    mk(2, "A", muzzleFx.A),
+    mk(2, "B", muzzleFx.B),
+    mk(2, "C", muzzleFx.C),
+    mk(3, "cur", fireFx.cur, { fixed: 1 }),
+    mk(3, "A", fireFx.A),
+    mk(3, "B", fireFx.B),
+    mk(3, "C", fireFx.C),
+    mk(4, "cur", spoutFx.cur, { fixed: 1 }),
+    mk(4, "A", spoutFx.A),
+    mk(4, "B", spoutFx.B),
+    mk(4, "C", spoutFx.C),
+    mk(5, "cur", vortexFx.cur, { fixed: 1 }),
+    mk(5, "A", vortexFx.A),
+    mk(5, "B", vortexFx.B),
+    mk(5, "C", vortexFx.C),
+    mk(6, "cur", waveFx.cur, { fixed: 1 }),
+    mk(6, "A", waveFx.A),
+    mk(6, "B", waveFx.B),
+    mk(6, "C", waveFx.C),
+    mk(7, "cur", stormFx.cur, { fixed: 1 }),
+    mk(7, "A", stormFx.A),
+    mk(7, "B", stormFx.B),
+    mk(7, "C", stormFx.C),
   ];
-  const CATS = ["", "火藥庫暴擊大爆炸", "開砲砲口煙", "起火冒煙與燃燒彈火焰", "水龍捲", "漩渦", "海嘯／瘋狗浪", "落雷＋濃霧"];
-  const REF = ["", "火焰爆炸＋衝擊波", "消散煙團", "煙柱＋燃燒地面", "風旋／能量漩渦", "能量漩渦", "潮汐衝湧", "雷霆落擊＋地面煙霧"];
   const SECS = [0, 3.5, 6, 6.5, 6.5, 7.5, 5, 6.5];   // how long (s at duration x1) until the effect is surely over
-  return { EFFECTS, CATS, REF, SECS, Pool, bake };
+  return { EFFECTS, SECS, Pool, bake };
 })();
