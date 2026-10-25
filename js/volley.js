@@ -10,8 +10,8 @@ const FAN_L = 5;             // fanned volleys from this level
 const FAN_W0 = 0.3, FAN_WK = 0.4;   // rad/s: the fan spans the doubt in the current turn, not a hard turn away (a dodge)
 const ARC_FIRE = ARC * 1.3;  // at the moment of firing the target may have drifted a little out of the arc
 const EMOUNT = { bow: MOUNTS[0], left: MOUNTS[1], right: MOUNTS[2], stern: MOUNTS[3] };
-Object.assign(STR.en, { volleyTip: "Red glow: a broadside is about to fire. Turn bow or stern into it!" });
-Object.assign(STR.zh, { volleyTip: "紅光：敵艦要齊射了。把船首或船尾轉向它！" });
+Object.assign(STR.en, { volleyTip: "Red glow: a volley (one whole side of guns) is about to fire. Turn bow or stern into it!" });
+Object.assign(STR.zh, { volleyTip: "紅光：敵艦要齊射了（一整舷的砲同時開火）。把船首或船尾轉向它！" });
 let volleyTips = 0;   // the first volleys laid on the player each session say what the red fan means
 // One warning at a time at the player: a pack's volleys come VOLLEY_GAP s apart instead of all at once, so each can be
 // read and dodged, and a pack of three frigates lands about a quarter less (AI-vs-AI fire is not held back).

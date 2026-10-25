@@ -83,11 +83,10 @@ function banner(id, html, ms, onShow) {
   el.innerHTML = html; el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
   clearTimeout(el.timer); el.timer = setTimeout(() => el.classList.remove("on"), ms);
 }
-// The boss card carries the Captain's Chest (bossChest, from js/campaign.js claimBounty) and the game's wordmark: it is
-// the frame people clip, so the link rides along.
+// The boss card carries the Captain's Chest (bossChest, from js/campaign.js claimBounty). The game's link is stamped only
+// on the share images (js/postcard.js, js/sharecard.js), never on the live screen.
 function bossCard(name) {
-  const mark = typeof WORDMARK === "string" ? `<i class="jmark">${WORDMARK}</i>` : "";
-  banner("bossCard", `<small>${t("bountyClaimed")}</small><b>${name}</b><span class="b-chest"></span>${mark}`, 2600);
+  banner("bossCard", `<small>${t("bountyClaimed")}</small><b>${name}</b><span class="b-chest"></span>`, 2600);
 }
 function bossChest(n) {
   const el = byId("bossCard"), line = el && el.querySelector(".b-chest");

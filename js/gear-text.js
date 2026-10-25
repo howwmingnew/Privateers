@@ -4,7 +4,7 @@
 // ga_<key> is an affix line ({n} is a percent), gleg_<effect> a legendary effect, gln_<part> a legendary's own name. Numbers in the legendary lines
 // come from GEAR_LEGX (js/config.js), so the text never drifts from the rule.
 Object.assign(STR.en, {
-  gearTitle: "Gear", gearHint: "Seven parts. Sink ships to find them: pick a spare, then tap its part to wear it. Guns are set on the gun deck above. The gear follows you from ship to ship, as far as the hull's tier allows. Grade is the hull tier an item needs, and a higher grade means stronger effects; Lv is how far you have upgraded it with gold.",
+  gearTitle: "Gear", gearHint: "Seven gear slots, one piece each. Sink ships to find them: pick a spare, then tap its part to wear it. Guns are set on the gun deck above. The gear follows you from ship to ship, as far as the hull's tier allows. Grade is the hull tier an item needs, and a higher grade means stronger effects; Lv is how far you have upgraded it with gold.",
   gp_prow: "Prow", gp_body: "Hull plating", gp_sail: "Sails", gp_gun: "Guns", gp_supply: "Supply hold", gp_instr: "Instruments", gp_flag: "Flag",
   gr_0: "Common", gr_1: "Magic", gr_2: "Rare", gr_3: "Epic", gr_4: "Legendary", gIl: "Grade {n}",
   ga_ram: "Collision damage dealt +{n}%", ga_keep: "Keeps {n}% more speed after a collision", ga_brace: "Collision damage taken −{n}%", ga_jolt: "Rammed ships lose {n}% more speed",
@@ -21,7 +21,7 @@ Object.assign(STR.en, {
   gleg_dock: "At a supply station, repairs {k}x as fast",
   gleg_mark: "Every {cd} s the nearest enemy within {r} px is marked: +{k}% damage taken for {t} s",
   gleg_rally: "When you first hit a ship, escorts deal +{k}% damage for {t} s",
-  gln_prow: "Leviathan's Beak", gln_body: "Bulwark of Saints", gln_sail: "Albatross Canvas", gln_gun: "Hellmouth", gln_supply: "Bottomless Hold", gln_instr: "Seer's Astrolabe", gln_flag: "Admiral's Colours",
+  gln_prow: "Leviathan's Beak", gln_body: "Bulwark of Saints", gln_sail: "Albatross Canvas", gln_gun: "Hellmouth", gln_supply: "Bottomless Hold", gln_instr: "Seer's Astrolabe", gln_flag: "Admiral's Colors",
   gGot: "Found: {name} ({r}, Grade {n})", gScrapFull: "Bag full: {name} broken down, +{m} fittings", gGotShort: "{name}",
 });
 Object.assign(STR.zh, {

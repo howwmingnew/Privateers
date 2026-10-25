@@ -13,7 +13,7 @@ Object.assign(STR.en, {
   tip_keys: "Press Space to fire!", tip_pad: "Press A to fire!", tip_click: "Click to fire!", tip_desk: "Space or click to fire!",
   sl_lbl: "Sail", sl_0: "Stopped", sl_1: "Slow", sl_2: "Half", sl_3: "Full", sl_less: "Lower the sail", sl_more: "Raise the sail",
   // device-neutral wording for the ledger (it used to say "tap" everywhere)
-  slotHint: "Choose a gun, then choose where it goes: a port swaps, an empty port takes it, the store keeps the spares.", shipArm: "Press again to buy",
+  slotHint: "Choose a gun, then choose where it goes: a port swaps, an empty port takes it, the store keeps the spares.", shipArm: "Press again within 6 s to buy",
   resetArm: "Press again to wipe all progress", bought: "Bought a <em>{gun}</em>. It is in the gun store: choose a gun port to mount it.",
   welcome: "Sail out, find a ship and turn until your aim lines point at it, then fire. Sink ships, scoop up their plunder, and bring it back here to sell. Deeper waters hold richer and deadlier ships. The controls are under How to play.",
 });
@@ -24,7 +24,7 @@ Object.assign(STR.zh, {
   hint_pad: "左搖桿轉向 · 十字鍵升降帆 · A／RT 開火 · Start 暫停",
   tip_keys: "按空白鍵開火！", tip_pad: "按 A 開火！", tip_click: "點一下開火！", tip_desk: "按空白鍵或點一下開火！",
   sl_lbl: "船帆", sl_0: "收帆", sl_1: "慢速", sl_2: "半帆", sl_3: "滿帆", sl_less: "降帆", sl_more: "升帆",
-  slotHint: "選一門砲，再選它要去的地方：砲位互換、空砲位直接移過去、庫存放備用的砲。", shipArm: "再按一次確認購買",
+  slotHint: "選一門砲，再選它要去的地方：砲位互換、空砲位直接移過去、庫存放備用的砲。", shipArm: "6 秒內再按一次確認購買",
   resetArm: "再按一次會清除所有進度", bought: "買下一門<em>{gun}</em>，放在火砲庫存。選擇一個砲位就能裝上。",
   welcome: "出港找一艘船，轉動船身讓瞄準線對準它，然後開火。擊沉敵船、撿起戰利品，再帶回這裡賣掉。離港口越遠，敵船越富有，也越危險。操作方式請看「玩法說明」。",
 });

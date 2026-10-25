@@ -8,12 +8,10 @@
 /* The URL footer on the victory sheet and the Captain's log: big and solid enough to survive a compressed screenshot */
 .wordmark { font-size: 16px; font-weight: 700; letter-spacing: .04em; color: var(--ink); opacity: 1; }
 
-/* The boss card: the Captain's Chest under the name, then the wordmark (the most clipped frame carries the link) */
+/* The boss card: the Captain's Chest under the name,  */
 #bossCard .b-chest { display: block; margin-top: 6px; font-family: "Barlow Semi Condensed", "Noto Sans TC", sans-serif; font-weight: 700;
   font-size: calc(24px * var(--ts, 1)); color: #ffe08a; letter-spacing: .04em; }
 #bossCard .b-chest:empty { display: none; }
-#bossCard .jmark { display: block; margin-top: 8px; font-family: "Barlow Semi Condensed", "Noto Sans TC", sans-serif; font-style: normal;
-  font-weight: 700; font-size: 16px; letter-spacing: .06em; color: #f6f1e3; }
 
 /* Kill #1: no plunder-streak chip until a second ship goes down */
 #streak.quiet { display: none !important; }

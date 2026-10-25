@@ -6,7 +6,7 @@
 Object.assign(STR.en, {
   tut_title: "First voyage", tut_skip: "Skip", tut_count: "{n} of {m}",
   tut_out: "Sail out of the harbor.",
-  tut_aim: "Find the gold-ringed ship. Turn until the aim line turns red.",
+  tut_aim: "Find the gold-ringed ship (a gold arrow at the screen edge points to it). Turn until the aim line turns red.",
   tut_fire: "Red means a hit. Fire!",
   tut_sink: "Keep firing until it sinks. Faint lines are still reloading. {hold}",
   tut_scoop: "Sunk! Sail over the floating crate to scoop up the plunder.",
@@ -15,6 +15,7 @@ Object.assign(STR.en, {
   tut_poor: "The cheapest upgrade costs {n} gold. Set sail, sink another ship and bring its plunder back.",
   tut_buySea: "Bring plunder home, then buy or upgrade something. The cheapest costs {n} gold.",
   tut_buyMoor: "Stop inside the harbor ring and hold still to open the ledger, then buy or upgrade something. The cheapest costs {n} gold.",
+  tut_again: "The plunder is gone, but your progress is kept. Follow the gold arrow to a ship, sink it and scoop its crate.",
   tut_docked: "Set sail to carry on with your first voyage.",
   tut_done: "That is the whole loop, captain. What next:\n1. Sink ships with green tags to earn gold.\n2. Back in port, upgrade guns or change ship until your Ship Lv reaches {lv} (now Lv {me}).\n3. {boss} lurks {dir} of the harbor: follow the gold skull arrow.",
   tut_doneGen: "That is the whole loop, captain. Farther waters hold richer ships, and deadlier ones.", tut_ok: "Got it",
@@ -28,7 +29,7 @@ Object.assign(STR.en, {
 Object.assign(STR.zh, {
   tut_title: "首航", tut_skip: "略過", tut_count: "第 {n}／{m} 步",
   tut_out: "駛出港口。",
-  tut_aim: "找綠色標籤的船（金圈標示），轉向讓瞄準線變紅。",
+  tut_aim: "找綠色標籤的船（金圈標示；不在畫面內時，畫面邊緣的金色箭頭會指路），轉向讓瞄準線變紅。",
   tut_fire: "紅線代表會命中。開火！",
   tut_sink: "繼續開火，直到它沉沒。淡色的線代表還在裝填。{hold}",
   tut_scoop: "擊沉了！駛過漂浮的木箱，把戰利品撈上船。",
@@ -37,6 +38,7 @@ Object.assign(STR.zh, {
   tut_poor: "最便宜的升級要 {n} 金幣。再出航擊沉一艘船，把戰利品帶回來。",
   tut_buySea: "把戰利品帶回港口，再購買或升級任何一項。最便宜的要 {n} 金幣。",
   tut_buyMoor: "在港口的虛線圈裡停船、保持靜止就能打開帳簿，再購買或升級任何一項。最便宜的要 {n} 金幣。",
+  tut_again: "戰利品沒了，但你的進度還在。跟著金色箭頭找一艘船，擊沉它、撈起木箱。",
   tut_docked: "啟航，繼續你的首航。",
   tut_done: "這就是整個循環了，船長。接下來：\n1. 去打綠色標籤的商船賺金幣。\n2. 回港口在帳簿升級砲或換船，讓船艦 Lv 升到 {lv}（現在 Lv {me}）。\n3. {boss}在港口{dir}方，跟著金色骷髏指標去找他。",
   tut_doneGen: "這就是整個循環了，船長。越遠的海域，敵船越富有，也越危險。", tut_ok: "知道了",
@@ -50,7 +52,7 @@ Object.assign(STR.zh, {
 
 const TUT_DONE_T = 30;   // seconds at sea the "what next" card stays up (the ledger does not count it down); "Got it" closes it sooner
 const TUT = ["out", "aim", "fire", "sink", "scoop", "sell", "buy"];
-const tut = { active: false, step: 0, sunk0: 0, gold0: 0, sold: false, sig: "", target: null, pickT: 0, doneT: 0, html: "", g: null, up: false };
+const tut = { active: false, step: 0, sunk0: 0, gold0: 0, sold: false, sig: "", looted: false, target: null, pickT: 0, doneT: 0, html: "", g: null, up: false };
 
 function hasProgress(s) {
   return s.sunk > 0 || s.gold > 0 || s.ship !== "sloop" || s.hull > 1 || s.sails > 1 || s.hold > 1 ||
@@ -131,8 +133,8 @@ function tutorialOnVoyage() {
   const easy = forgivingSpawn();
   tutorialStart();
   tut.target = easy || null;   // the old sea was just destroyed (resetEnemies), so drop any old target too
-  // a fresh mark starts the chase over: a card waiting for a shot, a sinking or a crate that are gone is a dead end
-  if (easy && tut.active && tut.doneT <= 0 && tut.step >= 1 && tut.step < TUT.indexOf("buy")) enterStep(1);
+  // a fresh mark never moves the card back: the step stays where the captain got to (a sinking keeps the progress), and the
+  // gold ring and arrow (guideTarget) point at the new mark; steps 5-6 with an empty hold read "tut_again" (tutRefill)
 }
 function tutorialStart() {
   if (save.tutorialDone || tut.active) return;
@@ -157,13 +159,17 @@ const tutorialCalm = () => firstVoyage() && tut.step <= TUT.indexOf("scoop") && 
 // Plunder the coach can point at: a fort's treasure crate (js/forts.js) sits under its guns, and wrecks are the player's own.
 const lootCrates = () => crates.filter(c => !c.wreck && !(typeof fortSites !== "undefined" && fortSites.some(f => f.crate === c)));
 // The "sell" step passes on a real sale of the hold (js/plunder.js sellHold), not on gold: a warship's bounty is gold too.
+// Plunder picked up from a crate that is not a wreck (also from a ship someone else sank) counts as the first loot.
+onHook("pickup", c => { if (tut.active && !c.wreck) tut.looted = true; });
 onHook("sale", () => { if (tut.active && TUT[tut.step] === "sell") tut.sold = true; });
 // The coach is up on a voyage the captain has not finished or skipped (a save edited to done also counts as done).
+// Past the first sinking but the plunder is gone (a sinking took the hold, or the crate drifted off): no step back, only a new goal.
+const tutRefill = () => tut.active && tut.doneT <= 0 && (TUT[tut.step] === "scoop" || TUT[tut.step] === "sell") && cargo <= 0 && !lootCrates().length && !tut.sold;
 const firstVoyage = () => tutorialRunning() && !save.tutorialDone;
 
 function enterStep(n) {
   tut.step = n; save.tutorialStep = n;
-  if (n <= 3) tut.sunk0 = save.sunk;        // only a sinking from here on counts
+  if (n <= 3) { tut.sunk0 = save.sunk; tut.looted = false; }        // only a sinking from here on counts
   if (TUT[n] === "sell") { tut.gold0 = save.gold; tut.sold = false; }
   if (TUT[n] === "buy") tut.sig = purchaseSig();
   persist();
@@ -181,14 +187,13 @@ function tutorialTick(dt) {
   let next = tut.step;
   if (!docked && !paused) {
     if (save.sunk > tut.sunk0 && next < 4) next = 4;                       // played ahead of the card: catch up
-    if (cargo > 0 && next < 5 && save.sunk > 0) next = 5;                   // (a wreck's cargo alone is not the lesson's plunder)
+    if (cargo > 0 && next < 5 && (save.sunk > 0 || tut.looted || cargo >= player.cap)) next = 5;   // (a wreck's cargo alone is not the lesson's plunder); a crate picked up counts even when the kill was not the player's
     if (at === "out" && Math.hypot(player.x - PORT.x, player.y - PORT.y) > DOCK_R + 140) next = Math.max(next, 1);
     else if (at === "aim" && aimOnTarget()) next = Math.max(next, 2);
     else if (at === "fire" && balls.some(b => b.fromPlayer)) next = Math.max(next, 3);
     else if (at === "sell" && tut.sold) next = 6;                           // sold on a pass through the ring (js/mooring.js)
-    else if ((at === "scoop" || at === "sell") && cargo <= 0 && !lootCrates().length) next = 1;   // the loot drifted away: find a ship again
   } else if (docked) {
-    if (at === "sell") next = tut.sold ? 6 : 1;              // docked by sinking: the hold was lost
+    if (at === "sell" && tut.sold) next = 6;                // (docked by sinking: the hold was lost, the step stays: tutRefill)
     else if (at === "buy" && purchaseSig() !== tut.sig) { finish(); renderCoach(); return; }
   }
   if (next !== tut.step) enterStep(next);
@@ -213,6 +218,7 @@ function coachText() {
     return t(!docked ? (rich ? "tut_buyMoor" : "tut_buySea") : rich ? "tut_buy" : "tut_poor", { n });
   }
   if (docked) return t("tut_docked");
+  if (tutRefill()) return t("tut_again");
   return t("tut_" + at, { steer: t("ctl_steer_" + device), fire: t("ctl_fire_" + device), hold: SETTINGS.autoFire && (device !== "touch" && device !== "pad") ? t("ctl_hold") : "" }).trim();   // Space only
 }
 // The card floats over the sea, and moves into the ledger sheet while docked so it never covers the shop.
@@ -239,7 +245,7 @@ document.addEventListener("devicechange", () => { tut.html = ""; renderCoach(); 
 // ---------- On-sea guide: a gold ring on the thing to go for, and an arrow at the screen edge when it is off-screen ----------
 function guideTarget(dt) {
   const at = TUT[tut.step];
-  if (at === "aim" || at === "fire" || at === "sink") {
+  if (at === "aim" || at === "fire" || at === "sink" || tutRefill()) {
     const live = tut.target && tut.target.alive && enemies.includes(tut.target);   // not sunk, not removed from the sea
     if (live) return { x: tut.target.x, y: tut.target.y, r: 46 };
     tut.pickT -= dt;

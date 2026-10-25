@@ -6,14 +6,14 @@
 // heat falls below two stars. Once four bounties are claimed, the Admiral's own fleet (flagship + escort) also patrols the deep
 // now and then, sooner when the captain is wanted: the warning shot before the last captain. Off in daily/seed runs.
 Object.assign(STR.en, {
-  heat_lbl: "Wanted", heat_aria: "Navy heat {n} of 5 stars, warship bounties x{m}",
+  heat_lbl: "Wanted", heat_tip: "How much the Navy wants you. More stars: richer warship bounties, stronger hunters. Docking cools it off.", heat_aria: "Navy heat {n} of 5 stars, warship bounties x{m}",
   heatUp: "Navy heat {n}/5: bounties x{m}", heatUpHunt: "Navy heat {n}/5: bounties x{m}. Hunters are at sea!",
   heatCooled: "The Navy has lost your trail.", heatHunt: "A Navy hunting fleet is on your wake!",
   admiralSighted: "The Admiral's fleet! A flagship and her escort patrol these waters.",
   heatWhy: "You sank a Navy ship, so the Navy now wants you: the stars (Wanted) show how hard. It cools if you keep clear of the Navy for a while, or at once in a harbor. More stars: richer Navy bounties, but hunters.",
 });
 Object.assign(STR.zh, {
-  heat_lbl: "通緝", heat_aria: "海軍通緝熱度 {n} / 5 星，戰艦賞金 ×{m}",
+  heat_lbl: "通緝", heat_tip: "海軍有多想抓你。星越多，戰艦賞金越高，追捕的敵人也越強；回港靠岸就會降溫。", heat_aria: "海軍通緝熱度 {n} / 5 星，戰艦賞金 ×{m}",
   heatUp: "海軍通緝 {n}/5：賞金 ×{m}", heatUpHunt: "海軍通緝 {n}/5：賞金 ×{m}。追獵艦隊出海了！",
   heatCooled: "海軍丟失了你的蹤跡。", heatHunt: "海軍的追獵艦隊正咬著你的尾流！",
   admiralSighted: "上將艦隊！旗艦帶著護航艦在這片海域巡邏。",
@@ -164,6 +164,7 @@ function heatPaint() {
   const m = heatBountyMul(st);
   document.getElementById("heatLbl").textContent = t("heat_lbl");   // not data-i18n: the language pass runs before this file adds its strings
   document.getElementById("heatTxt").textContent = st > 0 ? "x" + m.toFixed(1) : "";
+  el.title = t("heat_tip");
   el.setAttribute("aria-label", t("heat_aria", { n: st, m: m.toFixed(1) }));
 }
 document.addEventListener("langchange", () => { heatKey = ""; heatPaint(); });

@@ -69,8 +69,9 @@ console.log("Fresh campaign (desktop, en)");
   check(lock0.dis && /Red Ned/.test(lock0.why || ""), `schooner locked before bounty 1: "${lock0.txt}" / "${lock0.why}"`);
   // #92: models a Letter of Marque has not opened fold into one closed list at the end; the rest keep their order, owned ones first
   const fold = await page.evaluate(() => { const d = document.querySelector("#ships details.lockedships"), open = [...document.querySelectorAll("#ships > .item:not(.locked)")].map(e => e.querySelector(".btn").dataset.id);
-    return { has: !!d, closed: d && !d.open, inside: d && !!d.querySelector('[data-id="schooner"]'), summary: d?.querySelector("summary").textContent, open, loose: !!document.querySelector("#ships > .item.locked") }; });
-  check(fold.has && fold.closed && fold.inside && !fold.loose && /Not unlocked yet \(\d+\)/.test(fold.summary) && !fold.open.includes("schooner"), `locked ships fold away: "${fold.summary}", on sale: ${fold.open}`);
+    return { has: !!d, closed: d && !d.open, hint: !!document.querySelector("#ships > .hint-s:not([class*=line-])+details.lockedships"), inside: d && !!d.querySelector('[data-id="schooner"]'), summary: d?.querySelector("summary").textContent, open, loose: !!document.querySelector("#ships > .item.locked") }; });
+  // #103: with nothing on sale at all the list starts open, under a line saying why (no bare headings over an empty block)
+  check(fold.has && fold.closed === (fold.open.length > 0) && (fold.open.length > 0 || fold.hint) && fold.inside && !fold.loose && /Not unlocked yet \(\d+\)/.test(fold.summary) && !fold.open.includes("schooner"), `locked ships fold away: "${fold.summary}", on sale: ${fold.open}`);
   // the next level's gain sits on every hull upgrade button
   const gain = await page.evaluate(() => [...document.querySelectorAll('#yard [data-act="yard"] .gain')].map(g => g.textContent));
   check(gain.length === 3 && /^Hull \+\d+%( · Ship Lv (progress \+\d+%|→ \d+))?$/.test(gain[0]) && /^Speed \+\d+%$/.test(gain[1]) && /^Hold \+\d+%$/.test(gain[2]), `hull, sails and hold buttons name their gain (${gain})`);
