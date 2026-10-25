@@ -220,6 +220,6 @@ test("every part has a legendary effect, a base effect and at least four affixes
       if (part !== "gun") assert.ok(run(`GEAR_CAP.${k}`) > 0, "cap for " + k);   // a gun's own affixes stack on no other piece
       assert.ok(run(`!!STR.en.ga_${k} && !!STR.zh.ga_${k}`), "text for " + k);
     }
-    assert.ok(run(`!!STR.en.gl_${run(`GEAR_LEG.${part}`)} && !!STR.zh.gl_${run(`GEAR_LEG.${part}`)} && !!STR.zh.gln_${part} && !!STR.zh.gp_${part}`), "legendary text for " + part);
+    assert.ok(run(`!!STR.en.gleg_${run(`GEAR_LEG.${part}`)} && !!STR.zh.gleg_${run(`GEAR_LEG.${part}`)} && !!STR.zh.gln_${part} && !!STR.zh.gp_${part}`), "legendary text for " + part);
   }
 });
