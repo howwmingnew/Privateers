@@ -3,7 +3,7 @@
 // Values live in js/settings.js (SETTINGS / saveSettings); volume belongs to Snd, which stores its own fields.
 Object.assign(STR.en, {
   set_title: "Settings", set_audio: "Sound", set_sound: "All sound", set_master: "Master volume", set_music: "Music", set_sfx: "Sound effects", set_ambient: "Ambience",
-  set_game: "Game", set_lang: "Language", set_shake: "Screen shake", set_auto: "Hold Space to auto-fire (red aim lines only)", set_on: "On", set_off: "Off", set_ui: "UI size", set_marks: "Chart icon size", set_scaleReset: "Reset sizes", set_scaleNote: "Drag a slider and the panel fades, so you can see the change behind it.",
+  set_game: "Game", set_homeArrow: "Arrow to Safe Harbor when far away", set_lang: "Language", set_shake: "Screen shake", set_auto: "Hold Space to auto-fire (red aim lines only)", set_on: "On", set_off: "Off", set_ui: "UI size", set_marks: "Chart icon size", set_scaleReset: "Reset sizes", set_scaleNote: "Drag a slider and the panel fades, so you can see the change behind it.",
   set_mini: "Chart size",
   set_fxq: "Effects quality", set_fxqAuto: "Auto", set_fxqLow: "Low", set_fxqMid: "Medium", set_fxqHigh: "High", set_fxqNote: "Explosions, smoke, fire and sea disasters. Auto picks by your device and steps down by itself if the game runs slowly. Warnings and fog sight are the same at every level.", set_wxfx: "Weather effects", set_wxfxNote: "Rain, lightning, sky tint and weather sounds. The wind and storm still push ships when this is off, so every sea plays the same.",
   set_full: "Fullscreen", set_fullOn: "Leave fullscreen", set_fullOff: "Go fullscreen", set_fullFail: "This browser blocked fullscreen.",
@@ -12,7 +12,7 @@ Object.assign(STR.en, {
 });
 Object.assign(STR.zh, {
   set_title: "設定", set_audio: "聲音", set_sound: "所有聲音", set_master: "主音量", set_music: "音樂", set_sfx: "效果音", set_ambient: "環境音",
-  set_game: "遊戲", set_lang: "語言", set_shake: "畫面震動", set_auto: "按住空白鍵自動開火（只射紅色瞄準線）", set_on: "開", set_off: "關", set_ui: "介面大小", set_marks: "海圖圖示大小", set_scaleReset: "恢復預設", set_scaleNote: "拖動滑桿時面板會淡出，讓你看到背後的變化。",
+  set_game: "遊戲", set_homeArrow: "離港很遠時顯示「安全港」箭頭", set_lang: "語言", set_shake: "畫面震動", set_auto: "按住空白鍵自動開火（只射紅色瞄準線）", set_on: "開", set_off: "關", set_ui: "介面大小", set_marks: "海圖圖示大小", set_scaleReset: "恢復預設", set_scaleNote: "拖動滑桿時面板會淡出，讓你看到背後的變化。",
   set_mini: "海圖大小",
   set_fxq: "特效品質", set_fxqAuto: "自動", set_fxqLow: "低", set_fxqMid: "中", set_fxqHigh: "高", set_fxqNote: "爆炸、煙霧、火焰與海上天災的細緻度。自動依裝置判斷，遊戲跑不順時會自己降一級；天災預警與濃霧視距在每一檔都一樣。", set_wxfx: "天氣特效", set_wxfxNote: "雨、閃電、天色與天氣音效。關閉後風和暴風雨仍會影響船隻，所以每個人的海都一樣。",
   set_full: "全螢幕", set_fullOn: "離開全螢幕", set_fullOff: "進入全螢幕", set_fullFail: "瀏覽器擋下了全螢幕。",
@@ -49,7 +49,7 @@ function renderSettings() {
   });
   const seg = (name, val) => document.querySelectorAll(`[data-set="${name}"]`).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === val)));
   if (audio && typeof Snd.isMuted === "function") seg("sound", Snd.isMuted() ? "off" : "on");
-  seg("lang", lang); seg("shake", SETTINGS.shake ? "on" : "off"); seg("auto", SETTINGS.autoFire ? "on" : "off"); seg("weatherfx", SETTINGS.weatherFx !== false ? "on" : "off"); seg("fxq", SETTINGS.fxq);
+  seg("lang", lang); seg("shake", SETTINGS.shake ? "on" : "off"); seg("auto", SETTINGS.autoFire ? "on" : "off"); seg("weatherfx", SETTINGS.weatherFx !== false ? "on" : "off"); seg("homearrow", SETTINGS.homeArrow !== false ? "on" : "off"); seg("fxq", SETTINGS.fxq);
   const rp = typeof replaySupported === "function" && replaySupported();   // no MediaRecorder / captureStream: no row (js/replay.js)
   setEl("setReplayRow").hidden = setEl("setReplayNote").hidden = !rp;
   if (rp) seg("replay", replayWanted() ? "on" : "off");
@@ -111,6 +111,7 @@ setEl("p-settings").addEventListener("click", e => {
     case "shake": saveSettings({ shake: v === "on" }); break;
     case "replay": saveSettings({ replay: v === "on" }); break;   // the frame hook starts or stops recording (js/replay.js)
     case "auto": saveSettings({ autoFire: v === "on" }); break;
+    case "homearrow": saveSettings({ homeArrow: v === "on" }); break;   // js/edge-marks.js
     case "weatherfx": saveSettings({ weatherFx: v === "on" }); break;   // js/weather.js
     case "fxq": saveSettings({ fxq: v }); fxqDrop = 0; break;   // effects quality (js/vfx.js fxLevel): picking again clears the auto steps taken off
     case "scale-reset": saveSettings({ uiPct: SCALE_DEFAULT, miniPct: MINI_DEFAULT_PCT, markPct: SCALE_DEFAULT }); applyUiScale(); applyMiniSize(); break;

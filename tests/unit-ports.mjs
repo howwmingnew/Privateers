@@ -100,3 +100,15 @@ test("the dock list mirrors the stations", () => {
   assert.equal(docks.length, st.length);
   docks.forEach((d, i) => { assert.equal(d.x, st[i].x); assert.equal(d.y, st[i].y); assert.equal(d.kind, st[i].kind); assert.equal(d.ring, st[i].ring); assert.equal(d.outpost, false); });
 });
+
+test("supplyQuote (#109): the price to full, and how far a short purse goes", () => {
+  const g = boot();
+  const fee = g.run("supplyFee(2)");
+  const full = g.json("supplyQuote(50, 100, 1e9, 2)");   // half a hull
+  assert.equal(full.cost, Math.ceil(fee / 2));
+  assert.ok(Math.abs(full.afford - 0.5) < 1e-9, "a rich purse covers all that is missing");
+  const poor = g.json("supplyQuote(15, 100, 24, 2)");    // 85% missing, 24 gold
+  assert.ok(poor.afford < 0.85 && Math.abs(poor.afford - 24 / fee) < 1e-9, "a short purse mends only what it pays for");
+  assert.equal(g.json("supplyQuote(100, 100, 50, 2)").cost, 0);
+  assert.equal(g.json("supplyQuote(10, 100, 0, 2)").afford, 0);
+});

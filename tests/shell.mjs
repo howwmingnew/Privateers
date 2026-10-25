@@ -478,6 +478,66 @@ for (const dpr of [1, 2]) {
   ok("tutorial: a crate that stays afloat turns the card to 'scoop it up' once, and the arrow points at the crate", await ev(page, () => /crate/i.test(document.getElementById("coachTxt").textContent) && guideTarget(0).r === 24));
   await ctx.close();
 }
+{   // #109: the gold ring never picks a warship or a ship in water above the captain; a sinking never moves the card or says "Sunk!"; who sank you; the way home; the supply berth tells the truth
+  const { ctx, page } = await open(D, { tag: "tut-109" });
+  await toSea(page);
+  await ev(page, () => { player.x = PORT.x + DOCK_R + 220; player.y = PORT.y; enterStep(1); });
+  const pick = await ev(page, () => {
+    const near = { x: player.x + 90, y: player.y + 90 };
+    const navy = makeEnemy(S, near.x, near.y, 1, "navy");
+    const reefAt = polarPt(0.4, ringMid(4)), reef = makeEnemy(S, reefAt.x, reefAt.y, 4, "pirate");
+    for (const e of enemies) if (e !== navy && e !== reef && e.alive) { e.alive = false; e.spr.destroy(); e.badge?.destroy(); }
+    enemies.splice(0, enemies.length, navy, reef);
+    tut.target = null; tut.pickT = 0;
+    const tg = guideTarget(0);
+    const chosen = tut.target;
+    return { navySafe: tutSafe(navy), reefSafe: tutSafe(reef), faction: chosen && chosen.faction, tutMark: !!(chosen && chosen.tutMark), sea: chosen && seaOfRing(ringAt(dist(chosen, PORT))).id, hasTg: !!tg };
+  });
+  ok("tutorial: the gold ring skips a warship and a ship in a higher sea, and a fresh mark goes in the shallows", !pick.navySafe && !pick.reefSafe && pick.faction === "merchant" && pick.tutMark && pick.sea === "shallows" && pick.hasTg, pick);
+
+  // dying on step 3 (shot by an enemy, with an old kill on the books and a hold) then scooping the own wreck: no skip, no "Sunk!"
+  await ev(page, () => { save.sunk = 3; enterStep(2); cargo = 120; const k = makeEnemy(S, player.x + 200, player.y, 4, "pirate", "brig"); window.__killer = k; sink(player, k); });
+  await until(page, () => docked);
+  const sunkTxt = await ev(page, () => document.getElementById("pMsg").textContent);
+  ok("sinking: the ledger and toast say who (class, faction, Lv) and where (sea)", /Sunk by a pirate \w+ \(Lv 4\) in The Shallows/.test(sunkTxt), sunkTxt);
+  await page.click("#sail");
+  await until(page, () => !docked && !paused);
+  await ev(page, () => { const w = crates.find(c => c.wreck); player.x = w.x; player.y = w.y; });
+  await page.waitForTimeout(700 * SLOW);
+  const after = await ev(page, () => ({ step: tut.step, saved: save.tutorialStep, cargo, txt: document.getElementById("coachTxt").textContent }));
+  ok("tutorial: after dying with an old kill on the books, picking up the own wreck neither skips the card nor says 'Sunk!'", after.step === 2 && after.saved === 2 && after.cargo > 0 && !/Sunk/.test(after.txt), after);
+  await ev(page, () => { enterStep(5); tut.plan = ""; cargo = 0; tut.killed = false; addCrate(player.x + 500, player.y, 10, null); });
+  await page.waitForTimeout(1300 * SLOW);
+  const scoop = await ev(page, () => document.getElementById("coachTxt").textContent);
+  ok("tutorial: the scoop card says 'Sunk!' only after the captain's own kill", /crate/i.test(scoop) && !/Sunk/.test(scoop) &&
+    await ev(page, () => { tut.killed = true; tut.html = ""; return /^Sunk!/.test(coachText()); }), scoop);
+  await ev(page, () => { tutorialSkip(); });
+
+  // the way home: far from Safe Harbor an edge box points at it, and the setting switches it off
+  const far = await ev(page, () => {
+    const a = Math.atan2((H / 2) - PORT.y, (W / 2) - PORT.x) + 0.2;
+    player.x = clamp(PORT.x + Math.cos(a) * 6000, 200, W - 200); player.y = clamp(PORT.y + Math.sin(a) * 6000, 200, H - 200);
+    return { d: dist(player, PORT), reach: EDGE_RANGE * gearMul("view") * S.cameras.main.worldView.width };
+  });
+  await page.waitForTimeout(1200 * SLOW);
+  const box = () => ev(page, () => !!document.querySelector('#edgeMarks .em[data-kind="harbor"]:not(.gone)'));
+  ok("edge marks: far beyond the usual range, a box still points at Safe Harbor", far.d > far.reach * 1.2 && await box(), { ...far, dbg: await ev(page, () => ({ alive: player.alive, hidden: edgeHidden(), kinds: [...document.querySelectorAll("#edgeMarks .em")].map(e => e.dataset.kind + (e.classList.contains("gone") ? "-gone" : "")), docked, paused, photo: typeof photoOn === "function" && photoOn() })) });
+  await ev(page, () => saveSettings({ homeArrow: false }));
+  await page.waitForTimeout(800 * SLOW);
+  ok("edge marks: the Safe Harbor arrow setting off removes the far box", !(await box()));
+  await ev(page, () => saveSettings({ homeArrow: true }));
+
+  // a supply berth with a short purse: the rule is said before the fee, the ledger line matches the hull
+  const sup = await ev(page, () => {
+    player.x = PORT.x + 3000; player.y = PORT.y; save.gold = 24; player.hp = player.maxHp * 0.15;
+    stationGreet({ ring: 2 }, "supply");
+    const toastTxt = [document.getElementById("toast").textContent, ...toastQueue.map(q => q.msg)].join(" | ");
+    player.hp = player.maxHp * 0.53; dock("supply");
+    return { toastTxt, msg: document.getElementById("pMsg").textContent };
+  });
+  ok("supply berth: the greeting names the price and what the purse covers; the ledger says the real hull share", /you have 24/.test(sup.toastTxt) && /only about \d+% more/i.test(sup.toastTxt) && /53%/.test(sup.msg) && !/patched at the berth/.test(sup.msg), sup);
+  await ctx.close();
+}
 {   // docking mid-card never sends the captain back to step 1 of the card ("sail out"): the sea gets a fresh mark and the chase restarts at "find the ship" or later (also on a replay, where a kill is already on the books)
   for (const replay of [false, true]) {
     const { ctx, page } = await open(D, { tag: "tut-dock" });
