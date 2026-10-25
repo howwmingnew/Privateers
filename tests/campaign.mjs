@@ -67,6 +67,13 @@ console.log("Fresh campaign (desktop, en)");
   const lock0 = await page.evaluate(() => { resetLedgerPick(); hullOpen = true; renderPort();   // the ships are in the hull's panel (js/ledger-panel.js)
     const b = document.querySelector('#ships [data-id="schooner"]'); return { dis: b?.disabled, txt: b?.textContent, why: b?.closest(".item").querySelector(".lock")?.textContent }; });
   check(lock0.dis && /Red Ned/.test(lock0.why || ""), `schooner locked before bounty 1: "${lock0.txt}" / "${lock0.why}"`);
+  // #92: models a Letter of Marque has not opened fold into one closed list at the end; the rest keep their order, owned ones first
+  const fold = await page.evaluate(() => { const d = document.querySelector("#ships details.lockedships"), open = [...document.querySelectorAll("#ships > .item:not(.locked)")].map(e => e.querySelector(".btn").dataset.id);
+    return { has: !!d, closed: d && !d.open, inside: d && !!d.querySelector('[data-id="schooner"]'), summary: d?.querySelector("summary").textContent, open, loose: !!document.querySelector("#ships > .item.locked") }; });
+  check(fold.has && fold.closed && fold.inside && !fold.loose && /Not unlocked yet \(\d+\)/.test(fold.summary) && !fold.open.includes("schooner"), `locked ships fold away: "${fold.summary}", on sale: ${fold.open}`);
+  // the next level's gain sits on every hull upgrade button
+  const gain = await page.evaluate(() => [...document.querySelectorAll('#yard [data-act="yard"] .gain')].map(g => g.textContent));
+  check(gain.length === 3 && /^Hull \+\d+%$/.test(gain[0]) && /^Speed \+\d+%$/.test(gain[1]) && /^Hold \+\d+%$/.test(gain[2]), `hull, sails and hold buttons name their gain (${gain})`);
   await o.shot("desktop-en-1-ledger");
 
   // spawning: record every quota spawn, then park the player in each ring for 30 simulated seconds

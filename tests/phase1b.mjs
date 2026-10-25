@@ -151,7 +151,7 @@ for (const [tag, viewport, mobile] of [["desktop", { width: 1280, height: 720 },
     return out;
   });
   ok(`#34 ${tag}: the upgrade button shows the price, the shortfall when poor, and "Max level" (disabled) at Lv ${10}`,
-    /^Upgrade to Lv 4 \(\d[\d,]* gold, \d[\d,]* short\)$/.test(lbl.short[0]) && lbl.short[1] && /^Upgrade to Lv 4 \(\d[\d,]* gold\)$/.test(lbl.enough[0]) && !lbl.enough[1] && lbl.max[0] === "Max level" && lbl.max[1], lbl);
+    /^Upgrade to Lv 4 \(\d[\d,]* gold, need \d[\d,]* more\)Damage \+\d+%$/.test(lbl.short[0]) && lbl.short[1] && /^Upgrade to Lv 4 \(\d[\d,]* gold\)Damage \+\d+%$/.test(lbl.enough[0]) && !lbl.enough[1] && lbl.max[0] === "Max level" && lbl.max[1], lbl);
   // Chinese strings
   await ev(page, () => { lang = "zh"; applyLang(); deckSel = { side: "bow", i: 0 }; renderPort(); });
   const zh = await ev(page, () => ({ up5: document.querySelector('#ctx [data-act="gup5"]').textContent, off: document.querySelector('#ctx [data-act="unload"]').textContent, up: document.querySelector('#ctx [data-act="gup"]').textContent }));

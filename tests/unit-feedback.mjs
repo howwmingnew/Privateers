@@ -306,7 +306,7 @@ test("gun bay (#68): too little gold disables Upgrade x5 and shows the shortfall
   g.run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", 2)`);
   const plan = g.json("gunUpPlan(save.bow[0], 0)");
   g.run(`save.gold = ${plan.cost - 25}`);
-  assert.match(g.run("gunCardHtml()"), /data-act="gup5" disabled>Upgrade 5 levels \(\d[\d,]* gold total, 25 short\)/);
+  assert.match(g.run("gunCardHtml()"), /data-act="gup5" disabled>Upgrade 5 levels \(\d[\d,]* gold total, need 25 more\)/);
   assert.equal(g.run(`gunAct("gup5", {})`), null);
   assert.deepEqual(g.json("[save.bow[0].lv, save.gold]"), [2, plan.cost - 25], "no levels bought, no gold taken");
   assert.match(bay("zh").run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", 2); save.gold = 0; gunCardHtml()`), /disabled>升級 5 級（總價 [\d,]+ 金幣，還差 [\d,]+）/);

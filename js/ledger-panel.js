@@ -17,6 +17,8 @@ Object.assign(STR.en, {
   escBoughtShip: "{ship} bought for escort {n}.", escEvicted: "Escort slot {n} is free; the ship is back in the yard.", escEvictedGuns: "Escort slot {n} is free; the ship is back in the yard and its {m} gun(s) went to the store.",
   tabFlag: "Flagship", tabEsc: "Escort {n}", tabEmpty: "Empty", tabBuy: "{n} gold", tabLock: "Locked", stOn: "Deployed", stOff: "Standby",
   hullAria: "Hull: upgrade the ship or change ship", sfootLv: "Lv {n}",
+  escBuyShort: "Buy slot · {n} (need {d} more)", tabLockBounty: "Sink bounty {n}", tabLockOrder: "Buy slot {n} first",
+  gain_hull: "Hull +{p}%", gain_sails: "Speed +{p}%", gain_hold: "Hold +{p}%", lockedShips: "Not unlocked yet ({n})",
 });
 Object.assign(STR.zh, {
   ctxHint: "點砲口換砲或升級，點船身升級船體、船帆、貨艙或換船。", ctxClose: "關閉",
@@ -31,6 +33,8 @@ Object.assign(STR.zh, {
   escBoughtShip: "已買下 {ship} 給隨從 {n}。", escEvicted: "隨從席位 {n} 已讓出，船回到船塢。", escEvictedGuns: "隨從席位 {n} 已讓出，船回到船塢，船上的 {m} 門砲放回了庫存。",
   tabFlag: "旗艦", tabEsc: "隨從 {n}", tabEmpty: "空位", tabBuy: "{n} 金", tabLock: "鎖定", stOn: "出戰", stOff: "待命",
   hullAria: "船身：升級這艘船或換船", sfootLv: "Lv {n}",
+  escBuyShort: "購買船位 · {n}（還差 {d}）", tabLockBounty: "擊敗首領 {n}", tabLockOrder: "先買船位 {n}",
+  gain_hull: "船體 +{p}%", gain_sails: "航速 +{p}%", gain_hold: "貨艙 +{p}%", lockedShips: "尚未解鎖（{n}）",
 });
 
 const shipNameOf = e => esc(e.name || t("s_" + e.ship));
@@ -48,7 +52,8 @@ function yardRows(e) {   // hull, sails, hold of ship `e` (a yard entry or the f
     const lv = e[k], cur = y.show(yardVal(k, lv, sh));
     let btn, ds;
     if (lv >= y.max) { btn = `<button class="btn max" type="button" disabled>${t("max")}</button>`; ds = `<b>${cur}</b>`; }
-    else { const c = y.cost(lv, sh); btn = `<button class="btn" type="button" data-act="yard" data-k="${k}" data-id="${e.id}" ${save.gold < c ? "disabled" : ""}>${t("upgrade", { n: fmt(c) })}</button>`;
+    else { const c = y.cost(lv, sh), p = Math.round((yardVal(k, lv + 1, sh) / yardVal(k, lv, sh) - 1) * 100);   // what the next level adds, for the price
+      btn = `<button class="btn" type="button" data-act="yard" data-k="${k}" data-id="${e.id}" ${save.gold < c ? "disabled" : ""}>${t("upgrade", { n: fmt(c) })}<span class="gain">${t("gain_" + k, { p })}</span></button>`;
       ds = `<b>${cur}</b> <span class="up">→ ${y.show(yardVal(k, lv + 1, sh))}</span>`; }
     return `<div class="item"><div class="nm">${t("y_" + k)}<small>Lv ${lv}</small></div>${btn}<div class="ds">${ds}</div></div>`;
   }).join("");
@@ -80,9 +85,14 @@ function saleRows(slot, vs) {
     const label = arm ? t("shipArm") : buyLabel(id);
     const btn = lock ? `<button class="btn" type="button" ${act} disabled>${t("locked")}</button>` : full ? `<button class="btn" type="button" ${act} disabled>${t("yardFull")}</button>`
       : `<button class="btn" type="button" ${act} ${save.gold < sh.cost ? "disabled" : ""}>${label}</button>`;
-    return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${shipDs(sh, 1, 1, 1)}${lock ? `<span class="lock">${lock}</span>` : count[id] ? `<span class="up">${t(slot < 0 ? "ownedHint" : "ownedCount", { n: count[id] })}</span>` : ""}</div>${shipCmpHtml(sh, SHIPS[vs.ship], vs.ship)}</div>`;
+    return `<div class="item${lock ? " locked" : ""}"><div class="nm">${t("s_" + id)}</div>${btn}<div class="ds">${shipDs(sh, 1, 1, 1)}${lock ? `<span class="lock">${lock}</span>` : count[id] ? `<span class="own up">${t(slot < 0 ? "ownedHint" : "ownedCount", { n: count[id] })}</span>` : ""}</div>${shipCmpHtml(sh, SHIPS[vs.ship], vs.ship)}</div>`;
   };
-  return SHIP_LINE_KEYS.map(line => `<p class="hint-s line-${line}">${t("line_" + line)}</p>` + SHIP_ORDER.filter(id => forSale(id) && SHIPS[id].line === line).map(row).join("")).join("");
+  // Per line: the models you already own first, then the ones on sale; the ones a Letter of Marque has not opened fold into one closed list at the end.
+  const lines = SHIP_LINE_KEYS.map(line => SHIP_ORDER.filter(id => forSale(id) && SHIPS[id].line === line));
+  const locked = lines.flat().filter(id => shipLock(id)).sort((a, b) => SHIPS[a].tier - SHIPS[b].tier);
+  const open = line => line.filter(id => !shipLock(id)).sort((a, b) => !!count[b] - !!count[a]);   // stable: the yard's own order inside each group
+  return SHIP_LINE_KEYS.map((line, i) => `<p class="hint-s line-${line}">${t("line_" + line)}</p>` + open(lines[i]).map(row).join("")).join("") +
+    (locked.length ? `<details class="lockedships"><summary>${t("lockedShips", { n: locked.length })}</summary>${locked.map(row).join("")}</details>` : "");
 }
 
 // ---------- the panels ----------

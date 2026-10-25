@@ -27,8 +27,8 @@ Object.assign(STR.en, {
   emptyTip: "Empty port: tap a stored gun first, then tap here to mount it.",
   storeFullWhy: "The gun store is full ({n}): free a place before unloading.",
   movedMount: "Mounted {gun}.", movedShift: "Moved {gun} to another port.", movedSwap: "Swapped {a} and {b}.", movedUnload: "Unloaded {gun} to the store.", gunUndo: "Undo", gunUndone: "Undone.",
-  upTo: "Upgrade to Lv {n} ({cost} gold)", upShort: "Upgrade to Lv {n} ({cost} gold, {d} short)",
-  upN: "Upgrade {n} levels ({cost} gold total)", upNShort: "Upgrade {n} levels ({cost} gold total, {d} short)",
+  upTo: "Upgrade to Lv {n} ({cost} gold)", upShort: "Upgrade to Lv {n} ({cost} gold, need {d} more)",
+  upN: "Upgrade {n} levels ({cost} gold total)", upNShort: "Upgrade {n} levels ({cost} gold total, need {d} more)", gainDmg: "Damage +{p}%", gainFx: "Effect +{p}%",
   boughtMounted: "Bought a <em>{gun}</em> and mounted it.", putHere: "Put here", candInfo: "Details",
 });
 Object.assign(STR.zh, {
@@ -41,7 +41,7 @@ Object.assign(STR.zh, {
   storeFullWhy: "庫存已滿（{n} 門）：先騰出位置才能卸下。",
   movedMount: "已裝上{gun}。", movedShift: "已把{gun}移到另一個砲位。", movedSwap: "已交換{a}與{b}。", movedUnload: "已把{gun}卸下到庫存。", gunUndo: "復原", gunUndone: "已復原。",
   upTo: "升級到 Lv {n}（{cost} 金幣）", upShort: "升級到 Lv {n}（{cost} 金幣，還差 {d}）",
-  upN: "升級 {n} 級（總價 {cost} 金幣）", upNShort: "升級 {n} 級（總價 {cost} 金幣，還差 {d}）",
+  upN: "升級 {n} 級（總價 {cost} 金幣）", upNShort: "升級 {n} 級（總價 {cost} 金幣，還差 {d}）", gainDmg: "火力 +{p}%", gainFx: "效果 +{p}%",
   boughtMounted: "已買下<em>{gun}</em>並裝上。", putHere: "裝到這裡", candInfo: "詳情",
 });
 const GUN_ACTS = ["slot", "store", "buy", "gup", "gup5", "unload", "tostore", "gundo", "gfrom"];
@@ -190,9 +190,9 @@ function gunCardHtml(p = deckSel, cand = false) {
   const pl = cand ? ` data-side="${p.side}" data-i="${p.i}"${p.e != null ? ` data-e="${p.e}"` : ""}` : "";
   const G = GUNS[gun.g], max = gun.lv >= GUN_MAX, cost = max ? 0 : gunUpCost(gun), short = cost - save.gold, mounted = p.side !== "store";
   const up = max ? `<button class="btn max" type="button" disabled>${t("max")}</button>`
-    : `<button class="btn" type="button" data-act="gup"${pl} ${short > 0 ? "disabled" : ""}>${upgradeLabel(gun.lv + 1, cost, short)}</button>`;
+    : `<button class="btn" type="button" data-act="gup"${pl} ${short > 0 ? "disabled" : ""}>${upgradeLabel(gun.lv + 1, cost, short, t("gainDmg", { p: pctUp(gunLvMul(gun.lv), gunLvMul(gun.lv + 1)) }))}</button>`;
   const plan = gunUpPlan(gun, save.gold), up5 = plan.n >= 2   // one level left is just the button above
-    ? `<button class="btn" type="button" data-act="gup5"${pl} ${plan.short > 0 ? "disabled" : ""}>${t(plan.short > 0 ? "upNShort" : "upN", { n: plan.n, cost: fmt(plan.cost), d: fmt(plan.short) })}</button>` : "";
+    ? `<button class="btn" type="button" data-act="gup5"${pl} ${plan.short > 0 ? "disabled" : ""}>${t(plan.short > 0 ? "upNShort" : "upN", { n: plan.n, cost: fmt(plan.cost), d: fmt(plan.short) })}${gainLine(t("gainDmg", { p: pctUp(gunLvMul(gun.lv), gunLvMul(gun.lv + plan.n)) }))}</button>` : "";
   const full = save.store.length >= MAX_STORE;
   const off = !mounted || cand ? "" : `<button class="btn ghost" type="button" data-act="unload" ${full ? "disabled" : ""}>${t("toStore")}</button>`;
   const x = typeof gearExtraHtml === "function" ? gearExtraHtml(gun, "gun", pl) : null;   // rarity, affixes, re-roll, lock, break down (js/gear-ui.js)
@@ -204,7 +204,10 @@ function gunCardHtml(p = deckSel, cand = false) {
     ${x ? x.list + (mounted ? "" : gunCompareHtml(gun)) : ""}${cand ? "" : `<p class="hint-s">${mounted && full ? t("storeFullWhy", { n: MAX_STORE }) + " " : ""}${t(mounted ? "pickHintPort" : "pickHintStore")}</p>`}</div>`;
 }
 // "Upgrade to Lv 4 (310 gold)"; with too little gold the same label says how much is missing (the button is disabled then).
-const upgradeLabel = (n, cost, short) => t(short > 0 ? "upShort" : "upTo", { n, cost: fmt(cost), d: fmt(Math.max(0, short)) });
+// `gain` (a text) goes under it as a second line: what the upgrade buys (#97), so the price can be weighed against it.
+const gainLine = gain => (gain ? `<span class="gain">${gain}</span>` : "");
+const upgradeLabel = (n, cost, short, gain = "") => t(short > 0 ? "upShort" : "upTo", { n, cost: fmt(cost), d: fmt(Math.max(0, short)) }) + gainLine(gain);
+const pctUp = (from, to) => Math.round((to / from - 1) * 100);   // 1.15x per gun level -> 15; k levels at once -> the compound figure
 // The armory sells Lv 1 guns one at a time; how many of each the captain has is shown beside the name.
 function armoryHtml() {
   const full = save.store.length >= MAX_STORE && !(deckSel && deckSel.side !== "store" && !gunAt(deckSel));   // a gun bought into an empty port needs no room in the store

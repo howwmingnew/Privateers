@@ -78,8 +78,22 @@ const tank = page => ev(page, () => { player.maxHp = player.hp = 1e6; });
   const after = await ev(page, () => ({ cam: [S.cameras.main.midPoint.x, S.cameras.main.midPoint.y], e: enemies.map(e => e.x + e.y).join() }));
   ok("title: camera drifts, the player's ship is hidden", Math.hypot(after.cam[0] - before.cam[0], after.cam[1] - before.cam[1]) > 1 && await ev(page, () => !player.spr.visible));
   await page.screenshot({ path: join(out, "d-title-en.png") });
+  // #94: the title carries an English | 中文 pair; a fresh en-US browser starts in English, the pair switches both ways and remembers it
+  const lp = await ev(page, () => ({ lang, pressed: [...document.querySelectorAll("#title [data-lang-set]")].map(b => b.dataset.langSet + ":" + b.getAttribute("aria-pressed")).join(), vis: !!document.querySelector("#title [data-lang-set]").offsetParent }));
+  ok("title: an English | 中文 pair is visible and starts on English for an en-US browser", lp.vis && lp.lang === "en" && lp.pressed === "en:true,zh:false", lp);
+  await page.click('#title [data-lang-set="zh"]');
+  const lz = await ev(page, () => ({ lang, saved: localStorage.getItem("privateers-lang"), neu: document.getElementById("tNew").textContent, pressed: document.querySelector('[data-lang-set="zh"]').getAttribute("aria-pressed") }));
+  ok("title: tapping 中文 relabels the menu at once and the choice is kept", lz.lang === "zh" && lz.saved === "zh" && /啟航/.test(lz.neu) && lz.pressed === "true", lz);
+  await page.click('#title [data-lang-set="en"]');
+  ok("title: tapping English switches back", await ev(page, () => lang === "en" && /Set sail/i.test(document.getElementById("tNew").textContent)));
+  {
+    const z = await open(D, { locale: "zh-TW", tag: "title-zh" });
+    ok("title: a zh-TW browser's first visit opens in Chinese with 中文 marked", await ev(z.page, () => lang === "zh" && document.querySelector('[data-lang-set="zh"]').getAttribute("aria-pressed") === "true" && /啟航/.test(document.getElementById("tNew").textContent)));
+    await z.ctx.close();
+  }
 
-  await page.keyboard.down("Enter");                  // a held Enter starts the game once and stops at the ledger
+  await page.focus("#tNew");   // the language pair keeps focus after a tap; a keyboard player goes back to the menu
+  await page.keyboard.down("Enter");                // a held Enter starts the game once and stops at the ledger
   await page.keyboard.down("Enter"); await page.keyboard.down("Enter");   // (Playwright sends these as auto-repeats)
   await page.keyboard.up("Enter");
   await until(page, () => !titleOpen);

@@ -98,10 +98,20 @@ test("gun bay: the upgrade button names the next level and its price, in both la
 test("gun bay: too little gold shows the shortfall and disables the button; max level says so and is disabled", () => {
   const g = bay();
   g.run(`deckSel = { side: "bow", i: 0 }; save.gold = gunUpCost(save.bow[0]) - 40`);
-  assert.match(g.run("gunCardHtml()"), /data-act="gup" disabled>Upgrade to Lv 3 \(\d[\d,]* gold, 40 short\)/);
+  assert.match(g.run("gunCardHtml()"), /data-act="gup" disabled>Upgrade to Lv 3 \(\d[\d,]* gold, need 40 more\)/);
   g.run(`save.bow[0] = gunItem("six", GUN_MAX)`);
   assert.match(g.run("gunCardHtml()"), /class="btn max" type="button" disabled>Max level/);
   assert.match(bay("zh").run(`deckSel = { side: "bow", i: 0 }; save.bow[0] = gunItem("six", GUN_MAX); gunCardHtml()`), /disabled>已滿級/);
+});
+
+// ---------- #97: an upgrade button says what the level buys ----------
+test("gun bay: each upgrade button names its gain (one level 15%, five levels compound), in both languages", () => {
+  const g = bay();
+  g.run(`deckSel = { side: "bow", i: 0 }; save.gold = 1e6`);
+  const en = g.run("gunCardHtml()");
+  assert.match(en, /data-act="gup" >Upgrade to Lv 3 \(\d[\d,]* gold\)<span class="gain">Damage \+15%<\/span>/);
+  assert.match(en, /Upgrade 5 levels[^<]*<span class="gain">Damage \+101%<\/span>/);
+  assert.match(bay("zh").run(`deckSel = { side: "bow", i: 0 }; save.gold = 1e6; gunCardHtml()`), /<span class="gain">火力 \+15%<\/span>/);
 });
 
 // ---------- #33: letter of marque, level warning (js/bounty-rec.js) ----------
@@ -114,6 +124,10 @@ test("letter of marque: only a ship level below the asked one is short, and both
   assert.deepEqual([run("recShort(4, 2)"), run("recShort(4, 3)"), run("recShort(4, 4)"), run("recShort(4, 9)")], [true, true, false, false]);
   assert.equal(run('t("pRecLow")'), "建議先升級再出戰");
   assert.equal(run('STR.en.pRecLow'), "Level up before you sail");
+  // #91: the poster explains why its number is higher than the boss's badge, and how Ship Lv rises, in both languages
+  for (const k of ["pRecCalc", "pRecWhy", "pRecWhyEsc", "lvHow"]) { assert.ok(run(`STR.en.${k}`) && run(`STR.zh.${k}`), k); }
+  assert.match(run('t("pRecCalc", { b: 2, m: 2 })'), /Lv 2/);
+  assert.match(run('t("pRecWhy", { b: 2, m: 2 })'), /Lv 2.*2/);
 });
 
 // ---------- #42: chart marks (js/mini-marks.js) ----------
