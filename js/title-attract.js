@@ -40,13 +40,13 @@ function attractBall(b, dt) {
     if (!b.owner.alive) return false;
     const m = enemyMuzzle(b.owner, b.key, b.i, b.n);
     b.x = m.x; b.y = m.y;
-    b.spr = S.add.image(b.x, b.y, "ball").setDepth(7);
+    b.spr = ballSpr(b.x, b.y);   // a kept sprite if there is one (js/ball-pool.js)
     vfxMuzzle(b.x, b.y, b.a);
   }
   b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
   b.spr.setPosition(b.x, b.y).setScale(1 + Math.sin(Math.PI * clamp(1 - b.life / b.life0, 0, 1)) * 0.6);
   const hit = enemies.find(e => e !== b.owner && e.alive && hitShip(e, b.x, b.y));
-  const rock = !hit && islands.some(isl => Math.hypot(isl.x - b.x, isl.y - b.y) < isl.r * 0.9);
+  const rock = !hit && islandsNear(b.x, b.y).some(isl => { const dx = isl.x - b.x, dy = isl.y - b.y, R = isl.r * 0.9; return dx * dx + dy * dy < R * R; });   // only the rocks near it (js/ai-nav.js)
   if (!hit && !rock && b.life > 0) return true;
   if (hit) vfxHit(b.x, b.y); else vfxSplash(b.x, b.y, rock);
   ballFree(b);   // a pooled sprite goes back to the pool, any other is destroyed (js/ball-pool.js)

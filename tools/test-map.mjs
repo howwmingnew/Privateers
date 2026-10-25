@@ -25,6 +25,8 @@ export const MAP = [
   [/^js\/(tutorial|onboard|howto|menu|title-attract|hall|logbook|achievements|ledger|notices|notify|chart-legend|roadmap)/, ["shell", "polish"]],
   [/^js\/(art|scenery|vfx|mini-marks|poster|harbor-art|disasters-art|gun-art)/, ["art-hits", "polish"]],
   [/^js\/(hooks|boot-guard|fonts-link)/, ["shell"]],
+  [/^js\/cull/, ["phase1", "harbor", "ports", "scale", "art-hits"]],   // off-screen culling: photo mode, harbor, stations, big views
+  [/^js\/ball-pool/, ["gundeck", "collision", "phase1"]],
   // off-screen markers: phase1b and ports check them, escorts and campaign (boss frame) used to get them through CORE
   [/^js\/edge-(marks|math)/, ["phase1b", "ports", "escorts", "campaign"]],
   [/^css\//, ["shell", "polish", "scale"]],

@@ -48,7 +48,7 @@ What's coming next, one phase at a time. These images redraw themselves whenever
 npm install            # 只裝測試用的 Playwright（使用系統安裝的 Chrome，不另外下載瀏覽器）
 npm run serve          # 在 http://127.0.0.1:8765 提供遊戲（手動玩用；測試自己會開伺服器，不需要這個）
 npm test               # 單元 + 冒煙測試（CI 的必過關卡）
-npm run test:quick     # 單元 + 冒煙 + 依 `git diff origin/main` 挑出的相關瀏覽器測試，目標 5 分鐘內
+npm run test:quick     # 單元 + 冒煙 + 依分支相對 origin/main 分岔點的改動挑出的相關瀏覽器測試，目標 5 分鐘內
 npm run test:all       # 全部測試；加 `-- --jobs 4` 平行跑
 npm run fonts          # 重新產生 js/fonts-link.js（字型子集）
 ```
@@ -57,7 +57,9 @@ npm run fonts          # 重新產生 js/fonts-link.js（字型子集）
 
 `node tools/flake-check.mjs 5 shell heat --jobs 4` 把指定測試連跑 N 次並列出通過率（失敗輸出存在 `.review/flake/`），修不穩定測試時用。
 
-`node tools/run-tests.mjs [unit|smoke|browser|quick|all|ci] [--jobs N] [--no-retry] [--list]`：每個 worker 自己開一個靜態伺服器和埠；失敗的測試會單獨重跑一次，重跑後通過會標示「重跑後通過」（不算失敗，但請去修那支測試）。
+`node tools/run-tests.mjs [unit|smoke|browser|quick|all|ci] [--jobs N] [--no-retry] [--list]`：每個 worker 自己開一個靜態伺服器和埠；失敗的測試會單獨重跑一次，重跑後通過會標示「重跑後通過」（不算失敗，但請去修那支測試）。每支通過的測試耗時記在 `.review/test-times.json`，下次從最慢的先跑；`scale-extremes` 依視窗尺寸拆成幾份平行跑（單跑一份：`node tools/run-tests.mjs scale-extremes@390x844`）。Phaser 和 Google 字型第一次跑時存到 `node_modules/.cache/privateers`，之後測試都從本機提供，不再每個瀏覽器 context 重新下載。
+
+CI 的機器沒有 GPU（WebGL 由 SwiftShader 軟體繪製）；要在本機用同樣的方式計時或除錯，加 `TEST_NOGPU=1`，例如 `TEST_NOGPU=1 npm test`。
 
 **開 PR 與合併 main 之後**：字型清單和測試清單不再是固定衝突點。
 - 字型：`js/fonts-link.js` 是工具產生的單行檔案。遇到衝突就任選一邊，然後執行 `npm run fonts` 並 commit。CI 會跑 `node tools/font-subset.mjs --check`，清單過期時會明確報錯（不會自動改檔）。
