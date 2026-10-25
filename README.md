@@ -45,11 +45,22 @@ What's coming next, one phase at a time. These images redraw themselves whenever
 ## 開發
 
 ```bash
-npm install          # 只裝測試用的 Playwright（使用系統安裝的 Chrome，不另外下載瀏覽器）
-npm run serve        # 在 http://127.0.0.1:8765 提供遊戲
-npm test             # 單元測試 + 冒煙測試
-npm run test:all     # 全部測試（外殼、戰役、修補、平台、音效、命中判定）
+npm install            # 只裝測試用的 Playwright（使用系統安裝的 Chrome，不另外下載瀏覽器）
+npm run serve          # 在 http://127.0.0.1:8765 提供遊戲（手動玩用；測試自己會開伺服器，不需要這個）
+npm test               # 單元 + 冒煙測試（CI 的必過關卡）
+npm run test:quick     # 單元 + 冒煙 + 依 `git diff origin/main` 挑出的相關瀏覽器測試，目標 5 分鐘內
+npm run test:all       # 全部測試；加 `-- --jobs 4` 平行跑
+npm run fonts          # 重新產生 js/fonts-link.js（字型子集）
 ```
+
+**測試怎麼加**：放一個檔案就好，不用改 `package.json`。`tests/unit*.mjs` 是單元測試（`node --test`）；`tests/<name>.mjs` 是瀏覽器測試，網址從 `argv[2]` 讀、失敗時以非 0 結束，`test:all` 會自動跑到。檔名以 `-perf` 結尾，或是 `art-perf`／`art-shots`／`art-page`，屬於效能與截圖工具，預設不跑，要手動執行。要讓 `test:quick` 認得新模組，在 `tools/test-map.mjs` 加一行對應（沒對應到的檔案會改跑核心測試組）。單支測試：`node tools/run-tests.mjs gundeck heat`。
+
+`node tools/run-tests.mjs [unit|smoke|browser|quick|all|ci] [--jobs N] [--no-retry] [--list]`：每個 worker 自己開一個靜態伺服器和埠；失敗的測試會單獨重跑一次，重跑後通過會標示「重跑後通過」（不算失敗，但請去修那支測試）。
+
+**開 PR 與合併 main 之後**：字型清單和測試清單不再是固定衝突點。
+- 字型：`js/fonts-link.js` 是工具產生的單行檔案。遇到衝突就任選一邊，然後執行 `npm run fonts` 並 commit。CI 會跑 `node tools/font-subset.mjs --check`，清單過期時會明確報錯（不會自動改檔）。
+- 測試：`package.json` 不再列測試檔，所以不會因為加測試而衝突。
+- `index.html` 的 script 清單仍是共用清單；載入順序有語意，我沒有動它；新腳本請加在依賴它的腳本旁邊，不要每個 PR 都接在檔尾同一處，衝突時兩行都保留即可（先確認順序）。
 
 - Phaser 3.80.1 從 cdnjs 載入；程式是 `js/` 下的一般 `<script>`（不是 ES module），所以 `file://` 也能直接開。
 - 存檔在瀏覽器的 localStorage（`privateers-save-v2`，舊版 v1 存檔會自動轉換）；設定另存在 `privateers-settings`。
