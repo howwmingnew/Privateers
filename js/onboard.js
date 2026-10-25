@@ -6,22 +6,22 @@
 //   chartLite()       the chart shows only the harbor, the player, the gold-ringed mark and wrecks (js/hud.js drawMini)
 //   sinkingNear(r)    a ship going down this close: the touch "let go to fire" tip would print over it (js/input.js)
 // And the title drifts over the nearest AI fight near the harbor instead of an empty quay (attractFocus, js/menu.js).
-Object.assign(STR.en, { gl_drag: "drag", gl_lift: "let go", gl_hold: "hold", gl_click: "click", gl_stick: "stick" });
-Object.assign(STR.zh, { gl_drag: "拖曳", gl_lift: "放開", gl_hold: "按住", gl_click: "點擊", gl_stick: "搖桿" });
+Object.assign(STR.en, { gl_drag: "drag", gl_lift: "let go", gl_hold: "hold", gl_click: "click", gl_stick: "stick", gl_holdR: "hold right" });
+Object.assign(STR.zh, { gl_drag: "拖曳", gl_lift: "放開", gl_hold: "按住", gl_click: "點擊", gl_stick: "搖桿", gl_holdR: "按住右鍵" });
 
 // ---------- coach glyphs ----------
 const kc = (k, wide) => `<kbd class="kc${wide ? " wide" : ""}">${k}</kbd>`;
 const glyphCap = s => `<small>${s}</small>`;
-// touch: a fingertip with a drag arrow (steer) or a lifting fingertip (fire); mouse: a mouse with the left button lit
+// touch: a fingertip with a drag arrow (steer) or a lifting fingertip (fire); mouse: the right button lit to steer, the left to fire
 const finger = kind => `<span class="gl-finger ${kind}" aria-hidden="true"><i></i><b></b></span>`;
-const mouseGl = () => `<span class="gl-mouse" aria-hidden="true"><i></i></span>`;
+const mouseGl = right => `<span class="gl-mouse${right ? " r" : ""}" aria-hidden="true"><i></i></span>`;
 function coachGlyphs(at) {
   const d = typeof device !== "undefined" ? device : "desk";
   const steer = at === "out" ? "W" : "A D";
   if (at !== "out" && at !== "aim" && at !== "fire") return "";
   if (d === "touch") return at === "fire" ? finger("lift") + glyphCap(t("gl_lift")) : finger("drag") + glyphCap(t("gl_drag"));
   if (d === "pad") return at === "fire" ? kc("A") + kc("RT", true) : kc("L", true) + glyphCap(t("gl_stick"));
-  if (d === "mouse") return at === "fire" ? mouseGl() + glyphCap(t("gl_click")) : mouseGl() + glyphCap(t("gl_hold"));
+  if (d === "mouse") return at === "fire" ? mouseGl() + glyphCap(t("gl_click")) : mouseGl(true) + glyphCap(t("gl_holdR"));
   if (at === "fire") return kc("Space", true);
   return steer.split(" ").map(k => kc(k)).join("");
 }
