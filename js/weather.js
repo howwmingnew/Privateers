@@ -13,7 +13,7 @@ Object.assign(STR.en, {
 Object.assign(STR.zh, {
   wx_clear: "晴", wx_rain: "雨", wx_storm: "暴風雨", hr_day: "白天", hr_dusk: "黃昏", hr_night: "月夜",
   wx_kn: "節", wx_windPfx: "風", wx_label: "風速 {kn} 節。這個航向的速度 {fx}。{wx}，{hr}。", wx_toastStorm: "暴風雨來了！",
-  wx_kn: "節", wx_label: "風速 {kn} 節。這個航向的速度 {fx}。{wx}，{hr}。", wx_toastStorm: "暴風雨來了！",
+  wx_tip: "風向盤：箭頭指向風吹去的方向；± % 是風讓你目前航向加速或減速的幅度。",
 });
 
 const wx = { on: false, seed: 1, t: 0, easy: false, w: { kind: "clear", rain: 0, storm: 0, hour: "day", spell: 0 }, wind: { dir: 0, strength: 0.3 },
