@@ -52,6 +52,15 @@ test("lvGainNewGun: an empty port counts the gun, a port with a gun swaps it, no
   assert.equal(g.run("typeof lvGainNewGun('six', { side: 'bow', i: 0 })"), "string");
 });
 
+test("lvGainNewGun: a Lv 1 gun bought over a high-level one is a loss, shown as such", () => {
+  const g = boot();
+  g.run("save.left[0] = { g: 'six', lv: 9 }");
+  const into = JSON.stringify(g.json("{ side: 'left', i: 0 }"));
+  const out = g.run(`lvGainNewGun('six', ${into})`);
+  assert.match(out, /^Ship Lv (progress −\d+%|falls to \d+)$/, out);
+  assert.equal(g.run("JSON.stringify(save.left[0])"), '{"g":"six","lv":9}', "the preview leaves the gun alone");
+});
+
 test("emptyPortsOf counts the empty ports of the flagship and of an escort's ship", () => {
   const g = boot();
   const total = g.run("MOUNTS.reduce((c, { key }) => c + save[key].length, 0)");

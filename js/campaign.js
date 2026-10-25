@@ -78,15 +78,19 @@ const TETHER_SLACK = 100, TETHER_BEND = 0.35;   // past the line he first slides
 const bossStands = e => !!e.boss && !!(findBounty(e.boss) || {}).stands;
 // A bounty with a tether that is on the line, on a course that takes it farther out, slides along the line instead (so the fight goes on
 // without leading the captain into deeper water); TETHER_SLACK beyond it he turns for the lair (js/ships.js think) and stays turned
-// (e.tethered) until he is back inside the line by TETHER_BACK.
+// (e.tethered) until he is back inside the line by TETHER_BACK. The side he slides to (e.slideSign) is kept until he is back inside the line.
 function bossTether(e, desired, thr) {
   const b = e.boss && e.lair && desired != null ? findBounty(e.boss) : null;
   if (!b || !b.tether) return null;
   const d = dist(e, e.lair), out = Math.atan2(e.y - e.lair.y, e.x - e.lair.x), off = angDiff(desired, out);
   if (e.tethered && d < b.tether - TETHER_BACK) e.tethered = false;
+  if (d < b.tether) e.slideSign = 0;   // back inside the line: the next slide may pick its side afresh
   if (!e.tethered && d >= b.tether && Math.cos(off) > 0) {
     if (d >= b.tether + TETHER_SLACK) e.tethered = true;
-    else return { desired: out + (off >= 0 ? 1 : -1) * (Math.PI / 2 + TETHER_BEND), thr };
+    else {
+      if (!e.slideSign) e.slideSign = off >= 0 ? 1 : -1;   // keeps one side until back inside the line, so a wobbling course does not flip him back and forth
+      return { desired: out + e.slideSign * (Math.PI / 2 + TETHER_BEND), thr };
+    }
   }
   return e.tethered ? { desired: out + Math.PI, thr } : null;
 }

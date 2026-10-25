@@ -205,12 +205,13 @@ console.log("Fresh campaign (desktop, en)");
       const o1 = await page.evaluate(() => { sendHome(), dock("return"); setSail(); for (const c of crates) if (!c.wreck) c.value = 0;
         player.x = OUTPOST.x + 420; player.y = OUTPOST.y; player.hp = player.maxHp; cargo = 120; return save.gold; });
       await page.waitForTimeout(300 * SLOW);
+      await page.evaluate(() => { window.__sold = 0; onHook("sale", n => { window.__sold += n; }); });   // a hit on the approach spills part of the hold: compare with what was really sold
       await page.evaluate(() => { for (const c of crates) if (!c.wreck) c.value = 0; cargo = 120; player.x = OUTPOST.x + 70; player.y = OUTPOST.y + 30; player.hp = player.maxHp; });
       await page.waitForFunction(() => docked, null, { timeout: 7000 * SLOW }).catch(() => {});   // sold on the way in, ledger after 3 s stopped (js/mooring.js)
-      const op = await page.evaluate(() => ({ docked, atOutpost, gold: save.gold, title: document.getElementById("portTitle").textContent,
+      const op = await page.evaluate(() => ({ docked, atOutpost, gold: save.gold, sold: window.__sold, title: document.getElementById("portTitle").textContent,
         fleet: document.getElementById("deck").closest("section").hidden, gear: document.getElementById("gear").closest("section").hidden }));
       check(op.docked && op.atOutpost && op.title === "Hulk Outpost", `docks at the outpost ("${op.title}")`);
-      check(op.gold - o1 === 120, `outpost buys the hold (${o1} -> ${op.gold})`);
+      check(op.sold > 0 && op.gold - o1 === op.sold, `outpost buys the hold (${o1} -> ${op.gold}, sold ${op.sold}; a hit on the approach may have spilled some)`);
       check(op.fleet && op.gear, "outpost has no gun deck, armoury or shipyard (they all live under the fleet tabs)");
       await o.shot("desktop-en-6-outpost");
       const tr = await page.evaluate(() => { setSail(); return { truce: inSafe(player), near: nearestHarbor().outpost }; });

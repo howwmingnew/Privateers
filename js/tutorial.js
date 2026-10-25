@@ -118,17 +118,19 @@ const tutHazard = (x, y) => typeof disMarks === "function" && disMarks().some(h 
 const tutNavyNear = (x, y, but) => enemies.some(o => o !== but && o.alive && o.faction === "navy" && Math.hypot(o.x - x, o.y - y) < TUT_NAVY_GAP);
 function tutSafeSea(x, y) {
   const sea = seaOfRing(ringAt(Math.hypot(x - PORT.x, y - PORT.y)));
-  return SEAS.indexOf(sea) <= SEAS.indexOf(seaOfRing(playerRing())) && !seaIsDanger(sea.id) && !tutHazard(x, y);
+  return SEAS.indexOf(sea) <= SEAS.indexOf(seaOfRing(playerRing())) && (sea === SEAS[0] || !seaIsDanger(sea.id)) && !tutHazard(x, y);   // the first sea is where the mark is put: on New Game+ its level bonus would flag it "danger" for ever
 }
 const tutSafe = e => e.alive && isOrdinary(e) && e.faction !== "navy" && tutSafeSea(e.x, e.y);
+let lastMark = null;   // the mark put out last: while it still sails, no second one is made, so a target that is not "safe" can never make a ship every frame
 function forgivingSpawn() {
-  if (!needsMark()) return null;
+  if (!needsMark() || (lastMark && lastMark.alive && enemies.includes(lastMark))) return null;
   const base = Math.atan2(player.y - PORT.y, player.x - PORT.x), r = SAFE_R + 140;   // still inside the Lv 1 ring
   for (let i = 0; i < 24; i++) {
     const a = base + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.22, x = PORT.x + Math.cos(a) * r, y = PORT.y + Math.sin(a) * r;
     if (islands.some(s => Math.hypot(s.x - x, s.y - y) < s.r * 1.3 + 60) || tutHazard(x, y) || tutNavyNear(x, y)) continue;   // calm shallows only
     const e = spawnEnemy(S, { x, y, faction: "merchant", near: true });
     if (!e) return null;
+    lastMark = e;
     e.maxHp = e.hp = Math.ceil(e.maxHp * TUT_MARK_HULL);
     e.tutMark = true; e.maxSpeed *= TUT_MARK_SPEED;
     e.loot = Math.max(e.loot || 0, cheapestBuy());

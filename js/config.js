@@ -158,7 +158,7 @@ const ESCORT_SUNK_FEE = 0.15, ESCORT_SUNK_MIN = 30;   // a sunk escort is refitt
 const ESCORT_AIM_L = 6;              // the gun crews aim like a level-6 enemy (js/data.js enemyStats)
 const ESCORT_GAP = 120;              // px between slots of the escort formation
 const ESCORT_SPEED_K = 1.08;         // the crews hold station well: this much faster than the yard's sails, so they can rejoin
-const ESCORT_CATCH_D = 140;         // an escort this far from its slot presses on: it may sail up to ESCORT_CATCH_K x the flagship's top speed to rejoin (#108)
+const ESCORT_CATCH_D = 110, ESCORT_CATCH_OFF = 70;   // an escort this far from its slot presses on (inside ESCORT_LEASH): it may sail up to ESCORT_CATCH_K x the flagship's top speed to rejoin, and eases off once within the second (#108)
 const ESCORT_CATCH_K = 1.12;
 const ESCORT_WARN = 0.35;            // an escort under this share of hull gets a red bar on the ship and one warning (js/escort-ai.js, js/escort-hud.js)
 const ESCORT_LOST = 1500;            // an escort this far from the flagship and out of sight is set back on its station

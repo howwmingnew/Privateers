@@ -11,6 +11,8 @@ let hullOpen = false;   // the hull of that ship is picked
 let candSel = null;     // a gun of the panel's replace list whose card is open: a place like deckSel (js/gunbay.js), or null
 let lastPick = "";      // what the context panel showed last (renderFleet): a new pick scrolls the panel back to its top
 let openScroll = 0;     // the sheet's scrollTop just before the context panel opened: closing it puts the page back there (renderFleet)
+let openClamped = 0;    // where the sheet sat once the panel was open and settled (the wide page clamps it, harbor.js scrolls the panel into view)
+const noteOpenScroll = () => { openClamped = sheetEl.scrollTop; };   // that move is the panel's own, not the player's: only a scroll beyond it counts as theirs
 let ledgerFocus = null; // a selector the click handler focuses after the next render (a closed panel: the thing it was about)
 
 // Nothing picked: no gun port, no hull, no undo note.
@@ -124,9 +126,10 @@ function renderFleet() {
   ctx.innerHTML = ctxHtml();
   const nowOpen = !!ship && (hullOpen || !!deckSel);
   ctx.classList.toggle("open", nowOpen);
-  if (!wasOpen && nowOpen) openScroll = scrolled;
+  if (!wasOpen && nowOpen) { openScroll = scrolled; openClamped = sheetEl.scrollTop; }   // on the wide two-column page the panel's arrival can itself shorten the sheet: clamped at once
   // The tall panel going away shortens the sheet and the browser clamps the scroll position: the ship jumps under the player's finger.
-  // When that happened, go back to where the page was before the panel opened (and never scroll past the new end).
-  else if (wasOpen && !nowOpen && sheetEl.scrollTop < scrolled - 1) sheetEl.scrollTop = Math.min(openScroll, scrolled);
+  // When that happened (or it was clamped when the panel opened and the player has not scrolled since), go back to where the page
+  // was before the panel opened (the browser stops at the new end).
+  else if (wasOpen && !nowOpen && Math.abs(sheetEl.scrollTop - openScroll) > 1 && (sheetEl.scrollTop < scrolled - 1 || Math.abs(scrolled - openClamped) <= 1)) sheetEl.scrollTop = openScroll;
   if (pick !== lastPick) { ctx.scrollTop = 0; lastPick = pick; }   // a newly opened panel starts at its top, not where the last one was scrolled to (a phone's bottom sheet scrolls)
 }

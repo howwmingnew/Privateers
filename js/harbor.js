@@ -119,7 +119,7 @@ document.getElementById("port").addEventListener("click", ev => {
   if (ledgerFocus) { document.querySelector(ledgerFocus)?.focus({ preventScroll: true }); ledgerFocus = null; }
   if (act === "ship" || act === "switch" || act === "escBuyShip") document.getElementById("fleet").scrollIntoView({ block: "start" });   // a new hull: show the tabs and the new deck, never leave the sheet scrolled past them (focus moved to the catalog's next row)
   if (act === "gbag") document.querySelector(".gslot.dest")?.scrollIntoView({ block: "nearest" });   // a picked spare: the slot it goes to comes into view (js/gear-ui.js)
-  if (act === "port" || act === "hull") document.getElementById("ctx").scrollIntoView({ block: "nearest" });   // the panel opens under the deck: bring it into view
+  if ((act === "port" && deckSel) || (act === "hull" && hullOpen)) { document.getElementById("ctx").scrollIntoView({ block: "nearest" }); if (typeof noteOpenScroll === "function") noteOpenScroll(); }   // the panel opens under the deck: bring it into view (not when the same click closed it, js/ledger-tabs.js)
 });
 // Not enough gold: a disabled button never receives a click, so listen for the press itself.
 document.getElementById("port").addEventListener("pointerdown", ev => { const b = ev.target.closest("[data-act]"); if (b && b.disabled) Snd.play("denied"); });
