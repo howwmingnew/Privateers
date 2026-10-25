@@ -258,6 +258,25 @@ const jostle = await ev(() => {
 });
 check(jostle.moved < 0.5 && jostle.apart > 30 && jostle.hurts.player === 0 && jostle.hurts.escort === 0, `an escort that drifts onto the flagship is the one that gives way, no damage (flagship moved ${jostle.moved.toFixed(2)} px)`);
 
+// #108: a flagship at full sail (its gear can make it faster than the yard's sails times ESCORT_SPEED_K) is kept up with; a badly hurt escort is warned about once
+const sprint = await ev(() => {
+  const isl0 = islands; islands = [];
+  const es = sailOut([cfg("s1"), cfg("s3")], openRun()), f = fleets.find(x => x.type === "escort");
+  player.maxSpeed = Math.max(...es.map(e => e.baseSpeed)) * 1.3; joyVec = { x: 1, y: 0, m: 1 };
+  for (let i = 0; i < 30 * 60; i++) stepN(1);
+  const errs = es.map(e => { const q = slotWorld(fleetFrame(f), slotOf(f, e)); return Math.round(Math.hypot(e.x - q.x, e.y - q.y)); }), speed = Math.round(player.speed);
+  joyVec = { x: 0, y: 0, m: 0 }; for (let i = 0; i < 300; i++) stepN(1);
+  const said = []; const toast0 = toast; toast = (m, ...a) => { said.push(m); return toast0(m, ...a); };
+  es[0].hp = es[0].maxHp * 0.2; es[1].hp = es[1].maxHp * 0.9; stepN(60);
+  const warned = [...escWarned], low = document.querySelectorAll("#escHud .eh.low").length;
+  es[0].hp = es[0].maxHp * 0.1; stepN(60);
+  islands = isl0; toast = toast0;
+  return { errs, speed, warned, low, again: [...escWarned], toasted: said.join(" | ") };
+});
+check(sprint.errs.every(e => e < 200), `at full sail (${sprint.speed}) both escorts stay within 200 px of their slots (${sprint.errs})`);
+check(sprint.warned.join() === "1" && sprint.low === 1 && sprint.again.join() === "1", `a hull under ${35}% warns once for that escort only (${sprint.warned} / ${sprint.low} red chip / ${sprint.again})`);
+check(/Escort 1 is badly hurt/.test(sprint.toasted), `the warning reads "${sprint.toasted}"`);
+
 console.log("Stances");
 const stanceRows = await ev(() => {
   const rows = {};

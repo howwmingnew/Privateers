@@ -162,7 +162,7 @@ onHook("frame", () => {
   const live = bossShip && bossShip.alive && !paused && !docked && player.alive;
   if (!live) { bossArrow.hidden = true; bossBar.hidden = true; return; }
   placeBossArrow();
-  const near = dist(player, bossShip) < 1200;
+  const near = dist(player, bossShip) < 1200 && onScreen(bossShip.x, bossShip.y, 40);   // off screen the edge marker points the way instead (js/edge-marks.js, #108)
   bossBar.hidden = !near;
   if (near) {
     bossBar.firstElementChild.textContent = bossName(findBounty(bossShip.boss));
