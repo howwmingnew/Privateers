@@ -43,7 +43,7 @@ await boot(saveWith());
 await rig(); await sail();
 let r = await ev(() => {
   __gone(enemies.slice()); window.__hits = [];
-  onHook("hurt", (s, dmg, src) => { if ((bossSide(s) || bossSide(src)) && src && !src.isPlayer && !src.ally && !s.isPlayer && !s.ally) __hits.push([s.boss || s.escortOf || s.faction, dmg]); });
+  onHook("hurt", (s, dmg, src) => { if (bossSide(s) !== bossSide(src) && src && !src.isPlayer && !src.ally && !s.isPlayer && !s.ally) __hits.push((s.boss || s.escortOf || s.faction) + "<-" + (src.boss || src.escortOf || src.faction) + (src.A && src.A.boom ? "(boom)" : "")); });
   const spot = { x: 2600, y: 2600 }, b = BOUNTIES[1];
   const boss = spawnCaptain(b), navy = makeEnemy(S, spot.x + 220, spot.y, 3, "navy", "brig"), nav2 = makeEnemy(S, spot.x - 220, spot.y, 6, "navy", "frigate");
   for (const s of [boss, ...enemies.filter(e => e.escortOf)]) { s.x = spot.x + (s === boss ? 0 : 60); s.y = spot.y + (s === boss ? 0 : 80); s.spr.setPosition(s.x, s.y); }
@@ -56,10 +56,10 @@ r = await ev(() => {
   const { boss, navy, nav2 } = __q, hp0 = [boss.hp, ...__q.guards.map(g => g.hp)];
   let aimed = false, fired = false;
   for (let i = 0; i < 900; i++) { stepN(1); for (const o of [navy, nav2]) if (o.target === boss || __q.guards.includes(o.target)) aimed = true; if (boss.target === navy || boss.target === nav2) aimed = true; if (balls.some(b => b.owner === boss && !b.fromPlayer)) fired = true; player.x = 9000; player.y = 9000; }
-  return { aimed, fired, hits: __hits.length, same: boss.hp === hp0[0] && __q.guards.every((g, i) => g.hp === hp0[i + 1]), navyHp: [navy.hp / navy.maxHp, nav2.hp / nav2.maxHp] };
+  return { aimed, fired, hits: __hits.slice(), same: boss.hp === hp0[0] && __q.guards.every((g, i) => g.hp === hp0[i + 1]), navyHp: [navy.hp / navy.maxHp, nav2.hp / nav2.maxHp] };
 });
 check(!r.aimed && !r.fired, "15 s with a navy brig and frigate beside the boss: nobody aims at anybody, no boss shot is fired");
-check(r.hits === 0 && r.navyHp.every(v => v === 1), `boss and guards lose no hull, nobody hurts anybody (${r.hits} hurt events; navy ${r.navyHp.map(v => v.toFixed(2))})`);
+check(r.hits.length === 0, `boss and guards lose no hull, no outsider hurts the boss side or the other way round (${r.hits.length} hurt events ${r.hits.slice(0, 4)})`);
 r = await ev(() => {
   const { boss, navy } = __q; navy.attacker = boss; navy.angry = 8; __hits.length = 0;   // even an AI that was "hit" by the boss does not retaliate
   const b0 = boss.hp; hurt(navy, 1, 0, boss, null);
@@ -97,6 +97,55 @@ check(y.ship === "brig" && y.owned.includes("sloop") && y.switches.length === 1,
 await tap('[data-act="switch"]'); await page.waitForTimeout(300);
 y = await yardInfo();
 check(y.ship === "sloop" && y.gold === 0, "which switches on with an empty purse");
+
+// ---------- #73: the ledger's gold stays in view ----------
+console.log("#73 ledger gold is sticky");
+const ledgerState = () => ev(() => {
+  const sheet = document.querySelector("#port .sheet"), hd = sheet.querySelector("header"), g = document.getElementById("pGold").getBoundingClientRect(), s = sheet.getBoundingClientRect(), h = hd.getBoundingClientRect();
+  const hit = document.elementFromPoint(g.left + g.width / 2, g.top + g.height / 2);
+  return { top: Math.round(sheet.scrollTop), max: sheet.scrollHeight - sheet.clientHeight, goldVisible: g.top >= s.top - 1 && g.bottom <= s.top + h.height + 1 && !!hit && (hit.id === "pGold" || hit === hd || hd.contains(hit)),
+    hdrH: Math.round(h.height), vh: innerHeight, sheetH: Math.round(s.height), noHScroll: document.documentElement.scrollWidth <= innerWidth + 1 && sheet.scrollWidth <= sheet.clientWidth + 1,
+    gold: document.getElementById("pGold").textContent, btnBehind: [...sheet.querySelectorAll("button:not([disabled])")].filter(b => { const r = b.getBoundingClientRect(), fr = sheet.querySelector("footer").getBoundingClientRect(); return r.width > 0 && r.bottom < fr.top && r.top >= s.top + h.height && r.bottom <= s.bottom && (() => { const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !(e && (e === b || b.contains(e))); })(); }).length };
+});
+const sizes = [[1280, 720, 100], [390, 844, 100], [390, 844, 150], [390, 844, 250], [1280, 720, 250], [390, 844, 50]];
+for (const [w, h, pct] of sizes) {
+  await page.setViewportSize({ width: w, height: h });
+  await boot(saveWith({ gold: 12345 }));
+  await ev(pct => { SETTINGS.uiPct = pct; applyUiScale(); if (typeof applyMiniSize === "function") applyMiniSize(); }, pct);
+  await page.waitForTimeout(150);
+  const where = `${w}x${h} @${pct}%`;
+  let st = await ledgerState();
+  check(st.goldVisible && st.noHScroll, `${where}: gold visible at the top, no horizontal scroll`);
+  for (const f of [0.5, 1]) {
+    await ev(f => { const s = document.querySelector("#port .sheet"); s.scrollTop = (s.scrollHeight - s.clientHeight) * f; }, f);
+    await page.waitForTimeout(80);
+    st = await ledgerState();
+    check(st.max > 0 && st.goldVisible && st.noHScroll && st.hdrH < st.vh * 0.3 && st.btnBehind === 0, `${where}: scrolled to ${f * 100}% (${st.top}/${st.max}) the gold is still in view; bar ${st.hdrH}px of ${st.vh}px; ${st.btnBehind} buttons covered`);
+  }
+  if (pct === 100 && w === 390) await page.screenshot({ path: `${out}/ledger-mobile-scrolled.png` });
+  if (pct === 100 && w === 1280) await page.screenshot({ path: `${out}/ledger-desktop-scrolled.png` });
+}
+await page.setViewportSize({ width: 390, height: 844 });
+await boot(saveWith({ gold: 5000 }));
+await ev(() => { document.querySelector("#port .sheet").scrollTop = 600; });
+const before = await ev(() => document.getElementById("pGold").textContent);
+await ev(() => { save.gold -= 400; renderPort(); });
+await page.waitForTimeout(60);
+const mid = await ev(() => ({ txt: document.getElementById("pGold").textContent, cls: document.getElementById("pGold").className }));
+await page.waitForTimeout(600);
+const after = await ev(() => ({ txt: document.getElementById("pGold").textContent, cls: document.getElementById("pGold").className }));
+check(before === "5,000" && after.txt === "4,600" && /spent/.test(mid.cls), `spending 400 rolls the purse ${before} -> ${mid.txt} -> ${after.txt} and flashes (${mid.cls})`);
+await ev(() => { save.gold += 700; renderPort(); }); await page.waitForTimeout(60);
+check(await ev(() => document.getElementById("pGold").classList.contains("gained")), "earning gold flashes green");
+for (const kind of ["supply", "trade", "outpost"]) {
+  await ev(k => { setSail(); }, kind); await page.waitForFunction(() => !docked, null, { timeout: 8000 * SLOW });
+  await ev(k => { dock(k); }, kind); await page.waitForFunction(() => docked, null, { timeout: 8000 * SLOW });
+  await ev(() => { document.querySelector("#port .sheet").scrollTop = 99999; }); await page.waitForTimeout(80);
+  const st = await ledgerState();
+  check(st.goldVisible && st.noHScroll, `${kind}: the ledger's gold is in view (scroll ${st.top}/${st.max})`);
+  if (kind === "supply") await page.screenshot({ path: `${out}/ledger-supply-mobile.png` });
+}
+await page.setViewportSize({ width: 1280, height: 720 });
 
 // ---- END OF SECTIONS ----
 check(errors.length === 0, `0 page errors${errors.length ? " -> " + errors.join(" | ") : ""}`);

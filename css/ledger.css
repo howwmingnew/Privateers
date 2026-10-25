@@ -59,3 +59,21 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 .item.esc .esc-row .btn.on { background: var(--ink); color: var(--parch); box-shadow: 0 0 0 2px var(--brass); }
 .item.esc .esc-note { grid-column: 1 / -1; }
 .poster .p-rec .speed { display: block; margin-top: 2px; color: var(--ink-soft); font-style: italic; }
+
+/* ---- the purse stays in view: the ledger's header sticks to the top of the scrolling sheet (js/ledger-gold.js, #73) ---- */
+#port .sheet { scroll-padding-top: calc(min(70px * var(--ts), 18vw) + 20px); }   /* focus moves never land behind the bar */
+#port .sheet > header { position: sticky; top: -20px; z-index: 4;   /* the sheet pads 20px: sticky measures from inside it */ margin: -20px -20px 0; padding: 14px 20px 10px; background: var(--parch); align-items: center;
+  box-shadow: 0 8px 8px -8px rgba(60,40,10,.4); }
+#port .gold-big { white-space: nowrap; flex: none; }
+#port .gold-big b { transition: color .25s; }
+#port .gold-big b.spent { color: #a3281b; }
+#port .gold-big b.gained { color: #3f6b2a; }
+@media (max-width: 600px) {
+  /* one slim row on a phone: no eyebrow over the title, the gold's label beside its figure; sizes capped so a big UI scale cannot fill the screen */
+  #port .sheet > header { flex-wrap: nowrap; gap: 8px; padding: 10px 16px 8px; }
+  #port .sheet > header > div:first-child { min-width: 0; }
+  #port .sheet > header > div:first-child .eyebrow { display: none; }
+  #port .sheet > header h1 { font-size: min(calc(26px * var(--ts)), 7vw); margin: 0; }
+  #port .gold-big { display: flex; align-items: baseline; gap: 6px; }
+  #port .gold-big b { font-size: min(calc(24px * var(--ts)), 7vw); }
+}

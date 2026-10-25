@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
 const FILES = ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/hooks.js", "js/data.js", "js/save.js", "js/save-campaign.js",
-  "js/archetypes.js"];
+  "js/archetypes.js", "js/ledger-gold.js"];
 const SRC = FILES.map(f => [f, readFileSync(new URL("../" + f, import.meta.url), "utf8")]);
 const dom = new Proxy(function () {}, { get: (_, k) => (k === Symbol.toPrimitive ? () => "" : dom), apply: () => dom, set: () => true, construct: () => dom });
 const ctx = vm.createContext({
@@ -98,4 +98,17 @@ test("#72 the sloop is not for sale, and the owned-model strings exist in both l
   const g = bootYard();
   assert.equal(g.run("forSale('sloop')"), false);
   for (const k of ["ownedHint", "buyAnother"]) assert.ok(g.run(`STR.en.${k} && STR.zh.${k}`), k);
+});
+
+// ---------- #73: the purse number rolls to its new value ----------
+test("#73 goldRoll eases from the old figure to the new one, spending or earning, and clamps its input", () => {
+  assert.equal(run("goldRoll(5000, 4600, 0)"), 5000);
+  assert.equal(run("goldRoll(5000, 4600, 1)"), 4600);
+  assert.equal(run("goldRoll(100, 900, 1.7)"), 900, "past the end stays on the new figure");
+  assert.equal(run("goldRoll(100, 900, -3)"), 100, "before the start stays on the old figure");
+  const mid = run("goldRoll(0, 1000, 0.5)");
+  assert.ok(mid > 500 && mid < 1000, "eases out: more than halfway at the halfway mark (" + mid + ")");
+  const down = run("goldRoll(1000, 0, 0.5)");
+  assert.ok(down < 500 && down > 0, "and the same going down (" + down + ")");
+  assert.equal(run("Number.isInteger(goldRoll(7, 12, 0.33))"), true);
 });

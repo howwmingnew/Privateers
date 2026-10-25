@@ -112,7 +112,7 @@ test("an old save sails the same ship with the same upgrades, guns and fleet, an
   const fresh = boot({ [KEY]: oldSave({ ship: "line" }) }).json("save");
   assert.ok(fresh.campaign.ships.includes("line"), "a captain who already sails the line keeps it");
   const fleet = boot({ [KEY]: JSON.stringify({ ...JSON.parse(oldSave({ ship: "brig" })), fleet: [{ id: "s2", ship: "frigate", hull: 3, sails: 2, hold: 1 }, { id: "s3", ship: "nope", hull: 1, sails: 1, hold: 1 }], shipSeq: 4 }) }).json("save");
-  assert.deepEqual(fleet.fleet.map(e => e.ship), ["frigate"], "owned ships stay; an unknown id is dropped as before");
+  assert.deepEqual(fleet.fleet.map(e => e.ship), ["frigate", "sloop"], "owned ships stay; an unknown id is dropped as before; the missing starter is parked (#72)");
 });
 
 test("v1 saves still move onto the same four ships (the yard has two per tier now)", () => {
