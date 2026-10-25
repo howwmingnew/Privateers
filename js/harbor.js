@@ -51,7 +51,9 @@ function resetEnemies(sc) {
 let portMsg = ["welcome"];
 // Buying a ship costs its full price, so the button needs a second tap within a few seconds.
 let shipArmed = null, shipArmedAt = 0, shipArmTimer;
-const buyLabel = id => t(ownedShips().some(e => e.ship === id) ? "buyAnother" : "buy", { n: fmt(SHIPS[id].cost), cost: fmt(SHIPS[id].cost) });
+// A model you cannot pay for yet says how much is missing (like the upgrade buttons, js/gunbay.js upgradeLabel).
+const buyLabel = id => save.gold < SHIPS[id].cost ? t("buyShort", { n: fmt(SHIPS[id].cost), d: fmt(SHIPS[id].cost - save.gold) })
+  : t(ownedShips().some(e => e.ship === id) ? "buyAnother" : "buy", { n: fmt(SHIPS[id].cost), cost: fmt(SHIPS[id].cost) });
 function renderPort() {
   const $ = id => document.getElementById(id);
   $("pMsg").innerHTML = t(...portMsg);

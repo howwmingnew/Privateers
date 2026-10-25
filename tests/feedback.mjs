@@ -22,7 +22,7 @@ const ready = async () => {
   await page.evaluate(() => { if (!docked) dock("welcome"); });
   await page.waitForFunction(() => docked, null, { timeout: 15000 * SLOW });
 };
-const saveWith = (extra = {}) => ({ v: 2, gold: 20000, sunk: 30, tutorialDone: true, seed: 424242, wrecks: [], campaign: { bounty: 3 }, store: [], ...extra });
+const saveWith = (extra = {}) => ({ v: 2, gold: 20000, sunk: 30, tutorialDone: true, seed: 424242, wrecks: [], campaign: { bounty: 3 }, escortGift: "had", store: [], ...extra });
 const seed = ([s, lang]) => { localStorage.clear(); localStorage.setItem("privateers-lang", lang); localStorage.setItem("privateers-save-v2", JSON.stringify(s)); localStorage.setItem("privateers-settings", JSON.stringify({ muted: true, shake: false })); };
 // The game reads the save only on boot. The first boot gets it from an init script (once per tab: it would run again on every
 // reload); after that it goes into the running page, with its loop put to sleep so nothing can persist() over it, and a reload.

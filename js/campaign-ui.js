@@ -98,17 +98,19 @@ function posterHtml(b) {
       ${recLine(b)}
       <div class="p-seen"><dt>${t("pSeen")}</dt><dd>${t("pWhere", { sea, dir: dirWord(b.ang) })}</dd></div>
       <div><dt>${t("pReward")}</dt><dd><b>${t("pGold", { n: fmt(bountyReward(b)) })}</b> · ${prize}</dd></div>
+      ${i === 0 && !save.escortGift ? `<div class="p-bonus"><dt>${t("pBonus")}</dt><dd>${t("pGift")}</dd></div>` : ""}
     </dl>
     <button class="p-toggle" type="button" data-camp="poster" aria-expanded="${posterOpen}">${t(posterOpen ? "pLess" : "pMore")}</button></div>`;
 }
 function renderWanted() {
   const c = save.campaign, b = activeBounty();
   const story = storyKey ? `<p class="story">${t(storyKey, { n: save.ngPlus })}</p>` : "";
+  const next = giftCard ? `<p class="story gift">${t(giftCard)} <button class="btn" type="button" data-camp="gift">${t("giftGo")}</button></p>` : "";   // js/escort-gift.js
   const note = atOutpost ? `<p class="hint-s">${t(dockNoteKey())}</p>` : "";
   const body = b ? posterHtml(b)
     : `<div class="poster done"><div class="p-wanted">${t("allDoneT")}</div><p class="p-story">${t("allDone")}</p>
        <button class="btn ngbtn" type="button" data-camp="ng">${t(ngArmed ? "ngArm" : "ngBtn")}</button></div>`;
-  wantedEl.innerHTML = story + note + body +
+  wantedEl.innerHTML = story + next + note + body +
     `<div class="rankline"><span>${t("rankLbl")} <b>${t("rank_" + c.rank)}</b>${save.ngPlus ? ` · ${t("ngLbl", { n: save.ngPlus })}` : ""}</span>` +
     `<button class="logbtn" type="button" data-camp="log">${t("logBtn")}</button></div>`;
   const cv = wantedEl.querySelector(".p-flag");
@@ -120,6 +122,7 @@ wantedEl.addEventListener("click", ev => {
   const btn = ev.target.closest("[data-camp]");
   if (!btn) return;
   if (btn.dataset.camp === "log") { openLog(); return; }   // js/logbook.js
+  if (btn.dataset.camp === "gift") { tab = 1; resetLedgerPick(); giftCard = ""; sfx("uiClick"); renderPort(); return; }   // the card's button: the Escort 1 tab (js/ledger-tabs.js)
   if (btn.dataset.camp === "poster") { posterOpen = !posterOpen; sfx("uiClick"); renderWanted(); wantedEl.querySelector("[data-camp=poster]")?.focus({ preventScroll: true }); return; }
   if (!ngArmed) {   // New Game+ wipes the ship and gold, so it takes a second press
     ngArmed = true; btn.textContent = t("ngArm"); sfx("uiClick");

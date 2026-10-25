@@ -178,6 +178,7 @@ function claimBounty(b, s) {
   sfx("coin", { amount: reward, delay: 0.35 });
   if (b.final) S.time.delayedCall(2600, showVictory);   // js/victory.js
   else { toast(t("rankUp", { rank: t("rank_" + save.campaign.rank) })); sfx("buy", { big: true, delay: 1.1 }); }
+  if (typeof claimEscortGift === "function") claimEscortGift();   // the first bounty pays a free escort slot and a ship (js/escort-gift.js)
   syncOutpost();
   hud(true);
   runHook("bounty", n, b);

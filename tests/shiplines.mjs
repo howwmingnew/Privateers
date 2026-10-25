@@ -16,7 +16,7 @@ const browser = await chromium.launch({ channel: "chrome", headless: true });
 
 const G = g => ({ g, lv: 1 });
 const SAVE = JSON.stringify({ v: 2, gold: 99999, ship: "sloop", hull: 1, sails: 1, hold: 1, bow: [G("six")], left: [G("six")], right: [G("six")],
-  stern: [], store: [], sunk: 0, wrecks: [], salvage: [], seed: 424242, tutorialDone: true, campaign: { bounty: 4, deaths: 0 } });
+  stern: [], store: [], sunk: 0, wrecks: [], salvage: [], seed: 424242, tutorialDone: true, campaign: { bounty: 4, deaths: 0 }, escortGift: "had" });
 
 const ready = async page => {
   await page.waitForFunction(() => typeof player !== "undefined" && player && typeof S !== "undefined" && S && typeof titleOpen !== "undefined", null, { timeout: 15000 * SLOW });
@@ -209,7 +209,7 @@ const shot = (page, name, sel) => (sel ? page.locator(sel).first() : page).scree
 // ---------- an old save: same ship, upgrades and guns; the new hulls open with the bounties already claimed ----------
 {
   const old = JSON.stringify({ v: 2, gold: 1234, ship: "frigate", hull: 6, sails: 3, hold: 4, bow: [G("long12"), G("six")], left: new Array(7).fill(0).map((_, i) => ({ g: "carronade", lv: 1 + i })), right: [], stern: [G("six")],
-    store: [{ g: "chain", lv: 3 }], sunk: 40, wrecks: [], salvage: [], seed: 99, tutorialDone: true, campaign: { bounty: 3, ships: ["sloop", "schooner", "brig", "frigate"], deaths: 0 } });
+    store: [{ g: "chain", lv: 3 }], sunk: 40, wrecks: [], salvage: [], seed: 99, tutorialDone: true, campaign: { bounty: 3, ships: ["sloop", "schooner", "brig", "frigate"], deaths: 0 }, escortGift: "had" });
   const { ctx, page } = await open("en", { width: 1280, height: 720 }, old);
   await openHull(page);
   const s = await page.evaluate(() => ({ ship: save.ship, hull: save.hull, sails: save.sails, hold: save.hold, gold: save.gold, maxHp: player.maxHp, speed: player.maxSpeed, turn: player.turnRate, rating: shipRating(),

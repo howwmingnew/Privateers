@@ -164,7 +164,7 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 .deck .lbl .lbl-tip { display: block; margin-top: 1px; font-size: .85em; font-weight: 600; letter-spacing: 0; text-transform: none; }
 @media (min-width: 1100px) {
   /* a gun port picked opens its panel under the deck, so the right column scrolls: the left one stays put instead of sliding down to the flag */
-  #port .lcol-l:not(:has(.poster:not(.min):not(.done))):not(:has(#flagbox.open)) { position: sticky; top: calc(min(70px * var(--ts), 18vw) + 20px); align-self: start; }
+  #port .lcol-l:not(:has(.poster:not(.min):not(.done))):not(:has(#flagbox.open)) { position: sticky; top: calc(min(70px * var(--ts), 18vw) + 20px); align-self: start; max-height: calc(100vh - min(70px * var(--ts), 18vw) - 116px); overflow-y: auto; }   /* taller than the screen: it scrolls inside itself, so the flag below is never stuck under the Set sail bar */
 }
 @media (max-width: 1099px) {
   /* one column: the fleet and its deck come right after the ledger's header; the poster, the flag and the gear follow */

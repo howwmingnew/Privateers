@@ -70,8 +70,10 @@ function escHeadHtml(i, e, ship) {
   const go = [[1, "escDeploy"], [0, "stOff"]].map(([v, k]) => `<button class="${!!v === e.on ? "on" : ""}${v ? " go" : ""}" type="button" data-act="escOn" data-id="${i}" data-v="${v}" aria-pressed="${!!v === e.on}">${t(k)}</button>`).join("");
   const pay = e.owed > 0 ? `<button class="btn" type="button" data-act="escPay" data-id="${i}" ${save.gold < e.owed ? "disabled" : ""}>${t("escRepair", { n: fmt(e.owed) })}</button>` : "";
   const status = e.owed > 0 ? `<span class="lock">${t("escOwed", { n: fmt(e.owed) })}</span>` : escortGunCount(e) === 0 ? `<span class="lock">${t("escNoGuns")}</span>` : !e.on ? t("escOff") : t("escOn");
+  const dps = escortDps(ship.ship, e.guns), main = flagshipDps();
+  const out = dps > 0 ? `<p class="ds edps">${t("escDps", { d: dps.toFixed(1), p: main > 0 ? Math.round(dps / main * 100) : 0, m: main.toFixed(1) })}</p>` : "";   // js/escort-gift.js
   return `<div class="ctl"><div class="seg" role="group" aria-label="${t("escStance")}">${stances}</div><div class="seg" role="group">${go}</div>${pay}</div>
-    <p class="ds estatus">${t("stn_" + e.stance)} · ${t("escFire")} · ${status}</p>`;
+    <p class="ds estatus">${t("stn_" + e.stance)} · ${t("escFire")} · ${status}</p>${out}`;
 }
 function stageHeadHtml(ship, i) {
   const role = i < 0 ? t("tabFlag") : t("tabEsc", { n: i + 1 }), e = i >= 0 ? save.escorts[i] : null;
@@ -86,8 +88,8 @@ function slotBodyHtml(i) {
   const price = escortPrice(i);
   if (!escortOpen(save, i)) return `<div class="berth"><p class="role">${head}</p><p class="lock">${t("escLocked", { n: i + 1, price: fmt(price) })}</p></div>`;
   if (i > save.escorts.length) return `<div class="berth"><p class="role">${head}</p><p class="lock">${t("escOrder", { n: i })}</p></div>`;
-  const lbl = armedTap("escBuy" + i) ? t("escBuyArm") : t(save.gold < price ? "escBuyShort" : "escBuy", { n: fmt(price), d: fmt(price - save.gold) });
-  return `<div class="berth"><p class="role">${head}</p><div class="card"><h3>${t("escSlot", { n: i + 1 })}</h3><p class="sub">${t("escHint")}</p>` +
+  const cost = escortStartCost(i), lbl = armedTap("escBuy" + i) ? t("escBuyArm") : t(save.gold < price ? "escBuyShort" : "escBuy", { n: fmt(price), d: fmt(price - save.gold) });
+  return `<div class="berth"><p class="role">${head}</p><div class="card"><h3>${t("escSlot", { n: i + 1 })}</h3><p class="sub">${t("escHint")}</p>${cost ? `<p class="sub total">${t("escCost", cost)}</p>` : ""}` +
     `<button class="btn" type="button" data-act="escBuy" data-id="${i}" ${save.gold < price ? "disabled" : ""}>${lbl}</button></div></div>`;
 }
 function deckView(n, ship) {
