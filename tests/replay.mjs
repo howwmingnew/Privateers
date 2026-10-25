@@ -75,7 +75,9 @@ async function openSea(viewport, { mobile = false, noRecorder = false } = {}) {
     spawnBounty();
     if (!bossShip) return false;
     Object.assign(bossShip, { x: player.x + 300, y: player.y, rot: 1.2 });
-    hurt(bossShip, 1e9, 0, player, { fromPlayer: true, vx: 0, vy: 480 });
+    // a sinking may roll the powder magazine (Math.random): that would make this clip a "powder" one, not the "boss" one under test
+    const rand = Math.random; Math.random = () => 0.999;
+    try { hurt(bossShip, 1e9, 0, player, { fromPlayer: true, vx: 0, vy: 480 }); } finally { Math.random = rand; }
     return !bossShip || !bossShip.alive;
   });
   ok("real flow: the boss is sunk by the player's hit", boss === true, boss);

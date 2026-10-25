@@ -37,12 +37,17 @@ const res = await page.evaluate(() => {
 });
 // live balls: target at a random heading, shots in its own frame, stepped by hand
 const live = await page.evaluate(() => {
-  setSail(); for (const e of enemies) { e.spr.destroy(); e.badge?.destroy(); } enemies.length = 0; spawnT = 1e9;
+  setSail(); wx.on = false; dis.live = []; dis.plan = []; managePopulation = () => {};   // fair weather, no disasters, no population top-up (a storm's wind bends the balls)
+  for (const e of enemies) { e.spr.destroy(); e.badge?.destroy(); } enemies.length = 0; spawnT = 1e9;
   Object.assign(player, { x: PORT.x, y: PORT.y - 3000, alive: true, maxHp: 1e9, hp: 1e9 });
   islands = islands.filter(i => Math.hypot(i.x - PORT.x - 600, i.y - PORT.y + 2400) > i.r + 400);   // islands are rolled per game: keep the range clear
   S.game.loop.sleep(); let t = performance.now();
-  const adv = n => { for (let i = 0; i < n; i++) { t += 16.667; S.game.step(t, 16.667); } };
-  const res = {};
+  // Other systems (escort / ambush / wave spawners) keep adding ships while the loop steps, and under CPU load one of them can sail
+  // into the target and ram it (a 25% crash, not a ball). Only the target under test may exist at sea: sweep strays every step.
+  let keep = null;
+  const sweep = () => { for (let k = enemies.length - 1; k >= 0; k--) if (enemies[k] !== keep) { enemies[k].spr.destroy(); enemies[k].badge?.destroy(); enemies.splice(k, 1); } };
+  const adv = n => { for (let i = 0; i < n; i++) { sweep(); t += 16.667; S.game.step(t, 16.667); } };
+  const res = {}, rnd = mulberry32(20241025);   // seeded: the same headings every run, so a failure is reproducible
   for (const cls of ["cutter", "sloop", "brig", "frigate", "line", "fluyt"]) {
     const a = SHIP_ART[cls], rows = [];
     // [along-axis start, lateral offset, direction] in the target's frame; expect = should it hit?
@@ -53,17 +58,17 @@ const live = await page.evaluate(() => {
       ["across stern", -a.len / 2 + 2, -60, Math.PI / 2, true], ["past stern", -a.len / 2 - 5.5, -60, Math.PI / 2, false],
     ];
     for (const [name, u0, v0, dir, expect] of cases) {
-      spawnEnemy(S); const e = enemies[enemies.length - 1];
-      const rot = Math.random() * Math.PI * 2, c = Math.cos(rot), sn = Math.sin(rot);
-      Object.assign(e, { x: PORT.x + 600, y: PORT.y - 2400, rot, speed: 0, maxSpeed: 1e-6, turnRate: 0, hp: 1e6, maxHp: 1e6, guns: { left: [], right: [] } });
+      spawnEnemy(S); const e = enemies[enemies.length - 1]; keep = e;
+      const rot = rnd() * Math.PI * 2, c = Math.cos(rot), sn = Math.sin(rot);
+      Object.assign(e, { x: PORT.x + 600, y: PORT.y - 2400, rot, speed: 0, maxSpeed: 1e-6, turnRate: 0, hp: 1e6, maxHp: 1e6, guns: { left: [], right: [] }, vol: {} });
       applyShipArt(e, cls, "pirate");
       const sx = e.x + c * u0 - sn * v0, sy = e.y + sn * u0 + c * v0, ang = rot + dir;
       balls.push({ spr: S.add.image(sx, sy, "ball").setDepth(7), x: sx, y: sy, vx: Math.cos(ang) * BALL_SPEED, vy: Math.sin(ang) * BALL_SPEED,
         life: 0.5, life0: 0.5, dmg: 1, burn: 0, fromPlayer: true, owner: player });
       adv(36);
-      const hit = e.hp < 1e6;
+      const hit = e.hp < 1e6 && e.hp > 1e6 - 1000;   // a ball does a point or two; anything bigger was not a ball
       rows.push({ name, expect, hit, ok: hit === expect });
-      e.spr.destroy(); e.badge?.destroy(); enemies.splice(enemies.indexOf(e), 1);
+      e.spr.destroy(); e.badge?.destroy(); enemies.splice(enemies.indexOf(e), 1); keep = null;
     }
     res[cls] = rows;
   }
