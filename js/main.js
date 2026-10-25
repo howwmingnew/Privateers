@@ -188,14 +188,14 @@ function drawOverlays() {
         const c = Math.cos(m.a), sn = Math.sin(m.a);
         g.lineStyle((tg ? 3 : 2) * Math.max(k, 0.65) * lk, col, alpha);
         for (let d = 0; d < len; d += 18) g.lineBetween(m.x + c * d, m.y + sn * d, m.x + c * Math.min(d + 11, len), m.y + sn * Math.min(d + 11, len));
-        g.fillStyle(col, alpha); g.fillCircle(m.x + c * len, m.y + sn * len, (ready ? 4 : 2.5) * lk);
+        g.fillStyle(col, alpha); fillDisc(g, m.x + c * len, m.y + sn * len, (ready ? 4 : 2.5) * lk);   // a few segments, not Phaser's 100 (js/view.js)
       });
     }
     const pulse = 1 + 0.07 * Math.sin(S.time.now * 0.012);
     for (const e of marked) {   // target bracket: four arcs around the hull, a shape cue as well as a colour one
       const r = ((e.hl ?? 28) + (e.hw ?? 13)) * 0.8 * pulse + 8 * lk;
       g.lineStyle(2.5 * lk, 0xff4a2e, 0.9);
-      for (let q = 0; q < 4; q++) { g.beginPath(); g.arc(e.x, e.y, r, q * Math.PI / 2 + 0.35, q * Math.PI / 2 + 1.22); g.strokePath(); }
+      for (let q = 0; q < 4; q++) strokeArc(g, e.x, e.y, r, q * Math.PI / 2 + 0.35, q * Math.PI / 2 + 1.22);
     }
   }
   // health bars, just above each hull's drawn extent (none behind the title: a hero shot, not a HUD)

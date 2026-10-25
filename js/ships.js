@@ -60,7 +60,7 @@ function makeEnemy(sc, x, y, L, faction, cls = pickArch(L, faction)) {
   const e = makeShip(sc, "ship-" + faction, x, y);
   Object.assign(e, { L, ring: ringAt(Math.hypot(x - PORT.x, y - PORT.y)), faction, angry: 0, thinkT: 0, wander: null, target: null, chaseFrom: null,
     retarget: rand(0, 0.5), attacker: null, ignore: new Map() });
-  e.badge = sc.add.text(x, y - 36, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#1b1410", padding: { x: 5, y: 1 } })
+  e.badge = worldText(x, y - 36, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#1b1410", padding: { x: 5, y: 1 } })   // sc is S: worldText (js/art.js) draws into S
     .setOrigin(0.5).setDepth(9);
   outfitEnemy(e, cls);   // numbers, guns, and the class's art + hitbox via applyShipArt (js/art.js)
   if (typeof tameFirstVoyage === "function") tameFirstVoyage(e);   // no ▲▲ ship in the Shallows on a first voyage (js/notify-order.js)

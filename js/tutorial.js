@@ -242,14 +242,14 @@ function drawGuide(dt) {
   if (!tg) return;
   // px = CSS pixels on screen in world units (camera zoom includes the device pixel ratio, js/view.js)
   const cam = S.cameras.main, v = cam.worldView, px = (typeof VIEW !== "undefined" ? VIEW.dpr : 1) / cam.zoom, now = S.time.now / 1000;
-  if (tg.r) { g.lineStyle(3 * px, 0xf0c766, 0.9); g.strokeCircle(tg.x, tg.y, tg.r + Math.sin(now * 4) * 4); }
+  if (tg.r) { g.lineStyle(3 * px, 0xf0c766, 0.9); strokeRing(g, tg.x, tg.y, tg.r + Math.sin(now * 4) * 4); }
   // keep the arrow clear of the HUD strip at the top
   const L = v.x + 48 * px, R = v.right - 48 * px, T = v.y + 130 * px, B = v.bottom - 56 * px;
   if (tg.x > L && tg.x < R && tg.y > T && tg.y < B) return;
   const cx = (L + R) / 2, cy = (T + B) / 2, a = Math.atan2(tg.y - cy, tg.x - cx);
   const k = Math.min((R - L) / 2 / Math.max(Math.abs(Math.cos(a)), 1e-6), (B - T) / 2 / Math.max(Math.abs(Math.sin(a)), 1e-6));
   const ax = cx + Math.cos(a) * k, ay = cy + Math.sin(a) * k, s = 18 * px;
-  g.fillStyle(0x08222d, 0.6); g.fillCircle(ax, ay, s * 1.15);
+  g.fillStyle(0x08222d, 0.6); fillDisc(g, ax, ay, s * 1.15);
   g.fillStyle(0xf0c766, 1);
   g.fillTriangle(ax + Math.cos(a) * s, ay + Math.sin(a) * s, ax + Math.cos(a + 2.4) * s * 0.8, ay + Math.sin(a + 2.4) * s * 0.8, ax + Math.cos(a - 2.4) * s * 0.8, ay + Math.sin(a - 2.4) * s * 0.8);
 }

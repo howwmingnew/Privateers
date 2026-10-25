@@ -91,8 +91,8 @@ function drawBoarding(e, k, px, strain) {
   boardG.clear();
   const r = shipRadius(e) + 16 * px, a0 = -Math.PI / 2;
   if (k > 0) {
-    boardG.lineStyle(6 * px, 0x08222d, 0.55); boardG.strokeCircle(e.x, e.y, r);
-    boardG.lineStyle(4 * px, 0xf6f1e3, 0.95); boardG.beginPath(); boardG.arc(e.x, e.y, r, a0, a0 + k * TAU); boardG.strokePath();
+    boardG.lineStyle(6 * px, 0x08222d, 0.55); strokeRing(boardG, e.x, e.y, r);
+    boardG.lineStyle(4 * px, 0xf6f1e3, 0.95); strokeArc(boardG, e.x, e.y, r, a0, a0 + k * TAU);
   }
   if (!board.hooked) return;
   const f = clamp(strain / BOARD_SNAP_T, 0, 1);

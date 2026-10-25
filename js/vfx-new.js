@@ -13,6 +13,7 @@
 // disaster spray (the effects themselves are gameplay and stay); the effects quality level (js/vfx.js fxLevel, FXQ in js/config.js: low / mid / high, auto by device and frame time) scales every count.
 const VN = { pool: null, fog: [], loud: [], last: 0 };
 const VN_TAU = Math.PI * 2, VN_ADD = Phaser.BlendModes.ADD, VN_NORMAL = Phaser.BlendModes.NORMAL;
+const VN_ADD_DZ = 0.0005;   // far under the closest two depths in use (8.95 / 8.96), so nothing else lands between
 const VN_FIRE = [0xffffff, 0xfff0a0, 0xffb040, 0xff6a2a, 0xa02a14, 0x2a2420];
 const VN_FLAME = [0xffe58a, 0xffa23a, 0xff6a2a, 0xa02a14, 0x3a2420];   // no white start: additive white vanishes on a bright sea
 const VN_SMOKE = [0x6a625a, 0x4a443f, 0x8a8479];
@@ -30,7 +31,7 @@ const vnL = (c, s) => s * c.p.dur;   // a lifetime in seconds
 
 class VnPool {
   constructor(sc) {
-    this.sc = sc; this.ps = []; this.free = {};   // free sprites by depth: setDepth queues a re-sort of the whole display list, so a sprite keeps the depth it was made with
+    this.sc = sc; this.ps = []; this.free = {};   // free sprites by depth and blend (see add): setDepth queues a re-sort of the whole display list, so a sprite keeps the depth it was made with
     this.ps = this.ps; this.timers = []; this.draws = []; this.t = 0; this.tags = {}; this.widths = {};
     this.g = sc.add.graphics().setDepth(8.9); this.ga = sc.add.graphics().setDepth(9.3).setBlendMode(VN_ADD);
   }
@@ -38,11 +39,13 @@ class VnPool {
   add(o) {   // x y vx vy ax ay drag life s0 s1 (px) a0 a1 tint|ramp tex add rot vr depth fn delay tag face sx sy
     if (this.ps.length >= this.cap || (o.tag && (this.tags[o.tag] || 0) >= (VN_TAGMAX[o.tag] || 1e9))) return null;
     const v = this.view, cu = vnQ().cull; if (v && !o.fn && (o.x < v.x - cu || o.x > v.right + cu || o.y < v.y - cu || o.y > v.bottom + cu)) return null;   // far off screen: not made
-    const fl = this.free[o.depth ?? 9] || (this.free[o.depth ?? 9] = []);
-    const im = fl.pop() || Object.assign(this.sc.add.image(0, 0, "fx-soft").setDepth(o.depth ?? 9), { vnKey: o.depth ?? 9 });
     const p = Object.assign({ vx: 0, vy: 0, ax: 0, ay: 0, drag: 0, a0: 1, a1: 0, s0: 20, s1: 20, tex: "fx-soft", add: true, rot: 0, vr: 0, depth: 9, age: 0, life: 1, tint: 0xffffff, delay: 0 }, o);
+    // a sprite keeps its blend too, and additive ones sit VN_ADD_DZ above the normal ones of their depth: a blend switch
+    // flushes the batch, so each depth draws as two runs (normal under additive) instead of flipping sprite by sprite
+    const key = (o.depth ?? 9) + (p.add ? VN_ADD_DZ : 0), fl = this.free[key] || (this.free[key] = []);
+    const im = fl.pop() || Object.assign(this.sc.add.image(0, 0, "fx-soft").setDepth(key).setBlendMode(p.add ? VN_ADD : VN_NORMAL), { vnKey: key });
     p.im = im; p.w = this.widths[p.tex] || (this.widths[p.tex] = this.sc.textures.get(p.tex).getSourceImage().width);
-    im.setTexture(p.tex).setBlendMode(p.add ? VN_ADD : VN_NORMAL).setVisible(false).setActive(true);
+    im.setTexture(p.tex).setVisible(false).setActive(true);
     if (!p.ramp) im.setTint(p.tint);   // a ramp re-tints every frame; a fixed tint is set once
     if (p.tag) this.tags[p.tag] = (this.tags[p.tag] || 0) + 1;
     this.ps.push(p); return p;
@@ -108,7 +111,7 @@ onHook("dock", () => VN.pool && VN.pool.clear());
 
 // ---------- building blocks ----------
 function vnRing(c, x, y, r0, r1, ms, col, w, a = 1) {   // an expanding shock ring
-  c.pool.draw((g, ga, k) => { const e = 1 - (1 - k) * (1 - k), r = r0 + (r1 - r0) * e; ga.lineStyle(w * (1 - k * 0.7), col, a * (1 - k)); ga.strokeCircle(x, y, r); }, ms);
+  c.pool.draw((g, ga, k) => { const e = 1 - (1 - k) * (1 - k), r = r0 + (r1 - r0) * e; ga.lineStyle(w * (1 - k * 0.7), col, a * (1 - k)); strokeRing(ga, x, y, r); }, ms);
 }
 const vnGlow = (c, x, y, size, ms, tint, a = 1) => c.pool.add({ x, y, s0: size * 0.5, s1: size, a0: a, a1: 0, life: ms / 1000, tint, depth: 8.95 });
 const vnPuff = (c, x, y, o) => c.pool.add({ tex: "vn-puff" + ((Math.random() * 3) | 0), x, y, rot: vnRnd(0, VN_TAU), vr: vnRnd(-0.6, 0.6), add: false, ...o });
@@ -199,10 +202,10 @@ function vnSwirl(g, ev, c, dt) {
   const t = wx.t, spout = ev.kind === "spout", o = VFX_NEW[spout ? "spout" : "vortex"], f = Math.max(0, Math.min(1, (t - ev.t0) / 1.2, (ev.end - t) / 1.5)), R = c.R * o.size;
   const m = R / (spout ? 78 : 95), tt = t - ev.t0;
   if (spout) {   // a grey cloud heart, white spray arms spun up and out
-    g.fillStyle(0x37454d, 0.5 * f); g.fillCircle(ev.x, ev.y, 65 * m); g.fillStyle(0x1f2b31, 0.5 * f); g.fillCircle(ev.x, ev.y, 20 * m);
+    g.fillStyle(0x37454d, 0.5 * f); fillDisc(g, ev.x, ev.y, 65 * m); g.fillStyle(0x1f2b31, 0.5 * f); fillDisc(g, ev.x, ev.y, 20 * m);
   } else {   // rings that darken toward the middle, foam arms running inward
     const rn = vnQ().rings, an4 = vnQ().arms;
-    for (let i = 0; i < rn; i++) { g.fillStyle(vnMix(0x2a8ab0, 0x020c14, i / (rn - 1)), 0.34 * f); g.fillCircle(ev.x, ev.y, (95 - i * 80 / rn) * m * f); }
+    for (let i = 0; i < rn; i++) { g.fillStyle(vnMix(0x2a8ab0, 0x020c14, i / (rn - 1)), 0.34 * f); fillDisc(g, ev.x, ev.y, (95 - i * 80 / rn) * m * f); }
     g.lineStyle(3, 0xdff6ff, 0.65 * f);
     for (let a = 0; a < an4; a++) { g.beginPath(); for (let i = 0; i <= 20; i += an4 < 4 ? 2 : 1) { const u = i / 20, r = (92 - u * 80) * m * f, an = a * VN_TAU / an4 + tt * 2.4 + u * 5, px = ev.x + Math.cos(an) * r, py = ev.y + Math.sin(an) * r; i ? g.lineTo(px, py) : g.moveTo(px, py); } g.strokePath(); }
   }
