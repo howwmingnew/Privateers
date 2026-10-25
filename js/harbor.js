@@ -116,7 +116,9 @@ document.getElementById("port").addEventListener("click", ev => {
   applyPlayerStats(true); persist(); renderPort(); hud(true);
   Snd.play(snd, { big: act === "ship" || act === "switch" });
   // keyboard focus: a closed panel hands it back to what it was about; any other control the page rebuilt is found again by its data-* (js/ledger-nav.js)
-  if (ledgerFocus) { document.querySelector(ledgerFocus)?.focus(); ledgerFocus = null; }
+  if (ledgerFocus) { document.querySelector(ledgerFocus)?.focus({ preventScroll: true }); ledgerFocus = null; }
+  if (act === "ship" || act === "switch" || act === "escBuyShip") document.getElementById("fleet").scrollIntoView({ block: "start" });   // a new hull: show the tabs and the new deck, never leave the sheet scrolled past them (focus moved to the catalog's next row)
+  if (act === "gbag") document.querySelector(".gslot.dest")?.scrollIntoView({ block: "nearest" });   // a picked spare: the slot it goes to comes into view (js/gear-ui.js)
   if (act === "port" || act === "hull") document.getElementById("ctx").scrollIntoView({ block: "nearest" });   // the panel opens under the deck: bring it into view
 });
 // Not enough gold: a disabled button never receives a click, so listen for the press itself.

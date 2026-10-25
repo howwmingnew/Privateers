@@ -5,7 +5,7 @@
 // play, or null. A gun's moves between ships are js/gunbay.js (gfrom).
 Object.assign(STR.en, { escOrder: "Buy slot {n} first", escDown: "No ship aboard: assign one to deploy it" });
 Object.assign(STR.zh, { escOrder: "先購買船位 {n}", escDown: "沒有指派船：先指派一艘才能出戰" });
-const ESC_ACTS = ["escBuy", "escOn", "escStance", "escPay", "escAssign", "escBuyShip", "escEvict"];
+const ESC_ACTS = ["escGift", "escBuy", "escOn", "escStance", "escPay", "escAssign", "escBuyShip", "escEvict"];
 
 // A big spend (a slot, a ship) takes two taps: the first arms the button as "Confirm purchase?". It stays armed, with no timer to run out under a slow
 // reader (#107): the second tap buys, and a tap anywhere else, Esc, or leaving the panel puts it down again (harbor.js click handler, cancelArm).
@@ -31,6 +31,7 @@ function twoTap(key) {   // true on the confirming second tap
 }
 
 function escortAct(act, d) {
+  if (act === "escGift") { tab = 1; resetLedgerPick(); giftCard = ""; return "uiClick"; }   // the next-step card's button: the Escort 1 tab (js/escort-gift.js, js/ledger-tabs.js)
   const i = Number(d.id), e = save.escorts[i];
   if (act === "escBuy") {
     if (i !== save.escorts.length || !escortOpen(save, i) || save.gold < escortPrice(i) || !twoTap("escBuy" + i)) return null;
