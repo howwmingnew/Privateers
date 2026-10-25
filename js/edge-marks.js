@@ -99,13 +99,21 @@ function updateEdgeMarks(dt) {
   // the box's centre travels on the rectangle shrunk by half the box, so the whole box stays on screen
   for (const it of picked) { const m = edgeEls.get(it.o); spots.set(it.o, edgePoint({ l: inset.l + m.w / 2, r: inset.r - m.w / 2, t: inset.t + m.h / 2, b: inset.b - m.h / 2 }, it.sx - cx, it.sy - cy)); }
   // one edge at a time: keep each box's own spot, spread them on that edge, slide clear of the boss bar and the hint
-  for (const side of ["left", "right", "top", "bottom"]) {
+  // top and bottom first: the left and right edges then keep out of the corner those rows reach into, so a box near a corner never lands on its neighbour
+  const rows = [];   // the placed top / bottom boxes: { x, y, hw, hh }
+  for (const side of ["top", "bottom", "left", "right"]) {
     const group = picked.filter(it => spots.get(it.o).side === side);
     if (!group.length) continue;
-    const vert = side === "left" || side === "right", axis = vert ? "y" : "x", lo = vert ? inset.t : inset.l, hi = vert ? inset.b : inset.r;
+    const vert = side === "left" || side === "right", axis = vert ? "y" : "x";
+    let lo = vert ? inset.t : inset.l, hi = vert ? inset.b : inset.r;
+    if (vert) {   // a side box whose column a row box reaches into starts below (or ends above) that row box
+      const sx = spots.get(group[0].o).x, hw = Math.max(...group.map(it => edgeEls.get(it.o).w)) / 2;
+      for (const r of rows) if (Math.abs(r.x - sx) < r.hw + hw + 2 * z) { if (r.y < cy) lo = Math.max(lo, r.y + r.hh + 4 * z); else hi = Math.min(hi, r.y - r.hh - 4 * z); }
+    }
     const half = group.map(it => (vert ? edgeEls.get(it.o).h : edgeEls.get(it.o).w) / 2), gap = Math.max(boxH, ...half.map(x => x * 2)) * 1.08;
     const along = spreadAlong(group.map(it => spots.get(it.o)[axis]), gap, lo + Math.max(...half), hi - Math.max(...half));
     group.forEach((it, i) => { spots.get(it.o)[axis] = side === "bottom" ? dodgeAlong(along[i], half[i], keep.bottom, lo + half[i], hi - half[i]) : along[i]; });
+    if (!vert) for (const it of group) { const m = edgeEls.get(it.o), sp = spots.get(it.o); rows.push({ x: sp.x, y: sp.y, hw: m.w / 2, hh: m.h / 2 }); }
   }
   for (const [o, m] of edgeEls) {
     const spot = spots.get(o);
