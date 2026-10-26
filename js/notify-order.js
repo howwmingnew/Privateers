@@ -84,7 +84,7 @@ function tameFirstVoyage(e, placed) {
   if (!placed && practiceZone(e.x, e.y) && !(typeof heat === "number" && heat > 0)) {   // practice waters (#113, js/novice.js): a Lv 1 target that neither runs nor fires first; no fireship
     e.L = 1; outfitEnemy(e, e.merchant ? "fluyt" : pickArch(1, e.faction));
     if (e.A.boom) outfitEnemy(e, "cutter");
-    e.practice = true;
+    e.practice = true; e.escort = false;   // never a convoy's guard that hunts pirates
     return;
   }
   const me = shipRating(), home = !placed && noviceHome(save.campaign.bounty, save.ngPlus, Math.hypot(e.x - PORT.x, e.y - PORT.y));

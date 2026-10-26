@@ -15,7 +15,7 @@ Object.assign(STR.zh, { fleeTag: "逃跑中", fleeCall: "撤退！" });
 
 const fleeKind = e => e.merchant ? "merchant" : e.faction;
 const fleeBold = e => !!(e.boss || e.escortOf || e.ally || e.fixed || e.hunter || e.admiral || e.holdSea || e.struck || e.isPlayer
-  || (e.A && e.A.boom) || (typeof practiceShip === "function" && practiceShip(e)) || (typeof tut !== "undefined" && e === tut.target));
+  || (e.A && e.A.boom) || (typeof practiceTarget === "function" && practiceTarget(e)) || (typeof tut !== "undefined" && e === tut.target));
 const fleeFollows = e => e.alive && !fleeBold(e) && !e.fleeDone;                      // a wingman (even a convoy's escort brig) trails a runner
 const fleeCan = e => fleeFollows(e) && !e.escort && !!FLEE[fleeKind(e)];              // ...but only the rest pick running for themselves
 // "gap", "hurt" or null. diff: the threat's level minus the runner's (the player: shipRating() - threatL).

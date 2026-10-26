@@ -91,7 +91,7 @@ function hurt(s, dmg, burn, src, ball) {
     dmgNumber(s, dmg, s.isPlayer ? "#ff8a75" : byPlayer ? "#fff4d6" : "#a9c3cb", byPlayer || s.isPlayer ? 16 : 13);   // a broadside merges (js/notices.js)
   }
   Snd.play("hit", { x: s.x, y: s.y, big: s.isPlayer });
-  if (!s.isPlayer && src) { s.attacker = src; s.angry = 8; s.ignore.delete(src); }
+  if (!s.isPlayer && src) { s.attacker = src; s.angry = 8; s.ignore.delete(src); if (src === player) s.practiceProvoked = true; }   // a practice target the captain hit stays hostile (js/novice.js practiceShip)
   if (s.isPlayer) camShake(90, 0.0024);
   runHook("hurt", s, dmg, src);   // stats, achievements, bounty assists (js/hooks.js)
   if (s.hp <= 0) sink(s, src);

@@ -120,7 +120,7 @@ function tutSafeSea(x, y) {
   const sea = seaOfRing(ringAt(Math.hypot(x - PORT.x, y - PORT.y)));
   return SEAS.indexOf(sea) <= SEAS.indexOf(seaOfRing(playerRing())) && (sea === SEAS[0] || !seaIsDanger(sea.id)) && !tutHazard(x, y);   // the first sea is where the mark is put: on New Game+ its level bonus would flag it "danger" for ever
 }
-const tutSafe = e => e.alive && isOrdinary(e) && e.faction !== "navy" && tutSafeSea(e.x, e.y) && (!practiceOn() || !!e.practice);   // in the practice waters (js/novice.js) the lesson only sends the captain at a practice target
+const tutSafe = e => e.alive && isOrdinary(e) && e.faction !== "navy" && tutSafeSea(e.x, e.y) && (!practiceZone(player.x, player.y) || !!e.practice);   // with the captain in the practice waters (js/novice.js) the lesson only sends him at a practice target
 let lastMark = null;   // the mark put out last: while it still sails, no second one is made, so a target that is not "safe" can never make a ship every frame
 function forgivingSpawn() {
   if (!needsMark() || (lastMark && lastMark.alive && enemies.includes(lastMark))) return null;
@@ -304,6 +304,7 @@ function guideTarget(dt) {
       tut.pickT = 0.5;
       const mine = shipRating();
       tut.target = enemies.filter(e => e.L <= mine && tutSafe(e) && !tutNavyNear(e.x, e.y, e) && dist(e, player) < 1600).sort((a, b) => (practiceZone(b.x, b.y) - practiceZone(a.x, a.y)) || dist(a, player) - dist(b, player))[0] || null;
+      if (!tut.target && lastMark && lastMark.alive && enemies.includes(lastMark)) tut.target = lastMark;   // the mark put out earlier, however far (the captain sailed out of the practice waters)
       if (!tut.target) tut.target = forgivingSpawn();   // a step walked back with nothing qualifying near: a fresh slow mark, so the ring and arrow have something to point at
     }
     return tut.target ? { x: tut.target.x, y: tut.target.y, r: 46 } : null;

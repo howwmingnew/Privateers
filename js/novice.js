@@ -30,7 +30,9 @@ const noviceHome = (claimed, ng, d) => claimed === 0 && !ng && d < NOVICE_PORT_R
 const practiceAt = (claimed, ng, daily, d) => !daily && noviceHome(claimed, ng, d);
 const practiceOn = () => !!save && practiceAt(save.campaign.bounty, save.ngPlus, typeof runActive === "function" && runActive(), 0);
 const practiceZone = (x, y) => practiceOn() && noviceHome(save.campaign.bounty, save.ngPlus, Math.hypot(x - PORT.x, y - PORT.y));
-const practiceShip = e => !!e.practice && practiceOn();   // the flag lapses with the first bounty: a leftover target fights as an ordinary Lv 1
+const practiceTarget = e => !!e.practice && practiceOn();   // never runs; the flag lapses with the first bounty: a leftover target fights as an ordinary Lv 1
+// Never fires first: false once the captain has hit it (e.practiceProvoked, js/combat.js), for good - till it sinks or the sortie ends. It still never runs.
+const practiceShip = e => practiceTarget(e) && !e.practiceProvoked;
 const noviceAt =(rating, ring) => rating < NOVICE_LV && ring <= NOVICE_RINGS;
 const noviceCap = rating => rating + NOVICE_OVER;
 const seaWarnGap = (seaLv, rating) => seaLv - rating >= SEA_WARN_GAP;

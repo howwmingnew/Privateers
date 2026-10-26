@@ -87,3 +87,17 @@ test("hostility: a practice target never locks on the captain first, but fights 
   g.run("save.campaign.bounty = 1");
   assert.equal(g.run("isHostile(e, player)"), true, "after the first bounty a leftover pirate is ordinary");
 });
+
+test("provoked: a practice target the captain hit fights on (no timer), still never runs; escort flag is cleared", () => {
+  const g = boot();
+  g.ctx.player = { isPlayer: true, alive: true, faction: "player" };
+  const e = mk({ practice: true, attacker: null, angry: 0, ignore: new Map() }); g.ctx.e = e;
+  assert.equal(g.run("practiceShip(e)"), true);
+  e.practiceProvoked = true;
+  assert.equal(g.run("practiceShip(e)"), false, "provoked: no longer a never-fires-first target");
+  assert.equal(g.run("practiceTarget(e)"), true, "but still a target that never runs");
+  assert.equal(g.run("fleeBold(e)"), true);
+  assert.equal(g.run("isHostile(e, player)"), true, "hostile long after the 8 s anger has lapsed");
+  const b = mk({ escort: true, faction: "merchant" }); g.ctx.b = b; g.run("tameFirstVoyage(b, false)");
+  assert.equal(b.practice, true); assert.equal(!!b.escort, false, "a convoy brig made in the zone is no escort");
+});

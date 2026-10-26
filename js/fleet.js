@@ -94,13 +94,13 @@ function spawnWing(sc, type, lead, classes) {
     if (islands.some(isl => Math.hypot(isl.x - x, isl.y - y) < isl.r + 30)) return;
     const e = makeEnemy(sc, x, y, lead.L, lead.faction, cls);
     e.rot = lead.rot; ships.push(e);
-    if (type === "convoy" && cls === "brig") e.escort = true;   // keeps pirates off the fluyts (js/ships.js isHostile)
+    if (type === "convoy" && cls === "brig" && !(typeof practiceZone === "function" && practiceZone(x, y))) e.escort = true;  // keeps pirates off the fluyts (js/ships.js isHostile)
   });
   return ships;
 }
 // Called from spawnEnemy for each ordinary new ship: it may lead a fleet. Returns the fleet or null.
 function maybeFleet(sc, lead) {
-  if (lead.boss || lead.escortOf || lead.fixed || (typeof firstVoyage === "function" && firstVoyage())) return null;
+  if (lead.boss || lead.escortOf || lead.fixed || (typeof firstVoyage === "function" && firstVoyage()) || (typeof practiceZone === "function" && practiceZone(lead.x, lead.y))) return null;   // no fleets in the practice waters (js/novice.js)
   const type = fleetTypeFor(lead.faction), sea = seaOfRing(lead.ring);
   if (!type || grandom() >= (FLEET_CHANCE[sea.id] || 0)) return null;
   const live = fleetsLive(), used = live.reduce((a, f) => a + f.ships.filter(s => s.alive).length, 0);

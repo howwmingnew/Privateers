@@ -84,7 +84,7 @@ test("powder: the blast fades with distance, and never kills the player or a bos
 });
 
 // ---------- first-voyage ambush ----------
-const open = { done: false, sunk: 1, t: 45, calm: false, banner: false, engaged: false, hp: 1, safe: false };
+const open = { done: false, sunk: 1, t: 45, calm: false, banner: false, engaged: false, hp: 1, safe: false, practice: false };
 const ready = o => boot().run(`ambushReady(${JSON.stringify({ ...open, ...o })})`);
 
 test("ambush: comes once, 45 s after the first sinking, and only when the floor is clear", () => {
@@ -97,6 +97,7 @@ test("ambush: comes once, 45 s after the first sinking, and only when the floor 
   assert.equal(ready({ engaged: true }), false, "still fighting the tutorial merchant (or anything else)");
   assert.equal(ready({ hp: 0.59 }), false, "a hurt captain is given time to mend");
   assert.equal(ready({ safe: true }), false, "never in the safe waters");
+  assert.equal(ready({ practice: true }), false, "never while the captain sails the practice waters (#113)");
 });
 
 test("ambush: the pirates start on the island's far side, a shore's width apart", () => {
