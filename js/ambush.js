@@ -14,7 +14,7 @@ SAVE_SANITIZERS.push(s => ({ ...s, ambushDone: typeof s.ambushDone === "boolean"
 
 // Is it time? `w`: { done, sunk, t (s of sea time since the first sinking), calm (the tutorial's opening), banner (one up or
 // waiting), engaged (a hostile already on the player), hp (share of hull), safe (the player is in the safe waters) }.
-const ambushReady = w => !w.done && w.sunk >= 1 && w.t >= AMBUSH_DELAY && !w.calm && !w.banner && !w.engaged && w.hp >= AMBUSH_MIN_HP && !w.safe;
+const ambushReady = w => !w.done && w.sunk >= 1 && w.t >= AMBUSH_DELAY && !w.calm && !w.banner && !w.engaged && w.hp >= AMBUSH_MIN_HP && !w.safe && !w.practice;   // practice: the player is in the practice waters (js/novice.js), where only ships that never fire first live
 // Where the pirates start: on the island's far side from the player, just clear of the shore, so the island hides them
 // until they round it. `side` -1 / +1 offsets the two ships along the shore.
 function ambushSpot(isl, from, side) {
@@ -33,7 +33,7 @@ function ambushSpawn(isl) {
   const L = Math.max(1, Math.min(shipRating(), 2));
   save.ambushDone = true; persist();
   [-1, 1].forEach(side => {
-    const p = ambushSpot(isl, player, side), e = makeEnemy(S, p.x, p.y, L, "pirate", "cutter");
+    const p = ambushSpot(isl, player, side), e = makeEnemy(S, p.x, p.y, L, "pirate", "cutter", true);   // placed: never tamed into a practice target (js/notify-order.js)
     e.ring = Math.min(e.ring, ringAt(dist(player, PORT)) + 1);   // at home where the player is: an AI breaks off a chase 2 rings shallower than its own (js/ships.js think)
     e.maxHp = e.hp = Math.ceil(e.maxHp * AMBUSH_HULL);
     for (const k in e.vol) e.vol[k].cd = AMBUSH_HOLD;
@@ -48,6 +48,7 @@ onHook("frame", dt => {
   ambushT += dt;
   if (ambushT < AMBUSH_DELAY) return;
   const w = { done: save.ambushDone, sunk: save.sunk, t: ambushT, hp: player.hp / player.maxHp, safe: inSafe(player),
+    practice: typeof practiceZone === "function" && practiceZone(player.x, player.y),
     calm: typeof tutorialCalm === "function" && tutorialCalm(), banner: typeof bannerBusy === "function" && bannerBusy(),
     engaged: enemies.some(e => e.alive && e.target === player) };
   if (!ambushReady(w)) return;

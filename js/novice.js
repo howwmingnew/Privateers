@@ -24,6 +24,15 @@ const SEA_WARN_GAP = 3;       // a sea whose lowest level is this far above the 
 const NOVICE_PORT_R = 2400;   // until the first bounty is claimed, no ship made within this of the harbor (about two screens: the Shallows, the Reef Straits, the Lanes' edge) fights above noviceCap (#108)
 // Is a ship made d px from the harbor held to noviceCap? claimed: bounties claimed, ng: New Game+ cycles (a returning captain is no novice).
 const noviceHome = (claimed, ng, d) => claimed === 0 && !ng && d < NOVICE_PORT_R;
+// Practice waters (#113): the same circle, until the first bounty, outside New Game+ and the daily run. A ship made there is a practice
+// target (e.practice, set by tameFirstVoyage, js/notify-order.js): Lv 1, never runs (js/flee.js, js/ships.js), never opens fire on the
+// captain (isHostile) - but once shot it fights back like any ship. Ships that sail in from outside keep their level.
+const practiceAt = (claimed, ng, daily, d) => !daily && noviceHome(claimed, ng, d);
+const practiceOn = () => !!save && practiceAt(save.campaign.bounty, save.ngPlus, typeof runActive === "function" && runActive(), 0);
+const practiceZone = (x, y) => practiceOn() && noviceHome(save.campaign.bounty, save.ngPlus, Math.hypot(x - PORT.x, y - PORT.y));
+const practiceTarget = e => !!e.practice && practiceOn();   // never runs; the flag lapses with the first bounty: a leftover target fights as an ordinary Lv 1
+// Never fires first: false once the captain has hit it (e.practiceProvoked, js/combat.js), for good - till it sinks or the sortie ends. It still never runs.
+const practiceShip = e => practiceTarget(e) && !e.practiceProvoked;
 const noviceAt =(rating, ring) => rating < NOVICE_LV && ring <= NOVICE_RINGS;
 const noviceCap = rating => rating + NOVICE_OVER;
 const seaWarnGap = (seaLv, rating) => seaLv - rating >= SEA_WARN_GAP;

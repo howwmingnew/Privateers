@@ -83,10 +83,11 @@ await sleep(400);
   const start = await ev(() => ({ d: Math.hypot(player.x - PORT.x, player.y - PORT.y), alive: player.alive, onRock: islands.some(i => Math.hypot(i.x - player.x, i.y - player.y) < i.r + 40) }));
   ok("daily: the start (140 px from the old harbor) is open water", start.alive && !start.onRock && Math.abs(start.d - 140) < 60, start);
   await page.screenshot({ path: `${OUT}/daily-start.png` });
-  // ride the start for a while: the ship keeps moving, it is never stuck
-  const w = await ev(() => { player.rot = 0; player.speed = player.maxSpeed; return player.x; });
+  // ride the start for a while: with full sail set the ship keeps moving, it is never stuck (the sail is down at the start,
+  // so a speed set by hand with no sail would only coast to a halt in about 58 px, whatever is in the way)
+  const w = await ev(() => { player.rot = 0; player.speed = player.maxSpeed; setSailLevel(3); return player.x; });
   await sleep(1200);
-  const x1 = await ev(() => player.x);
+  const x1 = await ev(() => { const x = player.x; setSailLevel(0); return x; });   // sails down again: the later checks need a still ship
   ok("daily: sailing off from the start is not blocked", x1 > w + 60, { from: w, to: x1 });
   const dom = await ev(() => document.querySelectorAll('#edgeMarks .em[data-kind="harbor"], #edgeMarks .em[data-kind="supply"], #edgeMarks .em[data-kind="trade"]').length);
   ok("daily: no harbor or station box on the screen edge", dom === 0, dom);

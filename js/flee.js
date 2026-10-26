@@ -8,14 +8,14 @@
 // and sails a little faster. Clear by FLEE.escape: a gap-runner goes back to cruising, a hurt one sails off the map for good
 // (retired off-screen, not sunk). Pinned against a rock or the edge for FLEE.cornerT s it turns and fights, once.
 // A fleet's wingmen follow a fleeing lead. Never: bosses and their guards, rematch captains, the Admiral's fleet, hunters, the
-// player's escorts, fireships, forts, the tutorial's mark, a ship that has struck her colours (js/strike.js).
+// player's escorts, fireships, forts, the tutorial's mark, practice targets (js/novice.js), a ship that has struck her colours (js/strike.js).
 // No dice are thrown (a daily sea plays the same as any other); the player's own rating is the only thing that varies.
 Object.assign(STR.en, { fleeTag: "Fleeing", fleeCall: "Retreat!" });
 Object.assign(STR.zh, { fleeTag: "逃跑中", fleeCall: "撤退！" });
 
 const fleeKind = e => e.merchant ? "merchant" : e.faction;
 const fleeBold = e => !!(e.boss || e.escortOf || e.ally || e.fixed || e.hunter || e.admiral || e.holdSea || e.struck || e.isPlayer
-  || (e.A && e.A.boom) || (typeof tut !== "undefined" && e === tut.target));
+  || (e.A && e.A.boom) || (typeof practiceTarget === "function" && practiceTarget(e)) || (typeof tut !== "undefined" && e === tut.target));
 const fleeFollows = e => e.alive && !fleeBold(e) && !e.fleeDone;                      // a wingman (even a convoy's escort brig) trails a runner
 const fleeCan = e => fleeFollows(e) && !e.escort && !!FLEE[fleeKind(e)];              // ...but only the rest pick running for themselves
 // "gap", "hurt" or null. diff: the threat's level minus the runner's (the player: shipRating() - threatL).

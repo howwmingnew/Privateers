@@ -74,11 +74,19 @@ onHook("frame", () => {
 // the Shallows (js/ships.js makeEnemy) fights at most one level above that Ship Lv: no ▲▲ ship waits by the harbor
 // mouth. Re-roll its class, then drop its level. The player's own escorts (faction "ally", js/escort-ai.js; e.ally is only
 // set after makeEnemy returns) keep the class and level their yard entry gave them.
+// (Inside practiceZone, js/novice.js, the ships are Lv 1 targets instead, so the cap below only matters for the Shallows once the first
+// bounty is claimed, and for placed ships' neighbours at the edge of the circle.)
 // Until the first bounty is claimed the same cap holds anywhere within NOVICE_PORT_R of the harbor (#108: the Reef Straits and the
 // Lanes' edge are a screen or two out, and a Lv 4-7 crew there ended new captains' first sortie). `placed` ships (a bounty, its
 // guard, the tutorial's mark) keep their designed level: only quota spawns, fleets and hunters are held there.
 function tameFirstVoyage(e, placed) {
   if (e.fixed || e.faction === "ally" || typeof seaOfRing !== "function") return;
+  if (!placed && practiceZone(e.x, e.y) && !(typeof heat === "number" && heat > 0)) {   // practice waters (#113, js/novice.js): a Lv 1 target that neither runs nor fires first; no fireship
+    e.L = 1; outfitEnemy(e, e.merchant ? "fluyt" : pickArch(1, e.faction));
+    if (e.A.boom) outfitEnemy(e, "cutter");
+    e.practice = true; e.escort = false;   // never a convoy's guard that hunts pirates
+    return;
+  }
   const me = shipRating(), home = !placed && noviceHome(save.campaign.bounty, save.ngPlus, Math.hypot(e.x - PORT.x, e.y - PORT.y));
   if (!home && (seaOfRing(e.ring).id !== "shallows" || (save.tutorialDone && me >= NOVICE_LV))) return;
   const cap = noviceCap(me), over = () => (e.threatL ?? e.L) > cap;
