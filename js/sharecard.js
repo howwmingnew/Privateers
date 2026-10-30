@@ -49,7 +49,7 @@ function shareSpec(kind, d = {}) {
       stats: [...(d.winTime > 0 ? [[t("sc_fast"), fmtDur(d.winTime)]] : []), [t("sc_sunk"), fmt(d.sunk)], [t("sc_gold"), fmt(d.gold)]],
       text: t(d.winTime > 0 ? "sc_x_victory" : "sc_x_victory0", { n: fmt(d.sunk), g: fmt(d.gold), d: fmtDur(d.winTime) }) };
     case "log": { const h = d.hall || { sunk: 0, chain: 0, win: 0 };
-      return { ...base, title: t("sc_t_log"), sub: "",
+      return { ...base, title: t("sc_t_log"), sub: typeof rewardBadgeLine === "function" ? rewardBadgeLine() : "",   // the daily badges (js/daily-rewards.js)
         stats: [[t("sc_best"), fmt(h.sunk)], [t("sc_chain"), fmt(h.chain)], ...(h.win > 0 ? [[t("sc_fastest"), fmtDur(h.win)]] : [[t("sc_total"), fmt(d.total || 0)]])],
         text: t("sc_x_log", { a: fmt(h.sunk), b: fmt(h.chain) }) }; }
     case "daily": return { ...base, url: SHARE_URL + dailyLink(d.n, d), title: t("sc_t_daily", { n: d.n }), sub: d.tier ? `${d.bossName} · ${dailyTierLabel(d.n)}` : d.bossName,

@@ -106,7 +106,9 @@ function runEnd(why) {
   const res = dailyResult({ won: run.won, bossT: run.bossT, sunk: save.sunk, hull });
   const rec = dailyRecord(loadDaily(), run.n, res);
   saveDaily(rec.store);   // real storage: persist() is locked, this is its own key
-  run = { ...run, over: true, result: { ...res, why, best: rec.best, streak: rec.streak } };
+  const rw = rewardClaim(loadRewards(), run.n, res.won);   // cosmetics and badges, once per day (js/daily-rewards.js, its own key)
+  if (rw.status === "new") saveRewards(rw.store);
+  run = { ...run, over: true, result: { ...res, why, best: rec.best, streak: rec.streak, reward: { status: rw.status, item: rw.item, badges: rw.badges } } };
   paused = true; cancelPointerInput(); document.getElementById("joy").hidden = true; joyVec = { x: 0, y: 0, m: 0 };
   renderClock(); renderEnd(); endEl.hidden = false; sfx(res.won ? "victory" : "defeat");
   endEl.firstElementChild.focus();
@@ -127,6 +129,7 @@ function renderEnd() {
     <h1 id="rTitle">${t(r.won ? "dr_won" : "dr_lost", { boss })}</h1>
     <p class="hint-s" style="text-align:center">${t(r.why === "time" ? "dr_timeup" : r.why === "sunk" ? "dr_fell" : "dtrait_" + run.bounty.trait)}${r.best ? ` · <b>${t("dr_best")}</b>` : ""}</p>
     <section><dl class="logstats">${statRows(rows)}</dl></section>
+    ${rewardHtml(r.reward)}
     ${run.friend ? `<section class="vs"><h2>${t("dc_title")}</h2><p class="hint-s">${friendText(run.n, run.friend)}</p><ul class="vs-list">${compareFriend(r, run.friend).map(([k, v]) => `<li>${t(k, v)}</li>`).join("")}</ul></section>` : ""}
     <footer class="v-choices">${wordmarkHtml()}
       <button class="btn" type="button" data-run="title">${t("dr_title")}</button>

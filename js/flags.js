@@ -22,7 +22,7 @@ Object.assign(STR.zh, {
 // ---------- the data (pure) ----------
 const cleanFlag = raw => {
   const f = isObj(raw) ? raw : {}, pick = (v, list, def) => (typeof v === "string" && list.includes(v) ? v : def);
-  return { main: pick(f.main, FLAG_COLORS, DEFAULT_FLAG.main), alt: pick(f.alt, FLAG_COLORS, DEFAULT_FLAG.alt), emblem: pick(f.emblem, FLAG_EMBLEMS, DEFAULT_FLAG.emblem) };
+  return { main: pick(f.main, FLAG_COLORS.concat(FLAG_REWARD_COLORS), DEFAULT_FLAG.main), alt: pick(f.alt, FLAG_COLORS.concat(FLAG_REWARD_COLORS), DEFAULT_FLAG.alt), emblem: pick(f.emblem, FLAG_EMBLEMS.concat(FLAG_REWARD_EMBLEMS), DEFAULT_FLAG.emblem) };
 };
 // Width of a name: CJK, kana, hangul and full-width characters count 2.
 const nameUnits = s => [...s].reduce((n, ch) => n + (/[ᄀ-ᇿ⺀-鿿ꥠ-꥿가-퟿豈-﫿＀-￯]/.test(ch) ? 2 : 1), 0);
@@ -82,6 +82,16 @@ function drawFlagEmblem(c, id, x, y, s, col, bg) {
     }
   } else if (id === "star") { starPath(c, x, y + s * 0.05, s * 1.15); c.fill(); c.stroke(); }
   else if (id === "cross") { c.lineWidth = s * 0.44; c.beginPath(); c.moveTo(x, y - s * 0.95); c.lineTo(x, y + s * 0.95); c.moveTo(x - s * 0.95, y); c.lineTo(x + s * 0.95, y); c.stroke(); }
+  else if (id === "crown") {   // daily rewards (js/daily-rewards.js)
+    c.lineWidth = s * 0.16; c.beginPath(); c.moveTo(x - s, y + s * 0.7); c.lineTo(x - s, y - s * 0.6); c.lineTo(x - s * 0.5, y - s * 0.05); c.lineTo(x, y - s * 0.85);
+    c.lineTo(x + s * 0.5, y - s * 0.05); c.lineTo(x + s, y - s * 0.6); c.lineTo(x + s, y + s * 0.7); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = bg; c.fillRect(x - s * 0.7, y + s * 0.38, s * 1.4, s * 0.14);
+  } else if (id === "moon") {
+    c.beginPath(); c.arc(x, y, s * 0.95, 0, TAU); c.fill(); c.fillStyle = bg; c.beginPath(); c.arc(x + s * 0.45, y - s * 0.2, s * 0.8, 0, TAU); c.fill();
+  } else if (id === "wave") {
+    c.lineWidth = s * 0.24;
+    for (const dy of [-0.5, 0.35]) { c.beginPath(); c.moveTo(x - s, y + s * dy); c.bezierCurveTo(x - s * 0.5, y + s * (dy - 0.6), x - s * 0.1, y + s * (dy - 0.6), x, y + s * dy); c.bezierCurveTo(x + s * 0.1, y + s * (dy + 0.6), x + s * 0.5, y + s * (dy + 0.6), x + s, y + s * dy); c.stroke(); }
+  }
   c.restore();
 }
 // The flag on a staff: staff at (x, y), cloth w × h streaming right with a gentle wave. flag = { main, alt, emblem }.
@@ -109,10 +119,10 @@ function flagMiniMark(c) {
 
 // ---------- the sea: the flag becomes the player's livery (js/art.js liveryFor, js/ships.js applyPlayerStats) ----------
 function flagLivery(flag = flagOf()) {
-  const f = cleanFlag(flag), name = `pf-${f.main}-${f.alt}-${f.emblem}`;
+  const f = cleanFlag(flag), paint = typeof rewardPaint === "function" && HULL_PAINTS[rewardPaint()] ? rewardPaint() : "", name = `pf-${f.main}-${f.alt}-${f.emblem}${paint ? "-" + paint : ""}`;   // paint: a daily reward (js/daily-rewards.js)
   if (!LIVERY[name]) {
     const main = flagColor(f.main), alt = flagColor(f.alt);
-    LIVERY[name] = { ...LIVERY.player, flag: main, flag2: alt, pennant: main, trim: f.main === "black" ? alt : main, emblem: f.emblem };
+    LIVERY[name] = { ...LIVERY.player, ...(paint ? { hull: HULL_PAINTS[paint] } : {}), flag: main, flag2: alt, pennant: main, trim: f.main === "black" ? alt : main, emblem: f.emblem };
   }
   return name;
 }
@@ -147,6 +157,8 @@ function swatches(k, list, cur, label) {
     return `<button type="button" class="fl-sw${on ? " on" : ""}" data-flag="1" data-k="${k}" data-id="${id}" role="radio" aria-checked="${on}" aria-label="${nm}" title="${nm}">${face}</button>`;
   }).join("") + `</span></div>`;
 }
+// The base list plus the daily rewards earned of that kind (js/daily-rewards.js).
+const flagChoices = (base, kind) => base.concat(typeof rewardOwned === "function" ? rewardOwned(kind) : []);
 function renderFlagCard() {
   const f = flagOf(), name = save.shipName;
   if (document.activeElement && document.activeElement.id === "shipNameIn") return;   // never rebuild a field somebody is typing in
@@ -158,7 +170,8 @@ function renderFlagCard() {
       <input id="shipNameIn" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="${FLAG_NAME_UNITS}" value="${esc(name)}" placeholder="${esc(t("flNamePh"))}">
       <p class="fl-err" role="alert">${flagMsg === "rude" ? t("flRude") : ""}</p>
       <button type="button" class="textbtn" data-flag-reset="1" ${name ? "" : "disabled"}>${t("flReset")}</button></div></div>` +
-    swatches("main", FLAG_COLORS, f.main, t("flMain")) + swatches("alt", FLAG_COLORS, f.alt, t("flAlt")) + swatches("emblem", FLAG_EMBLEMS, f.emblem, t("flEmblem")) + `</div>`;
+    swatches("main", flagChoices(FLAG_COLORS, "color"), f.main, t("flMain")) + swatches("alt", flagChoices(FLAG_COLORS, "color"), f.alt, t("flAlt")) +
+    swatches("emblem", flagChoices(FLAG_EMBLEMS, "emblem"), f.emblem, t("flEmblem")) + (typeof paintRow === "function" ? paintRow() : "") + `</div>`;
   drawBanner(flagEl.querySelector(".fl-prev").getContext("2d"), 30, 14, 150, 100, f, 112);
   for (const cv of flagEl.querySelectorAll("canvas[data-em]")) {
     drawFlagEmblem(cv.getContext("2d"), cv.dataset.em, 22, 22, 11, flagColor(f.alt), flagColor(f.main));
