@@ -49,12 +49,13 @@ function shareSpec(kind, d = {}) {
       stats: [...(d.winTime > 0 ? [[t("sc_fast"), fmtDur(d.winTime)]] : []), [t("sc_sunk"), fmt(d.sunk)], [t("sc_gold"), fmt(d.gold)]],
       text: t(d.winTime > 0 ? "sc_x_victory" : "sc_x_victory0", { n: fmt(d.sunk), g: fmt(d.gold), d: fmtDur(d.winTime) }) };
     case "log": { const h = d.hall || { sunk: 0, chain: 0, win: 0 };
-      return { ...base, title: t("sc_t_log"), sub: "",
+      return { ...base, title: t("sc_t_log"), sub: typeof rewardBadgeLine === "function" ? rewardBadgeLine() : "",   // the daily badges (js/daily-rewards.js)
         stats: [[t("sc_best"), fmt(h.sunk)], [t("sc_chain"), fmt(h.chain)], ...(h.win > 0 ? [[t("sc_fastest"), fmtDur(h.win)]] : [[t("sc_total"), fmt(d.total || 0)]])],
         text: t("sc_x_log", { a: fmt(h.sunk), b: fmt(h.chain) }) }; }
     case "daily": return { ...base, url: SHARE_URL + dailyLink(d.n, d), title: t("sc_t_daily", { n: d.n }), sub: d.tier ? `${d.bossName} · ${dailyTierLabel(d.n)}` : d.bossName,
       stats: [[t("sc_captain"), d.won ? fmtClock(d.bossT) : t("sc_away")], [t("sc_sunk"), fmt(d.sunk)], [t("sc_hull"), d.hull + "%"],
         ...(d.streak > 1 ? [[t("sc_streak"), String(d.streak)]] : [])],
+      badges: typeof rewardBadgeLine === "function" ? rewardBadgeLine() : "",   // the daily badges, as on the hall card (js/daily-rewards.js)
       text: dailyShareText(d) };
     default: throw new Error("unknown share kind: " + kind);
   }
@@ -101,6 +102,7 @@ function drawCard(c, spec) {
   c.font = `400 78px ${CARD_FONT.disp}`; c.fillText("PRIVATEERS", px + 214, py + 112);
   c.fillStyle = "#b4412c"; c.font = `400 40px ${CARD_FONT.disp}`; c.fillText(spec.title, px + 216, py + 164);
   if (spec.sub) { c.fillStyle = "#6b5a3e"; c.font = `600 28px ${CARD_FONT.ui}`; c.fillText(spec.sub, px + 216, py + 202); }
+  if (spec.badges) { c.fillStyle = "#6b5a3e"; c.font = `600 20px ${CARD_FONT.ui}`; c.fillText(spec.badges, px + 216, py + 226); }   // daily card: its sub line is taken, so the badges ride beneath
   drawShipMark(c, px + pw - 160, py + 150, spec.ship);
   if (spec.flag) {   // the captain's flag on the stern staff, streaming aft, and the ship's name beneath her (js/flags.js)
     const k = 1, len = (150 + (SHIP_SAILS[spec.ship] || 2) * 30) * k, sx = px + pw - 160 - len / 2 + 8;

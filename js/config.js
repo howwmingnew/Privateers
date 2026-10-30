@@ -226,6 +226,11 @@ const FLAG_COLORS = ["red", "blue", "green", "black", "gold", "purple", "teal", 
 const FLAG_HEX = { red: "#b02626", blue: "#2f8ad6", green: "#3d8b4a", black: "#1a1618", gold: "#e0b44a", purple: "#7a3f98", teal: "#1f9aa0", orange: "#e07b2c", white: "#f4efe2", grey: "#6b6f78" };
 const FLAG_EMBLEMS = ["diag", "skull", "anchor", "swords", "star", "cross"];
 const DEFAULT_FLAG = { main: "blue", alt: "white", emblem: "diag" };   // what the player's ensign always looked like
+// Daily-sea rewards (js/daily-rewards.js, #39): extra flag colours and emblems and hull paints. Cosmetic only. The flag card offers
+// them once earned, but a flag that names one is always valid.
+const FLAG_REWARD_COLORS = ["navy", "rose", "lime"], FLAG_REWARD_EMBLEMS = ["crown", "moon", "wave"];
+Object.assign(FLAG_HEX, { navy: "#1d3a6b", rose: "#d9648a", lime: "#8cc63f" });
+const HULL_PAINTS = { ebony: "#3a3036", crimson: "#8c3a2e", sea: "#2f6b73", ivory: "#b9ad8a" };
 
 // Sea disasters (js/disasters-core.js is the plan and the maths, js/disasters.js the sea). Every figure is gameplay, the same
 // for every player whatever the weather-effects setting says. [PLACEHOLDER] until playtested.
