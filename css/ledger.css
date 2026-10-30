@@ -188,3 +188,9 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 #port { --pz: 1; }   /* the zoom css/style.css gives #port on big screens, for the sticky column's height */
 @media (min-width: 1500px) and (min-height: 900px) { #port { --pz: 1.25; } }
 @media (min-width: 2400px) and (min-height: 1300px) { #port { --pz: 1.5; } }
+
+/* ---- the edge box of a shooter that just hit you (js/edge-marks.js, #119): red border and a quick flash ---- */
+#edgeMarks .em.atk { border-color: #ff5a3c; color: #fff6ea; opacity: 1; animation: emAtk .5s ease-in-out 3; }
+#edgeMarks .em.atk .ptr { border-left-color: #ff5a3c; }
+@keyframes emAtk { 50% { background: rgba(200,50,31,.9); } }
+@media (prefers-reduced-motion: reduce) { #edgeMarks .em.atk { animation: none; } }

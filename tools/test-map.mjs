@@ -32,7 +32,8 @@ export const MAP = [
   [/^js\/cull/, ["phase1", "harbor", "ports", "scale", "art-hits"]],   // off-screen culling: photo mode, harbor, stations, big views
   [/^js\/ball-pool/, ["gundeck", "collision", "phase1"]],
   // off-screen markers: phase1b and ports check them, escorts and campaign (boss frame) used to get them through CORE
-  [/^js\/edge-(marks|math)/, ["phase1b", "ports", "escorts", "campaign"]],
+  [/^js\/edge-(marks|math)/, ["phase1b", "ports", "escorts", "campaign", "readmarks"]],
+  [/^js\/read-marks/, ["readmarks", "phase1b"]],   // #119: shooter ring, bow chevron, plate rim
   [/^css\//, ["shell", "polish", "scale"]],
   [/^index\.html$/, ["shell", "platform"]],
   [/^tests\/lib\//, ["phase1b", "ports", "collision"]],   // helpers shared by browser tests

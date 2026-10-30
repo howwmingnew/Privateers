@@ -40,9 +40,16 @@ function dodgeAlong(pos, half, spans, lo, hi) {
   }
   return p;
 }
+// The spans along an edge that the level plates of on-screen ships cover (#119): rects [{l,t,r,b}] in css px; a box of thickness `thick`
+// centred `at` px in from its side's axis (x for left/right, y for top/bottom) is blocked wherever a plate reaches into its band.
+function plateSpans(rects, side, at, thick, pad = 3) {
+  const vert = side === "left" || side === "right", lo = at - thick / 2 - pad, hi = at + thick / 2 + pad;
+  return rects.filter(r => (vert ? r.l < hi && r.r > lo : r.t < hi && r.b > lo)).map(r => (vert ? [r.t - pad, r.b + pad] : [r.l - pad, r.r + pad]));
+}
 const EDGE_REF_W = 1300;   // a typical world view width in px, to scale distance against the range
 // Which targets get a box: the bounty first, then dangerous ships, then places and the rest, nearer before farther; at most EDGE_MAX.
 function edgeRank(it) {   // it: { boss, kind: "ship" | "place", d: threat step vs you, px: world distance }
+  if (it.atk) return 2000 - (it.px / (EDGE_RANGE * EDGE_REF_W)) * 40;   // whoever just hit you always gets a box, above even the bounty (#119)
   const base = it.boss ? 1000 : it.ally ? 45 : it.kind === "place" ? 60 : it.d >= 1 ? 100 + it.d * 20 : 50;   // an escort out of sight ranks below the sea's own ships
   // up to 40 points off for distance; the cap is for the way home only (the harbor's box may be far past the range and must still rank), every other box keeps ranking by distance
   const k = it.px / (EDGE_RANGE * EDGE_REF_W);
