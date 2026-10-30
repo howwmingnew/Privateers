@@ -1,7 +1,6 @@
 // #119 combat readability in headless Chrome: the shooter that just hit you is ringed (on screen) or gets a flashing edge box (off screen),
 // the aim line / bracket on a Navy ship is violet (and the ordinary hit colour on a pirate), the bow chevron is drawn ahead of your hull,
-// a rim sits behind each enemy plate at night and in rain, an edge box never lands on a level plate, and the bow chevron
-// shows only in a fight (#142). 0 page errors.
+// a rim sits behind each enemy plate at night and in rain, and an edge box never lands on a level plate. 0 page errors.
 // Usage: node tests/readmarks.mjs [url] [outDir]   (serve the repo first, e.g. `npm run serve`)
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
