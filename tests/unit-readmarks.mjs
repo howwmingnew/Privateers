@@ -1,4 +1,4 @@
-// Unit tests for #119 (combat readability): edge boxes clear of level plates, the shooter's box ranks first, the Navy aim warning,
+// Unit tests for #119 (combat readability): edge boxes clear of level plates, the shooter's box ranks first, the aim colour,
 // the bow chevron and the plate rim strength. Pure functions only, loaded into one node:vm context.
 // Usage: node --test tests/unit-readmarks.mjs
 import { test } from "node:test";
@@ -35,16 +35,12 @@ test("edgeRank: a shooter that just hit you outranks the bounty, nearer shooter 
   assert.equal(run(`edgePick([{ kind: "ship", d: 0, px: 800, atk: true }, { kind: "ship", boss: true, d: 3, px: 100 }], 1)[0].atk`), true);
 });
 
-test("navyAim: only a Navy ship that is not an escort, and only while heat is in play", () => {
-  run("var heatOn = () => true");
-  assert.equal(run(`navyAim({ faction: "navy" })`), true);
-  assert.equal(run(`navyAim({ faction: "navy", ally: true })`), false, "an escort is never aimed at");
-  assert.equal(run(`navyAim({ faction: "pirate" })`), false);
-  assert.equal(run(`navyAim({ faction: "merchant" })`), false);
-  assert.equal(run(`navyAim(null)`), false);
-  run("heatOn = () => false");
-  assert.equal(run(`navyAim({ faction: "navy" })`), false, "the tutorial / first voyage: no heat, no warning");
-  assert.notEqual(run("NAVY_AIM"), run("AIM_RED"), "the warning is not the hit colour");
+test("aimColor: a ship in the line is red whatever its faction, Navy included (#141)", () => {
+  const red = run("AIM_RED");
+  for (const f of ["navy", "pirate", "merchant"]) assert.equal(run(`aimColor(true, { faction: "${f}" })`), red, f);
+  assert.equal(red, 0xff4a2e);
+  assert.equal(run(`aimColor(true, null)`), 0xffd76a, "a ready line that misses is yellow");
+  assert.equal(run(`aimColor(false, null)`), 0xf6f1e3, "reloading is faint white");
 });
 
 test("bowChevron: the tip leads the bow by gap along the heading, the wings sit behind it, symmetric about the keel", () => {

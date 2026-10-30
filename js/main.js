@@ -188,8 +188,7 @@ function drawOverlays() {
         const len = gun.range * (ready ? 1 : 1 - gun.cd / gun.interval);
         const tg = ready ? lineHits(m.x, m.y, m.a, gun.range) : null;
         if (tg) marked.add(tg);
-        // a Navy ship in the line gets the violet warning (js/read-marks.js)
-        const col = !ready ? 0xf6f1e3 : tg ? (navyAim(tg) ? NAVY_AIM : AIM_RED) : 0xffd76a, alpha = (!ready ? 0.25 : tg ? 0.95 : 0.75) * (tg ? Math.max(k, 0.7) : k);
+        const col = aimColor(ready, tg), alpha = (!ready ? 0.25 : tg ? 0.95 : 0.75) * (tg ? Math.max(k, 0.7) : k);
         const c = Math.cos(m.a), sn = Math.sin(m.a);
         g.lineStyle((tg ? 3 : 2) * Math.max(k, 0.65) * lk, col, alpha);
         for (let d = 0; d < len; d += 18) g.lineBetween(m.x + c * d, m.y + sn * d, m.x + c * Math.min(d + 11, len), m.y + sn * Math.min(d + 11, len));
@@ -199,10 +198,8 @@ function drawOverlays() {
     const pulse = 1 + 0.07 * Math.sin(S.time.now * 0.012);
     for (const e of marked) {   // target bracket: four arcs around the hull, a shape cue as well as a colour one
       const r = ((e.hl ?? 28) + (e.hw ?? 13)) * 0.8 * pulse + 8 * lk;
-      const navy = navyAim(e);
-      g.lineStyle(2.5 * lk, navy ? NAVY_AIM : AIM_RED, 0.9);
+      g.lineStyle(2.5 * lk, AIM_RED, 0.9);
       for (let q = 0; q < 4; q++) strokeArc(g, e.x, e.y, r, q * Math.PI / 2 + 0.35, q * Math.PI / 2 + 1.22);
-      if (navy) { g.lineStyle(2 * lk, NAVY_AIM, 0.7); strokeArc(g, e.x, e.y, r + 7 * lk, 0, TAU - 0.01); }   // a second full ring: a shape cue as well as the colour
     }
   }
   // health bars, just above each hull's drawn extent (none behind the title: a hero shot, not a HUD)
