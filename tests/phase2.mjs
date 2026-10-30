@@ -190,6 +190,8 @@ let snapA = null;
   ok("the win earns a reward and a badge, kept under their own key", rw && rw.owned.length === 1 && rw.badges.includes("first") && Object.keys(rw.days).length === 1, rw);
   ok("...the result page shows what was earned", /Daily reward/i.test(t1) && /New: /.test(t1) && /Badge: /.test(t1), t1.replace(/\n+/g, " | ").slice(0, 300));
   ok("...the campaign save is still byte for byte the same", await stored(page, SAVE_KEY) === OLD_SAVE);
+  const bl = await ev(page, () => ({ daily: shareSpec("daily", { n: run.n, tier: run.tier, bossName: "x", ...run.result }).badges, hall: shareSpec("log", { hall: save.hall, total: 0 }).sub }));
+  ok("the daily share card carries the badge line, the same text as the hall card", bl.daily === "Badges: First sea cleared" && bl.daily === bl.hall, bl);
   await page.click("[data-run=again]");
   await page.waitForTimeout(1800 * SLOW);
   await ev(page, () => { player.hp = player.maxHp = 1e6; hurt(bossShip, 1e9, 0, player, null); });
