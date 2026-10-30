@@ -88,8 +88,8 @@ console.log("Wind dial");
   const tail = await info();
   await page.evaluate(() => { player.rot = Math.PI; wxDial(); });
   const head = await info();
-  check(tail.cls === "tail" && tail.fx === "+20%", "tailwind: green class and +20%", tail);
-  check(head.cls === "head" && head.fx === "−25%", "headwind: red class and −25%", head);
+  check(tail.cls === "tail" && tail.fx === "+150%", "tailwind: green class and +150%", tail);
+  check(head.cls === "head" && head.fx === "−30%", "headwind: red class and −30%", head);
   await page.screenshot({ path: `${out}/dial-desktop.png`, clip: { x: 0, y: 0, width: 420, height: 200 } });
 
   // UI size slider: the dial follows --ts
@@ -148,10 +148,10 @@ console.log("Sailing in the wind");
     const e = enemies.find(e => e.alive && !e.fixed);
     return { p: mk(player), e: mk(e) };
   }, [rel, strength]);
-  const tail = await run([0, 1]), beam = await run([Math.PI / 2, 1]), head = await run([Math.PI, 1]), calm = await run([0, 0.05]);
+  const tail = await run([0, 1]), beam = await run([Math.PI / 2, 1]), head = await run([Math.PI, 1]), calm = await run([0, 0.01]);
   check(tail.p > beam.p && beam.p > head.p, "player: before the wind is faster than across it, which is faster than into it", { tail: tail.p, beam: beam.p, head: head.p });
-  check(Math.abs(tail.p / beam.p - 1.2) < 0.02 && Math.abs(head.p / beam.p - 0.75) < 0.02, "player: +20% before a full wind and −25% into it", { t: tail.p / beam.p, h: head.p / beam.p });
-  check(Math.abs(tail.e / beam.e - 1.2) < 0.02 && Math.abs(head.e / beam.e - 0.75) < 0.02, "an enemy ship obeys the same rule", { t: tail.e / beam.e, h: head.e / beam.e });
+  check(Math.abs(tail.p / beam.p - 2.5) < 0.05 && Math.abs(head.p / beam.p - 0.7) < 0.02, "player: x2.5 before a full wind and x0.7 into it (no sail gear)", { t: tail.p / beam.p, h: head.p / beam.p });
+  check(Math.abs(tail.e / beam.e - 2.5) < 0.05 && Math.abs(head.e / beam.e - 0.7) < 0.02, "an enemy ship obeys the same rule", { t: tail.e / beam.e, h: head.e / beam.e });
   check(Math.abs(calm.p / beam.p - 1) < 0.1, "a dead calm barely changes anything", calm.p / beam.p);
 
   // storm: a ship left to itself broaches; held on course it stays steady; coasts are safe
