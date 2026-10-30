@@ -4,7 +4,7 @@
 // ga_<key> is an affix line ({n} is a percent), gleg_<effect> a legendary effect, gln_<part> a legendary's own name. Numbers in the legendary lines
 // come from GEAR_LEGX (js/config.js), so the text never drifts from the rule.
 Object.assign(STR.en, {
-  gearTitle: "Gear", gearHint: "Seven gear slots, one piece each. Sink ships to find them: pick a spare, then tap its part to wear it. Guns are set on the gun deck above. The gear follows you from ship to ship, as far as the hull's tier allows. Grade is the hull tier an item needs, and a higher grade means stronger effects; Lv is how far you have upgraded it with gold.",
+  gearTitle: "Gear", gearHint: "Seven gear slots, one piece each. Sink ships to find them: pick a spare, then tap its part to wear it. Guns are set on the gun deck above. The gear follows you from ship to ship, as far as the hull's tier allows. Grade is the hull tier an item needs, and a higher grade means stronger effects; Lv is how far you have upgraded it with gold. Affix = an extra bonus line on a piece; fittings = scrap from breaking down spares (explained under Spares).",
   gp_prow: "Prow", gp_body: "Hull plating", gp_sail: "Sails", gp_gun: "Guns", gp_supply: "Supply hold", gp_instr: "Instruments", gp_flag: "Flag",
   gr_0: "Common", gr_1: "Magic", gr_2: "Rare", gr_3: "Epic", gr_4: "Legendary", gIl: "Grade {n}",
   ga_ram: "Collision damage dealt +{n}%", ga_keep: "Keeps {n}% more speed after a collision", ga_brace: "Collision damage taken −{n}%", ga_jolt: "Rammed ships lose {n}% more speed",
@@ -25,7 +25,7 @@ Object.assign(STR.en, {
   gGot: "Found: {name} ({r}, Grade {n})", gScrapFull: "Bag full: {name} broken down, +{m} fittings", gGotShort: "{name}",
 });
 Object.assign(STR.zh, {
-  gearTitle: "裝備", gearHint: "七個部位。擊沉敵船有機會掉裝備：先點一件備用品，再點它的部位來穿上。火砲請在上方的火砲配置裡設定。裝備會跟著你換船，只要船級夠高就能穿。品階是穿這件裝備需要的船級，品階越高效果越強；Lv 則是你花金幣升級的次數。",
+  gearTitle: "裝備", gearHint: "七個部位。擊沉敵船有機會掉裝備：先點一件備用品，再點它的部位來穿上。火砲請在上方的火砲配置裡設定。裝備會跟著你換船，只要船級夠高就能穿。品階是穿這件裝備需要的船級，品階越高效果越強；Lv 則是你花金幣升級的次數。詞綴 = 裝備上額外的加成；零件 = 拆解備用裝備得來的材料（詳見下方備用裝備）。",
   gp_prow: "船首", gp_body: "船身", gp_sail: "船帆", gp_gun: "火砲", gp_supply: "補給艙", gp_instr: "航海儀器", gp_flag: "旗幟",
   gr_0: "普通", gr_1: "魔法", gr_2: "稀有", gr_3: "史詩", gr_4: "傳說", gIl: "品階 {n}",
   ga_ram: "撞擊傷害 +{n}%", ga_keep: "撞擊後多保留 {n}% 速度", ga_brace: "承受的撞擊傷害 −{n}%", ga_jolt: "被撞的船多損失 {n}% 航速",

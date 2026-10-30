@@ -178,7 +178,7 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
   /* one column: the fleet and its deck come right after the ledger's header; the poster, the flag and the gear follow */
   #port .sheet > header { order: -5; }
   #port .sheet > #coach, #port .sheet > .msg { order: -4; }
-  #port #pStats { order: -3; }
+  #port #pStats, #port #wanted { order: -3; }   /* the Wanted poster (folded) comes right after the stats, above the fleet (#124) */
   #port #fleet { order: -2; }
   #port #fleet + section { order: -1; }
   #port .sheet > footer { order: 99; }

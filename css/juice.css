@@ -20,6 +20,8 @@
 #tally.on { opacity: 1; transform: translate(-50%, 0) scale(1); }
 @media (max-width: 600px) { #tally { top: calc(env(safe-area-inset-top, 0px) + 33vh); } }   /* clear of the phone's minimap */
 #tally .t-sunk { display: flex; gap: 3px; align-items: center; justify-content: center; flex-wrap: wrap; margin-bottom: 4px; }
+#tally .t-title { margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(240,199,102,.4); font-weight: 700; letter-spacing: .06em; color: #f0c766; }
+#tally .t-sunk .t-n { margin-left: 4px; font-weight: 700; }
 #tally .t-sunk span { margin-right: 6px; text-transform: uppercase; letter-spacing: .08em; font-size: .8em; opacity: .8; }
 #tally .t-sunk .jsk { width: 17px; height: 17px; display: block; filter: drop-shadow(0 1px 1px rgba(0,0,0,.6)); }
 #tally .t-math b { color: #9fe0a0; }
