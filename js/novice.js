@@ -6,12 +6,14 @@
 // more raises a red warning banner instead of the quiet name card (js/world-seas.js).
 Object.assign(STR.en, {
   seaWarnTag: "Danger", seaWarn: "Ships here far out-fight your Lv {n}. Turn back toward the harbor, or be ready to run.",
-  seaAhead: "Warning: {sea} lies just ahead, and its ships far out-fight you. Turn back now.",
+  seaAhead: "Warning: {sea} is about {s} s ahead, and its ships far out-fight you. Turn back now.",
+  seaAheadNear: "Warning: {sea} is just ahead, and its ships far out-fight you. Turn back now.",
   navyAim: "That is a Navy ship (the ⚓ on its plate). Sinking Navy ships gets you Wanted. It will not attack you first while you are under 2 stars of Wanted; shoot, ram or board it and it fights back.",
 });
 Object.assign(STR.zh, {
   seaWarnTag: "危險", seaWarn: "這裡的船遠比你的 Lv {n} 強。建議掉頭回港，或做好逃跑的準備。",
-  seaAhead: "警告：前方就是{sea}，那裡的船遠比你強。現在掉頭還來得及。",
+  seaAhead: "警告：約 {s} 秒後就進入{sea}，那裡的船遠比你強。現在掉頭還來得及。",
+  seaAheadNear: "警告：前方就是{sea}，那裡的船遠比你強。現在掉頭還來得及。",
   navyAim: "這是海軍（標籤上有 ⚓）。攻擊海軍會被通緝；通緝低於 2 星時牠不會先攻擊你；但你（或護航艦）開火、衝撞或登船，牠就會還擊。",
 });
 
@@ -42,9 +44,9 @@ const seaWarnGap = (seaLv, rating) => seaLv - rating >= SEA_WARN_GAP;
 // Navy leaves the captain (and the escorts) alone anywhere unless provoked (#105, #120): a ship's colour is its strength, not its side, and a newcomer
 // who cannot yet tell Navy from pirate must not be hunted for it. One rule: while Wanted is under HEAT_HUNT_FROM stars (the first voyage counts as 0) the
 // Navy never opens fire. It replaces the old "until the first bounty" gate. Retaliation = js/combat.js hurt() made the ship's attacker the captain/escort within 8 s (ram and shots both go through hurt), or `provoked` below. In the Shallows, a novice is also spared by every Navy ship rated over noviceCap. The later bounties keep their crowds: the difficulty bands are untouched.
-const PEACE_R = 1100, SEA_AHEAD_R = 380;
+const PEACE_R = 1100, SEA_AHEAD_R = 380, SEA_AHEAD_S = 15;   // the sea warning comes SEA_AHEAD_S s before the line at the ship's speed (#114), or inside SEA_AHEAD_R px whatever the speed
 const bountyPeace = (claimed, dLair) => claimed === 0 && dLair < PEACE_R;
-let spare = { bounty: false, shallows: false, navy: false, cap: 0 }, aheadShown = false, navyTipShown = false;
+let spare = { bounty: false, shallows: false, navy: false, cap: 0 }, aheadShown = {}, navyTipShown = false;   // aheadShown: sea id -> the distance (px) it warned at
 // Navy ships the captain or an escort has hurt this voyage (shot, rammed) stay hostile: provoking one ends its peace for good, not for 8 s.
 let provoked = new WeakSet();
 onHook("hurt", (s, dmg, src) => { if (src && (src === player || src.ally) && s.faction === "navy" && !s.isPlayer && !s.ally) provoked.add(s); });
@@ -58,8 +60,14 @@ function noviceSpare(e) {
   return spare.shallows && e.faction === "navy" && (e.threatL ?? e.L) > spare.cap;
 }
 const noviceZone = () => spare.shallows;
-// The deepest sea's edge is a short sail away and the sea would out-fight the captain: a second warning, before the line.
-const seaAheadDue = (dEdge, danger, shown) => !shown && danger && dEdge > 0 && dEdge < SEA_AHEAD_R;
+// A sea that would out-fight the captain is a short sail away: a second warning, before the line (#114: SEA_AHEAD_S s of sailing, not a last-second 380 px).
+// dEdge: px to the sea's edge; vOut: the ship's speed straight away from the harbor (px/s, <= 0 sailing home or sideways).
+const seaAheadDue = (dEdge, vOut, danger, shown) => !shown && danger && dEdge > 0 && (dEdge < SEA_AHEAD_R || (vOut > 0 && dEdge / vOut <= SEA_AHEAD_S));
+// The first sea outward from d (px from the harbor) the captain cannot take, as { sea, dEdge }, or null. isDanger: sea id -> bool.
+function seaAheadOf(d, isDanger) {
+  const s = SEAS.slice(1).find(x => ringEdge(x.L0) > d && isDanger(x.id));
+  return s ? { sea: s, dEdge: ringEdge(s.L0) - d } : null;
+}
 function noviceTick() {
   const live = player && player.alive && !docked && !titleOpen && save && !(typeof runActive === "function" && runActive());
   const r = live ? curRating() : 99;
@@ -69,18 +77,20 @@ function noviceTick() {
   };
   if (live && spare.navy && !navyTipShown && typeof tipOnce === "function" && enemies.some(e => e.alive && !e.fixed && e.faction === "navy" && dist(e, player) < NAVY_NOTE_R)) {
     navyTipShown = true;   // a memory flag: tipOnce reads storage, and a blocked store must not toast every frame
-    if (tipOnce("navyAim")) toast(t("navyAim"), false, 6000);
+    if (tipOnce("navyAim")) toast(t("navyAim"), false, 6000, TOAST_TIP);
   }
   if (!live || typeof seaIsDanger !== "function") return;
-  const last = SEAS[SEAS.length - 1], edge = ringEdge(last.L0) - dist(player, PORT);
-  if (aheadShown && edge > SEA_AHEAD_R * 2.5) aheadShown = false;   // sailed well clear: it may warn again
-  if (seaAheadDue(edge, seaIsDanger(last.id), aheadShown)) {
-    aheadShown = true;
-    toast(t("seaAhead", { sea: t("sea_" + last.id) }), true, 5200); sfx("bell", { pitch: 0.4 });
-  }
+  const d = dist(player, PORT), ahead = seaAheadOf(d, seaIsDanger);
+  for (const id of Object.keys(aheadShown)) if (!ahead || ahead.sea.id !== id || ahead.dEdge > aheadShown[id] * 1.5 + SEA_AHEAD_R) delete aheadShown[id];   // sailed well clear: it may warn again
+  if (!ahead) return;
+  const vOut = d > 1 ? ((player.vx || 0) * (player.x - PORT.x) + (player.vy || 0) * (player.y - PORT.y)) / d : 0, id = ahead.sea.id;
+  if (!seaAheadDue(ahead.dEdge, vOut, true, id in aheadShown)) return;
+  aheadShown[id] = ahead.dEdge;
+  const secs = vOut > 0 ? Math.round(ahead.dEdge / vOut) : 0, sea = t("sea_" + id);
+  toast(secs >= 3 ? t("seaAhead", { sea, s: secs }) : t("seaAheadNear", { sea }), true, 5200, TOAST_WARN); sfx("bell", { pitch: 0.4 });
 }
 onHook("frame", () => { if (!paused) noviceTick(); });
-onHook("sail", () => { aheadShown = false; provoked = new WeakSet(); });
+onHook("sail", () => { aheadShown = {}; provoked = new WeakSet(); });
 
 // shipRating() walks every gun and the power table: the ring quotas ask for it every frame, so it is read twice a second.
 let ratingNow = 1, ratingT = 0;

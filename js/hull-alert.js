@@ -35,7 +35,7 @@ onHook("frame", () => {
   if (!player || !player.alive || paused || docked || titleOpen) return;
   const a = hullAlertStep(hullArmed, player.hp / player.maxHp);
   hullArmed = a.armed;
-  if (a.fire) { toast(t("hullCrit"), true); sfx("bell", { pitch: 0.35 }); }
-  if (typeof repairOn !== "undefined" && repairOn && player.hp < player.maxHp * 0.9 && save.tutorialDone && tipOnce("mend")) toast(t("hullMend"), false, 5200);
+  if (a.fire) { toast(t("hullCrit"), true, undefined, TOAST_WARN); sfx("bell", { pitch: 0.35 }); }
+  if (typeof repairOn !== "undefined" && repairOn && player.hp < player.maxHp * 0.9 && save.tutorialDone && tipOnce("mend")) toast(t("hullMend"), false, 5200, TOAST_TIP);
 });
 onHook("sail", () => { hullArmed = true; });

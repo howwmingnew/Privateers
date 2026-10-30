@@ -13,31 +13,41 @@
 // toast(msg, true) is direct feedback on a key press (mute, pad) or a sinking: it shows at once, and a news line that
 // was up goes back to the head of the queue. toast(msg, now, ms) stays up ms instead of TOAST_MS: a one-time explanation.
 const TOAST_MS = 2400, TOAST_GAP_MS = 350, TOAST_QUEUE_MAX = 4, TOAST_STALE_MS = 6000;
+// Priority (#118, toast's 4th argument): TIP < 0 are one-time explanations (Wanted, the Navy, mending) that wait behind news and never cut one short;
+// the default 0 is news; TOAST_WARN > 0 are warnings (a sea ahead, the hull, the map's edge) that jump the queue and replace a tip that is up.
+const TOAST_TIP = -1, TOAST_WARN = 1;
 const toastEl = document.getElementById("toast");
-let toastTimer, toastOn = false, toastQueue = [], toastNowOn = false;   // toastQueue: [{ msg, at }]
-function queueToast(msg, front, ms) {
-  const rest = toastQueue.filter(q => q.msg !== msg), q = { msg, at: performance.now(), ms };
-  toastQueue = front ? [q, ...rest].slice(0, TOAST_QUEUE_MAX) : [...rest, q].slice(-TOAST_QUEUE_MAX);
+let toastTimer, toastOn = false, toastQueue = [], toastNowOn = false, toastPri = 0, toastMs;   // toastQueue: [{ msg, at, ms, pri }], best first
+// Pure: the queue after adding one (a repeat of the same line folds into one; best priority first, then oldest; the weakest fall off the end).
+function toastQueued(queue, q, front, max = TOAST_QUEUE_MAX) {
+  const rest = queue.filter(x => x.msg !== q.msg), all = front ? [q, ...rest] : [...rest, q];
+  return all.map((x, i) => ({ x, i })).sort((a, b) => ((b.x.pri || 0) - (a.x.pri || 0)) || a.i - b.i).map(o => o.x).slice(0, max);
 }
-function toast(msg, now, ms) {
+function queueToast(msg, front, ms, pri = 0) { toastQueue = toastQueued(toastQueue, { msg, at: performance.now(), ms, pri }, front); }
+function toast(msg, now, ms, pri = 0) {
   const held = (typeof docked !== "undefined" && docked) || (typeof toastHeld === "function" && toastHeld());
   if (now && !held) {
-    if (toastOn && !toastNowOn && toastEl.textContent !== msg) queueToast(toastEl.textContent, true);
-    showToast(msg, true, ms);
+    if (toastOn && !toastNowOn && toastEl.textContent !== msg) queueToast(toastEl.textContent, true, toastMs, toastPri);
+    showToast(msg, true, ms, pri);
     return;
   }
   if (toastOn && !held && toastEl.textContent === msg) return;   // already saying it
-  if (held || toastOn) { queueToast(msg, false, ms); return; }
-  showToast(msg, false, ms);
+  if (toastOn && !held && !toastNowOn && pri > toastPri) {   // a warning over a tip: the tip goes back to the head of the line
+    queueToast(toastEl.textContent, true, toastMs, toastPri);
+    showToast(msg, false, ms, pri);
+    return;
+  }
+  if (held || toastOn) { queueToast(msg, false, ms, pri); return; }
+  showToast(msg, false, ms, pri);
 }
-function showToast(msg, now, ms) {
-  toastEl.textContent = msg; toastEl.classList.add("on"); toastOn = true; toastNowOn = !!now;
+function showToast(msg, now, ms, pri = 0) {
+  toastEl.textContent = msg; toastEl.classList.add("on"); toastOn = true; toastNowOn = !!now; toastPri = pri; toastMs = ms;
   clearTimeout(toastTimer); toastTimer = setTimeout(endToast, ms || TOAST_MS);
 }
 // A faded toast keeps no words: old lines (a sinking, say) must not sit in the page text once they are gone.
 const blankToast = () => { if (!toastOn) toastEl.textContent = ""; };
 function endToast() {
-  toastEl.classList.remove("on"); toastOn = false; toastNowOn = false;
+  toastEl.classList.remove("on"); toastOn = false; toastNowOn = false; toastPri = 0;
   clearTimeout(toastTimer); toastTimer = setTimeout(nextToast, TOAST_GAP_MS);
   setTimeout(blankToast, 500);   // after the fade-out
 }
@@ -47,7 +57,7 @@ function nextToast() {
   toastQueue = toastQueue.filter(q => now - q.at <= TOAST_STALE_MS);
   if (!toastQueue.length) return;
   const [q, ...rest] = toastQueue; toastQueue = rest;
-  showToast(q.msg, false, q.ms);
+  showToast(q.msg, false, q.ms, q.pri);
 }
 // The sinking toast fires just before dock("sunk"): it must not sit on the ledger's first line. Docking also drops sea news
 // still waiting its turn (old by the time the ledger closes); lines raised while docked wait for the sea.

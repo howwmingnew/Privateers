@@ -38,7 +38,7 @@ let toastWasHeld = false;
 onHook("frame", () => {
   const held = toastHeld(), freed = toastWasHeld && !held;
   if (held && !toastWasHeld && toastOn) {   // the banner arrived over a live toast: take it down and show it after
-    queueToast(toastEl.textContent, true);
+    queueToast(toastEl.textContent, true, toastMs, toastPri);
     toastEl.classList.remove("on"); toastOn = false; clearTimeout(toastTimer);
   }
   toastWasHeld = held;
