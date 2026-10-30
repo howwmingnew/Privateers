@@ -91,7 +91,7 @@ const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold
   await ev(page, () => { tallyUntil = 0; });   // the tally's 3.2 s would outlast the pass: end it here
   await until(page, () => !document.getElementById("moor").hidden || !moor.inside, null, { timeout: 2000 * SLOW });
   const s1b = await state(page);
-  ok("moving in the ring after the tally: the prompt says how to stop for the ledger", /Drop sail/.test(s1b.prompt), s1b.prompt);
+  ok("moving in the ring after the tally: the prompt says how to stop for the ledger", /furl them \(S\)/.test(s1b.prompt), s1b.prompt);
   await page.waitForTimeout(500 * SLOW);
   const s2 = await state(page);
   ok("the hull mends quickly while inside the ring", s2.hp > s1.hp && s2.hp >= 0.5, { from: s1.hp, to: s2.hp });
@@ -161,6 +161,62 @@ const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold
   await until(page, () => tut.step === 6);
   const c = await ev(page, () => ({ docked, txt: document.getElementById("coachTxt").textContent }));
   ok("tutorial: the sell step passes on a quick sale at sea; the coach says to stop in the ring for the ledger", !c.docked && /hold still to open the ledger/.test(c.txt), c);
+  await ctx.close();
+}
+
+// ---------- 4. #116: furled sail stops short, the cursor owns the sail while a button steers, the prompt names the sail, the touch dial tells the truth ----------
+{
+  const { ctx, page } = await open(D, { tag: "furl" });
+  await toSea(page);
+  await atRingEdge(page, {});
+  const run = async (hold) => {   // sail Full at top speed in open water, then S three times (optionally with a turn key let go at the same moment)
+    await ev(page, () => { canDock = false; player.x = PORT.x + DOCK_R + 500; player.y = PORT.y; player.rot = 0; player.speed = player.maxSpeed; setSailLevel(3); });
+    const x0 = await ev(page, () => player.x);
+    if (hold) await page.keyboard.down("KeyA");
+    await page.keyboard.press("KeyS"); await page.keyboard.press("KeyS"); await page.keyboard.press("KeyS");
+    if (hold) await page.keyboard.up("KeyA");
+    await page.waitForTimeout(2500 * SLOW);   // long enough to be at rest if it is going to be
+    return ev(page, x => ({ run: Math.round(Math.hypot(player.x - x, player.y - PORT.y)), max: Math.round(player.maxSpeed), sp: Math.round(player.speed), lv: sailLevel }), x0);
+  };
+  const a = await run(false), b = await run(true);
+  ok("S to Stopped from full speed coasts under 0.3 s of top speed (no overshoot past the ring)", a.run < a.max * 0.3, a);
+  ok("S while a turn key is let go at the same moment does not start the coast either", b.run < b.max * 0.3, b);
+  // the cursor owns the sail while a mouse button steers
+  const at = await ev(page, () => { player.rot = 0; player.speed = 0; setSailLevel(0); const c = S.game.canvas.getBoundingClientRect(), cam = S.cameras.main, k = S.game.canvas.width / c.width;
+    return { x: (player.x - cam.worldView.x) * cam.zoom / k, y: (player.y - cam.worldView.y) * cam.zoom / k }; });
+  await page.mouse.move(at.x, at.y - 80); await page.mouse.down({ button: "right" }); await page.waitForTimeout(300 * SLOW);
+  await page.keyboard.press("KeyW");
+  const h = await ev(page, () => ({ lv: sailLevel, by: sailByMouse, txt: document.getElementById("sailTxt").textContent, toast: document.getElementById("toast").textContent }));
+  ok("right button held: the cursor sets the sail (80 px = Slow), the dial says so, W is ignored and a toast explains", h.lv === 1 && h.by && /by cursor/.test(h.txt) && /cursor sets the sail/.test(h.toast), h);
+  await page.mouse.up({ button: "right" }); await page.waitForTimeout(200 * SLOW);
+  await page.keyboard.press("KeyW");
+  const r = await ev(page, () => ({ lv: sailLevel, by: sailByMouse, txt: document.getElementById("sailTxt").textContent }));
+  ok("button let go: the sail stays, the 'by cursor' tag goes, and W works again", r.lv === 2 && !r.by && !/cursor/.test(r.txt), r);
+  // in the ring with the sail up: the prompt says which key furls it
+  await atRingEdge(page, { speed: 40 });
+  await page.keyboard.press("KeyW"); await page.keyboard.press("KeyW"); await page.keyboard.press("KeyW");
+  await until(page, () => moor.inside && /Sails are still up/.test(document.getElementById("moor").textContent), null, { timeout: 4000 * SLOW });
+  ok("in the ring with the sail still up the prompt names the sail and the S key", await ev(page, () => /Sails are still up \(Full\): furl them \(S\)/.test(document.getElementById("moor").textContent)));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open(M, { mobile: true, tag: "touch-dial" });
+  await toSea(page);
+  await atRingEdge(page, {});
+  await ev(page, () => { player.x = PORT.x + DOCK_R + 500; canDock = false; });
+  const cdp = await ctx.newCDPSession(page);
+  const tp = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y, id: 1 }] });
+  const dial = () => ev(page, () => document.querySelector("#touchSail b").textContent);
+  await tp("touchStart", 260, 600); await tp("touchMove", 230, 600); await tp("touchMove", 200, 600);
+  await page.waitForTimeout(400 * SLOW);
+  const pulled = await dial();
+  await tp("touchEnd");
+  await page.waitForTimeout(400 * SLOW);
+  const lifted = await dial();
+  ok("touch dial reads Full while the stick is pulled, Stopped once the finger lifts", pulled === "Full" && lifted === "Stopped", { pulled, lifted });
+  await ev(page, () => setTouchCap(1));
+  await page.waitForTimeout(200 * SLOW);
+  ok("a lowered cap still reads as the cap (labelled 'Sail max')", await ev(page, () => document.querySelector("#touchSail b").textContent === "Slow" && /max/i.test(document.querySelector("#touchSail small").textContent)));
   await ctx.close();
 }
 

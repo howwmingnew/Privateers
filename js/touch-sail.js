@@ -11,11 +11,21 @@ touchSailEl.innerHTML = `<button type="button" data-d="-1"><i class="tsm" aria-h
 document.body.append(touchSailEl);
 const tsLbl = touchSailEl.querySelector("small"), tsVal = touchSailEl.querySelector("b"), tsBtns = touchSailEl.querySelectorAll("button");
 
+// What the dial reads: the cap once a captain has lowered it, otherwise the step the ship is really asking for (the stick's pull
+// under the cap; a lifted finger is Stopped), so letting go of the stick no longer leaves the dial on Full (#116).
+function touchSailShown() {
+  if (touchCap < SAIL_THR.length - 1) return touchCap;
+  if (joyVec.m <= 0.2) return 0;
+  const thr = Math.min(1, joyVec.m * 1.25);
+  return Math.max(1, SAIL_THR.findIndex(v => v >= thr - 1e-6));
+}
+let tsShown = -1;
 function touchSailRender() {
-  tsLbl.textContent = t("sl_lbl"); tsVal.textContent = t("sl_" + touchCap);
+  tsShown = touchSailShown();
+  tsLbl.textContent = t(touchCap < SAIL_THR.length - 1 ? "sl_cap" : "sl_lbl"); tsVal.textContent = t("sl_" + tsShown);
   tsBtns[0].setAttribute("aria-label", t("sl_less")); tsBtns[1].setAttribute("aria-label", t("sl_more"));
   tsBtns[0].disabled = touchCap <= 0; tsBtns[1].disabled = touchCap >= SAIL_THR.length - 1;
-  touchSailEl.dataset.cap = String(touchCap);
+  touchSailEl.dataset.cap = String(touchCap < SAIL_THR.length - 1 ? touchCap : tsShown);
 }
 touchSailEl.addEventListener("pointerdown", e => e.stopPropagation());   // never reaches the sea's stick (#game takes its own pointers)
 touchSailEl.addEventListener("click", e => {
@@ -31,5 +41,6 @@ onHook("sail", () => setTouchCap(SAIL_THR.length - 1));
 onHook("frame", () => {
   const show = device === "touch" && !!player && player.alive && !paused && !docked && !titleOpen;
   if (touchSailEl.hidden === show) touchSailEl.hidden = !show;
+  if (show && touchSailShown() !== tsShown) touchSailRender();   // the stick came down or went up
 });
 touchSailRender();
