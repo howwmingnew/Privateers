@@ -8,7 +8,8 @@ Object.assign(STR.en, {
   tut_out: "Sail out of the harbor. {mouse}",
   tut_aim: "Find the gold-ringed ship (off screen, a gold arrow at the edge points to it) and turn until the aim line turns red.\nA green tag only means it is weaker than you. It does not mean merchant.",
   tut_fire: "Red means a hit. Fire! {fire}",
-  tut_mouse: "Mouse: hold the right button and the ship sails toward the cursor; left-click fires.",
+  tut_mouse: "Mouse: hold the right button and the ship sails toward the cursor: the farther the cursor from the ship, the fuller the sail (W/S do nothing while you hold). Let go and the sail stays; press S to stop; left-click fires.",
+  tut_loaded: "Plunder aboard! Next, sell it at the harbor.",
   tut_sink: "Keep firing until it sinks. Faint lines are still reloading. {hold}",
   tut_scoop: "Sunk! Sail over the floating crate to scoop up the plunder.", tut_scoopNo: "Sail over the floating crate to scoop up the plunder.",
   tut_sell: "Now sail back to {harbor} (the gold arrow points to it) and into the dashed ring around it to sell your cargo.",
@@ -23,7 +24,7 @@ Object.assign(STR.en, {
   tut_docked: "Set sail to carry on with your first voyage.",
   tut_done: "That is the whole loop, captain. What next:\n1. Sink ships with green tags (weaker than you) to earn gold.\n2. Back in port, upgrade guns or change ship until your Ship Lv reaches {lv} (now Lv {me}).\n3. {boss} lurks {dir} of the harbor: follow the gold skull arrow.",
   tut_doneGen: "That is the whole loop, captain. Farther waters hold richer ships, and deadlier ones.", tut_ok: "Got it",
-  ctl_steer_keys: "W raises the sail, S lowers it, A and D turn.", ctl_steer_mouse: "Hold the right mouse button where you want to sail; farther means faster.",
+  ctl_steer_keys: "W raises the sail, S lowers it, A and D turn.", ctl_steer_mouse: "Hold the right mouse button where you want to sail: the farther the cursor, the fuller the sail. W/S do nothing while you hold.",
   ctl_steer_touch: "Drag anywhere to steer.", ctl_steer_pad: "Steer with the left stick; D-pad up raises the sail.",
   ctl_steer_desk: "Steer with W A S D, or hold the right mouse button where you want to sail.",
   ctl_fire_keys: "Press Space to fire.", ctl_fire_mouse: "Left-click to fire.", ctl_fire_touch: "Let go to fire.",
@@ -35,7 +36,8 @@ Object.assign(STR.zh, {
   tut_out: "駛出港口。{mouse}",
   tut_aim: "找金圈標示的船（不在畫面內時，邊緣的金色箭頭會指路），轉向讓瞄準線變紅。\n標籤是綠色，只代表比你弱，不代表是商船。",
   tut_fire: "紅線代表會命中。開火！{fire}",
-  tut_mouse: "用滑鼠：按住右鍵，船會朝游標駛去；左鍵開火。",
+  tut_mouse: "用滑鼠：按住右鍵，船會朝游標駛去，游標離船越遠帆越滿（按住時 W/S 無效）。放開後帆速維持不變，要停船按 S；左鍵開火。",
+  tut_loaded: "戰利品上船了！下一步把它帶回港口賣掉。",
   tut_sink: "繼續開火，直到它沉沒。淡色的線代表還在裝填。{hold}",
   tut_scoop: "擊沉了！駛過漂浮的木箱，把戰利品撈上船。", tut_scoopNo: "駛過漂浮的木箱，把戰利品撈上船。",
   tut_sell: "現在回「{harbor}」（金色箭頭指向它），駛進它周圍的虛線圈把貨物賣掉。",
@@ -50,7 +52,7 @@ Object.assign(STR.zh, {
   tut_docked: "啟航，繼續你的首航。",
   tut_done: "這就是整個循環了，船長。接下來：\n1. 去打標籤是綠色（比你弱）的船賺金幣。\n2. 回港口在帳簿升級砲或換船，讓船艦 Lv 升到 {lv}（現在 Lv {me}）。\n3. {boss}在港口{dir}方，跟著金色骷髏指標去找他。",
   tut_doneGen: "這就是整個循環了，船長。越遠的海域，敵船越富有，也越危險。", tut_ok: "知道了",
-  ctl_steer_keys: "W 升帆、S 降帆，A 和 D 轉向。", ctl_steer_mouse: "在想去的方向按住滑鼠右鍵，游標越遠速度越快。",
+  ctl_steer_keys: "W 升帆、S 降帆，A 和 D 轉向。", ctl_steer_mouse: "在想去的方向按住滑鼠右鍵，游標離船越遠帆越滿；按住時 W/S 無效。",
   ctl_steer_touch: "在任意位置拖曳來轉向。", ctl_steer_pad: "用左搖桿轉向，十字鍵上升帆。",
   ctl_steer_desk: "用 W A S D 操控，或在想去的方向按住滑鼠右鍵。",
   ctl_fire_keys: "按空白鍵開火。", ctl_fire_mouse: "按滑鼠左鍵開火。", ctl_fire_touch: "放開手指就會開火。",
@@ -58,9 +60,10 @@ Object.assign(STR.zh, {
   ctl_hold: "按住空白鍵，會自動對紅線開火。",
 });
 
+const TUT_MIN_T = 1.6;   // seconds the scoop card (step 5) stays up at least: a crate picked up in the same moment as the kill must not skip it
 const TUT_DONE_T = 30;   // seconds at sea the "what next" card stays up (the ledger does not count it down); "Got it" closes it sooner
 const TUT = ["out", "aim", "fire", "sink", "scoop", "sell", "buy"];
-const tut = { active: false, step: 0, sunk0: 0, gold0: 0, sold: false, sig: "", looted: false, killed: false, target: null, pickT: 0, doneT: 0, html: "", g: null, up: false, plan: "", planT: 0, lbl: null };
+const tut = { active: false, step: 0, sunk0: 0, gold0: 0, sold: false, sig: "", looted: false, killed: false, target: null, pickT: 0, doneT: 0, stepT: 0, html: "", g: null, up: false, plan: "", planT: 0, lbl: null, arrow: null };
 
 function hasProgress(s) {
   return s.sunk > 0 || s.gold > 0 || s.ship !== "sloop" || s.hull > 1 || s.sails > 1 || s.hold > 1 ||
@@ -214,7 +217,7 @@ function wrongPort() {
 }
 
 function enterStep(n) {
-  tut.step = n; save.tutorialStep = n; tut.plan = ""; tut.planT = 0;
+  tut.step = n; save.tutorialStep = n; tut.plan = ""; tut.planT = 0; tut.stepT = 0;
   if (n <= 3) { tut.sunk0 = save.sunk; tut.looted = false; tut.killed = false; }        // only a sinking from here on counts
   if (TUT[n] === "sell") { tut.gold0 = save.gold; tut.sold = false; }
   if (TUT[n] === "buy") tut.sig = purchaseSig();
@@ -233,8 +236,10 @@ function tutorialTick(dt) {
   let next = tut.step;
   if (plunderStep(at) && !docked && !paused && player.alive) plunderTick(dt);
   if (!docked && !paused && player.alive) {   // a sinking in progress (the 1.7 s before the ledger) moves nothing
-    if (save.sunk > tut.sunk0 && next < 4) next = 4;                       // played ahead of the card: catch up
-    if (cargo > 0 && next < 5 && (tut.killed || tut.looted || cargo >= player.cap)) next = 5;   // (a wreck's cargo alone is not the lesson's plunder); a crate picked up counts even when the kill was not the player's
+    tut.stepT += dt;
+    if (save.sunk > tut.sunk0 && next < 4) next = 4;                       // played ahead of the card: catch up, but only as far as "scoop"
+    if (cargo > 0 && next < 4 && (tut.killed || tut.looted || cargo >= player.cap)) next = 4;   // (a wreck's cargo alone is not the lesson's plunder); a crate picked up counts even when the kill was not the player's
+    if (at === "scoop" && cargo > 0 && tut.stepT >= TUT_MIN_T && (tut.killed || tut.looted || cargo >= player.cap)) next = 5;   // the card moves on from "scoop" only after it has been seen (it used to jump 4 -> 6 when sunk and loot landed together)
     if (at === "out" && Math.hypot(player.x - PORT.x, player.y - PORT.y) > DOCK_R + 140) next = Math.max(next, 1);
     else if (at === "aim" && aimOnTarget()) next = Math.max(next, 2);
     else if (at === "fire" && balls.some(b => b.fromPlayer)) next = Math.max(next, 3);
@@ -268,7 +273,7 @@ function coachText() {
   }
   if (docked) return t("tut_docked");
   if (tutRefill()) return t("tut_again");
-  const key = plunderStep(at) && plunderPlan() === "scoop" ? (tut.killed ? "tut_scoop" : "tut_scoopNo") : "tut_" + at;   // a sale step with an empty hold and a crate afloat asks for the crate
+  const key = at === "scoop" && cargo > 0 ? "tut_loaded" : plunderStep(at) && plunderPlan() === "scoop" ? (tut.killed ? "tut_scoop" : "tut_scoopNo") : "tut_" + at;   // the plunder is already aboard (a dwell on the card, or loot from another ship's kill)   // a sale step with an empty hold and a crate afloat asks for the crate
   const pc = device !== "touch" && device !== "pad";
   return t(key, { harbor, mouse: device === "mouse" || device === "desk" ? t("tut_mouse") : "", fire: t("ctl_fire_" + device), hold: SETTINGS.autoFire && pc ? t("ctl_hold") : "" }).trim();   // Space only
 }
@@ -310,12 +315,26 @@ function guideTarget(dt) {
     return tut.target ? { x: tut.target.x, y: tut.target.y, r: 46 } : null;
   }
   if (plunderStep(at) && plunderPlan() === "scoop") { const c = lootCrates().sort((a, b) => dist(a, player) - dist(b, player))[0]; return c ? { x: c.x, y: c.y, r: 24 } : null; }
-  if (at === "sell" || at === "buy" || plunderStep(at)) return { x: PORT.x, y: PORT.y, r: 0, label: t("harbor") };   // Safe Harbor, named on the arrow
+  if (at === "sell" || at === "buy" || plunderStep(at)) return { x: PORT.x, y: PORT.y, r: DOCK_R, label: t("harbor") };   // Safe Harbor: its dock ring in gold and its name, so a nearer trade port or supply station is not taken for it
   return null;
+}
+// The bottom edge (CSS px) of the HUD's left bars and right panel, read a few times a second (a layout read per frame is costly).
+let hudKeep = 0, hudKeepT = 0;
+function hudBottom(dt) {
+  if ((hudKeepT -= dt) > 0) return hudKeep;
+  hudKeepT = 0.4;
+  return (hudKeep = Math.max(0, ...[...document.querySelectorAll("#hud .side, #hud .bars")].map(el => el.hidden ? 0 : el.getBoundingClientRect().bottom)));
+}
+// The arrow (or, with the harbor in view, the harbor itself) names what it points at (Safe Harbor): never taken for a ship, a supply station or a trade port.
+function guideLabel(tg, x, y) {
+  if (!tg.label) return;
+  if (!tut.lbl) tut.lbl = worldText(x, y, tg.label, { fontFamily: UI_FONT, fontSize: "14px", fontStyle: "700", color: "#f0c766", stroke: "#0b2530", strokeThickness: 4 }).setOrigin(0.5).setDepth(10);
+  if (tut.lbl.text !== tg.label) tut.lbl.setText(tg.label);
+  tut.lbl.setPosition(x, y).setVisible(true);
 }
 function drawGuide(dt) {
   if (!tut.g) tut.g = S.add.graphics().setDepth(9);
-  const g = tut.g; g.clear();
+  const g = tut.g; g.clear(); tut.arrow = null;
   if (tut.lbl && tut.lbl.visible) tut.lbl.setVisible(false);
   // .up pins top: a stale inline bottom (js/hud-stack.js) would stretch the card, so it is dropped
   const coachUp = on => { if (on !== tut.up) { tut.up = on; const el = tutEl("coach"); el.classList.toggle("up", on); if (on) el.style.removeProperty("bottom"); } };
@@ -329,17 +348,14 @@ function drawGuide(dt) {
   const fy = (tg.y - v.y) / v.height, up = fy > 0.55 ? true : fy < 0.4 ? false : tut.up;
   coachUp(up);
   if (tg.r) { g.lineStyle(3 * px, 0xf0c766, 0.9); strokeRing(g, tg.x, tg.y, tg.r + Math.sin(now * 4) * 4); }
-  // keep the arrow clear of the HUD strip at the top
-  const L = v.x + 48 * px, R = v.right - 48 * px, T = v.y + 130 * px, B = v.bottom - 56 * px;
-  if (tg.x > L && tg.x < R && tg.y > T && tg.y < B) return;
+  // keep the arrow clear of the HUD strip at the top: bars, wind dial and chart are read off the page (the dial sat under a fixed 130 px)
+  const L = v.x + 48 * px, R = v.right - 48 * px, T = v.y + Math.max(130, hudBottom(dt) + 12) * px, B = v.bottom - 56 * px;
+  if (tg.x > L && tg.x < R && tg.y > T && tg.y < B) { guideLabel(tg, tg.x, tg.y - (tg.r + 22) * px); return; }
   const cx = (L + R) / 2, cy = (T + B) / 2, a = Math.atan2(tg.y - cy, tg.x - cx);
   const k = Math.min((R - L) / 2 / Math.max(Math.abs(Math.cos(a)), 1e-6), (B - T) / 2 / Math.max(Math.abs(Math.sin(a)), 1e-6));
   const ax = cx + Math.cos(a) * k, ay = cy + Math.sin(a) * k, s = 18 * px;
-  if (tg.label) {   // the arrow names what it points at (Safe Harbor), so a harbor arrow is never taken for a ship
-    if (!tut.lbl) tut.lbl = worldText(ax, ay, tg.label, { fontFamily: UI_FONT, fontSize: "14px", fontStyle: "700", color: "#f0c766", stroke: "#0b2530", strokeThickness: 4 }).setOrigin(0.5).setDepth(10);
-    if (tut.lbl.text !== tg.label) tut.lbl.setText(tg.label);
-    tut.lbl.setPosition(ax - Math.cos(a) * s * 2.6, ay - Math.sin(a) * s * 1.8).setVisible(true);
-  }
+  guideLabel(tg, ax - Math.cos(a) * s * 2.6, ay - Math.sin(a) * s * 1.8);
+  tut.arrow = { x: ax, y: ay };   // world position of the drawn arrow (tests/shell.mjs checks it is clear of the HUD)
   g.fillStyle(0x08222d, 0.6); fillDisc(g, ax, ay, s * 1.15);
   g.fillStyle(0xf0c766, 1);
   g.fillTriangle(ax + Math.cos(a) * s, ay + Math.sin(a) * s, ax + Math.cos(a + 2.4) * s * 0.8, ay + Math.sin(a + 2.4) * s * 0.8, ax + Math.cos(a - 2.4) * s * 0.8, ay + Math.sin(a - 2.4) * s * 0.8);

@@ -419,11 +419,45 @@ for (const dpr of [1, 2]) {
   ok("tutorial: empty hold on 'sell' stays on the step, says plunder is gone and still points at a ship", rf.step === 5 && /plunder is gone/i.test(rf.txt) && rf.tg, rf);
   // a crate picked up from a ship the player did not sink, or a full hold, moves 'keep firing' on to 'sell'
   await ev(page, () => { enterStep(3); save.sunk = 0; tut.sunk0 = 0; cargo = player.cap; });
-  await page.waitForTimeout(300 * SLOW);
-  ok("tutorial: a full hold on 'keep firing' (kill was not the player's) advances to 'sell'", await ev(page, () => tut.step === 5));
+  await until(page, () => tut.step >= 5);
+  ok("tutorial: a full hold on 'keep firing' (kill was not the player's) advances to 'sell' (through 'scoop', #123)", await ev(page, () => tut.step === 5));
   await ev(page, () => { enterStep(3); save.sunk = 0; cargo = 0; runHook("pickup", { wreck: null, value: 10 }, 10); cargo = 10; });
-  await page.waitForTimeout(300 * SLOW);
+  await until(page, () => tut.step >= 5);
   ok("tutorial: a picked-up crate on 'keep firing' advances to 'sell' without a kill of its own", await ev(page, () => tut.step >= 5));
+  await ctx.close();
+}
+{   // #123: step 5 (scoop) is always shown, even when the kill and the loot land together; the mouse card teaches cursor distance; the arrow clears the wind dial
+  const { ctx, page } = await open(D, { tag: "tut-123" });
+  await toSea(page);
+  await ev(page, () => { window.__seen = []; runHook("frame", 0); const w = window.__seen; setInterval(() => { if (!w.length || w[w.length - 1].n !== tut.step) w.push({ n: tut.step, t: performance.now(), txt: document.getElementById("coachStep").textContent }); }, 16); });
+  await ev(page, () => { player.x = PORT.x + DOCK_R + 220; player.y = PORT.y; enterStep(3); save.sunk = 0; tut.sunk0 = 0; });
+  await ev(page, () => { sink(tut.target, player); cargo = player.cap; tut.looted = true; });   // the kill and the plunder in one tick: it used to jump 4 -> 6
+  await until(page, () => tut.step >= 5);
+  const seen = await ev(page, () => window.__seen);
+  const s5 = seen.find(x => x.n === 4), s6 = seen.find(x => x.n === 5);
+  ok("tutorial #123: a kill and a full hold in one tick still shows step 5 for at least 1.5 s, then 6", !!s5 && !!s6 && /5 of 7/.test(s5.txt) && s6.t - s5.t >= 1500, { seen });
+  const ord = seen.map(x => x.n).join(",");
+  ok("tutorial #123: the numbering never jumps (…3,4,5)", /(^|,)3,4,5(,|$)/.test(ord) || /(^|,)4,5(,|$)/.test(ord), { ord });
+  await ev(page, () => { enterStep(4); cargo = 5; tut.looted = true; tut.stepT = 0; });
+  await page.waitForTimeout(250 * SLOW);
+  const ld = await ev(page, () => ({ step: tut.step, txt: document.getElementById("coachTxt").textContent }));
+  ok("tutorial #123: step 5 with the plunder already aboard says so instead of asking for a crate", ld.step === 4 && /Plunder aboard/.test(ld.txt), ld);
+  const mouse = await ev(page, () => { const d = device; device = "mouse"; tut.step = 0; const x = coachText(); device = d; return x; });
+  ok("tutorial #123: the mouse card teaches 'the farther the cursor, the fuller the sail' and that W/S do nothing while held",
+    /farther the cursor/.test(mouse) && /fuller the sail/.test(mouse) && /W\/S do nothing while you hold/.test(mouse) && /stays/.test(mouse), { mouse });
+  // the gold arrow to the harbor, with the harbor top-left behind the wind dial: it has to land below the HUD strip, not under the dial
+  const arrow = await ev(page, () => {
+    tut.step = 5; tut.plan = ""; cargo = 20; paused = false;
+    const cam = S.cameras.main, v = cam.worldView;
+    player.x = PORT.x + 2600; player.y = PORT.y + 2600; cam.centerOn(player.x, player.y);   // the harbor far to the upper left of the view
+    cam.preRender?.(); drawGuide(1);
+    const dial = document.getElementById("windDial").getBoundingClientRect(), w = v.width / VIEW.cssW, h = v.height / VIEW.cssH;
+    const a = tut.arrow && { x: (tut.arrow.x - v.x) / w, y: (tut.arrow.y - v.y) / h };
+    return { a, dial: { l: dial.left, t: dial.top, r: dial.right, b: dial.bottom }, tg: guideTarget(0), port: { x: PORT.x, y: PORT.y } };
+  });
+  const hit = arrow.a && arrow.a.x > arrow.dial.l - 18 && arrow.a.x < arrow.dial.r + 18 && arrow.a.y > arrow.dial.t - 18 && arrow.a.y < arrow.dial.b + 18;
+  ok("tutorial #123: the gold arrow is on screen and clear of the wind dial, and it points at Safe Harbor (never a trade port)", !!arrow.a && !hit && arrow.tg.x === arrow.port.x && arrow.tg.y === arrow.port.y && arrow.tg.label === "Safe Harbor", arrow);
+  await page.screenshot({ path: join(out, "d-tutorial-arrow-dial.png") });
   await ctx.close();
 }
 {   // #106: the card names Safe Harbor, says what a supply station / trade port can do, teaches the right mouse button, never skips on a sinking or flickers between two lines
