@@ -49,7 +49,7 @@ function heatAdd(n) {
   if (!heatOn() || !player || !player.alive) return;
   const before = heatStars(heat), first = heat <= 0;
   heat = heatGain(heat, n * gearCut("heat")); heatQuiet = 0;   // a flag that draws less attention (js/gear-core.js)
-  if (first && typeof tipOnce === "function" && tipOnce("heat")) toast(t("heatWhy"), false, 7000);   // the first stars ever: why, and how to shake them (js/hull-alert.js)
+  if (first && typeof tipOnce === "function" && tipOnce("heat")) toast(t("heatWhy"), false, 7000, TOAST_TIP);   // the first stars ever: why, and how to shake them (js/hull-alert.js)
   const st = heatStars(heat);
   if (st > before) {
     if (before < HEAT_HUNT_FROM && st >= HEAT_HUNT_FROM) huntT = HEAT_HUNT_FIRST;

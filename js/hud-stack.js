@@ -40,4 +40,59 @@ function stackTick() {
     placed.push({ ...box, top: box.top - lift, bottom: box.bottom - lift });
   }
 }
-onHook("frame", dt => { if ((stackT -= dt) > 0) return; stackT = 0.15; stackTick(); });
+onHook("frame", dt => { if ((stackT -= dt) > 0) return; stackT = 0.15; stackTick(); laneTick(); });
+
+// ---------- The top lane keeps clear of the ship and the tutorial card (#118) ----------
+// The toast, the sea banner and the Ship Lv / boss cards (.jbanner) sit in the upper half; a tall one (a two-line explanation, a big boss name) could reach down
+// onto the captain's own ship in the middle of the screen, or onto the tutorial card when it hops to the top (#coach.up). Every 0.15 s each one showing is
+// measured at its stylesheet spot: when it meets the ship or the card it is lifted clear (never above LANE_TOP px), and when there is no room to lift it
+// shrinks (.lane-compact, css/notify.css: smaller type, the sub-line gone). The ship's box is the hull plus its level badge, in world px * the view scale.
+const LANE_IDS = ["toast", "seaBanner", "lvBanner", "bossCard"], LANE_TOP = 6, LANE_SHIP = { w: 46, up: 54, down: 40 }, LANE_HOLD_MS = 8000;
+let laneMoved = [], laneHoldMs = 0;   // laneHoldMs: how long a tip has been held back for want of room (it shows anyway after LANE_HOLD_MS)
+// Pure: the top (px) a box wants to sit at to clear `obst`, or null when no lift fits above `minTop`. box: { left, right, top, bottom }.
+function laneTop(box, obst, minTop = LANE_TOP) {
+  const lift = stackLift(box, obst);
+  return lift <= 0 ? box.top : box.top - lift >= minTop ? box.top - lift : null;
+}
+// Pure: the top (px) just below every box in `obst` that `box` meets, or null when that would run past `maxBottom` (a short screen).
+function laneDrop(box, obst, maxBottom) {
+  let b = { ...box };
+  for (let n = 0; n <= obst.length; n++) {
+    const hit = obst.find(o => stackHit(b, o));
+    if (!hit) break;
+    const h = b.bottom - b.top; b = { ...b, top: hit.bottom + STACK_GAP, bottom: hit.bottom + STACK_GAP + h };
+  }
+  return b.bottom <= maxBottom ? b.top : null;
+}
+const shipBox = k => {   // k: screen px per world px
+  const p = typeof worldToCss === "function" && player ? worldToCss(player.x, player.y) : null;
+  return p ? { left: p.x - LANE_SHIP.w * k, right: p.x + LANE_SHIP.w * k, top: p.y - LANE_SHIP.up * k, bottom: p.y + LANE_SHIP.down * k } : null;
+};
+function laneTick() {
+  for (const el of laneMoved) { el.style.removeProperty("top"); el.style.removeProperty("visibility"); el.classList.remove("lane-compact"); }   // back to the stylesheet's own spot, then measured there
+  laneMoved = [];
+  if (docked || titleOpen || !player || typeof S === "undefined" || !S || !S.cameras || typeof VIEW === "undefined") return;
+  const els = LANE_IDS.map(id => document.getElementById(id)).filter(el => el && el.classList.contains("on") && el.getClientRects().length);
+  if (!els.length) { laneHoldMs = 0; return; }
+  const v = S.cameras.main.worldView, coach = document.getElementById("coach");
+  const obst = [shipBox(VIEW.cssW / v.width), coach && !coach.hidden && coach.classList.contains("up") && coach.getClientRects().length ? coach.getBoundingClientRect() : null].filter(Boolean);
+  const bars = document.querySelector("#hud .bars"), hudB = bars ? bars.getBoundingClientRect().bottom : LANE_TOP;   // a banner is lifted no higher than the HUD's bars
+  for (const el of els) {
+    const floor = el.id === "toast" ? el.getBoundingClientRect().top : Math.max(LANE_TOP, hudB);   // the toast keeps its own lane: it shrinks instead of climbing
+    const fit = () => { const r = el.getBoundingClientRect(); return { r, top: laneTop({ left: r.left, right: r.right, top: r.top, bottom: r.bottom }, obst, floor) }; };
+    let m = fit();
+    if (m.top === null) { el.classList.add("lane-compact"); m = fit(); }   // no room to lift: shrink, and try again
+    if (m.top === null) {   // still no room above: drop below the obstacles when the screen has room there, else it stays (a banner is brief)
+      const b = { left: m.r.left, right: m.r.right, top: m.r.top, bottom: m.r.bottom }, d = laneDrop(b, obst, window.innerHeight - LANE_TOP);
+      m = { r: m.r, top: d };
+      if (d === null) {
+        if (el.id === "toast" && typeof toastPri === "number" && toastPri < 0 && (laneHoldMs += 150) < LANE_HOLD_MS) { el.style.visibility = "hidden"; clearTimeout(toastTimer); toastTimer = setTimeout(endToast, toastMs || TOAST_MS); }   // a tip waits (unseen, its time not running) until the card or the ship has moved on
+        laneMoved.push(el); continue;
+      }
+    }
+    if (el.id === "toast") laneHoldMs = 0;
+    const k = el.offsetHeight ? m.r.height / el.offsetHeight : 1;   // CSS zoom on the big-screen overlays: style.top is in the element's own px
+    if (m.top !== m.r.top) el.style.top = (parseFloat(getComputedStyle(el).top) + (m.top - m.r.top) / (k || 1)) + "px";
+    if (m.top !== m.r.top || el.classList.contains("lane-compact")) laneMoved.push(el);
+  }
+}
