@@ -164,7 +164,7 @@ const adm = await ev(() => {
   clearSea(); save.campaign = { ...save.campaign, bounty: 4 };
   fresh(2); save.campaign = { ...save.campaign, bounty: 4 };
   admT = 0; stepN(60 * 40); res.shallow = fleetsLive().filter(f => f.admiral).length;
-  fresh(5); save.campaign = { ...save.campaign, bounty: 4 };
+  fresh(9); save.campaign = { ...save.campaign, bounty: 4 };   // deep enough that the fleet (1400-2000 px from the player) never spawns in the Shallows, where a novice rating tames it into a cutter (js/notify-order.js tameFirstVoyage)
   admT = 0; stepN(30);
   const fs = fleetsLive().filter(f => f.admiral), f = fs[0];
   res.n = fs.length;

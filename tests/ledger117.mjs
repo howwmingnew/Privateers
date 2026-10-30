@@ -46,7 +46,7 @@ async function tap(page, sel) {
     const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   }, sel);
   if (!pt) throw new Error("no element for " + sel);
-  await page.mouse.click(pt.x, pt.y); await page.waitForTimeout(260 * SLOW);
+  await page.mouse.click(pt.x, pt.y); await page.waitForTimeout(450 * SLOW);   // longer than the 400 ms double-click guard of the two-tap confirm (js/escort-ui.js twoTap): a quick second click is not a confirming tap
 }
 const ev = (page, fn, arg) => page.evaluate(fn, arg);
 const gold = page => ev(page, () => save.gold);
