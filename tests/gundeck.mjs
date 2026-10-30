@@ -89,7 +89,10 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
     islands = islands.filter(i => Math.hypot(i.x - player.x, i.y - player.y) > i.r + 500);   // islands are rolled per game: a rock under the player would shove it off the test line
     const game = S.game; game.loop.sleep(); let now = performance.now();   // stepped by hand: 16.667 ms frames, the camera follows
     const step = () => { now += 16.667; game.step(now, 16.667); };
-    const ring = [0, 1, 2, 3].map(() => spawnEnemy(S));   // untouchable (negative hit box): they only give the guns something to see, a ball that hit one would leave the count early
+    const ring = [0, 1, 2, 3].map(k => makeEnemy(S, player.x + Math.cos(k * Math.PI / 2) * 150, player.y + Math.sin(k * Math.PI / 2) * 150, 3, "pirate", undefined, true));
+    for (const x of enemies.splice(0, enemies.length, ...ring)) if (!ring.includes(x)) { x.alive = false; x.spr.destroy(); x.badge?.destroy(); }   // the sea's own ships (unseeded) would soak up balls too
+    spawnT = 1e9;   // and no top-ups
+    // the ring ships are untouchable (negative hit box): they only give the guns something to see, a ball that hit one would leave the count early
     const place = () => ring.forEach((e, k) => { const a = k * Math.PI / 2; Object.assign(e, { x: player.x + Math.cos(a) * 150, y: player.y + Math.sin(a) * 150, rot: a + Math.PI / 2, hl: -1e3, hw: -1e3, speed: 0, maxHp: 1e9, hp: 1e9 }); });
     for (let i = 0; i < 30; i++) { place(); S.cameras.main.centerOn(player.x, player.y); step(); }
     place();
@@ -121,8 +124,12 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
     // Fixed target: same class (hull size), same heading, seeded dice; which aim lines are red depends on all three.
     let sd = 7654321; Math.random = () => { sd = (sd + 0x6D2B79F5) | 0; let t = Math.imul(sd ^ (sd >>> 15), 1 | sd); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
     wx.on = false; dis.live = []; dis.plan = [];
-    const e = spawnEnemy(S); applyShipArt(e, "brig", "pirate");
-    const place = () => Object.assign(e, { x: player.x + 30, y: player.y - 150, rot: 0, turnRate: 0, maxSpeed: 1e-6, speed: 0, maxHp: 1e9, hp: 1e9 });   // off the larboard beam, a bit aft of centre
+    // The only ship in the sea. resetEnemies above filled the whole sea with unseeded dice and managePopulation would top it up near the player:
+    // a stray ship on the starboard beam turned that side's aim lines red too (fired 14 of 12) in about one run in eight, on any machine.
+    const e = makeEnemy(S, player.x + 30, player.y - 150, 3, "pirate", "brig", true);
+    for (const x of enemies.splice(0, enemies.length, e)) if (x !== e) { x.alive = false; x.spr.destroy(); x.badge?.destroy(); }
+    spawnT = 1e9;
+    const place =() => Object.assign(e, { x: player.x + 30, y: player.y - 150, rot: 0, turnRate: 0, maxSpeed: 1e-6, speed: 0, maxHp: 1e9, hp: 1e9 });   // off the larboard beam, a bit aft of centre
     for (let i = 0; i < 30; i++) { place(); S.cameras.main.centerOn(player.x, player.y); step(); }
     // The hold length is re-armed before every step: stepped by hand, a busy machine could stretch the real clock past the hold delay.
     for (let i = 0; i < 5; i++) { spaceDownAt = performance.now() - 40; place(); step(); }   // not held long enough yet
