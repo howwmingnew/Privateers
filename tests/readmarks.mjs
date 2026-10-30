@@ -46,14 +46,14 @@ await page.evaluate(() => {
 const put = (faction, dx, dy, L = 3) => page.evaluate(([faction, dx, dy, L]) => {
   const e = makeEnemy(S, player.x + dx, player.y + dy, L, faction, undefined, true);
   Object.assign(e, { speed: 0, maxSpeed: 0, thinkT: 1e9, ignore: new Map(), target: null }); e.fixed = false;
-  return enemies.indexOf(e);
+  return (window.__placed ||= []).push(e) - 1;   // a handle, not an index into enemies: the sea retires far ships (js/world-seas.js managePopulation) and shifts the indexes
 }, [faction, dx, dy, L]);
 
 // ---- 1. aim warning: a Navy ship in the line is violet, a pirate red
 const navy = await put("navy", 260, 0), pirate = await put("pirate", -260, 0);
 const aim = (idx, rot) => page.evaluate(([idx, rot]) => {
   Object.assign(player, { rot, speed: 0 });
-  const e = enemies[idx], m = MOUNTS.find(m => m.key === "bow") || MOUNTS[0], gun = player.guns[m.key][0];
+  const e = window.__placed[idx], m = MOUNTS.find(m => m.key === "bow") || MOUNTS[0], gun = player.guns[m.key][0];
   const mz = muzzle(player, m, gun.pi, gun.pn); gun.cd = 0;
   return { hit: lineHits(mz.x, mz.y, mz.a, gun.range * 3) === e, warn: navyAim(e), col: navyAim(e) ? NAVY_AIM : AIM_RED };
 }, [idx, rot]);
@@ -71,12 +71,12 @@ await page.screenshot({ path: out + "/night-rain.png" });
 
 // ---- 3. a shooter that just hit you: a ring when seen, a flashing, top-ranked edge box when not
 const near = await put("pirate", 200, 160);
-const hit = await page.evaluate(i => { const e = enemies[i]; runHook("hurt", player, 5, e); return hitMarks.some(h => h.src === e); }, near);
+const hit = await page.evaluate(i => { const e = window.__placed[i]; runHook("hurt", player, 5, e); return hitMarks.some(h => h.src === e); }, near);
 check(hit === true, "a hit registers a marker on the shooter", hit);
 await sleep(300);
 await page.screenshot({ path: out + "/shooter-ring.png" });
 const far = await put("pirate", 1500, 0);   // off screen to the east, within the edge box range
-await page.evaluate(i => runHook("hurt", player, 5, enemies[i]), far);
+await page.evaluate(i => runHook("hurt", player, 5, window.__placed[i]), far);
 await sleep(500);
 const box = await page.evaluate(() => [...document.querySelectorAll("#edgeMarks .em.atk")].map(el => ({ edge: el.dataset.edge, on: el.classList.contains("on") })));
 check(box.length === 1 && box[0].edge === "right", "the off-screen shooter's edge box is flagged and on the right edge", box);

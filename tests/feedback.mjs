@@ -292,6 +292,7 @@ console.log("#69 grapple pull");
 await boot(saveWith({ gold: 500, ship: "brig", hull: 3 }));
 await rig(); await sail();
 await ev(() => {
+  wx.on = false;   // still air: a following wind (up to x3, js/weather.js) outruns the rope pull and the tow checks below are calibrated without it
   window.think = () => {}; window.spawnEnemy = () => null;   // the test steers every ship itself
   __gone(enemies.slice()); save.tutorialDone = true; tutorialReset(); document.getElementById("coach") && (document.getElementById("coach").hidden = true);
   window.__hurtP = 0; onHook("hurt", s => { if (s.isPlayer) __hurtP++; });
