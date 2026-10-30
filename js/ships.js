@@ -92,10 +92,12 @@ function refreshBadge(e) {
 // Letting go of the helm (which is also how touch fires) doesn't brake the player's ship at once: it holds its heading at
 // COAST_K of its speed for COAST_T s, then slows, so firing doesn't make you a sitting target. Chain shot (s.chainT)
 // costs a ship speed and turn while its rigging is torn.
-const COAST_T = 1.2, COAST_K = 0.8;
+// A furled sail (keys / mouse / pad: s.furled, set by playerInput) is a deliberate stop: no coast, and the hull brakes FURL_BRAKE
+// times harder than normal slowing, so S at the ring edge does not carry the ship through the circle (#116).
+const COAST_T = 1.2, COAST_K = 0.8, FURL_BRAKE = 2;
 function steer(s, desired, thr, dt) {
   if (s.isPlayer) {
-    if (desired == null && thr === 0) {
+    if (desired == null && thr === 0 && !s.furled) {
       if (s.helmThr > 0) { s.coastT = COAST_T; s.coastV = s.speed * COAST_K; }
       if (s.coastT > 0) { s.coastT -= dt; thr = Math.min(s.coastV, s.speed) / Math.max(1, s.maxSpeed); }
     } else s.coastT = 0;
@@ -107,7 +109,8 @@ function steer(s, desired, thr, dt) {
   if (desired != null) s.rot += clamp(angDiff(desired, s.rot), -turn, turn);
   else if (typeof wxYaw === "function") s.rot += wxYaw(s) * dt;   // a storm slews a hull whose helm is let go (js/weather.js)
   const target = thr * s.maxSpeed * (torn ? CHAIN_SPEED : 1) * (typeof gxSpeedK === "function" ? gxSpeedK(s) : 1);   // a legendary gun drags its target, a legendary sail speeds a hard turn (js/gear-fx.js)
-  s.speed += clamp(target - s.speed, -s.maxSpeed * 1.1 * dt, s.maxSpeed * 0.7 * dt);
+  const slow = s.isPlayer && s.furled && thr === 0 ? FURL_BRAKE : 1;   // only a furled sail brakes harder; every other slowdown is as before
+  s.speed += clamp(target - s.speed, -s.maxSpeed * 1.1 * slow * dt, s.maxSpeed * 0.7 * dt);
 }
 function avoidIslands(s, desired) {
   const away = s.shoreAway;   // just rammed a rock (js/collision.js): head out from it for a moment
@@ -125,7 +128,7 @@ function avoidIslands(s, desired) {
 }
 // Who fights whom:
 //   pirate -> attacks everyone that is not a pirate (player, navy, merchants)
-//   navy   -> attacks pirates and the player
+//   navy   -> attacks pirates, and the player and escorts only from 2 stars of heat (or when provoked: js/novice.js navyCalm)
 //   merchant -> attacks nobody; runs from pirates and the player, fires back at whoever shot it
 // Anyone fights back against the ship that last hit it.
 const LEASH = 900;          // an AI gives up once it has sailed this far from where the chase began and still cannot reach
@@ -139,6 +142,7 @@ function isHostile(e, o) {
   if (bossFeud(e, o)) return false;   // bosses, rematch captains and their guards stay out of the other AI's fights (js/archetypes.js)
   if (e.ally) return !o.isPlayer && !o.fixed && !o.ally && (o.faction === "pirate" || o.faction === "navy");   // an escort fights pirates and the Navy, not batteries or merchants (js/escort-ai.js)
   if (e.attacker === o && e.angry > 0) return true;
+  if (o.ally && typeof navyCalm === "function" && navyCalm(e)) return false;   // under 2 stars the Navy does not open on the escorts either (js/novice.js)
   if (o.isPlayer && typeof practiceShip === "function" && practiceShip(e)) return false;   // a practice target never fires first (js/novice.js)
   if (o.isPlayer && typeof noviceSpare === "function" && noviceSpare(e)) return false;   // a newcomer's first bounty is a duel; the Shallows are not hunted (js/novice.js)
   const g = o.isPlayer ? "player" : o.faction;

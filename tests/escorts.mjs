@@ -348,6 +348,7 @@ check(ff.blastSpares, "the player's powder-magazine blast spares the escorts");
 const tgt = await ev(() => {
   const es = sailOut([cfg("s3")], 5), e = es[0], rs = {};
   const far = { x: player.x + 3000, y: player.y }; Object.assign(e, { x: far.x, y: far.y }); e.spr.setPosition(far.x, far.y);
+  heat = 40; if (typeof noviceTick === "function") noviceTick();   // the Navy shoots only from two stars (#120)
   for (const fac of ["pirate", "navy"]) { const o = pin(makeEnemy(S, far.x + 250, far.y, 3, fac, "brig")); o.retarget = 0; rs[fac] = pickTarget(o, S.time.now / 1000) === e; o.alive = false; o.spr.destroy(); o.badge.destroy(); enemies.splice(enemies.indexOf(o), 1); }
   const m = makeEnemy(S, far.x + 250, far.y, 3, "merchant", "fluyt"); rs.merchantSafe = !isHostile(e, m) && !isHostile(m, e);
   rs.noBatteries = !isHostile(e, { alive: true, fixed: true, faction: "pirate", x: 0, y: 0 });
