@@ -169,7 +169,7 @@ const ESCORT_STANCE = { active: { aggro: 800, reach: 1000 }, normal: { aggro: 1.
 const ESCORT_LEASH = 120;            // px (about 60 m, EDGE_M_PER_PX) an escort may stray from its formation slot before it turns back to it
 // Wind, weather and the hour of day (js/weather-core.js is the maths, js/weather.js the sea). Every number here is gameplay:
 // the same for every player whatever the weather-effects setting says, so a daily sea plays the same everywhere.
-const WIND = { tail: 0.20, head: 0.25, full: 0.6 };   // speed gained running before the wind, lost beating into it, at wind strength >= full (a calm gives less)
+const WIND = { tail: 2.0, head: 0.30, full: 0.6, min: 0.7, max: 3 };   // speed gained running before the wind (x3 at most), lost beating into it (x0.7 at least), at wind strength >= full (a calm gives less); min/max bound it with geared sails too
 const WEATHER = {
   seg: [75, 150], blend: 12,                          // a spell of weather lasts seg[0]..seg[1] s and fades into the next over `blend` s
   first: { clear: 0.5, rain: 0.3, storm: 0.2 },       // the opening weather of a sortie

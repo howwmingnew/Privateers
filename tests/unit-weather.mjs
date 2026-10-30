@@ -14,21 +14,26 @@ const near = (a, b, e = 1e-9) => assert.ok(Math.abs(a - b) <= e, `${a} vs ${b}`)
 
 test("running before a full wind gains WIND.tail, beating into it loses WIND.head, across it changes nothing", () => {
   const tail = run("windFactor(0, { dir: 0, strength: 1 })"), head = run("windFactor(Math.PI, { dir: 0, strength: 1 })"), beam = run("windFactor(Math.PI / 2, { dir: 0, strength: 1 })");
-  near(tail, 1.2); near(head, 0.75); near(beam, 1);
+  near(tail, 3); near(head, 0.7); near(beam, 1);
   assert.ok(tail > beam && beam > head);
+});
+
+test("geared sails never push the wind past x3 or below x0.7", () => {
+  near(run("windFactor(0, { dir: 0, strength: 1 }, 1.35)"), 3);
+  near(run("windFactor(Math.PI, { dir: 0, strength: 1 }, 1, 2)"), 0.7);
 });
 
 test("a calm gives less of the effect, and anything at or above WIND.full gives all of it", () => {
   const half = run("windFactor(0, { dir: 0, strength: WIND.full / 2 })");
-  near(half, 1.1);
+  near(half, 2);
   near(run("windFactor(0, { dir: 0, strength: 1 })"), run("windFactor(0, { dir: 0, strength: WIND.full })"));
   near(run("windFactor(0, { dir: 0, strength: 0 })"), 1);
 });
 
 test("an angle in between is in between (45 degrees off the wind)", () => {
   const f = run("windFactor(Math.PI / 4, { dir: 0, strength: 1 })");
-  assert.ok(f > 1 && f < 1.2);
-  near(f, 1 + 0.2 * Math.cos(Math.PI / 4));
+  assert.ok(f > 1 && f < 3);
+  near(f, 1 + 2 * Math.cos(Math.PI / 4));
 });
 
 test("storm yaw: none in fair weather, slews a hull ahead of the wind off it, bounded, and stays well under a ship's turn rate", () => {

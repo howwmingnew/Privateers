@@ -150,7 +150,7 @@ console.log("Sailing in the wind");
   }, [rel, strength]);
   const tail = await run([0, 1]), beam = await run([Math.PI / 2, 1]), head = await run([Math.PI, 1]), calm = await run([0, 0.05]);
   check(tail.p > beam.p && beam.p > head.p, "player: before the wind is faster than across it, which is faster than into it", { tail: tail.p, beam: beam.p, head: head.p });
-  check(Math.abs(tail.p / beam.p - 1.2) < 0.02 && Math.abs(head.p / beam.p - 0.75) < 0.02, "player: +20% before a full wind and −25% into it", { t: tail.p / beam.p, h: head.p / beam.p });
+  check(Math.abs(tail.p / beam.p - 3) < 0.05 && Math.abs(head.p / beam.p - 0.7) < 0.02, "player: x3 before a full wind and x0.7 into it", { t: tail.p / beam.p, h: head.p / beam.p });
   check(Math.abs(tail.e / beam.e - 1.2) < 0.02 && Math.abs(head.e / beam.e - 0.75) < 0.02, "an enemy ship obeys the same rule", { t: tail.e / beam.e, h: head.e / beam.e });
   check(Math.abs(calm.p / beam.p - 1) < 0.1, "a dead calm barely changes anything", calm.p / beam.p);
 

@@ -52,7 +52,7 @@ const windKnots = w => Math.round(WEATHER.knots[0] + w.strength * (WEATHER.knots
 // tailK / headK: the sails' gear scales the gain and the loss (js/gear-core.js), 1 for every other hull.
 function windFactor(rot, w, tailK = 1, headK = 1) {
   const a = Math.cos(rot - w.dir), k = clamp(w.strength / WIND.full, 0, 1);
-  return 1 + (a >= 0 ? WIND.tail * tailK : WIND.head * headK) * a * k;
+  return clamp(1 + (a >= 0 ? WIND.tail * tailK : WIND.head * headK) * a * k, WIND.min, WIND.max);
 }
 // Storm yaw (rad/s) with the helm let go: the hull broaches, slowly slewing beam-on to the wind (a wind dead ahead or astern
 // is an unstable balance, so `sway` -1..1, a slow wave from the sea, tips it one way). 0 in fair weather.
