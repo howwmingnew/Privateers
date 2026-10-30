@@ -66,7 +66,7 @@ function crashLand(s, dmg, src, x, y, nx, ny) {
 function crashIsland(s, isl, nx, ny) {
   if (!s.alive || s.fixed || s.ally || crashSafe(s, isl)) return;   // an escort scrapes a rock harmlessly: it must not be bled for its flagship's course
   const now = S.time.now / 1000, book = s.crashBook || (s.crashBook = new Map());
-  const fresh = crashContact(book, isl, now), frac = crashFrac(s.vx * nx + s.vy * ny, CRASH_ISLAND_K) * hitOf(s, null);
+  const fresh = crashContact(book, isl, now), frac = crashFrac((s.cvx ?? s.vx) * nx + (s.cvy ?? s.vy) * ny, CRASH_ISLAND_K) * hitOf(s, null);
   if (!frac || !fresh || !crashDue(book, isl, now)) return;
   crashLand(s, crashDamage(frac, s.maxHp, s.hp, !!s.isPlayer), null, s.x + nx * ((s.hw ?? 13) + 2), s.y + ny * ((s.hw ?? 13) + 2), nx, ny);
   if (!s.isPlayer) s.shoreAway = { x: isl.x, y: isl.y, until: now + 2 };   // an AI turns away from the rock for a moment
@@ -79,7 +79,7 @@ function crashShips(a, b, nx, ny) {
   if ((a.isPlayer || a.ally) && (b.isPlayer || b.ally)) return;   // the flagship and its escorts jostle in formation: no blow, no damage
   if (bossFeud(a, b)) return;   // a boss (or its guard) and an ordinary AI ship brush past each other: the boss fight is the player's alone (js/archetypes.js)
   const now = S.time.now / 1000, book = a.crashBook || (a.crashBook = new Map());
-  const fresh = crashContact(book, b, now), base = shipFrac((a.vx - b.vx) * nx + (a.vy - b.vy) * ny);
+  const fresh = crashContact(book, b, now), base = shipFrac(((a.cvx ?? a.vx) - (b.cvx ?? b.vx)) * nx + ((a.cvy ?? a.vy) - (b.cvy ?? b.vy)) * ny);
   if (!fresh || !crashDue(book, b, now)) return;
   a.speed *= shedOf(a, b); b.speed *= shedOf(b, a);   // the blow takes the way off both hulls: two AI ships don't grind on each other
   const mayKill = !!(a.isPlayer || b.isPlayer), ma = hullMass(a), mb = hullMass(b), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;

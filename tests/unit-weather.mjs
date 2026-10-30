@@ -14,26 +14,36 @@ const near = (a, b, e = 1e-9) => assert.ok(Math.abs(a - b) <= e, `${a} vs ${b}`)
 
 test("running before a full wind gains WIND.tail, beating into it loses WIND.head, across it changes nothing", () => {
   const tail = run("windFactor(0, { dir: 0, strength: 1 })"), head = run("windFactor(Math.PI, { dir: 0, strength: 1 })"), beam = run("windFactor(Math.PI / 2, { dir: 0, strength: 1 })");
-  near(tail, 3); near(head, 0.7); near(beam, 1);
+  near(tail, 2.5); near(head, 0.7); near(beam, 1);
   assert.ok(tail > beam && beam > head);
 });
 
 test("geared sails never push the wind past x3 or below x0.7", () => {
   near(run("windFactor(0, { dir: 0, strength: 1 }, 1.35)"), 3);
+  near(run("windFactor(0, { dir: 0, strength: 1 }, 5)"), 3);
   near(run("windFactor(Math.PI, { dir: 0, strength: 1 }, 1, 2)"), 0.7);
+});
+
+test("the best sail gear (item level 5, Lv 10, top tail roll) just reaches the x3 cap, a bare ship sits at x2.5; head gear lifts the x0.7", () => {
+  const best = run("1 + Math.min(GEAR_CAP.tail, GEAR_AFFIX.sail.tail[1] * GEAR_ILV_K[GEAR_ILV_K.length - 1] * (1 + GEAR_LV_STEP * (GEAR_LV_MAX - 1)))");   // one sail slot, one tail affix: no stacking
+  const raw = run(`1 + WIND.tail * ${best} - 1`) + 1;
+  assert.ok(raw >= 3 && raw < 3.05, `best gear lands at the cap, not far past it (${raw})`);
+  near(run(`windFactor(0, { dir: 0, strength: 1 }, ${best})`), 3);
+  near(run("windFactor(0, { dir: 0, strength: 1 })"), 2.5);
+  assert.ok(run("windFactor(Math.PI, { dir: 0, strength: 1 }, 1, 0.5)") > 0.7);
 });
 
 test("a calm gives less of the effect, and anything at or above WIND.full gives all of it", () => {
   const half = run("windFactor(0, { dir: 0, strength: WIND.full / 2 })");
-  near(half, 2);
+  near(half, 1.75);
   near(run("windFactor(0, { dir: 0, strength: 1 })"), run("windFactor(0, { dir: 0, strength: WIND.full })"));
   near(run("windFactor(0, { dir: 0, strength: 0 })"), 1);
 });
 
 test("an angle in between is in between (45 degrees off the wind)", () => {
   const f = run("windFactor(Math.PI / 4, { dir: 0, strength: 1 })");
-  assert.ok(f > 1 && f < 3);
-  near(f, 1 + 2 * Math.cos(Math.PI / 4));
+  assert.ok(f > 1 && f < 2.5);
+  near(f, 1 + 1.5 * Math.cos(Math.PI / 4));
 });
 
 test("storm yaw: none in fair weather, slews a hull ahead of the wind off it, bounded, and stays well under a ship's turn rate", () => {

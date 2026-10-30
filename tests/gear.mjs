@@ -219,11 +219,11 @@ check(r.fast > 0 && !(r.slow > 0), `legendary prow: a hard ram tears the other s
 r = await page.evaluate(() => {
   wx.on = true; wx.wind = { dir: 0, strength: 1 }; player.rot = 0; const out = {};
   __bare(); out.tail0 = wxMul(player); player.rot = Math.PI; out.head0 = wxMul(player);
-  __wear("sail", { p: "sail", lv: 1, r: 1, il: 1, af: [["tail", 0.5], ["head", 0.5]] }); player.rot = 0; out.tail1 = wxMul(player); player.rot = Math.PI; out.head1 = wxMul(player);
+  __wear("sail", { p: "sail", lv: 1, r: 1, il: 1, af: [["tail", 0.2], ["head", 0.5]] }); player.rot = 0; out.tail1 = wxMul(player); player.rot = Math.PI; out.head1 = wxMul(player);
   const e = { rot: 0, isPlayer: false }; out.other = wxMul(e);
   return out;
 });
-check(near(r.tail1 - 1, (r.tail0 - 1) * 1.5, 0.01) && near(1 - r.head1, (1 - r.head0) * 0.5, 0.01), `wind: following +50% (${r.tail0.toFixed(3)} to ${r.tail1.toFixed(3)}), head wind loss halved (${r.head0.toFixed(3)} to ${r.head1.toFixed(3)})`);
+check(near(r.tail1 - 1, (r.tail0 - 1) * 1.2, 0.01) && near(1 - r.head1, (1 - r.head0) * 0.5, 0.01), `wind: following +20% (${r.tail0.toFixed(3)} to ${r.tail1.toFixed(3)}), head wind loss halved (${r.head0.toFixed(3)} to ${r.head1.toFixed(3)})`);
 check(near(r.other, r.tail0, 0.001), "other ships feel the plain wind");
 r = await page.evaluate(() => { wx.w.storm = 1; wx.calm = false; player.rot = Math.PI / 4; __bare(); const a = wxYaw(player); __wear("instr", { p: "instr", lv: 1, r: 1, il: 1, af: [["storm", 0.5]] }); return [a, wxYaw(player)]; });
 check(r[0] !== 0 && near(r[1] / r[0], 0.5, 0.01), "navigation instruments cut the storm's yaw by 50%");
