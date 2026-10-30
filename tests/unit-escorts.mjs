@@ -257,19 +257,19 @@ test("gunbay actions on an escort's port: upgrade, upgrade x5, buy into the port
   assert.equal(g.run(`gunAct("gup5", {})`), "upgrade");
   assert.equal(g.run("save.escorts[0].guns.bow[0].lv"), 7);
   assert.match(g.run("gunCardHtml()"), /data-act="gup"/);
-  // buy: mounted straight into the picked port; the gun it replaces goes to the store
+  // buy with a gun in the picked port: never replaces it (#117). The escort's ship has no empty port here, so the new gun waits in the store
   const storeBefore = g.run("save.store.length"), goldBefore = g.run("save.gold");
   assert.equal(g.run(`gunAct("buy", { id: "carronade" })`), "buy");
-  assert.deepEqual(g.json("[save.escorts[0].guns.bow[0].g, save.escorts[0].guns.bow[0].lv, save.store.length, save.store[save.store.length - 1].g + save.store[save.store.length - 1].lv]"), ["carronade", 1, storeBefore + 1, "six7"]);
+  assert.deepEqual(g.json("[save.escorts[0].guns.bow[0].g, save.escorts[0].guns.bow[0].lv, save.store.length, save.store[save.store.length - 1].g + save.store[save.store.length - 1].lv]"), ["six", 7, storeBefore + 1, "carronade1"]);
   assert.equal(g.run("save.gold"), goldBefore - g.run("GUNS.carronade.cost"));
   assert.deepEqual(g.json("deckSel"), { side: "bow", i: 0, e: 0 }, "the port stays picked");
   // gfrom: the stored long 12 goes into the port; the carronade takes its place in the store
   assert.equal(g.run(`gunAct("gfrom", { side: "store", i: "0" })`), "reload");
   assert.equal(g.run("save.escorts[0].guns.bow[0].g"), "long12");
-  assert.ok(g.json("save.store.map(x => x.g)").includes("carronade"));
+  assert.ok(g.json("save.store.map(x => x.g)").includes("six"), "the gun that was in the port is in the store now");
   assert.equal(g.run("gunNote.text[0]"), "movedSwap");
   g.run(`gunAct("gundo", {})`);
-  assert.equal(g.run("save.escorts[0].guns.bow[0].g"), "carronade", "Undo puts the port back");
+  assert.equal(g.run("save.escorts[0].guns.bow[0].g"), "six", "Undo puts the port back");
   assert.equal(g.run("save.store[0].g"), "long12", "...and the store");
   // Unload leaves an empty port; a gfrom then fills it and the store closes up
   g.run(`deckSel = ${place("bow", 0, 0)}`);

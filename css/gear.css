@@ -43,3 +43,8 @@
 /* a card with several buttons: the name on its own row, the buttons under it (the gun card too, now that it carries lock and break down) */
 .gcard .nm, .gcard .gacts { grid-column: 1 / -1; }
 .gcard .gacts { justify-content: flex-start; }
+/* the bulk break-down: a block of its own, one button to a row, so a thumb aimed at a spare never lands on one (#124) */
+.gbulk { margin-top: 18px; padding: 8px 10px 10px; border: 1.5px dashed rgba(163,40,27,.55); border-radius: 6px; }
+.gbulk .hint-s { margin: 2px 0 8px; }
+.gbulk .gbatch { flex-direction: column; gap: 10px; margin-top: 0; }
+.gbulk .gbatch .btn { width: 100%; text-align: left; }

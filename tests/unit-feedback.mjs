@@ -242,7 +242,7 @@ test("gun bay (#68): Undo takes back only the latest move, and a purchase or upg
   tap(g, "bow", 0); g.run(`gunAct("gup", {})`);
   assert.equal(g.run("gunNote"), null, "an upgrade spends gold: nothing left to undo");
   tap(g, "bow", 0); tap(g, "bow", 1); g.run(`gunAct("buy", { id: "six" })`);
-  assert.equal(g.run("gunNote"), null, "a purchase is not a move");
+  assert.equal(g.run("gunNote.before"), undefined, "a purchase is not a move: no Undo snapshot (its note only says where the gun went)");
 });
 
 test("gun bay (#68): Undo is for the ship it was made on", () => {

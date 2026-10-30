@@ -9,7 +9,7 @@ export const MAP = [
   [/^js\/gear/, ["gear", "gundeck", "boarding", "harbor"]],
   [/^js\/(heat|ports|world-seas|forts|novice)/, ["heat", "ports", "daily-ports"]],
   [/^js\/(escort|fleet)/, ["escorts", "fleet"]],
-  [/^js\/ledger-(tabs|panel)/, ["harbor", "shipyard", "escorts", "gundeck", "gear"]],   // the fleet tabs, the context panel and everything they hold
+  [/^js\/ledger-(tabs|panel|hold)/, ["harbor", "shipyard", "escorts", "gundeck", "gear"]],   // the fleet tabs, the context panel and everything they hold
   [/^js\/flee/, ["flee"]],
   [/^js\/(boarding|grapple)/, ["boarding"]],
   [/^js\/(disasters|weather|sea-fx)/, ["disasters", "weather"]],
@@ -25,14 +25,15 @@ export const MAP = [
   [/^js\/(rematch|run|daily)/, ["rematch", "daily-ports"]],
   [/^js\/(harbor|mooring|repair)/, ["harbor"]],
   [/^js\/(view|input|hud|options|settings|touch-sail|aground|hit-glow)/, ["scale", "platform", "shell"]],
-  [/^js\/(novice|aground|hit-glow|touch-sail|notify-order|world-seas|mooring|input|hull-alert|plate-spread)|^css\/safety/, ["safety", "feedback"]],   // the new-captain safety net
+  [/^js\/(novice|aground|hit-glow|touch-sail|notify-order|hud-stack|safety-hints|world-seas|mooring|input|hull-alert|plate-spread)|^css\/safety/, ["safety", "feedback"]],   // the new-captain safety net
   [/^js\/(tutorial|onboard|howto|menu|title-attract|hall|logbook|achievements|ledger|notices|notify|chart-legend|roadmap)/, ["shell", "polish"]],
   [/^js\/(art|scenery|vfx|mini-marks|poster|harbor-art|disasters-art|gun-art)/, ["art-hits", "polish"]],
   [/^js\/(hooks|boot-guard|fonts-link)/, ["shell"]],
   [/^js\/cull/, ["phase1", "harbor", "ports", "scale", "art-hits"]],   // off-screen culling: photo mode, harbor, stations, big views
   [/^js\/ball-pool/, ["gundeck", "collision", "phase1"]],
   // off-screen markers: phase1b and ports check them, escorts and campaign (boss frame) used to get them through CORE
-  [/^js\/edge-(marks|math)/, ["phase1b", "ports", "escorts", "campaign"]],
+  [/^js\/edge-(marks|math)/, ["phase1b", "ports", "escorts", "campaign", "readmarks"]],
+  [/^js\/read-marks/, ["readmarks", "phase1b"]],   // #119: shooter ring, bow chevron, plate rim
   [/^css\//, ["shell", "polish", "scale"]],
   [/^index\.html$/, ["shell", "platform"]],
   [/^tests\/lib\//, ["phase1b", "ports", "collision"]],   // helpers shared by browser tests

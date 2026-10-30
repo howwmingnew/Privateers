@@ -40,3 +40,12 @@ body.on-title #aground, body.on-pause #aground { display: none; }
 #seaBanner[data-danger] b { border-block-color: rgba(255,110,90,.8); color: #ffe3dc; }
 #seaBanner[data-danger] span { opacity: 1; color: #ffd0c6; font-weight: 700; }
 @media (max-height: 500px) { #seaBanner[data-danger] span { display: block; font-size: 13px; } }   /* a landscape phone still gets the warning line */
+
+/* The way home (js/safety-hints.js, #114): under 40% hull a chip under the HUD bars points at the harbor and gives the distance. --barsB: where the bars end (js/notify-order.js) */
+#homeChip { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(var(--barsB, 96px) + 6px); z-index: 8; pointer-events: none; display: flex; align-items: center; gap: 8px;
+  padding: 3px 12px 4px 8px; border-radius: 3px; background: rgba(60,12,10,.82); border: 1px solid rgba(255,110,90,.6); color: var(--foam); font-weight: 700; font-size: calc(14px * var(--ts, 1)); text-shadow: 0 1px 3px #000; }
+#homeChip[hidden] { display: none; }
+#homeChip i { width: 0; height: 0; border: 7px solid transparent; border-left: 12px solid #ffb199; border-right: 0; flex: none; }   /* a triangle pointing right, turned toward the harbor by script */
+body.on-title #homeChip, body.on-pause #homeChip { display: none; }
+@media (min-width: 1500px) and (min-height: 900px) { #homeChip { zoom: 1.25; } }
+@media (min-width: 2400px) and (min-height: 1300px) { #homeChip { zoom: 1.5; } }

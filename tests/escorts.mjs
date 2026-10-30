@@ -5,6 +5,8 @@
 // Usage: node tests/escorts.mjs [url] [outDir]   (serve the repo first, e.g. `npm run serve`)
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
+// A spend of CONFIRM_GOLD or more (a gun upgrade or purchase, a break-down) arms its button on the first tap (#117): press again once it shows "Tap again to confirm".
+const sureClick = async (page, sel) => { await page.click(sel); if (await page.evaluate(s => !!document.querySelector(s + "[data-armed]"), sel)) { await page.waitForTimeout(450); await page.click(sel); } };
 const SLOW = +process.env.TEST_SLOW || 1;
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const out = process.argv[3] || ".review/escorts";
@@ -132,11 +134,11 @@ check(await ev(() => save.escorts[0].id === "s1" && Object.values(save.escorts[0
 check(/No guns aboard/.test(await ev(() => document.getElementById("shead").innerText)) && await ev(() => !escortReady(save, 0)), "with no guns the ledger says why it will not sail, and it does not");
 await page.click('#deck [data-act="port"][data-side="bow"][data-i="0"][data-e="0"]');
 check(await ev(() => deckSel && deckSel.e === 0 && !!document.querySelector('#ctx [data-act="buy"][data-id="six"]')), "tapping an escort's empty port opens the panel with the armory");
-await page.click('#ctx [data-act="buy"][data-id="six"]');
+await sureClick(page, '#ctx [data-act="buy"][data-id="six"]');
 check(await ev(() => save.escorts[0].guns.bow[0] && save.escorts[0].guns.bow[0].g === "six" && save.store.length === 1 && escortReady(save, 0)), "a gun bought there is mounted on the escort's port (the store is untouched) and the escort is ready to sail");
 await page.click('#ctx [data-act="gfrom"][data-side="store"]');
 check(await ev(() => save.escorts[0].guns.bow[0].g === "long12" && save.escorts[0].guns.bow[0].lv === 4 && save.store[0].g === "six"), "picking the stored Long 12 for that port trades it with the six");
-await page.click('#ctx [data-act="gup"]');
+await sureClick(page, '#ctx [data-act="gup"]');
 check(await ev(() => save.escorts[0].guns.bow[0].lv === 5), "the card upgrades the gun on the escort's port");
 await page.click('#ctx [data-act="ctxclose"]');
 check(await ev(() => !deckSel && !document.querySelector("#ctx .cpanel") && /Tap a gun port/.test(document.getElementById("ctx").innerText)), "closing the panel leaves the one hint line");

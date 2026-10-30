@@ -6,11 +6,12 @@
 // worn piece to look at it or take it off. Every move says what happened with an Undo for the latest one only. The gun slot is a pointer to the
 // gun deck above: guns keep their own picking, and their cards use gearExtraHtml() below for affixes, re-roll, lock and break down.
 Object.assign(STR.en, {
-  gEmpty: "Empty", gGuns: "{n} mounted", gSlotAria: "{part}: {item}", gBag: "Spares {n} / {max} · Fittings {m}", gBagEmpty: "No spare parts yet. Sunk ships may drop gear.",
-  gEquip: "Wear", gEquipTo: "Wear on {part}", gWear: "After wearing", gUnequip: "Take off", gLock: "Lock", gUnlock: "Unlock", gLocked: "Locked", gScrap: "Break down · +{n} fittings", gScrapTip: "Scrap this item into fittings. Fittings pay for re-rolling an affix (a bonus line on gear). It cannot be undone.",
+  gEmpty: "Empty", gGuns: "{n} mounted", gSlotAria: "{part}: {item}", gBag: "Spares {n} / {max} · Fittings (scrap) {m}", gBagEmpty: "No spare parts yet. Sunk ships may drop gear.",
+  gEquip: "Wear", gEquipTo: "Wear on {part}", gWear: "After wearing", gUnequip: "Take off", gLock: "Lock", gUnlock: "Unlock", gLocked: "Locked", gScrap: "Break down · +{n} fittings", gScrapTip: "Breaks this piece down into fittings (scrap). The piece is gone for good.", gScrapArm: "Tap again to confirm: break down · +{n} fittings (cannot be undone)",
   gNeedTier: "Needs a hull of tier {n} or better", gBagFull: "The bag is full ({n}): break something down first.", gNeedMats: "Needs {m} fittings and {g} gold",
   gReroll: "Re-roll · {m} fittings + {g} gold", gLvLine: "Lv {n}", gBase: "Base: ",
-  gLockHint: "Lock keeps this from being broken down by mistake, batch buttons included.", gFitHint: "Fittings come from breaking down spare gear or guns. Re-rolling an affix (a bonus line on the item) spends them.",
+  gLockHint: "Lock keeps this from being broken down by mistake, batch buttons included.", gFitHint: "Fittings are scrap: breaking down a spare piece or gun you do not need turns it into fittings, and the piece is gone for good. Spend fittings to re-roll an affix. An affix is an extra bonus line on a piece; re-rolling swaps one for a new random bonus.", gAffixHint: "Affix: an extra bonus line on this piece. Re-roll swaps one for a new random bonus.",
+  gBulkHead: "Break down in bulk", gBulkHint: "Breaks down every unlocked spare of that grade or lower into fittings. It cannot be undone; locked pieces are skipped. Each button asks you to tap twice.", gBatchArm: "Tap again to confirm: break down {n}, +{m} fittings",
   gPickHint: "Now tap its slot to wear it. Tap it again, press Esc or tap a blank spot to cancel.", gWornHint: "Worn. Take it off to put a spare on, or tap a spare to swap.",
   gCmp: "Compared with what you wear", gCmpNone: "Nothing worn here: all of it is new", gCmpSame: "No change", gCmpLost: "Lose: {text}", gCmpLeg: "A legendary effect", gCmpWas: "was {n}%",
   gBatch: "Break down up to {r}: {n} · +{m} fittings", gBatchNone: "Nothing to break down up to {r}",
@@ -18,11 +19,12 @@ Object.assign(STR.en, {
   gGunRef: "Compared with your {gun}", gGunNone: "No mounted gun to compare with",
 });
 Object.assign(STR.zh, {
-  gEmpty: "空", gGuns: "已裝 {n} 門", gSlotAria: "{part}：{item}", gBag: "備用 {n} / {max} · 零件 {m}", gBagEmpty: "還沒有備用裝備。擊沉的船可能掉裝備。",
-  gEquip: "穿上", gEquipTo: "穿上到「{part}」", gWear: "穿上後的數值", gUnequip: "卸下", gLock: "鎖定", gUnlock: "解鎖", gLocked: "已鎖定", gScrap: "拆解 · +{n} 零件", gScrapTip: "把這件拆成零件。零件用來重洗詞綴（裝備上的加成）。拆了就回不來。",
+  gEmpty: "空", gGuns: "已裝 {n} 門", gSlotAria: "{part}：{item}", gBag: "備用 {n} / {max} · 零件（拆解材料）{m}", gBagEmpty: "還沒有備用裝備。擊沉的船可能掉裝備。",
+  gEquip: "穿上", gEquipTo: "穿上到「{part}」", gWear: "穿上後的數值", gUnequip: "卸下", gLock: "鎖定", gUnlock: "解鎖", gLocked: "已鎖定", gScrap: "拆解 · +{n} 零件", gScrapTip: "把這件拆成零件（拆解得到的材料），這件就消失了。", gScrapArm: "再點一次確認：拆解 · +{n} 零件（拆了就回不來）",
   gNeedTier: "需要船級 {n} 以上的船", gBagFull: "背包已滿（{n}）：先拆解一些。", gNeedMats: "需要 {m} 零件與 {g} 金幣",
   gReroll: "重洗 · {m} 零件 + {g} 金幣", gLvLine: "Lv {n}", gBase: "基礎：",
-  gLockHint: "鎖定後這件不會被誤拆解，批次拆解也會跳過它。", gFitHint: "零件來自拆解用不到的備用裝備或火砲，重洗詞綴（裝備上的加成）時會用掉。",
+  gLockHint: "鎖定後這件不會被誤拆解，批次拆解也會跳過它。", gFitHint: "零件是拆解得來的材料：把用不到的備用裝備或火砲拆解就會變成零件，原本那件會消失。零件用來重洗詞綴：詞綴是裝備上額外多出來的加成，重洗會把其中一條換成新的隨機加成。", gAffixHint: "詞綴：這件裝備上額外的加成。重洗會把其中一條換成新的隨機加成。",
+  gBulkHead: "批次拆解", gBulkHint: "把該品質以下、沒有鎖定的備用裝備全部拆成零件。拆了就回不來，已鎖定的不會被拆。每顆按鈕都要點兩次才會執行。", gBatchArm: "再點一次確認：拆解 {n} 件，+{m} 零件",
   gPickHint: "再點它的部位格來穿上。再點一次、按 Esc 或點空白處可取消。", gWornHint: "已穿上。卸下才能換別件，或直接點備用品對調。",
   gCmp: "與目前穿的比較", gCmpNone: "這個部位還沒穿東西：全都是新增", gCmpSame: "沒有變化", gCmpLost: "失去：{text}", gCmpLeg: "傳說效果", gCmpWas: "原本 {n}%",
   gBatch: "批次拆解到{r}：{n} 件，+{m} 零件", gBatchNone: "沒有可拆解到{r}的裝備",
@@ -83,12 +85,15 @@ function gearExtraHtml(it, w, at = "") {   // at: extra attributes on its button
     `<li>${t("ga_" + k, { n: gearPct(v * mult) })}${r ? ` <button class="btn ghost sm" type="button" data-act="greroll" data-w="${w}" data-k="${i}"${at} ${canPay ? "" : "disabled"}>${t("gReroll", { m: c.mats, g: fmt(c.gold) })}</button>` : ""}</li>`));
   if (it.lg) lines.push(`<li class="leg">${gearLegendText(part)}</li>`);
   const lockBtn = `<button class="btn ghost" type="button" data-act="glock" data-w="${w}"${at}>${t(it.lk ? "gUnlock" : "gLock")}</button>`;
-  return { list: (lines.length ? `<ul class="afx">${lines.join("")}</ul>` : "") + `<p class="lockhint">${t("gLockHint")}</p>`, lockBtn,
-    scrapBtn: `<button class="btn ghost" type="button" data-act="gscrap" title="${t("gScrapTip")}" data-w="${w}"${at} ${it.lk ? "disabled" : ""}>${t("gScrap", { n: gearScrapValue(it) })}</button>` };
+  const arm = !it.lk && armedNow(scrapKey(w, at));   // an armed break-down is put down by any other tap (js/escort-ui.js)
+  return { list: (lines.length ? `<ul class="afx">${lines.join("")}</ul>` : "") + (r ? `<p class="lockhint">${t("gAffixHint")}</p>` : "") + `<p class="lockhint">${t("gLockHint")}</p>`, lockBtn,
+    scrapBtn: `<button class="btn ghost" type="button" data-act="gscrap" title="${t("gScrapTip")}" data-w="${w}"${at} ${it.lk ? "disabled" : ""}${arm ? armAttrs() : ""}>${t(arm ? "gScrapArm" : "gScrap", { n: gearScrapValue(it) })}</button>` };
 }
 
 // ---------- actions: each returns the sound to play, or null when nothing happened ----------
 const gearSnap = () => ({ gear: save.gear, shipId: save.shipId });
+const scrapKey = (w, at) => `gscrap:${w}${at}`;   // the armed state of a break-down button (the card's, or a candidate card's: `at` carries its place)
+const batchKey = r => `gbatch:${r}`;
 const gearUp5Key = () => `gpup5:${gearSel.w}${gearSel.i ?? gearSel.p ?? ""}`;   // the armed state of the picked piece's "upgrade N levels" button
 const itemAt = () => (gearSel ? gearAt(save, gearSel) : null);
 function gearAct(act, d) {
@@ -103,6 +108,7 @@ function gearAct(act, d) {
   if (act === "gbatch") {
     const r = gearScrapBelow(save, +d.r);
     if (!r.n) return null;
+    gearNote = null; if (!confirmed(batchKey(+d.r))) return null;   // irreversible, and three of them sit side by side: the first tap only arms the button (#124)
     save = r.save; gearSel = null; gearNote = null; deckSel = null; return "buy";
   }
   if (act === "gslot" || act === "gbag") {
@@ -134,6 +140,7 @@ function gearAct(act, d) {
   if (act === "gscrap") {
     const next = gearScrapAt(save, l);
     if (!next) return null;
+    gearNote = null; if (!confirmed(scrapKey(w, cand ? ` data-side="${d.side}" data-i="${d.i}"${d.e !== undefined ? ` data-e="${d.e}"` : ""}` : ""))) return null;
     save = next; if (w === "gun") { if (cand) candSel = null; else deckSel = null; } else gearSel = null; gearNote = null; return "buy";
   }
   if (act === "greroll") { const next = gearRerollAt(save, l, +d.k); if (!next) return null; save = next; return "upgrade"; }
@@ -179,10 +186,12 @@ function noteHtml() {
 function bagHtml() {
   const bag = save.gear.bag, tier = gearTierOf(save.ship);
   const tiles = bag.map((it, i) => `<button class="slot${rarClass(it)}${gearSel && gearSel.w === "bag" && gearSel.i === i ? " sel" : ""}${gearWearable(it, tier) ? "" : " over"}" type="button" data-act="gbag" data-i="${i}" aria-pressed="${!!gearSel && gearSel.w === "bag" && gearSel.i === i}" aria-label="${gearTitle(it)}, ${rarLine(it)}">${t("gp_" + it.p)}<small>${gearTypeName(it) === t("gp_" + it.p) ? t("gr_" + gearR(it)) : gearTypeName(it)} · ${gearIl(it)}${it.lk ? " · " + t("gLocked") : ""}</small></button>`);
-  const batch = [0, 1, 2].map(r => { const b = gearScrapBelow(save, r);
-    return `<button class="btn ghost sm" type="button" data-act="gbatch" title="${t("gScrapTip")}" data-r="${r}" ${b.n ? "" : "disabled"}>${t(b.n ? "gBatch" : "gBatchNone", { r: t("gr_" + r), n: b.n, m: b.mats })}</button>`; });
+  const batch = [0, 1, 2].map(r => { const b = gearScrapBelow(save, r), arm = !!b.n && armedNow(batchKey(r));
+    return `<button class="btn ghost sm" type="button" data-act="gbatch" title="${t("gScrapTip")}" data-r="${r}" ${b.n ? "" : "disabled"}${arm ? armAttrs() : ""}>${t(!b.n ? "gBatchNone" : arm ? "gBatchArm" : "gBatch", { r: t("gr_" + r), n: b.n, m: b.mats })}</button>`; });
+  // the break-down buttons sit in a block of their own, one to a row, under a heading that says they cannot be undone (#124)
   return `<div class="lbl" title="${t("gFitHint")}">${t("gBag", { n: bag.length, max: GEAR_BAG_MAX, m: save.gear.mats })}</div>` +
-    (tiles.length ? `<div class="slots">${tiles.join("")}</div>` : `<p class="hint-s">${t("gBagEmpty")}</p>`) + `<div class="gbatch">${batch.join("")}</div><p class="hint-s">${t("gFitHint")}</p>`;
+    (tiles.length ? `<div class="slots">${tiles.join("")}</div>` : `<p class="hint-s">${t("gBagEmpty")}</p>`) + `<p class="hint-s">${t("gFitHint")}</p>` +
+    `<div class="gbulk" role="group" aria-label="${t("gBulkHead")}"><div class="lbl">${t("gBulkHead")}</div><p class="hint-s">${t("gBulkHint")}</p><div class="gbatch">${batch.join("")}</div></div>`;
 }
 function renderGear() {
   const box = document.getElementById("gear");

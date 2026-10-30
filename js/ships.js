@@ -109,7 +109,10 @@ function steer(s, desired, thr, dt) {
   if (desired != null) s.rot += clamp(angDiff(desired, s.rot), -turn, turn);
   else if (typeof wxYaw === "function") s.rot += wxYaw(s) * dt;   // a storm slews a hull whose helm is let go (js/weather.js)
   const target = thr * s.maxSpeed * (torn ? CHAIN_SPEED : 1) * (typeof gxSpeedK === "function" ? gxSpeedK(s) : 1);   // a legendary gun drags its target, a legendary sail speeds a hard turn (js/gear-fx.js)
-  const slow = s.isPlayer && s.furled && thr === 0 ? FURL_BRAKE : 1;   // only a furled sail brakes harder; every other slowdown is as before
+  let slow = s.isPlayer && s.furled && thr === 0 ? FURL_BRAKE : 1;   // only a furled sail brakes harder; every other slowdown is as before
+  // A following wind drives the hull faster than s.speed (up to x3), so the same brake would carry it that much further past the harbor ring. A furled sail
+  // loses the wind's push, so the brake grows with the following-wind factor: the stop takes 1/factor of the time and the run stays what it is in still air.
+  if (slow > 1 && typeof wxMul === "function") slow *= Math.max(1, wxMul(s));
   s.speed += clamp(target - s.speed, -s.maxSpeed * 1.1 * slow * dt, s.maxSpeed * 0.7 * dt);
 }
 function avoidIslands(s, desired) {
@@ -238,9 +241,11 @@ function think(e, dt) {
 const NO_PUSH = { x: 0, y: 0 };
 function move(s, dt) {
   if (s.fixed) { s.vx = s.vy = s.speed = 0; return; }   // shore batteries stand on their island
-  const wm = (typeof wxMul === "function" ? wxMul(s) : 1) * (typeof disMul === "function" ? disMul(s) : 1), lee = typeof wxLee === "function" ? wxLee(s) : NO_PUSH;   // wind and storm (js/weather.js), disasters (js/disasters.js)
+  const wxm = typeof wxMul === "function" ? wxMul(s) : 1, dm = typeof disMul === "function" ? disMul(s) : 1, wm = wxm * dm, lee = typeof wxLee === "function" ? wxLee(s) : NO_PUSH;   // wind and storm (js/weather.js), disasters (js/disasters.js)
   const dp = typeof disPush === "function" ? disPush(s) : NO_PUSH;   // a whirl's pull or a wave's shove, on every hull alike
-  s.vx = Math.cos(s.rot) * s.speed * wm + dp.x; s.vy = Math.sin(s.rot) * s.speed * wm + dp.y;   // a wave's shove counts as speed, so a hull driven onto a rock is hurt by it (js/collision.js)
+  const c0 = Math.cos(s.rot), s0 = Math.sin(s.rot);
+  s.vx = c0 * s.speed * wm + dp.x; s.vy = s0 * s.speed * wm + dp.y;   // a wave's shove counts as speed, so a hull driven onto a rock is hurt by it (js/collision.js)
+  s.cvx = c0 * s.speed * dm + dp.x; s.cvy = s0 * s.speed * dm + dp.y;   // the same without the wind's gain or loss: a crash is hurt by the hull's own way, not by a x3 tail wind (js/collision.js)
   s.x = clamp(s.x + (s.vx + lee.x) * dt, 60, W - 60); s.y = clamp(s.y + (s.vy + lee.y) * dt, 60, H - 60);
   // islands are solid to the whole hull: the hit capsule (s.hl / s.hw, cutter to man-o'-war) is kept off the rock
   const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = s.hl ?? 28, hw = s.hw ?? 13;
