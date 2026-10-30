@@ -9,7 +9,7 @@ export const MAP = [
   [/^js\/gear/, ["gear", "gundeck", "boarding", "harbor"]],
   [/^js\/(heat|ports|world-seas|forts|novice)/, ["heat", "ports", "daily-ports"]],
   [/^js\/(escort|fleet)/, ["escorts", "fleet"]],
-  [/^js\/ledger-(tabs|panel)/, ["harbor", "shipyard", "escorts", "gundeck", "gear"]],   // the fleet tabs, the context panel and everything they hold
+  [/^js\/ledger-(tabs|panel|hold)/, ["harbor", "shipyard", "escorts", "gundeck", "gear"]],   // the fleet tabs, the context panel and everything they hold
   [/^js\/flee/, ["flee"]],
   [/^js\/(boarding|grapple)/, ["boarding"]],
   [/^js\/(disasters|weather|sea-fx)/, ["disasters", "weather"]],

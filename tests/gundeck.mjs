@@ -3,6 +3,8 @@
 // Usage: node tests/gundeck.mjs [url] [outDir]     (exit 1 on any failed check or page error)
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
+// A spend of CONFIRM_GOLD or more (a gun upgrade or purchase, a break-down) arms its button on the first tap (#117): press again once it shows "Tap again to confirm".
+const sureClick = async (page, sel) => { await page.click(sel); if (await page.evaluate(s => !!document.querySelector(s + "[data-armed]"), sel)) { await page.waitForTimeout(450); await page.click(sel); } };
 
 const SLOW = +process.env.TEST_SLOW || 1;
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
@@ -61,7 +63,7 @@ for (const [name, vp, mobile] of [["desktop", D, false], ["phone", M, true]]) {
     return { top: Math.round(r.top), bottom: Math.round(r.bottom), vh: innerHeight }; });
   ok(`${name}: tapping a port shows its gun card, inside the screen`, card && card.top >= 0 && card.bottom <= card.vh + 1, card);
   const g0 = await page.evaluate(() => ({ gold: save.gold, lv: save.left[0].lv, gun: save.left[0].g }));
-  await page.locator('#ctx [data-act="gup"]').click();
+  await sureClick(page, '#ctx [data-act="gup"]');
   const g1 = await page.evaluate(() => ({ gold: save.gold, lv: save.left[0].lv }));
   ok(`${name}: the card's upgrade levels that gun and spends gold`, g1.lv === g0.lv + 1 && g1.gold < g0.gold, { g0, g1 });
   await page.screenshot({ path: `${out}/${name}-card.png` });
