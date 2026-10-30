@@ -47,6 +47,7 @@ async function toSea(page, { tutorial = false } = {}) {
   await page.waitForTimeout(450 * SLOW);
   await page.click("#sail");
   await until(page, () => !docked && !paused);
+  await ev(page, () => { wx.on = false; });   // still air: a following wind (up to x3, js/weather.js) would rush a pass through the ring before the hull mends
 }
 // Park the ship outside the ring (arms canDock), then put it just inside. The default heading cuts across the ring
 // clear of the harbor island (bumping into it would stop the ship, and a stopped ship moors).
@@ -185,6 +186,7 @@ const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold
   const at = await ev(page, () => { player.rot = 0; player.speed = 0; setSailLevel(0); const c = S.game.canvas.getBoundingClientRect(), cam = S.cameras.main, k = S.game.canvas.width / c.width;
     return { x: (player.x - cam.worldView.x) * cam.zoom / k, y: (player.y - cam.worldView.y) * cam.zoom / k }; });
   await page.mouse.move(at.x, at.y - 80); await page.mouse.down({ button: "right" }); await page.waitForTimeout(300 * SLOW);
+  await until(page, () => !toastHeld());   // a sea-name banner holds every toast (js/onboard.js): wait it out so the tip can show
   await page.keyboard.press("KeyW");
   const h = await ev(page, () => ({ lv: sailLevel, by: sailByMouse, txt: document.getElementById("sailTxt").textContent, toast: document.getElementById("toast").textContent }));
   ok("right button held: the cursor sets the sail (80 px = Slow), the dial says so, W is ignored and a toast explains", h.lv === 1 && h.by && /by cursor/.test(h.txt) && /cursor sets the sail/.test(h.toast), h);
