@@ -301,6 +301,7 @@ test("share text: the daily line has the number, the captain, the time and the h
   assert.equal(b.run(`shareSpec("daily", { n: 57, bossName: "黑喬瑞", won: false, bossT: 0, sunk: 6, hull: 0 }).text`), "Privateers 每日 #57 · 黑喬瑞 逃脫 · 擊沉 6 艘 · 船體 0%");
   lang(b, "en");
   assert.equal(b.run(`shareSpec("daily", { n: 57, bossName: "Black Jerry", won: true, bossT: 102, sunk: 6, hull: 64 }).text`), "Privateers Daily #57 · Black Jerry sunk in 1:42 · hull 64%");
+  assert.equal(b.run(`shareSpec("daily", { n: 57, bossName: "x", won: true, bossT: 1, sunk: 0, hull: 1 }).badges`), "", "no daily-rewards script (or no badge): no badge line");
 });
 
 test("share text: the link is the game's page, with #daily for the daily and #seed= for a seeded sea", () => {

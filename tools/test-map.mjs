@@ -36,7 +36,8 @@ export const MAP = [
   [/^js\/edge-(marks|math)/, ["phase1b", "ports", "escorts", "campaign", "readmarks"]],
   [/^js\/read-marks/, ["readmarks", "phase1b"]],   // #119: shooter ring, bow chevron, plate rim
   [/^css\//, ["shell", "polish", "scale"]],
-  [/^index\.html$/, ["shell", "platform"]],
+  [/^index\.html$/, ["shell", "platform", "portal"]],   // portal: the build rewrites index.html line by line and stops when one no longer matches
+  [/^tools\/(build-portal|portal\/)|^js\/fonts-link/, ["portal"]],   // the portal build and its SDK shim (#19); fonts-link.js is where it reads the font URL
   [/^tests\/lib\//, ["phase1b", "ports", "collision"]],   // helpers shared by browser tests
 ];
 // Changes that need no browser test at all (.claude/ and .vscode/ hold editor and agent settings, e.g. an untracked launch.json).
