@@ -48,7 +48,7 @@ test("#118 lane: a notice that meets the ship is lifted clear; with no room abov
   assert.equal(g.run(`laneTop({ left: 0, right: 50, top: 270, bottom: 330 }, [${ship}])`), 270, "beside the ship: no overlap");
 });
 
-test("#114 sea ahead: the first dangerous sea outward, warned about 15 s before the line", () => {
+test("#114 sea ahead: the first dangerous sea outward, warned about SEA_AHEAD_S s before the line", () => {
   const g = boot(["js/novice.js"], WORLD);
   const lanes = g.run("ringEdge(6)");
   const a = g.json("seaAheadOf(1000, id => id === 'lanes' || id === 'maelstrom')");
@@ -57,19 +57,22 @@ test("#114 sea ahead: the first dangerous sea outward, warned about 15 s before 
   assert.equal(g.run("seaAheadOf(lanesPast = ringEdge(6) + 10, id => id === 'lanes')"), null, "already inside it: the red banner has it");
   assert.equal(g.json("seaAheadOf(1000, id => id === 'maelstrom')").sea.id, "maelstrom");
   assert.equal(g.run("seaAheadOf(1000, () => false)"), null, "a strong captain is not warned");
-  // 1000 px short of a sea at 70 px/s is 14 s away: due; at 40 px/s it is 25 s: not yet
-  assert.equal(g.run(`seaAheadDue(1000, 70, true, false)`), true);
-  assert.equal(g.run(`seaAheadDue(1000, 40, true, false)`), false);
+  // 1000 px short of a sea at 110 px/s is 9 s away: due; at 70 px/s it is 14 s: not yet
+  assert.equal(g.run(`seaAheadDue(1000, 110, true, false)`), true);
+  assert.equal(g.run(`seaAheadDue(1000, 70, true, false)`), false);
 });
 
-test("#114 safety hints: way-home chip under 40% hull, the lesson's stray radius, the edge of the chart", () => {
+test("#114 safety hints: way-home chip under HOME_HULL, the lesson's stray radius, the edge of the chart", () => {
   const g = boot(["js/safety-hints.js"], WORLD + "const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y); const edgeMeters = px => px / 2;");
-  assert.equal(g.run("homeChipOn(0.39, 1200)"), true);
-  assert.equal(g.run("homeChipOn(0.41, 1200)"), false, "a healthy hull needs no chip");
+  assert.equal(g.run("homeChipOn(HOME_HULL - 0.01, 1200)"), true);
+  assert.equal(g.run("homeChipOn(HOME_HULL + 0.01, 1200)"), false, "a healthy hull needs no chip");
   assert.equal(g.run("homeChipOn(0.1, 100)"), false, "in sight of the harbor: no chip");
   assert.ok(Math.abs(g.run("homeHeading({ x: 0, y: 0 }, { x: 0, y: 10 })") - Math.PI / 2) < 1e-9, "harbor to the south: the arrow points down the screen");
   assert.deepEqual(g.json("chartEdgeInfo(7900, 4000, 50, 0)"), { d: 100, out: true }, "100 px off the east border, still sailing east");
   assert.equal(g.json("chartEdgeInfo(7900, 4000, -50, 0)").out, false, "sailing away from the border");
   assert.equal(g.json("chartEdgeInfo(4000, 30, 0, -5)").out, true, "north border");
-  assert.ok(g.run("TUT_STRAY_R") < g.run("2400"), "inside the practice waters");
+  assert.ok(g.run("TUT_STRAY_R") < 2400, "inside NOVICE_PORT_R");
+  // the owner's tuning (#144): fewer early warnings and nudges
+  assert.deepEqual(g.json("[HOME_HULL, TUT_STRAY_R]"), [0.25, 2000]);
+  assert.equal(boot(["js/novice.js"], WORLD).run("SEA_AHEAD_S"), 10);
 });

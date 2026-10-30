@@ -1,5 +1,5 @@
 // #118 / #114 in headless Chrome: the top lane keeps clear of the ship and the tutorial card, warnings jump explanations in the toast queue,
-// the sea warning comes ~15 s early, the way-home chip under 40% hull, the edge-of-the-chart hint, 0 page errors.
+// the sea warning comes ~10 s early, the way-home chip under 25% hull (#144), the edge-of-the-chart hint, 0 page errors.
 // Usage: node tests/hud118.mjs [url]   (serve the repo first, e.g. `npm run serve`)
 import { chromium } from "playwright";
 const SLOW = +process.env.TEST_SLOW || 1;
@@ -77,11 +77,14 @@ console.log("desktop: priority, warnings, home chip, the edge");
   check(w.edge - w.d > 380, "...and it came earlier than the old 380 px", w);
   await sleep(6000);
 
-  // the way home under 40% hull
+  // the way home under 25% hull (#144: 30% no longer shows it)
   await page.evaluate(() => { player.x = PORT.x + 1500; player.y = PORT.y; player.maxHp = 100; player.hp = 30; });
   await sleep(700);
+  check(await page.evaluate(() => homeChip.hidden), "at 30% hull the way home stays hidden", null);
+  await page.evaluate(() => { player.hp = 20; });
+  await page.waitForFunction(() => !homeChip.hidden, null, { timeout: 2000 * SLOW }).catch(() => {});   // the chip check below reports a miss
   const chip = await page.evaluate(() => ({ hidden: homeChip.hidden, text: homeChip.textContent, tf: homeChip.querySelector("i").style.transform }));
-  check(!chip.hidden && /Harbor \d+ m/.test(chip.text) && /rotate/.test(chip.tf), "under 40% hull the way home shows direction and distance", chip);
+  check(!chip.hidden && /Harbor \d+ m/.test(chip.text) && /rotate/.test(chip.tf), "under 25% hull the way home shows direction and distance", chip);
   const cr = await rect(page, "#homeChip"), tb = await page.evaluate(() => { const b = document.querySelector("#hud .bars").getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom }; });
   check(!hit(cr, tb), "the chip sits below the HUD bars", { cr, tb });
   await page.evaluate(() => { player.hp = 90; });

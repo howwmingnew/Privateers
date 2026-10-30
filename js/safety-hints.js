@@ -13,9 +13,9 @@ Object.assign(STR.zh, {
   chartEdge: "海圖盡頭：前面沒有海了，請掉頭。",
 });
 
-const HOME_HULL = 0.4;        // under this share of hull the way home stays on the screen
+const HOME_HULL = 0.25;       // under this share of hull the way home stays on the screen (= HULL_CRIT_AT, js/hull-alert.js: on purpose, one "badly hurt" line)
 const HOME_MIN_D = 500;       // px: that close the harbor is in sight, no chip (the harbor zone is SAFE_R)
-const TUT_STRAY_R = 1500;     // px: during the lesson, farther than this from the harbor earns a nudge (inside the practice waters, NOVICE_PORT_R)
+const TUT_STRAY_R = 2000;     // px: during the lesson, farther than this from the harbor earns a nudge (past the practice waters, PRACTICE_R, inside NOVICE_PORT_R)
 const TUT_STRAY_GAP = 25;     // s between nudges while the captain stays out
 const CHART_EDGE_NEAR = 160, CHART_EDGE_CLEAR = 420;   // px from the map's border: the hint shows inside the first, may show again after the captain has been farther than the second
 
