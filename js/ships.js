@@ -125,7 +125,7 @@ function avoidIslands(s, desired) {
 }
 // Who fights whom:
 //   pirate -> attacks everyone that is not a pirate (player, navy, merchants)
-//   navy   -> attacks pirates and the player
+//   navy   -> attacks pirates, and the player and escorts only from 2 stars of heat (or when provoked: js/novice.js navyCalm)
 //   merchant -> attacks nobody; runs from pirates and the player, fires back at whoever shot it
 // Anyone fights back against the ship that last hit it.
 const LEASH = 900;          // an AI gives up once it has sailed this far from where the chase began and still cannot reach
@@ -139,6 +139,7 @@ function isHostile(e, o) {
   if (bossFeud(e, o)) return false;   // bosses, rematch captains and their guards stay out of the other AI's fights (js/archetypes.js)
   if (e.ally) return !o.isPlayer && !o.fixed && !o.ally && (o.faction === "pirate" || o.faction === "navy");   // an escort fights pirates and the Navy, not batteries or merchants (js/escort-ai.js)
   if (e.attacker === o && e.angry > 0) return true;
+  if (o.ally && typeof navyCalm === "function" && navyCalm(e)) return false;   // under 2 stars the Navy does not open on the escorts either (js/novice.js)
   if (o.isPlayer && typeof practiceShip === "function" && practiceShip(e)) return false;   // a practice target never fires first (js/novice.js)
   if (o.isPlayer && typeof noviceSpare === "function" && noviceSpare(e)) return false;   // a newcomer's first bounty is a duel; the Shallows are not hunted (js/novice.js)
   const g = o.isPlayer ? "player" : o.faction;
