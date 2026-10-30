@@ -12,7 +12,8 @@
     "test:all": "node tools/run-tests.mjs all",
     "test:quick": "node tools/run-tests.mjs quick",
     "fonts": "node tools/font-subset.mjs --write",
-    "fonts:check": "node tools/font-subset.mjs --check"
+    "fonts:check": "node tools/font-subset.mjs --check",
+    "portal": "node tools/build-portal.mjs"
   },
   "devDependencies": {
     "playwright": "1.56.1"
