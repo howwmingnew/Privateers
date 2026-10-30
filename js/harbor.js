@@ -57,7 +57,8 @@ const buyLabel = id => save.gold < SHIPS[id].cost ? t("buyShort", { n: fmt(SHIPS
   : t(ownedShips().some(e => e.ship === id) ? "buyAnother" : "buy", { n: fmt(SHIPS[id].cost), cost: fmt(SHIPS[id].cost) });
 function renderPort() {
   const $ = id => document.getElementById(id);
-  $("pMsg").innerHTML = t(...portMsg) + sunkByHtml(portMsg) + visitBillsHtml();
+  const keep = typeof ledgerAnchor === "function" ? ledgerAnchor() : null;   // where the open panel sits now: put back after the redraw (js/ledger-hold.js)
+  holdMsg($("pMsg"), t(...portMsg) + sunkByHtml(portMsg) + visitBillsHtml());   // the message box never gets shorter within a visit, so the deck below it holds still
   $("pGold").textContent = fmt(save.gold);
   const rate = lvProgress();   // Ship Lv and the share of the way to the next (js/lv-path.js)
   $("pStats").innerHTML = `<span><b>${t("s_" + save.ship)}</b></span><span>${t("statLvP", { n: rate.lv, p: rate.pct })}</span><span><b>${YARD.hull.show(yardVal("hull"))}</b></span>` +
@@ -65,6 +66,7 @@ function renderPort() {
   renderGunBay();   // drops a pick whose place is gone (js/gunbay.js), before the fleet is drawn
   renderFleet();   // the ship tabs, the picked ship's gun deck and the context panel (js/ledger-tabs.js)
   runHook("renderPort");   // wanted poster, outpost layout (js/campaign.js)
+  if (keep) keep();
 }
 
 document.getElementById("port").addEventListener("click", ev => {
@@ -119,7 +121,7 @@ document.getElementById("port").addEventListener("click", ev => {
   if (ledgerFocus) { document.querySelector(ledgerFocus)?.focus({ preventScroll: true }); ledgerFocus = null; }
   if (act === "ship" || act === "switch" || act === "escBuyShip") document.getElementById("fleet").scrollIntoView({ block: "start" });   // a new hull: show the tabs and the new deck, never leave the sheet scrolled past them (focus moved to the catalog's next row)
   if (act === "gbag") document.querySelector(".gslot.dest")?.scrollIntoView({ block: "nearest" });   // a picked spare: the slot it goes to comes into view (js/gear-ui.js)
-  if ((act === "port" && deckSel) || (act === "hull" && hullOpen)) { document.getElementById("ctx").scrollIntoView({ block: "nearest" }); if (typeof noteOpenScroll === "function") noteOpenScroll(); }   // the panel opens under the deck: bring it into view (not when the same click closed it, js/ledger-tabs.js)
+  if ((act === "port" && deckSel) || (act === "hull" && hullOpen)) { panelInView(); if (typeof noteOpenScroll === "function") noteOpenScroll(); }   // the panel opens under the deck: bring it into view (not when the same click closed it, js/ledger-tabs.js)
 });
 // Not enough gold: a disabled button never receives a click, so listen for the press itself.
 document.getElementById("port").addEventListener("pointerdown", ev => { const b = ev.target.closest("[data-act]"); if (b && b.disabled) Snd.play("denied"); });

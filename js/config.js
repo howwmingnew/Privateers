@@ -69,6 +69,7 @@ const MINI_UNIT_MIN = 0.35;   // a chart unit never draws smaller than this many
 
 // Sharing (js/sharecard.js) and the daily sea (js/daily.js, js/run.js). [PLACEHOLDER] loadout until playtested.
 const PLAYER_TURN = 2.5;   // rad/s the captain turns at before the hull's own turn factor (SHIPS[id].turn)
+const CONFIRM_GOLD = 30;   // a gun upgrade or purchase from this price up takes a second tap to confirm (js/gunbay.js, #117)
 const GUN_UP_BATCH = 5;   // levels the gun card's "Upgrade 5 levels" button buys at once (js/gunbay.js)
 const FLEET_MAX = 12;   // ships the yard keeps for one captain, the one you sail included (js/shipyard.js)
 const SHARE_URL = "https://howwmingnew.github.io/Privateers/";

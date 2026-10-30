@@ -5,11 +5,11 @@
 //   sortieTally({ sunk, cargo, bonus, gold })   the 1.2 s count-up when the hold sells (js/mooring.js, js/harbor.js)
 //   lvBanner(n) · bossCard(name) · screenFlash()
 Object.assign(STR.en, {
-  lvUp: "Ship Lv {n}!", tallySunk: "Sunk", tallyCargo: "{n} cargo", tallyGold: "gold", tallyBest: "Most ships sunk in one sortie!",
+  lvUp: "Ship Lv {n}!", tallyTitle: "Sortie settlement", tallySunk: "Ships sunk", tallyCargo: "Cargo sold: {n}", tallyGold: "gold earned", tallyBest: "Most ships sunk in one sortie!",
   tallyRec: "Best sortie: {n} sunk",
 });
 Object.assign(STR.zh, {
-  lvUp: "船艦升到 Lv {n}！", tallySunk: "擊沉", tallyCargo: "{n} 貨物", tallyGold: "金幣", tallyBest: "單次出航擊沉最多！",
+  lvUp: "船艦升到 Lv {n}！", tallyTitle: "出航結算", tallySunk: "擊沉艘數", tallyCargo: "賣出貨物：{n}", tallyGold: "賺得金幣", tallyBest: "單次出航擊沉最多！",
   tallyRec: "紀錄：一次出航擊沉 {n} 艘",
 });
 // save.bestRun: the best sortie by ships sunk (gold breaks a tie: the streak is the sunk count). It replaced
@@ -116,7 +116,7 @@ function sortieTally({ sunk, cargo: c, bonus, gold }) {
   const icons = Math.min(sunk, 12);
   // (a pass that sold at two different prices has no single multiplier: the cargo and the gold stand alone)
   const firstSale = typeof firstVoyage === "function" && firstVoyage();   // the first sale reads cargo -> gold, no multiplier math
-  el.innerHTML = (sunk > 0 ? `<div class="t-sunk"><span>${t("tallySunk")}</span>${SKULL_SVG.repeat(icons)}${sunk > icons ? `<em>+${sunk - icons}</em>` : ""}</div>` : "") +
+  el.innerHTML = `<div class="t-title">${t("tallyTitle")}</div>` + (sunk > 0 ? `<div class="t-sunk"><span>${t("tallySunk")}</span>${SKULL_SVG.repeat(icons)}<b class="t-n">×${sunk}</b></div>` : "") +
     `<div class="t-math">${t("tallyCargo", { n: fmt(c) })}${bonus > 0 && !firstSale && Math.abs(Math.round(c * (1 + bonus)) - gold) <= 1 ? ` <b>× ${(1 + bonus).toFixed(1)}</b>` : ""}</div>` +
     `<div class="t-gold">+<b>0</b> <small>${t("tallyGold")}</small></div>` +
     (record ? `<div class="t-best">${t("tallyBest")}</div>` : (save.bestRun.sunk > 0 ? `<div class="t-rec">${t("tallyRec", { n: save.bestRun.sunk })}</div>` : ""));

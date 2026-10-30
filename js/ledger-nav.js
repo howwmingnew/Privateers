@@ -45,7 +45,7 @@ function ledgerMove(dx, dy) {
     const ports = [...$m("deck").querySelectorAll(".slot, .dk-ship")], next = ports[ports.indexOf(cur) + 1];   // the hull button sits between the larboard and starboard ports
     if (next) { focusEl(next); return; }
   }
-  const foot = inFooter(cur), col = cur.closest(".lcol");
+  const foot = inFooter(cur), lc = cur.closest(".lcol"), col = lc && getComputedStyle(lc).display !== "contents" ? lc : null;   // the two columns exist on a wide page only; in one column the poster leads and plain position decides (#124)
   // sideways stays in its row (footer or shop); up and down move through the shop, never into the footer, and finish
   // the column they are in (the shop, or the poster beside it) before crossing to the other
   const pool = els.filter(el => el !== cur && (dx ? inFooter(el) === foot : !inFooter(el)));

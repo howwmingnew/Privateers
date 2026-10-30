@@ -4,6 +4,8 @@
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+// A spend of CONFIRM_GOLD or more (a gun upgrade or purchase, a break-down) arms its button on the first tap (#117): press again once it shows "Tap again to confirm".
+const sureClick = async (page, sel) => { await page.click(sel); if (await page.evaluate(s => !!document.querySelector(s + "[data-armed]"), sel)) { await page.waitForTimeout(450); await page.click(sel); } };
 // CI runners render without a GPU (~10 fps, game time runs at half speed): TEST_SLOW stretches every wait.
 const SLOW = +process.env.TEST_SLOW || 1;
 
@@ -367,7 +369,7 @@ for (const dpr of [1, 2]) {
   ok("a shop click in the first moments after docking is ignored", early === 1, { early });
   await page.screenshot({ path: join(out, "d-tutorial-ledger.png") });
   await page.click('#deck [data-act="port"]');   // a gun port picked: the armory is in its panel
-  await page.click('[data-act="buy"][data-id="six"]');
+  await sureClick(page, '[data-act="buy"][data-id="six"]');
   await page.waitForTimeout(150 * SLOW);
   const t7 = await ev(page, () => ({ done: save.tutorialDone, txt: document.getElementById("coachTxt").textContent }));
   ok("tutorial advances out > aim (red) > fire > sink > scoop > sell > buy > done from game state", t6.gold > 0 && t6.inSheet && /12/.test(t6.txt) && t7.done && /loop/.test(t7.txt), { t6, t7 });
