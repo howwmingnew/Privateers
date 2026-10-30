@@ -1,4 +1,4 @@
-// Unit tests for #121: the fights a Normal escort turns down (js/escort-pick.js), the escort chip's hit warning (js/escort-hud.js), and the
+// Unit tests for #121 / #143: the fights an escort turns down (js/escort-pick.js), the escort chip's hit warning (js/escort-hud.js), and the
 // plain stance lines and the one firepower base in both languages (js/escorts.js, js/escort-gift.js).
 // Usage: node --test tests/unit-escort-care.mjs
 import { test } from "node:test";
@@ -17,8 +17,8 @@ function boot(files, extra = {}) {
   for (const f of files) vm.runInContext(src(f), ctx, { filename: f });
   return { run: code => vm.runInContext(code, ctx), json: code => JSON.parse(vm.runInContext(`JSON.stringify(${code})`, ctx)) };
 }
-const pick = extra => boot(["js/config.js", "js/escort-pick.js"], extra);
-const base = { mine: 5, theirs: 5, zone: 5, provoked: false, navyPeace: false };
+const pick = () => boot(["js/config.js", "js/escort-pick.js"]);
+const base = { mine: 5, theirs: 5, zone: 5, provoked: false, navy: false };
 const shuns = (g, stance, o) => g.run(`escortShuns(${JSON.stringify(stance)}, ${JSON.stringify({ ...base, ...o })})`);
 
 test("Normal escorts turn down ships and seas far above them, and nothing else", () => {
@@ -34,24 +34,18 @@ test("a Normal escort still defends itself and the flagship against a stronger s
   assert.equal(shuns(pick(), "normal", { theirs: 30, zone: 30, provoked: true }), false);
 });
 
-test("Normal escorts do not start a fight with a Navy ship while the captain is not wanted (#120), but defend", () => {
+test("no escort starts a fight with a Navy ship, in any stance (#143), but every stance defends against one", () => {
   const g = pick();
-  assert.equal(shuns(g, "normal", { navyPeace: true }), true);
-  assert.equal(shuns(g, "normal", { navyPeace: true, provoked: true }), false, "the Navy that shot at us is fair");
+  for (const st of ["active", "normal", "passive"]) {
+    assert.equal(shuns(g, st, { navy: true }), true, st + " leaves an idle Navy ship alone");
+    assert.equal(shuns(g, st, { navy: true, provoked: true }), false, st + ": the Navy that shot at us or the flagship is fair");
+  }
 });
 
-test("Active may still take on anything; Passive is not governed here (it only fights what hit it)", () => {
+test("Active may still take on any other ship; Passive is not governed here (it only fights what hit it)", () => {
   const g = pick();
-  assert.equal(shuns(g, "active", { theirs: 30, zone: 30, navyPeace: true }), false);
-  assert.equal(shuns(g, "passive", { theirs: 30, zone: 30, navyPeace: true }), false);
-});
-
-test("escortNavyPeace: a Navy ship is off limits below two stars, fair from two; a pirate never is", () => {
-  const g = pick({ heatStars: h => Math.floor(h / 20), heatNow: () => 39 });
-  assert.equal(g.run("escortNavyPeace({ faction: 'navy' })"), true);
-  assert.equal(g.run("escortNavyPeace({ faction: 'pirate' })"), false);
-  assert.equal(pick({ heatStars: h => Math.floor(h / 20), heatNow: () => 40 }).run("escortNavyPeace({ faction: 'navy' })"), false);
-  assert.equal(pick().run("escortNavyPeace({ faction: 'navy' })"), true, "no heat system loaded: not wanted");
+  assert.equal(shuns(g, "active", { theirs: 30, zone: 30 }), false);
+  assert.equal(shuns(g, "passive", { theirs: 30, zone: 30 }), false);
 });
 
 // js/escort-hud.js with the page stubbed out: the hurt hook lights the chip and warns once per escort per sortie.

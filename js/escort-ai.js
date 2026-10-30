@@ -56,7 +56,8 @@ function deployEscorts() {
 
 // ---------- Who an escort fights ----------
 // active: any enemy near it; normal: an enemy in gun range, one hunting the flagship or an escort, one that hit it;
-// passive: only one that hit it or is bearing down on it. Always inside the stance's reach of the flagship. Normal also refuses fights it would lose (escortShuns).
+// passive: only one that hit it or is bearing down on it. Always inside the stance's reach of the flagship. None starts on the Navy, and Normal also
+// refuses fights it would lose (escortShuns).
 function escortRetarget(e, now) {
   const P = ESCORT_STANCE[e.stance] || ESCORT_STANCE.normal, lead = player;
   if (!lead.alive || docked) { e.target = null; return; }
@@ -68,9 +69,9 @@ function escortRetarget(e, now) {
     return hitMe(o) || on === e;
   };
   const ok = o => o && o.alive && !o.ally && isHostile(e, o) && !ignoring(e, o, now) && dist(o, lead) <= P.reach * 1.25;
-  // a Normal escort turns down a much stronger ship, one in a much deadlier sea, and a Navy ship while the captain is not wanted (js/escort-pick.js)
+  // no escort starts on the Navy; a Normal one also turns down a much stronger ship and one in a much deadlier sea (js/escort-pick.js)
   const shuns = o => escortShuns(e.stance, { mine: e.threatL ?? e.L, theirs: o.threatL ?? o.L, zone: levelAt(Math.hypot(o.x - PORT.x, o.y - PORT.y)),
-    provoked: hitMe(o) || o.target === lead || !!(o.target && o.target.ally), navyPeace: escortNavyPeace(o) });
+    provoked: hitMe(o) || o.target === lead || !!(o.target && o.target.ally), navy: o.faction === "navy" });
   if (ok(e.target) && wants(e.target) && !shuns(e.target)) return;   // stay on the one it has
   let best = null, bd = 1e9;
   for (const o of enemies) {
