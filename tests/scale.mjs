@@ -198,6 +198,29 @@ console.log("Old settings");
   await ctx.close();
 }
 
+// ---------- 6. First-voyage chart is not a blank square (#125) ----------
+console.log("First-voyage chart");
+{
+  const { ctx, page, errors } = await open(browser, { viewport: { width: 1280, height: 720 } });
+  await page.click("[data-smoke=start]");
+  await page.evaluate(() => { if (!docked) dock("welcome"); });
+  await page.waitForFunction(() => docked, null, { polling: 50, timeout: 5000 * SLOW });
+  await page.evaluate(() => { save.tutorialDone = false; tut.active = true; });   // the coach is up: the chart is the lite one
+  await page.click("#sail"); await sleep(400); await settle(page);
+  const r = await page.evaluate(() => {
+    const lite = chartLite(), cv = miniLiteBase(), d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data;
+    let land = 0;   // island pixels are the pale ISLAND_FILL (js/mini-marks.js), brighter than any sea tint
+    for (let i = 0; i < d.length; i += 4) if (d[i] > 150 && d[i + 1] > 150 && d[i + 2] > 130) land++;
+    const near = islands.filter(liteIsle).length;
+    return { lite, land, near, shade: new Set([d[0], d[d.length - 4], d[(cv.width * (cv.height >> 1) + 3) * 4]]).size };
+  });
+  check(r.lite, "first voyage draws the lite chart", r);
+  check(r.near > 0 && r.land > 20, "the lite chart shows the first sea's islands, not only a flat sea", r);
+  check(r.shade > 1, "the lite chart keeps the sea's shading from harbor to corner", r);
+  check(errors.length === 0, "no page errors on the first-voyage chart", errors);
+  await ctx.close();
+}
+
 await browser.close();
 if (fails.length) { console.log(`\n${fails.length} FAILED`); for (const f of fails) console.log("  - " + f); process.exit(1); }
 console.log("\nAll size slider checks passed.");
