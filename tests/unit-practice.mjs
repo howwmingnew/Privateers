@@ -16,9 +16,9 @@ function boot() {
     STR: { en: {}, zh: {} }, docked: false, heat: 0, runActive: () => false, shipRating: () => 1, seaOfRing: () => ({ id: "shallows" }),
     save: { campaign: { bounty: 0 }, ngPlus: 0, tutorialDone: false }, bossFeud: () => false, inSafe: () => false,
     pickArch: (L, f) => f === "navy" ? "fireship" : "brig",   // worst case: the mix hands out a fireship
-    outfitEnemy(e, k) { e.arch = k; e.A = { boom: k === "fireship" }; e.merchant = k === "fluyt"; e.cls = k; },
+    outfitEnemy(e, k) { e.threatL = e.L; e.arch = k; e.A = { boom: k === "fireship" }; e.merchant = k === "fluyt"; e.cls = k; },
   });
-  for (const f of ["js/config.js", "js/flee.js", "js/novice.js", "js/notify-order.js"]) vm.runInContext(src(f), ctx, { filename: f });
+  for (const f of ["js/config.js", "js/util.js", "js/flee.js", "js/novice.js", "js/notify-order.js"]) vm.runInContext(src(f), ctx, { filename: f });
   vm.runInContext(hostile, ctx);
   return { ctx, run: code => vm.runInContext(code, ctx) };
 }
@@ -100,4 +100,48 @@ test("provoked: a practice target the captain hit fights on (no timer), still ne
   assert.equal(g.run("isHostile(e, player)"), true, "hostile long after the 8 s anger has lapsed");
   const b = mk({ escort: true, faction: "merchant" }); g.ctx.b = b; g.run("tameFirstVoyage(b, false)");
   assert.equal(b.practice, true); assert.equal(!!b.escort, false, "a convoy brig made in the zone is no escort");
+});
+
+// ---- #115: two bands. Inner (first 3 rings, to PRACTICE_R = ringEdge(4)): practice targets. Outer (to NOVICE_PORT_R): ordinary Lv 2-3 ships.
+test("bands: the inner band is the first 3 rings, the outer band runs from there to NOVICE_PORT_R", () => {
+  const g = boot();
+  assert.equal(g.run("PRACTICE_R"), 1580, "SAFE_R 620 + 3 x ZONE_STEP 320 = ringEdge(4)");
+  assert.ok(g.run("PRACTICE_R") < g.run("NOVICE_PORT_R"));
+  assert.equal(g.run("practiceZone(PORT.x + PRACTICE_R - 1, PORT.y)"), true);
+  assert.equal(g.run("practiceZone(PORT.x + PRACTICE_R, PORT.y)"), false);
+  assert.equal(g.run("outerZone(PORT.x + PRACTICE_R - 1, PORT.y)"), false);
+  assert.equal(g.run("outerZone(PORT.x + PRACTICE_R, PORT.y)"), true);
+  assert.equal(g.run("outerZone(PORT.x + NOVICE_PORT_R - 1, PORT.y)"), true);
+  assert.equal(g.run("outerZone(PORT.x + NOVICE_PORT_R, PORT.y)"), false, "beyond the circle: the usual bands");
+  const ned = g.run("SAFE_R + 2 * ZONE_STEP + ZONE_STEP / 2");   // ringMid(3), Red Ned's lair
+  assert.ok(ned < g.run("PRACTICE_R"), "Red Ned's lair is in the inner band");
+  g.run("save.campaign.bounty = 1");
+  assert.equal(g.run("outerZone(PORT.x + 2000, PORT.y)"), false, "first bounty claimed");
+  g.run("save.campaign.bounty = 0; save.ngPlus = 1");
+  assert.equal(g.run("outerZone(PORT.x + 2000, PORT.y)"), false, "New Game+");
+  g.run("save.ngPlus = 0; runActive = () => true");
+  assert.equal(g.run("outerZone(PORT.x + 2000, PORT.y)"), false, "a daily run");
+});
+
+test("outerLv: Lv 2 on ring 4, Lv 3 on rings 5-6, never above Ship Lv + 1, never under 2", () => {
+  const g = boot(), lv = (ring, me) => g.run(`outerLv(${ring}, ${me})`);
+  assert.deepEqual([4, 5, 6].map(r => lv(r, 9)), [2, 3, 3]);
+  assert.deepEqual([4, 5, 6].map(r => lv(r, 1)), [2, 2, 2], "a Ship Lv 1 captain: capped at Lv 2");
+  assert.deepEqual([4, 5, 6].map(r => lv(r, 2)), [2, 3, 3]);
+  for (let me = 1; me <= 12; me++) for (let r = 4; r <= 6; r++) { assert.ok(lv(r, me) >= 2); assert.ok(lv(r, me) <= me + 1); assert.ok(lv(r, me) <= 3); }
+});
+
+test("spawn: an ordinary ship made in the outer band is a normal ship at outerLv; it keeps its flee/first-strike rules", () => {
+  const g = boot();
+  g.run("seaOfRing = r => ({ id: r <= 3 ? \"shallows\" : \"reef\" })");
+  const make = (o, me = 1) => { g.ctx.me = me; g.run("shipRating = () => me"); const e = mk({ x: 4000 + 2000, ring: 5, ...o }); g.ctx.e = e; g.run("tameFirstVoyage(e, false)"); return e; };
+  const e = make({});
+  assert.equal(e.L, 2, "Ship Lv 1: Lv 2"); assert.notEqual(e.practice, true, "not a practice target");
+  assert.equal(g.run("practiceShip(e)"), false); assert.equal(g.run("practiceTarget(e)"), false, "it may flee");
+  assert.equal(make({}, 6).L, 3, "ring 5 at Ship Lv 6: Lv 3");
+  assert.equal(make({ ring: 4 }, 6).L, 2, "ring 4: Lv 2");
+  assert.equal(make({ x: 4000 + 1500 }).practice, true, "just inside the line: still a practice target");
+  assert.equal(make({ x: 4000 + 3000, ring: 8 }).L, 5, "beyond the circle: untouched");
+  g.run("heat = 3");
+  assert.equal(make({ faction: "navy" }, 1).L, 2, "a hunter's spawn while Wanted keeps the old cap (Ship Lv + 1)");
 });

@@ -83,6 +83,8 @@ check(r.b && r.a, "and to the player's own escorts (and the escorts to the boss)
 // ---------- #72: the starter and every bought ship swap back free ----------
 console.log("#72 owned ships switch back free");
 const tap = sel => page.click(sel);
+// a spend of CONFIRM_GOLD or more arms its button on the first tap (#117): tap again once it shows "Tap again to confirm"
+const sure = async sel => { await page.click(sel); if (await page.evaluate(s => !!document.querySelector(s + "[data-armed]"), sel)) { await page.waitForTimeout(450); await page.click(sel); } };
 // The ships are in the hull's panel (js/ledger-panel.js): open it before reading or pressing them.
 const openHull = () => ev(() => { if (!hullOpen) { resetLedgerPick(); hullOpen = true; renderPort(); } });
 const yardInfo = async () => { await openHull(); return ev(() => ({ ship: save.ship, id: save.shipId, gold: save.gold, owned: ownedShips().map(e => e.ship), switches: [...document.querySelectorAll('#ships [data-act="switch"]')].map(b => b.dataset.id),
@@ -115,7 +117,7 @@ const ledgerState = () => ev(() => {
   const hit = document.elementFromPoint(g.left + g.width / 2, g.top + g.height / 2);
   return { top: Math.round(sheet.scrollTop), max: sheet.scrollHeight - sheet.clientHeight, goldVisible: g.top >= s.top - 1 && g.bottom <= s.top + h.height + 1 && !!hit && (hit.id === "pGold" || hit === hd || hd.contains(hit)),
     hdrH: Math.round(h.height), vh: innerHeight, sheetH: Math.round(s.height), noHScroll: document.documentElement.scrollWidth <= innerWidth + 1 && sheet.scrollWidth <= sheet.clientWidth + 1,
-    gold: document.getElementById("pGold").textContent, btnBehind: [...sheet.querySelectorAll("button:not([disabled])")].filter(b => { const r = b.getBoundingClientRect(), fr = sheet.querySelector("footer").getBoundingClientRect(); return r.width > 0 && r.bottom < fr.top && r.top >= s.top + h.height && r.bottom <= s.bottom && r.left + r.width / 2 > 0 && r.left + r.width / 2 < innerWidth /* a tab scrolled out of the tab row sideways is not behind anything */ && (() => { const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !(e && (e === b || b.contains(e))); })(); }).length };
+    gold: document.getElementById("pGold").textContent, btnBehind: [...sheet.querySelectorAll("button:not([disabled])")].filter(b => { const r = b.getBoundingClientRect(), fr = sheet.querySelector("footer").getBoundingClientRect(); return r.width > 0 && r.bottom < fr.top && r.top >= s.top + h.height && r.bottom <= s.bottom && r.left + r.width / 2 > 0 && r.left + r.width / 2 < innerWidth /* a tab scrolled out of the tab row sideways is not behind anything */ && (() => { const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !(e && (e === b || b.contains(e) || e.closest("#tabs"))); })(); }).length };   // (the ship tabs stick under the header on purpose, #107: content passing beneath them is not covered by a bug)
 });
 const sizes = [[1280, 720, 100], [390, 844, 100], [390, 844, 150], [390, 844, 250], [1280, 720, 250], [390, 844, 50]];
 for (const [w, h, pct] of sizes) {
@@ -168,7 +170,7 @@ await page.locator(S1("bow", 0)).scrollIntoViewIfNeeded();
 await tap(S1("right", 0)); await page.waitForTimeout(100);
 let g68 = await bayState();
 check(g68.sel === "right0" && g68.acts.includes("gfrom") && g68.acts.includes("buy") && !g68.acts.includes("unload"), `the empty port picked offers the stored gun and the armory, nothing to unload (${g68.acts})`);
-await tap('[data-act="buy"][data-id="carronade"]'); await page.waitForTimeout(100);
+await sure('[data-act="buy"][data-id="carronade"]'); await page.waitForTimeout(100);
 g68 = await bayState();
 check(g68.right === "carronade1" && g68.store === "chain1" && g68.sel === "right0", `a gun bought for the empty port is mounted at once (${g68.right}), the store is untouched, the port stays picked`);
 check(!(await ev(() => !!document.querySelector('[data-act="swap"]'))) && !g68.acts.includes("gundo"), "there is no Swap position button anywhere; a purchase has no Undo");

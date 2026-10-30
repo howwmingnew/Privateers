@@ -5,6 +5,8 @@
 // Usage: node tests/gear.mjs [url]     (exit 1 on any failed check or page error)
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
+// A spend of CONFIRM_GOLD or more (a gun upgrade or purchase, a break-down) arms its button on the first tap (#117): press again once it shows "Tap again to confirm".
+const sureClick = async (page, sel) => { await page.click(sel); if (await page.evaluate(s => !!document.querySelector(s + "[data-armed]"), sel)) { await page.waitForTimeout(450); await page.click(sel); } };
 const SLOW = +process.env.TEST_SLOW || 1;
 const url = process.argv[2] || "http://127.0.0.1:8765/index.html";
 const SHOTS = ".review/gear/";
@@ -121,11 +123,11 @@ await page.click('#gear [data-act="glock"]');
 check(await page.evaluate(() => save.gear.bag[8].lk === 1 && document.querySelector('#gear [data-act="gscrap"]').disabled), "Lock sticks and disables Break down");
 await page.click('#gear [data-act="glock"]');
 const m0 = await page.evaluate(() => save.gear.mats);
-await page.click('#gear [data-act="gscrap"]');
+await sureClick(page, '#gear [data-act="gscrap"]');
 r = await page.evaluate(() => ({ bag: save.gear.bag.length, mats: save.gear.mats }));
 check(r.bag === 9 && r.mats > m0, `Break down removes the piece and pays fittings (${m0} to ${r.mats})`);
 await page.evaluate(() => { save = { ...save, gear: { ...save.gear, bag: save.gear.bag.concat([{ p: "flag", lv: 1, lk: 1 }]) } }; renderPort(); });
-await page.click('#gear [data-act="gbatch"][data-r="0"]');
+await sureClick(page, '#gear [data-act="gbatch"][data-r="0"]');
 r = await page.evaluate(() => ({ plain: save.gear.bag.filter(x => !(x.r | 0) && !x.lk).length, locked: save.gear.bag.some(x => x.lk) }));
 check(r.plain === 0 && r.locked, "the batch breaks down every unlocked common piece and spares the locked one");
 await page.evaluate(() => { window.__ei = save.gear.bag.findIndex(x => x.p === "body" && x.r === 3); });
@@ -151,14 +153,14 @@ check(await page.evaluate(() => document.querySelectorAll("#ctx .cand .slot.r3, 
 await page.click('#ctx [data-act="gprev"][data-side="store"][data-i="0"]');
 check(await page.evaluate(() => !!document.querySelector("#ctx .candcard .gcard.r3 .afx") && !!document.querySelector('#ctx .candcard [data-act="glock"]') && !!document.querySelector("#ctx .candcard .cmp") && /▲|▼/.test(document.querySelector("#ctx .candcard .cmp").innerText)), "a stored gun's card lists its affixes, offers Lock and compares with a mounted gun");
 await shot("gear-gun-card");
-await page.click('#ctx .candcard [data-act="gup"]');
+await sureClick(page, '#ctx .candcard [data-act="gup"]');
 check(await page.evaluate(() => save.store[0].lv === 3 && save.store[0].r === 3 && save.store[0].af.length === 3), "upgrading a gun keeps its rarity and affixes");
 await page.click('#ctx .candcard [data-act="glock"][data-w="gun"]');
 check(await page.evaluate(() => save.store[0].lk === 1), "a gun can be locked");
 await page.click('#ctx .candcard [data-act="glock"][data-w="gun"]');
 await page.click('#ctx .candcard [data-act="greroll"][data-k="0"]');
 check(await page.evaluate(() => save.store[0].rr === 1), "a gun's affix can be re-rolled");
-await page.click('#ctx .candcard [data-act="gscrap"][data-w="gun"]');
+await sureClick(page, '#ctx .candcard [data-act="gscrap"][data-w="gun"]');
 check(await page.evaluate(() => save.store.length === 2 && save.store[0].g === "six" && !candSel && !!deckSel), "a stored gun can be broken down (the picked port stays picked)");
 await page.evaluate(() => { cancelGunPick(); });
 check(await page.evaluate(() => gunSig(["six!", null, "long12", "fire!"]) === "s!-lf!" && gunSig(["six", "carronade"]) === "sc"), "a legendary gun has its own picture key; plain guns keep theirs");
@@ -219,11 +221,11 @@ check(r.fast > 0 && !(r.slow > 0), `legendary prow: a hard ram tears the other s
 r = await page.evaluate(() => {
   wx.on = true; wx.wind = { dir: 0, strength: 1 }; player.rot = 0; const out = {};
   __bare(); out.tail0 = wxMul(player); player.rot = Math.PI; out.head0 = wxMul(player);
-  __wear("sail", { p: "sail", lv: 1, r: 1, il: 1, af: [["tail", 0.5], ["head", 0.5]] }); player.rot = 0; out.tail1 = wxMul(player); player.rot = Math.PI; out.head1 = wxMul(player);
+  __wear("sail", { p: "sail", lv: 1, r: 1, il: 1, af: [["tail", 0.2], ["head", 0.5]] }); player.rot = 0; out.tail1 = wxMul(player); player.rot = Math.PI; out.head1 = wxMul(player);
   const e = { rot: 0, isPlayer: false }; out.other = wxMul(e);
   return out;
 });
-check(near(r.tail1 - 1, (r.tail0 - 1) * 1.5, 0.01) && near(1 - r.head1, (1 - r.head0) * 0.5, 0.01), `wind: following +50% (${r.tail0.toFixed(3)} to ${r.tail1.toFixed(3)}), head wind loss halved (${r.head0.toFixed(3)} to ${r.head1.toFixed(3)})`);
+check(near(r.tail1 - 1, (r.tail0 - 1) * 1.2, 0.01) && near(1 - r.head1, (1 - r.head0) * 0.5, 0.01), `wind: following +20% (${r.tail0.toFixed(3)} to ${r.tail1.toFixed(3)}), head wind loss halved (${r.head0.toFixed(3)} to ${r.head1.toFixed(3)})`);
 check(near(r.other, r.tail0, 0.001), "other ships feel the plain wind");
 r = await page.evaluate(() => { wx.w.storm = 1; wx.calm = false; player.rot = Math.PI / 4; __bare(); const a = wxYaw(player); __wear("instr", { p: "instr", lv: 1, r: 1, il: 1, af: [["storm", 0.5]] }); return [a, wxYaw(player)]; });
 check(r[0] !== 0 && near(r[1] / r[0], 0.5, 0.01), "navigation instruments cut the storm's yaw by 50%");

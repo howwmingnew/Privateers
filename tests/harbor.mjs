@@ -83,7 +83,7 @@ const state = page => ev(page, () => ({ docked, paused, canDock, gold: save.gold
   const s1 = await state(page);
   const resets = await ev(page, () => window.__resets);
   ok("sailing into the ring sells the hold at once, reported by the tally alone (no toast), and no ledger",
-    !s1.docked && !s1.paused && s1.gold - before.gold === 80 && /cargo/.test(s1.tally) && !/Sold the hold/.test(s1.toast), s1);
+    !s1.docked && !s1.paused && s1.gold - before.gold === 80 && /cargo/i.test(s1.tally) && !/Sold the hold/.test(s1.toast), s1);
   ok("quick resupply keeps the sortie: no sea reset, no new sortie, gold counted in the log", resets === 0 && s1.sorties === before.sorties && s1.statGold - before.statGold === 80, { resets, s1 });
   ok("while the tally is up the stop prompt waits (one report of the sale)", s1.prompt === "" && s1.t === 0, s1.prompt);
   await until(page, () => /\+80/.test(document.getElementById("tally").textContent), null, { timeout: 3000 * SLOW });

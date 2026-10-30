@@ -40,6 +40,7 @@ function edgeBox(it) {
   return { el, ic: el.firstElementChild, txt: el.children[1], ptr: el.lastElementChild, key: "", label: "", w: 0, h: 0, sk: "", look: it.boss ? "b" : "s" };
 }
 // Every target that could get a box right now, with its screen position (css px) and distance (world px).
+const edgeHitBy = o => typeof hitMarks !== "undefined" && hitMarks.some(h => h.src === o);   // a shooter that just hit you (js/notices.js)
 function edgeCandidates(v, kx, ky) {
   const out = [], reach = EDGE_RANGE * gearMul("view") * v.width, me = shipRating();   // one rating for every ship's threat
   const add = (o, it) => {
@@ -49,7 +50,7 @@ function edgeCandidates(v, kx, ky) {
     if (it.boss) it = { ...it, risky: edgeRisky(it.e.threatL ?? it.e.L, seaLowLv(seaOfRing(ringAt(dist(o, PORT))).id), me) };   // the skull warns about the water it points into
     out.push({ ...it, o, px, sx: (o.x - v.x) * kx, sy: (o.y - v.y) * ky });
   };
-  for (const e of enemies) if (e.alive && !e.fixed && (e.ally || !(typeof disFogHides === "function" && disFogHides(e)))) add(e, { kind: "ship", e, boss: !!e.boss, ally: !!e.ally, d: e.ally ? 0 : threatTier(e.threatL ?? e.L, me).d });   // an escort that has dropped out of sight keeps a mint box, fog or not
+  for (const e of enemies) if (e.alive && !e.fixed && (e.ally || !(typeof disFogHides === "function" && disFogHides(e)))) add(e, { kind: "ship", e, boss: !!e.boss, ally: !!e.ally, d: e.ally ? 0 : threatTier(e.threatL ?? e.L, me).d, atk: edgeHitBy(e) });   // an escort that has dropped out of sight keeps a mint box, fog or not
   if (typeof disMarks === "function") for (const h of disMarks()) add(h, { kind: "hazard", hz: h, d: 2 });   // warning or running disasters (js/disasters.js)
   if (portsOff()) return out;   // the daily sea has no harbor or stations (js/ports.js)
   add(PORT, { kind: "place", place: "harbor", d: 0, far: SETTINGS.homeArrow !== false });   // the way home is shown from anywhere on the chart, unless switched off
@@ -69,6 +70,16 @@ function readEdgeKeepouts(dt) {   // the HUD strip (as one top limit) and the bo
   const top = Math.max(0, ...over, ...[...document.querySelectorAll("#hud .side, #hud .bars")].map(el => el.getBoundingClientRect().bottom));
   return (edgeKeep = { top, bottom: ["bossBar", "hint", "touchSail"].map(id => box(document.getElementById(id))).filter(Boolean).map(r => [r.left, r.right]) });
 }
+function onScreenPlates(v, kx, ky) {   // each shown enemy plate as a css-px rect (origin 0.5, js/ships.js)
+  const out = [];
+  for (const e of enemies) {
+    const b = e.badge;
+    if (!e.alive || !b || !b.visible || b.alpha < 0.5) continue;
+    const w = b.displayWidth * kx, h = b.displayHeight * kx, x = (b.x - v.x) * kx, y = (b.y - v.y) * ky;
+    out.push({ l: x - w / 2, r: x + w / 2, t: y - h / 2, b: y + h / 2 });
+  }
+  return out;
+}
 function updateEdgeMarks(dt) {
   if (edgeHidden()) { edgeLayer.hidden = true; edgeShowsBoss = false; for (const [, m] of edgeEls) m.el.remove(); edgeEls.clear(); return; }
   edgeLayer.hidden = false;
@@ -87,7 +98,7 @@ function updateEdgeMarks(dt) {
     let m = edgeEls.get(it.o);
     if (!m) { m = edgeBox(it); edgeEls.set(it.o, m); requestAnimationFrame(() => m.el.classList.add("on")); }
     m.el.classList.remove("gone"); m.it = it;
-    m.el.classList.toggle("risky", !!it.risky);
+    m.el.classList.toggle("risky", !!it.risky); m.el.classList.toggle("atk", !!it.atk);   // atk: it just hit you, its box flashes (css/ledger.css)
     if (it.kind === "ship" && !it.boss && !it.ally) { const th = String(edgeThreat(it.d)); if (m.el.dataset.th !== th) m.el.dataset.th = th; }   // the box's border and pointer take the threat colour (css/campaign.css)
     const key = (it.boss ? "b" : it.place || (it.hz ? "h" + it.hz.kind : "s")) + (it.e ? it.d + (it.e.faction || "") + (it.e.arch || "") : "");
     if (key !== m.key || it.e?.arch === "fireship") { m.key = key; edgeIcon(m.ic, it); }   // a fireship's flicker needs a fresh paint
@@ -101,6 +112,7 @@ function updateEdgeMarks(dt) {
   for (const it of picked) { const m = edgeEls.get(it.o); spots.set(it.o, edgePoint({ l: inset.l + m.w / 2, r: inset.r - m.w / 2, t: inset.t + m.h / 2, b: inset.b - m.h / 2 }, it.sx - cx, it.sy - cy)); }
   // one edge at a time: keep each box's own spot, spread them on that edge, slide clear of the boss bar and the hint
   // top and bottom first: the left and right edges then keep out of the corner those rows reach into, so a box near a corner never lands on its neighbour
+  const plates = onScreenPlates(v, kx, ky);   // level plates in view: a box slides along its edge to clear them (#119)
   const rows = [];   // the placed top / bottom boxes: { x, y, hw, hh }
   for (const side of ["top", "bottom", "left", "right"]) {
     const group = picked.filter(it => spots.get(it.o).side === side);
@@ -113,7 +125,8 @@ function updateEdgeMarks(dt) {
     }
     const half = group.map(it => (vert ? edgeEls.get(it.o).h : edgeEls.get(it.o).w) / 2), gap = Math.max(boxH, ...half.map(x => x * 2)) * 1.08;
     const along = spreadAlong(group.map(it => spots.get(it.o)[axis]), gap, lo + Math.max(...half), hi - Math.max(...half));
-    group.forEach((it, i) => { spots.get(it.o)[axis] = side === "bottom" ? dodgeAlong(along[i], half[i], keep.bottom, lo + half[i], hi - half[i]) : along[i]; });
+    const thick = Math.max(...group.map(it => edgeEls.get(it.o)[vert ? "w" : "h"])), blocked = (side === "bottom" ? keep.bottom : []).concat(plateSpans(plates, side, spots.get(group[0].o)[vert ? "x" : "y"], thick));
+    group.forEach((it, i) => { spots.get(it.o)[axis] = dodgeAlong(along[i], half[i], blocked, lo + half[i], hi - half[i]); });
     if (!vert) for (const it of group) { const m = edgeEls.get(it.o), sp = spots.get(it.o); rows.push({ x: sp.x, y: sp.y, hw: m.w / 2, hh: m.h / 2 }); }
   }
   for (const [o, m] of edgeEls) {

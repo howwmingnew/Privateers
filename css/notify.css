@@ -23,6 +23,12 @@
   #achToast.on { transform: translate(-50%, 0); }
 }
 
+/* The top lane (js/hud-stack.js laneTick, #118): a notice that cannot be lifted clear of the ship or the tutorial card shrinks instead */
+#toast.lane-compact { font-size: min(calc(16px * var(--ts, 1)), 6vh); padding-block: 1px 2px; }
+#seaBanner.lane-compact span, #seaBanner.lane-compact small, .jbanner.lane-compact small, .jbanner.lane-compact .b-chest { display: none; }
+#seaBanner.lane-compact b, .jbanner.lane-compact b { font-size: clamp(20px, 4vw, 30px); padding: 1px 14px; }
+.jbanner.lane-compact { font-size: calc(22px * var(--ts, 1)); }
+
 /* Landscape phones: the sea banner is a slim strip at the top, clear of the ship in the middle of the screen */
 @media (max-height: 500px) {
   #seaBanner { top: calc(env(safe-area-inset-top, 0px) + 6px); gap: 0; }

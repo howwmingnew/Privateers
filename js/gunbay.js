@@ -1,8 +1,8 @@
 "use strict";
 // ---------- Harbor ledger: moving guns about, the gun store, the armory ----------
 // The ledger (js/ledger-tabs.js, js/ledger-panel.js) shows one ship's gun deck at a time: tap a port to pick it (deckSel; the context panel
-// then offers its upgrades, the guns to put there instead (gfrom: the store and your other ships' ports) and the armory (buy mounts it at
-// once, the gun it replaces goes to the store)). A place is { side: mount key | "store", i } on the flagship, plus e = the escort slot for a
+// then offers its upgrades, the guns to put there instead (gfrom: the store and your other ships' ports) and the armory (a bought gun goes into the
+// picked port when it is empty, else an empty port of that ship, else the store: buyTarget; it never replaces a gun)). A place is { side: mount key | "store", i } on the flagship, plus e = the escort slot for a
 // port of that escort (js/escorts.js); the pure edits below take any of them. The older tap-the-source-then-the-destination rules, still
 // what gunAct "slot" / "store" do:
 //   - a stored gun or a mounted one: tap it to pick it up (deckSel) and every place it can go is outlined; tap it again to put it down.
@@ -14,8 +14,8 @@
 // Esc, the pad's back button, tapping the source again, or tapping a blank spot in the ledger drops the pick. Every move says what
 // happened ("Swapped", "Mounted", "Unloaded") with an Undo button for the latest one only (gunNote). The picked gun's card offers
 // its upgrade (named with the next level and its price), the same upgrade five levels at a time (total price; fewer levels near
-// the cap, disabled with the shortfall when gold runs out) and Unload. The armory sells one gun at a time: with a port picked it is mounted
-// there at once (the gun it replaces goes to the store), with nothing picked it lands in the store, picked. renderPort (js/harbor.js) calls
+// the cap, disabled with the shortfall when gold runs out) and Unload. The armory sells one gun at a time (buyTarget says where it goes, and the note beside the buttons where it went).
+// A gun upgrade or purchase of CONFIRM_GOLD or more takes a second tap (js/escort-ui.js twoTap): the first tap arms the button and relabels it "Tap again to confirm" (#117). renderPort (js/harbor.js) calls
 // renderGunBay; js/ledger-panel.js builds the panel from gunCardHtml, armoryHtml and gunNoteHtml; the click handler hands every gun action to gunAct; Esc reaches cancelGunPick through goBack (js/menu.js). A gun may carry a rarity, item level and affixes
 // (#38, js/gear-core.js): its slot is edged in the rarity colour, and its card (gearExtraHtml, js/gear-ui.js) lists them with re-roll, lock and break down.
 Object.assign(STR.en, {
@@ -31,6 +31,9 @@ Object.assign(STR.en, {
   upNArm: "Tap again to confirm: +{n} levels for {cost} gold", spreadHint: "This gun is already {d} levels above your {gun}. Each level costs 1.5x the last, so spreading the gold over the lower guns pays off more.",
   upN: "Upgrade {n} levels at once ({cost} gold)", upNShort: "Upgrade {n} levels at once: {d} gold short ({cost} in all)", gainDmg: "Damage +{p}%", gainFx: "Effect +{p}%",
   boughtMounted: "Bought a <em>{gun}</em> and mounted it.", putHere: "Put here", candInfo: "Details",
+  boughtPort: "Bought a <em>{gun}</em> and put it in the empty {side} port {n}. The gun you picked stays where it is.",
+  boughtStored: "Bought a <em>{gun}</em>. Every port is full, so it waits in the store; pick it under \"Put a gun here\" to swap it in. Nothing was replaced.",
+  upArm: "Tap again to confirm: Lv {n} for {cost} gold", buyArm: "Tap again to confirm: buy for {n} gold",
 });
 Object.assign(STR.zh, {
   bay: "火砲庫存", bayEmpty: "庫存是空的。在軍械庫買的砲會先放在這裡，等你裝上船。",
@@ -45,6 +48,9 @@ Object.assign(STR.zh, {
   upTo: "升級到 Lv {n}（{cost} 金幣）", upShort: "升級到 Lv {n}（{cost} 金幣，還差 {d}）",
   upN: "一次升 {n} 級（共 {cost} 金幣）", upNShort: "一次升 {n} 級：還差 {d} 金（共 {cost}）", gainDmg: "火力 +{p}%", gainFx: "效果 +{p}%",
   boughtMounted: "已買下<em>{gun}</em>並裝上。", putHere: "裝到這裡", candInfo: "詳情",
+  boughtPort: "已買下<em>{gun}</em>，裝在空的{side}砲位 {n}。你選的那門砲沒有動。",
+  boughtStored: "已買下<em>{gun}</em>。砲位都滿了，所以先放在庫存；到「換上別的砲」點它就能換上。沒有任何砲被取代。",
+  upArm: "再點一次確認：升到 Lv {n}，花 {cost} 金幣", buyArm: "再點一次確認：花 {n} 金幣購買",
 });
 const GUN_ACTS = ["slot", "store", "buy", "gup", "gup5", "unload", "tostore", "gundo", "gfrom"];
 let deckSel = null;   // the picked port or stored gun: { side: mount key | "store", i } (+ e: an escort's slot, for one of its ports), or null
@@ -83,6 +89,8 @@ const gunStats = (g, lv, ship = save.ship, to = 0) => { const G = GUNS[g], k = s
   return t("dmg", { n: was }) + (to ? arrow(dmgNum(G.dmg * m2)) : "") + (G.burn ? t("burn", { n: wasB }) + (to ? arrow(dmgNum(G.burn * m2 * BURN_T)) : "") : ""); };
 const armedNow = key => typeof armedTap === "function" && armedTap(key);   // the two-tap confirm lives in js/escort-ui.js (not loaded by the unit tests)
 const confirmed = key => typeof twoTap !== "function" || twoTap(key);
+const upKey = p => `gup:${p.side}${p.i}${p.e ?? ""}`, buyKey = id => `buy:${id}`;   // the armed state of one port's single upgrade, and of one armory row
+const spendNeedsTap = cost => cost >= CONFIRM_GOLD;   // a small spend goes through at once; a bigger one takes a second tap (one rule for upgrades and purchases, #117)
 const up5Key = p => `gup5:${p.side}${p.i}${p.e ?? ""}`;   // the armed state of one port's "upgrade N levels" button (js/escort-ui.js twoTap)
 const gunName = gun => t("gf_" + gun.g) + " Lv " + gun.lv;
 const gunRar = gun => (typeof rarClass === "function" ? rarClass(gun) : "");   // " r0".." r4": the rarity colour of the slot and card (css/gear.css)
@@ -117,6 +125,16 @@ function gunUpPlan(gun, gold, n = GUN_UP_BATCH) {
   let cost = 0;
   for (let j = 0; j < k; j++) cost += gunUpCost({ ...gun, lv: gun.lv + j });
   return { n: k, cost, short: Math.max(0, cost - gold) };
+}
+
+// Pure: where a gun bought with `sel` picked goes. The picked port when it is empty; else the first empty port of the same ship (the picked gun stays put);
+// else null: the store. A bought gun never replaces one, so an epic is never pushed out by a mis-tap (#117).
+function buyTarget(s, sel) {
+  if (!sel || sel.side === "store") return null;
+  if (!gunIn(s, sel)) return sel;
+  const ports = sel.e != null ? (s.escorts[sel.e] || {}).guns || {} : s;
+  for (const { key } of MOUNTS) { const i = (ports[key] || []).findIndex(g => !g); if (i >= 0) return placeOf(key, i, sel.e); }
+  return null;
 }
 
 // ---------- actions: each returns the sound to play, or null when nothing happened ----------
@@ -157,13 +175,14 @@ function gunAct(act, d) {
   }
   if (act === "buy") {
     const id = d.id, cost = Object.hasOwn(GUNS, id) ? GUNS[id].cost : Infinity;
-    const into = deckSel && deckSel.side !== "store" ? deckSel : null, old = into ? gunAt(into) : null;   // a port picked in the ledger: the new gun goes straight in
-    if (save.gold < cost || (!into || old) && save.store.length >= MAX_STORE) return null;   // the store takes the new gun, or the one it replaces
+    const into = buyTarget(save, deckSel);   // an empty port to mount it in, or null: the store
+    if (save.gold < cost || !into && save.store.length >= MAX_STORE) return null;
+    if (spendNeedsTap(cost) && !confirmed(buyKey(id))) return null;   // the first tap arms the button (js/escort-ui.js)
     const paid = { ...save, gold: save.gold - cost };
-    if (into) { const next = withGun(paid, into, gunItem(id)); save = old ? { ...next, store: next.store.concat([old]) } : next; }
-    else { save = { ...paid, store: paid.store.concat([gunItem(id)]) }; deckSel = { side: "store", i: save.store.length - 1 }; }
-    gunNote = null;   // a purchase is not a move: nothing to undo
-    portMsg = [into ? "boughtMounted" : "bought", { gun: t("gf_" + id) }];
+    if (into) save = withGun(paid, into, gunItem(id));
+    else { save = { ...paid, store: paid.store.concat([gunItem(id)]) }; if (!deckSel || deckSel.side === "store") deckSel = { side: "store", i: save.store.length - 1 }; }
+    // a purchase is not a move: nothing to undo. The words go beside the buttons (gunNote), not into the ledger's top message: its height would shift the deck (#117)
+    gunNote = { tip: !into ? "boughtStored" : deckSel && samePlace(into, deckSel) ? "boughtMounted" : "boughtPort", gunId: id, at: into };
     return "buy";
   }
   if (act === "tostore") return gunAct("unload", d);
@@ -173,7 +192,7 @@ function gunAct(act, d) {
   if (act === "gup" || act === "gup5") {
     const plan = act === "gup5" ? gunUpPlan(gun, save.gold) : { n: gun.lv < GUN_MAX ? 1 : 0, cost: gunUpCost(gun), short: Math.max(0, gunUpCost(gun) - save.gold) };
     if (!plan.n || plan.short > 0) return null;
-    if (act === "gup5" && !confirmed(up5Key(at))) return null;   // a big spend: the first tap arms the button (js/escort-ui.js)
+    if (act === "gup5" ? !confirmed(up5Key(at)) : spendNeedsTap(plan.cost) && !confirmed(upKey(at))) return null;   // a big spend: the first tap arms the button (js/escort-ui.js)
     save = withGun({ ...save, gold: save.gold - plan.cost }, at, { ...gun, lv: gun.lv + plan.n });   // rarity, affixes and lock stay with the gun
     gunNote = null;   // gold was spent: Undo would hand the levels back for free, so it only ever covers a move
     return "upgrade";
@@ -197,7 +216,8 @@ function renderGunBay() {
 // The status line: what the last move did, with Undo; or a one-off tip (an empty port tapped with nothing to mount).
 function gunNoteHtml() {
   if (!gunNote) return "";
-  if (gunNote.tip) return `<p class="gnote tip" role="status">${t(gunNote.tip)}</p>`;
+  if (gunNote.tip) { const at = gunNote.at, side = at && at.side !== "store" && typeof sideLabel === "function" ? sideLabel(at.side) : "";   // a purchase's note names the gun and the port it went to
+    return `<p class="gnote tip" role="status">${t(gunNote.tip, { gun: gunNote.gunId ? t("gf_" + gunNote.gunId) : "", side, n: at ? at.i + 1 : "" })}</p>`; }
   return `<div class="gnote" role="status"><span>${t(...gunNote.text)}</span><button class="btn ghost" type="button" data-act="gundo">${t("gunUndo")}</button></div>`;
 }
 // The card of the picked gun, or (cand) of a candidate in the ledger's replace list: its buttons then carry the gun's place and add "Put here".
@@ -207,7 +227,7 @@ function gunCardHtml(p = deckSel, cand = false) {
   const pl = cand ? ` data-side="${p.side}" data-i="${p.i}"${p.e != null ? ` data-e="${p.e}"` : ""}` : "";
   const G = GUNS[gun.g], max = gun.lv >= GUN_MAX, cost = max ? 0 : gunUpCost(gun), short = cost - save.gold, mounted = p.side !== "store";
   const up = max ? `<button class="btn max" type="button" disabled>${t("max")}</button>`
-    : `<button class="btn" type="button" data-act="gup"${pl} ${short > 0 ? "disabled" : ""}>${upgradeLabel(gun.lv + 1, cost, short, gunGain(gun, 1))}</button>`;
+    : `<button class="btn" type="button" data-act="gup"${pl} ${short > 0 ? "disabled" : ""}${short <= 0 && armedNow(upKey(p)) ? armAttrs() : ""}>${short <= 0 && armedNow(upKey(p)) ? t("upArm", { n: gun.lv + 1, cost: fmt(cost) }) + gainLine(gunGain(gun, 1)) : upgradeLabel(gun.lv + 1, cost, short, gunGain(gun, 1))}</button>`;
   const plan = gunUpPlan(gun, save.gold), up5 = plan.n >= 2   // one level left is just the button above
     ? `<button class="btn" type="button" data-act="gup5"${pl} ${plan.short > 0 ? "disabled" : ""}${armedNow(up5Key(p)) ? armAttrs() : ""}>${t(plan.short > 0 ? "upNShort" : armedNow(up5Key(p)) ? "upNArm" : "upN", { n: plan.n, cost: fmt(plan.cost), d: fmt(plan.short) })}${gainLine(gunGain(gun, plan.n))}</button>` : "";
   const spread = gunSpread(save, p), spreadNote = spread ? `<p class="hint-s spread">${t("spreadHint", { d: spread.d, gun: gunName(spread.gun) })}</p>` : "";
@@ -232,13 +252,13 @@ const gunGain = (gun, n) => { const lv = typeof lvGainGun === "function" ? lvGai
 const pctUp = (from, to) => Math.round((to / from - 1) * 100);   // 1.15x per gun level -> 15; k levels at once -> the compound figure
 // The armory sells Lv 1 guns one at a time; how many of each the captain has is shown beside the name.
 function armoryHtml() {
-  const full = save.store.length >= MAX_STORE && !(deckSel && deckSel.side !== "store" && !gunAt(deckSel));   // a gun bought into an empty port needs no room in the store
-  const mounted = deckSel && deckSel.side !== "store", mine = !mounted || deckSel.e == null;   // a gun bought for an escort's port does not count in the flagship's Ship Lv
+  const into = buyTarget(save, deckSel), full = save.store.length >= MAX_STORE && !into;   // a gun bought into an empty port needs no room in the store
+  const mine = !into ? !deckSel || deckSel.side === "store" || deckSel.e == null : into.e == null;   // a gun bought for an escort's port does not count in the flagship's Ship Lv
   return GUN_ORDER.map(id => {
     const G = GUNS[id], n = allGuns().filter(x => x.g === id).length;
-    const gain = mine && typeof lvGainNewGun === "function" ? lvGainNewGun(id, mounted ? deckSel : null) : "";   // js/lv-path.js
+    const gain = mine && typeof lvGainNewGun === "function" ? lvGainNewGun(id, into) : "";   // js/lv-path.js
     return `<div class="item"><div class="nm">${gunIcon(id)}${t("gf_" + id)}<small>${t("owned", { n })}</small></div>
-      <button class="btn" type="button" data-act="buy" data-id="${id}" ${save.gold < G.cost || full ? "disabled" : ""}>${save.gold < G.cost ? t("buyNeed", { n: fmt(G.cost), d: fmt(G.cost - save.gold) }) : t("buy", { n: fmt(G.cost) })}${gainLine(gain)}</button>
+      <button class="btn" type="button" data-act="buy" data-id="${id}" ${save.gold < G.cost || full ? "disabled" : ""}${save.gold >= G.cost && !full && armedNow(buyKey(id)) ? armAttrs() : ""}>${save.gold < G.cost ? t("buyNeed", { n: fmt(G.cost), d: fmt(G.cost - save.gold) }) : armedNow(buyKey(id)) && !full ? t("buyArm", { n: fmt(G.cost) }) : t("buy", { n: fmt(G.cost) })}${gainLine(gain)}</button>
       <div class="ds">${gunStats(id, 1)} · ${t("range", { n: G.range })} · ${t("rpm", { n: G.rpm })}${G.chain ? t("chainFx", { n: CHAIN_T }) : ""} · ${t("gn_" + id)}</div></div>`;
   }).join("");
 }

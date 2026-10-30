@@ -9,6 +9,7 @@ const ENEMY_COUNT = 30;     // ordinary ships at sea, shared out by ring quota (
 const BALL_SPEED = 480;
 const ARC = 0.62;           // half-angle (rad) of each broadside firing arc
 const ZONE_STEP = 320;      // every this many px from the harbor, enemy level +1: the axis edge reaches Lv 10
+const PRACTICE_R = SAFE_R + 3 * ZONE_STEP;   // the practice waters (js/novice.js) end here: = ringEdge(4), the first 3 rings (1580 px)
 const MAX_RING = 10;        // the outermost level ring; the corners past it belong to it too
 // Big gun decks (js/gundeck.js, js/combat.js): the most ports on one side, and the gun-bay layout that goes compact from DENSE_PORTS.
 // A broadside rolls off gun by gun, ROLL_GAP_MS apart but never longer than ROLL_MAX_MS in all; only about FX_GUNS guns of a
@@ -69,6 +70,7 @@ const MINI_UNIT_MIN = 0.35;   // a chart unit never draws smaller than this many
 
 // Sharing (js/sharecard.js) and the daily sea (js/daily.js, js/run.js). [PLACEHOLDER] loadout until playtested.
 const PLAYER_TURN = 2.5;   // rad/s the captain turns at before the hull's own turn factor (SHIPS[id].turn)
+const CONFIRM_GOLD = 30;   // a gun upgrade or purchase from this price up takes a second tap to confirm (js/gunbay.js, #117)
 const GUN_UP_BATCH = 5;   // levels the gun card's "Upgrade 5 levels" button buys at once (js/gunbay.js)
 const FLEET_MAX = 12;   // ships the yard keeps for one captain, the one you sail included (js/shipyard.js)
 const SHARE_URL = "https://howwmingnew.github.io/Privateers/";
@@ -171,7 +173,7 @@ const ESCORT_OVER = 4;              // a normal-stance escort will not pick a fi
 const ESCORT_LEASH = 120;            // px (about 60 m, EDGE_M_PER_PX) an escort may stray from its formation slot before it turns back to it
 // Wind, weather and the hour of day (js/weather-core.js is the maths, js/weather.js the sea). Every number here is gameplay:
 // the same for every player whatever the weather-effects setting says, so a daily sea plays the same everywhere.
-const WIND = { tail: 0.20, head: 0.25, full: 0.6 };   // speed gained running before the wind, lost beating into it, at wind strength >= full (a calm gives less)
+const WIND = { tail: 1.5, head: 0.30, full: 0.6, min: 0.7, max: 3 };   // speed gained running before the wind (a bare ship x2.5, the best sails x3 = max), lost beating into it (a bare ship x0.7 = min; head gear softens it), at wind strength >= full (a calm gives less); min/max bound it as a safety net (#wind-range)
 const WEATHER = {
   seg: [75, 150], blend: 12,                          // a spell of weather lasts seg[0]..seg[1] s and fades into the next over `blend` s
   first: { clear: 0.5, rain: 0.3, storm: 0.2 },       // the opening weather of a sortie
@@ -274,7 +276,7 @@ const GEAR_REROLL = { mats: [0, 2, 5, 12, 25], gold: 30, step: 0.6 };   // one a
 const GEAR_AFFIX = {
   prow:   { ram: [0.08, 0.18], keep: [0.10, 0.25], brace: [0.06, 0.14], jolt: [0.10, 0.25] },   // ram: damage a collision deals; keep: speed kept after one; brace: damage it does you (also body); jolt: the other ship's extra lost speed
   body:   { hp: [0.06, 0.14], brace: [0.06, 0.14], fire: [0.10, 0.25], armor: [0.04, 0.09] },   // fire: burning damage you take (also supply); armor: cannon damage you take
-  sail:   { spd: [0.04, 0.08], turn: [0.05, 0.12], tail: [0.15, 0.35], head: [0.15, 0.35] },    // tail: more of the following wind's speed; head: less of the head wind's loss
+  sail:   { spd: [0.04, 0.08], turn: [0.05, 0.12], tail: [0.07, 0.165], head: [0.15, 0.35] },    // tail: more of the following wind's gain (best roll at item level 5, Lv 10: 0.165 x 1.5 x 1.36 = +0.337, so 1 + 1.5 x 1.337 reaches the x3 cap); head: less of the head wind's loss
   gun:    { gdmg: [0.06, 0.14], grange: [0.05, 0.12], greload: [0.06, 0.14], gtype: [0.10, 0.25] },   // gtype: burn x, chain slow time x, ball speed x for the plain guns
   supply: { repair: [0.15, 0.35], fire: [0.10, 0.25], cargo: [0.08, 0.20], powder: [0.20, 0.50] },   // powder: more magazine blasts from your rakes
   instr:  { view: [0.08, 0.20], aim: [0.06, 0.15], storm: [0.15, 0.35], reach: [0.04, 0.10] },  // view: plunder seen and ships marked farther; aim: damage rises up to this at full range; storm: storm yaw; reach: every gun's range
