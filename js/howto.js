@@ -24,7 +24,7 @@ Object.assign(STR.en, {
     <li><i class="sw-badge" style="--c:#e88a3a">Lv 3</i><span>One level stronger</span></li>
     <li><i class="sw-badge dark" style="--c:#d9493a">Lv 4</i><span>Much stronger: keep your distance</span></li></ul>
     <p><b>The color says how strong a ship is next to you, not whose it is.</b> The icon in front of the level says which side she sails for: <b>⚓ Navy</b>, <b>☠ Pirate</b>, <b>$ Merchant</b>. A green Navy ship is still the Navy: sink one and you are Wanted.</p>
-    <p>Merchants never attack first and carry the most gold. Pirates attack everyone. The navy hunts pirates, and you, but until you claim your first bounty it leaves you alone unless you shoot first.</p>`,
+    <p>Merchants never attack first and carry the most gold. Pirates attack everyone. The navy hunts pirates. It leaves you alone while you are under 2 stars of Wanted, unless you shoot, ram or board it first; from 2 stars it hunts you too.</p>`,
   ht_terms: `<h3>Words you will meet</h3><ul>
     <li><b>Ship Lv</b> (under the map): how strong your ship is. It rises with stronger guns (upgrade or swap them), a better hull, sails or gear, or a bigger ship. A Wanted poster's <b>Ready at Ship Lv</b> is the level to be before you sail.</li>
     <li><b>Lv badge on an enemy</b>: that ship's strength, on the same scale as your Ship Lv.</li>
@@ -87,7 +87,7 @@ Object.assign(STR.zh, {
     <li><i class="sw-badge" style="--c:#e88a3a">Lv 3</i><span>比你強一級</span></li>
     <li><i class="sw-badge dark" style="--c:#d9493a">Lv 4</i><span>強很多，最好保持距離</span></li></ul>
     <p><b>標籤顏色＝這艘船比你強弱，不代表陣營。</b>等級前面的圖示才是陣營：<b>⚓ 海軍</b>、<b>☠ 海盜</b>、<b>$ 商船</b>。綠色的海軍仍是海軍，打沉牠會被通緝。</p>
-    <p>商船從不主動攻擊，身上的金幣也最多。海盜見誰打誰。海軍會追捕海盜，也會追捕你；但在你領第 1 張懸賞前，除非你先開火，否則海軍不會主動攻擊你。</p>`,
+    <p>商船從不主動攻擊，身上的金幣也最多。海盜見誰打誰。海軍會追捕海盜；你的通緝低於 2 星時，除非你先開火、衝撞或登船，否則海軍不會主動攻擊你，從 2 星起才會連你一起追捕。</p>`,
   ht_terms: `<h3>會遇到的詞</h3><ul>
     <li><b>船艦 Lv</b>（地圖下方）：你這艘船有多強。換更強的砲（升級或對調）、升級船體、船帆、裝備，或換大一點的船都會提高。懸賞海報上的<b>船艦 Lv 即可迎戰</b>，就是出航前最好達到的等級。</li>
     <li><b>敵船上的 Lv 標籤</b>：那艘船的戰力，和你的船艦 Lv 用同一套標準。</li>
