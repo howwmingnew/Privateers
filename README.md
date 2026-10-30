@@ -51,7 +51,10 @@ npm test               # 單元 + 冒煙測試（CI 的必過關卡）
 npm run test:quick     # 單元 + 冒煙 + 依分支相對 origin/main 分岔點的改動挑出的相關瀏覽器測試，目標 5 分鐘內
 npm run test:all       # 全部測試；預設同時跑「CPU 執行緒數的一半、最多 8」支，可用 `-- --jobs N` 指定
 npm run fonts          # 重新產生 js/fonts-link.js（字型子集）
+npm run portal         # 產生 portal/（Poki / CrazyGames 版；加 `-- --sdk poki` 或 `-- --sdk crazygames` 會放入該平台的 SDK script）
 ```
+
+**入口網站版（`portal/`）**：Poki、CrazyGames 禁止外部請求，所以 `npm run portal`（`tools/build-portal.mjs`）從主版本自動產生 `portal/`：Phaser 與字型存到本地，外部連結改寫掉，並多載入 `js/portal-sdk.js`（來源在 `tools/portal/`，主版本不會載入它）：第一次操作與恢復航行時 `gameplayStart`，暫停、進港、切到背景時 `gameplayStop`，進港時請求插頁廣告並在廣告期間暫停音效；偵測不到 SDK 時什麼都不做。`portal/` 是產生物、已被 gitignore，不要手改；第一次建置需要網路（之後用 `node_modules/.cache/privateers-portal`）。`node tools/run-tests.mjs portal` 會建置並在「除 localhost 外全部擋掉」的瀏覽器裡驗證它能完整開機。
 
 **測試怎麼加**：放一個檔案就好，不用改 `package.json`。`tests/unit*.mjs` 是單元測試（`node --test`）；`tests/<name>.mjs` 是瀏覽器測試，網址從 `argv[2]` 讀、失敗時以非 0 結束，`test:all` 會自動跑到。檔名以 `-perf` 結尾，或是 `art-perf`／`art-shots`／`art-page`，屬於效能與截圖工具，預設不跑，要手動執行。要讓 `test:quick` 認得新模組，在 `tools/test-map.mjs` 加一行對應（沒對應到的檔案會改跑核心測試組）。單支測試：`node tools/run-tests.mjs gundeck heat`。
 
