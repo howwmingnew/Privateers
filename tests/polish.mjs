@@ -223,7 +223,7 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
   const { ctx, page } = await open(D, { tag: "read" });
   await toLedger(page);
   const rec = await ev(page, () => ({ txt: document.querySelector(".poster .p-rec")?.textContent || "", ned: bountyRecLv(BOUNTIES[0]), all: BOUNTIES.map(bountyRecLv), me: shipRating() }));
-  ok("poster: a goal ship level from the boss's real threat (Red Ned: Ready at Ship Lv 3, his badge Lv 2 + 1: #98)", rec.ned === 3 && rec.all.slice(1).join() === "9,11,13,17" && /Goal/.test(rec.txt) && /Ready/.test(rec.txt) && new RegExp(`Lv ${rec.ned}`).test(rec.txt) && /you: Lv/.test(rec.txt), rec);
+  ok("poster: a goal ship level from the boss's real threat (Red Ned: Ready at Ship Lv 3, his badge Lv 2 + 1: #98; Carey: +2 in all, Lv 8: #122)", rec.ned === 3 && rec.all.slice(1).join() === "8,11,13,17" && /Goal/.test(rec.txt) && /Ready/.test(rec.txt) && new RegExp(`Lv ${rec.ned}`).test(rec.txt) && /you: Lv/.test(rec.txt), rec);
   // #91 #92: the poster is folded to head, goal and reward; its goal line shows the badge number it adds to; the toggle opens the rest
   const fold = await ev(page, () => { const p = document.querySelector("#wanted .poster"), vis = s => { const el = p.querySelector(s); return !!el && getComputedStyle(el).display !== "none"; };
     return { min: p.classList.contains("min"), story: vis(".p-story"), ship: vis(".p-ship"), goal: vis(".p-rec .goal"), calc: p.querySelector(".p-rec .calc")?.textContent || "", badge: bountyThreat(BOUNTIES[0]), h: Math.round(p.getBoundingClientRect().height) }; });

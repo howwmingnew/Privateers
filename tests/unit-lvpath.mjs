@@ -6,16 +6,17 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const FILES = ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/data.js", "js/save.js", "js/lv-path.js", "js/bounty-rec.js"];
+const FILES = ["js/config.js", "js/util.js", "js/settings.js", "js/i18n.js", "js/data.js", "js/save.js", "js/save-campaign.js", "js/shipyard.js", "js/ship-lines.js", "js/arsenal.js", "js/lv-path.js", "js/bounty-rec.js"];
 const SRC = FILES.map(f => [f, readFileSync(new URL("../" + f, import.meta.url), "utf8")]);
 
 function boot(lang = "en") {
-  const store = new Map([["privateers-lang", lang]]);
+  const store = new Map([["privateers-lang", lang]]), ready = [];
   const ctx = vm.createContext({
     localStorage: { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k), clear: () => store.clear() },
-    navigator: { language: "en-US" }, document: { addEventListener() {} }, console: { log() {}, warn() {}, error() {} }, setTimeout, clearTimeout,
+    navigator: { language: "en-US" }, document: { addEventListener: (type, fn) => { if (type === "DOMContentLoaded") ready.push(fn); } }, console: { log() {}, warn() {}, error() {} }, setTimeout, clearTimeout,
   });
   for (const [f, code] of SRC) vm.runInContext(code, ctx, { filename: f });
+  ready.forEach(fn => fn());   // the save loads here, once every file (shipyard adds the fleet) has added its defaults
   const run = code => vm.runInContext(code, ctx);
   return { run, json: code => JSON.parse(run(`JSON.stringify(${code})`)) };
 }
@@ -99,7 +100,7 @@ test("the hull upgrade shows its progress; sails and hold are not part of the ra
 
 test("lvPath: nothing to buy when already there; otherwise gold and the first purchase, and every purchase is affordable-priced from the tables", () => {
   const g = boot();
-  assert.deepEqual(g.json("lvPath(2)"), { gold: 0, first: null });
+  assert.deepEqual(g.json("lvPath(2)"), { gold: 0, first: null, fills: 0, ups: 0, hull: 0 });
   const p = g.json("lvPath(3)");
   assert.ok(p && p.gold > 0 && p.first, JSON.stringify(p));
   assert.equal(p.first.kind, "gun", "a Lv 1 gun costs 12 gold for +15% of a third of the damage: far better value than the 110-gold hull");
@@ -115,7 +116,7 @@ test("lvPath: a level far beyond what upgrades can reach on this hull is null, a
   const g = boot();
   assert.equal(g.run("lvPath(30)"), null);
   assert.match(g.run("lvShortHtml(30)"), /bigger ship/);
-  assert.match(g.run("lvShortHtml(3)"), /Cheapest way up: upgrade .* first; about \d+ gold/);
+  assert.match(g.run("lvShortHtml(3)"), /Route: keep your Sloop, upgrade \d+ gun\(s\).*; about \d+ gold in all/);
   assert.match(g.run("lvShortHtml(3)"), /levels to go/);
 });
 
@@ -129,17 +130,48 @@ test("lvPath: the result is memoised on the save it reads, and any change to gun
   assert.equal(g.run("lvPath(30)"), null);
 });
 
+test("lvRoute: a sloop that cannot reach Lv 8 by upgrades is told which open hull to buy, how many ports to fill and upgrade, and the gold", () => {
+  const g = boot();
+  g.run("save.campaign = { ships: ['sloop', 'schooner', 'gunboat'] }");   // Red Ned sunk: the two tier-2 hulls are open (SHIP_GATE)
+  assert.equal(g.run("lvPath(8)"), null, "the stock sloop cannot upgrade its way there");
+  const r = g.json("lvRoute(8)");
+  assert.ok(r, "an open hull gets there");
+  assert.equal(r.kind, "buy");
+  assert.ok(["schooner", "gunboat"].includes(r.ship));
+  assert.ok(r.gold > g.run(`SHIPS.${r.ship}.cost`), "the price plus the refit");
+  assert.ok(r.fills >= 1, "the new hull has empty ports to fill: " + JSON.stringify(r));
+  assert.ok(Number.isInteger(r.ups) && Number.isInteger(r.hull));
+  assert.equal(g.run(`onSave(buyShip({ ...save, gold: 99999 }, '${r.ship}'), () => lvPathCalc(8, emptyPortsOf(0)).gold) + SHIPS.${r.ship}.cost`), r.gold, "price + the walk on the bought hull");
+  assert.match(g.run("lvShortHtml(8)"), new RegExp(`Route: buy a ${g.run(`t('s_${r.ship}')`)}, fill \\d+ empty port\\(s\\).*gold in all`));
+  assert.match(boot("zh").run("(save.campaign = { ships: ['sloop', 'schooner', 'gunboat'] }, lvShortHtml(8))"), /路線：買一艘.*補滿 \d+ 個空砲位.*全部約 [\d.,]+K? 金幣/);
+  assert.equal(g.run("save.ship"), "sloop", "the preview never touches the save");
+});
+
+test("lvRoute: a hull the bounty has not opened is never offered, and an owned one is a free switch", () => {
+  const g = boot();
+  assert.ok(!g.run("(() => { const r = lvRoute(8); return r && r.kind === 'buy'; })()"), "nothing but the sloop is open on a fresh save");
+  g.run("save.campaign = { ships: ['sloop', 'schooner', 'gunboat'] }; save.fleet = [{ id: 's2', ship: 'gunboat', hull: 1, sails: 1, hold: 1 }]; save.shipSeq = 3");
+  const r = g.json("lvRoute(8)");
+  assert.ok(r && r.kind === "switch" && r.ship === "gunboat", JSON.stringify(r));
+  assert.match(g.run("lvShortHtml(8)"), /Route: sail your Gunboat/);
+});
+
 test("the poster's margin: a bounty can set its own (Red Ned asks one level), the rest keep boss + escort", () => {
   const g = boot();
   assert.equal(g.run("bountyMargin({ escorts: [], margin: 1 })"), 1);
   assert.equal(g.run("bountyMargin({ escorts: [] })"), 2);
   assert.equal(g.run("bountyMargin({ escorts: [{ cls: 'brig' }] })"), 3);
   assert.equal(g.run("bountyMargin({ escorts: [], margin: 0 })"), 0, "a margin of 0 is a margin, not 'unset'");
+  // #122: Mother Carey (with her escort) asks +2 in all, one under the default +3, so her poster reads about Ship Lv 8; set on the bounty, not in the constants
+  const camp = readFileSync(new URL("../js/campaign.js", import.meta.url), "utf8");
+  assert.match(camp.match(/\{ id: "carey"[^\n]*/)[0], /escorts: \[\{ cls: "brig" \}\], margin: 2 \}/);
+  assert.doesNotMatch(camp.match(/\{ id: "saint"[^\n]*/)[0], /margin/, "the later bounties keep the default");
+  assert.equal(g.run("BOSS_MARGIN + ESCORT_MARGIN"), 3);
 });
 
 test("every new string exists in both languages, with its placeholders", () => {
   const g = boot();
-  for (const k of ["shipLvP", "statLvP", "lvGainUp", "lvGainPct", "pRecGap", "pRecPath", "pRecPathBig", "pRecWhatHull", "pRecYou"])
+  for (const k of ["shipLvP", "statLvP", "lvGainUp", "lvGainPct", "pRecGap", "pRecRoute", "pRecPathBig", "rtBuy", "rtSwitch", "rtKeep", "rtFill", "rtUp", "rtHull", "rtJoin", "pRecYou"])
     assert.ok(g.run(`STR.en.${k}`) && g.run(`STR.zh.${k}`), k);
   for (const k of ["shipLvP", "statLvP"]) for (const l of ["en", "zh"]) assert.match(g.run(`STR.${l}.${k}`), /\{n\}.*\{p\}/, `${l}.${k}`);
   assert.match(g.run('t("shipLvP", { n: 2, p: 40 })'), /Ship Lv 2 · next 40%/);
