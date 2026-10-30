@@ -11,12 +11,12 @@
 // A struck prize within reach is grappled (#69, the spring in js/grapple.js): the rope reels the flagship alongside and a full-speed
 // run straight away parts it; boarding finished, or the prize sunk, ends the grapple.
 Object.assign(STR.en, {
-  boardHint: "Stay alongside to board", fBoarded: "Boarded!", fBoardGold: "+{n} gold", fHook: "Grappled", fSnap: "Rope parted!",
+  boardHint: "Stay alongside to board", boardNavy: "Boarding a Navy ship makes you Wanted. Stay alongside to board anyway", fBoarded: "Boarded!", fBoardGold: "+{n} gold", fHook: "Grappled", fSnap: "Rope parted!",
   toastPrizeGun: "Prize gun taken: {gun}, Lv {lv}. It waits in the gun store.",
   toastPrizeSold: "Gun store full: the prize gun sold for {n} gold instead.",
 });
 Object.assign(STR.zh, {
-  boardHint: "貼緊對方船舷就能登船", fBoarded: "登船成功！", fBoardGold: "+{n} 金幣", fHook: "抓鉤勾上", fSnap: "繩索斷了！",
+  boardHint: "貼緊對方船舷就能登船", boardNavy: "登上海軍的船會被通緝。仍要登船就保持貼緊", fBoarded: "登船成功！", fBoardGold: "+{n} 金幣", fHook: "抓鉤勾上", fSnap: "繩索斷了！",
   toastPrizeGun: "奪得火砲：{gun}，Lv {lv}，已放進火砲庫存。",
   toastPrizeSold: "火砲庫存已滿，奪來的砲改賣了 {n} 金幣。",
 });
@@ -128,7 +128,7 @@ function ropeSnap(e) {
 function boardPrompt(e, show) {
   if (!boardTxt) boardTxt = labelText(S.add.text(0, 0, "", { fontFamily: UI_FONT, fontSize: "13px", fontStyle: "700", color: "#f6f1e3", stroke: "#0b2530", strokeThickness: 4 }).setOrigin(0.5).setDepth(9));
   if (!show) { boardTxt.setVisible(false); return; }
-  const txt = t("boardHint");
+  const txt = t(e.faction === "navy" ? "boardNavy" : "boardHint");   // a Navy prize: the scuttling counts as a Navy sinking, so Wanted (js/heat.js)
   if (txt !== boardTxtShown) { boardTxtShown = txt; boardTxt.setText(txt); }
   boardTxt.setPosition(e.x, e.y + 46 * labelScale()).setVisible(true);
 }

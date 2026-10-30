@@ -9,14 +9,14 @@ Object.assign(STR.en, {
   seaAhead: "Warning: {sea} lies just ahead, and its ships far out-fight you. Turn back now.",
   practiceOut: "Beyond the practice waters: these ships dodge, flee and shoot back for real.",
   practiceIn: "Back in the practice waters: only small ships that never flee or fire first.",
-  navyAim: "That is a Navy ship (the ⚓ on its plate). Sinking Navy ships gets you Wanted. It will not attack you first for now.",
+  navyAim: "That is a Navy ship (the ⚓ on its plate). Sinking Navy ships gets you Wanted. It will not attack you first while you are under 2 stars of Wanted; shoot, ram or board it and it fights back.",
 });
 Object.assign(STR.zh, {
   seaWarnTag: "危險", seaWarn: "這裡的船遠比你的 Lv {n} 強。建議掉頭回港，或做好逃跑的準備。",
   seaAhead: "警告：前方就是{sea}，那裡的船遠比你強。現在掉頭還來得及。",
   practiceOut: "已離開練習海域：這裡的船會閃避、會逃，也會認真還擊。",
   practiceIn: "回到練習海域：只有不會逃、不會先開火的小船。",
-  navyAim: "這是海軍（標籤上有 ⚓）。攻擊海軍會被通緝；在你領第 1 張懸賞前，牠不會先攻擊你。",
+  navyAim: "這是海軍（標籤上有 ⚓）。攻擊海軍會被通緝；通緝低於 2 星時牠不會先攻擊你；但你（或護航艦）開火、衝撞或登船，牠就會還擊。",
 });
 
 const NOVICE_LV = 4;          // a Ship Lv under this still counts as a novice
@@ -49,20 +49,23 @@ const seaWarnGap = (seaLv, rating) => seaLv - rating >= SEA_WARN_GAP;
 
 // Peace for a newcomer (#102). Red Ned's lair: until the first bounty is claimed, no ship but Ned himself joins a fight within
 // PEACE_R of it unless the captain shot at it first, so the first bounty is a duel, not a brawl. Until that first bounty is claimed the
-// Navy leaves the captain alone anywhere unless shot at first (#105): a ship's colour is its strength, not its side, and a newcomer
-// who cannot yet tell Navy from pirate must not be hunted for it. In the Shallows, a novice is also spared by every Navy ship rated over noviceCap. The later bounties keep their crowds: the difficulty bands are untouched.
+// Navy leaves the captain (and the escorts) alone anywhere unless provoked (#105, #120): a ship's colour is its strength, not its side, and a newcomer
+// who cannot yet tell Navy from pirate must not be hunted for it. One rule: while Wanted is under HEAT_HUNT_FROM stars (the first voyage counts as 0) the
+// Navy never opens fire. It replaces the old "until the first bounty" gate. Retaliation = js/combat.js hurt() made the ship's attacker the captain/escort within 8 s (ram and shots both go through hurt), or `provoked` below. In the Shallows, a novice is also spared by every Navy ship rated over noviceCap. The later bounties keep their crowds: the difficulty bands are untouched.
 const PEACE_R = 1100, SEA_AHEAD_R = 380;
 const bountyPeace = (claimed, dLair) => claimed === 0 && dLair < PEACE_R;
 let bandWas = 0, bandT = 0;   // the band the captain was last in (the graduation cue), and its cooldown so the line's edge cannot spam
 let spare = { bounty: false, shallows: false, navy: false, cap: 0 }, aheadShown = false, navyTipShown = false;
-// Navy ships the captain has shot at this voyage stay hostile (cleared on sail): provoking one ends its peace for good, not for 8 s.
+// Navy ships the captain or an escort has hurt this voyage (shot, rammed) stay hostile: provoking one ends its peace for good, not for 8 s.
 let provoked = new WeakSet();
-onHook("hurt", (s, dmg, src) => { if (src === player && s.faction === "navy" && !s.isPlayer) provoked.add(s); });
+onHook("hurt", (s, dmg, src) => { if (src && (src === player || src.ally) && s.faction === "navy" && !s.isPlayer && !s.ally) provoked.add(s); });
 const NAVY_NOTE_R = 460;   // the first Navy ship this close to the captain explains itself (once, tipOnce js/hull-alert.js)
 // May e leave the captain alone this frame? (read by isHostile, js/ships.js, and the hunters, js/heat.js)
+// Does this Navy ship hold its fire at the captain's side (the heat rule above)? Also read by isHostile for the escorts.
+const navyCalm = e => !!e && spare.navy && e.faction === "navy" && !e.boss && !e.escortOf && !e.ally && !e.fixed && !provoked.has(e);
 function noviceSpare(e) {
   if (e.boss || e.escortOf || e.ally || e.fixed || provoked.has(e)) return false;
-  if (spare.bounty || (spare.navy && e.faction === "navy")) return true;
+  if (spare.bounty || navyCalm(e)) return true;
   return spare.shallows && e.faction === "navy" && (e.threatL ?? e.L) > spare.cap;
 }
 const noviceZone = () => spare.shallows;
@@ -73,7 +76,7 @@ function noviceTick() {
   const r = live ? curRating() : 99;
   spare = {
     bounty: !!(live && typeof bossShip !== "undefined" && bossShip && bossShip.alive && bossShip.lair && bountyPeace(save.campaign.bounty, dist(player, bossShip.lair))),
-    shallows: !!live && noviceAt(r, ringAt(dist(player, PORT))), navy: !!live && save.campaign.bounty === 0 && !save.ngPlus && !(typeof heat === "number" && heat > 0), cap: noviceCap(r),
+    shallows: !!live && noviceAt(r, ringAt(dist(player, PORT))), navy: !!live && typeof heatStars === "function" && heatStars(heatNow()) < HEAT_HUNT_FROM, cap: noviceCap(r),
   };
   if (live && spare.navy && !navyTipShown && typeof tipOnce === "function" && enemies.some(e => e.alive && !e.fixed && e.faction === "navy" && dist(e, player) < NAVY_NOTE_R)) {
     navyTipShown = true;   // a memory flag: tipOnce reads storage, and a blocked store must not toast every frame

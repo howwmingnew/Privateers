@@ -3,7 +3,7 @@
 // A fresh captain goes from the title straight to sea (js/menu.js startGame). During the first voyage:
 //   coachGlyphs(at)   coach steps 1-3 show the control itself (keycaps, a finger) beside a one-verb card (js/tutorial.js)
 //   toastHeld()       toasts wait while the sea banner shows; achievement toasts and the volley tip wait for the coach
-//   chartLite()       the chart shows only the harbor, the player, the gold-ringed mark and wrecks (js/hud.js drawMini)
+//   chartLite()       the chart shows the harbor, the first sea's islands, the player, the gold-ringed mark and wrecks (js/hud.js drawMini)
 //   sinkingNear(r)    a ship going down this close: the touch "let go to fire" tip would print over it (js/input.js)
 // And the title drifts over the nearest AI fight near the harbor instead of an empty quay (attractFocus, js/menu.js).
 Object.assign(STR.en, { gl_drag: "drag", gl_lift: "let go", gl_hold: "hold", gl_click: "click", gl_stick: "stick", gl_holdR: "hold right" });
@@ -55,14 +55,16 @@ onHook("frame", () => { if (typeof achQueue !== "undefined" && achQueue.length &
 // ---------- first-voyage chart ----------
 const chartLite = () => !save.tutorialDone && typeof tut !== "undefined" && tut.active;
 let miniLiteCv = null;
-// Plain sea, the safe water and the harbor: no islands (dozens of dots at this scale), ring lines, labels or forts.
+// The sea's shading, the safe water, the first sea's islands and the harbor: no ring lines, labels, forts or far islands
+// (dozens of dots at this scale). A flat tint with a harbor speck read as a blank square (#125): land says "this is a map".
+const liteIsle = i => !i.outpost && Math.hypot(i.x - PORT.x, i.y - PORT.y) < ringEdge(SEAS[1].L0);
 function miniLiteBase() {
-  const M = mini.width, key = M + "/" + SETTINGS.markPct;
+  const M = mini.width, key = M + "/" + SETTINGS.markPct + "/" + islandSeed;
   if (miniLiteCv && miniLiteCv.key === key) return miniLiteCv;
   const k = M / W, u = miniUnit(M), c = (miniLiteCv = document.createElement("canvas")).getContext("2d");
   miniLiteCv.width = miniLiteCv.height = M; miniLiteCv.key = key;
-  c.fillStyle = SEAS[0].tint; c.fillRect(0, 0, M, M);
-  c.fillStyle = "#3a9aab"; c.beginPath(); c.arc(PORT.x * k, PORT.y * k, SAFE_R * k, 0, TAU); c.fill();
+  drawSeaChart(c, M);
+  for (const i of islands) if (liteIsle(i)) miniIsland(c, i, k, u);
   miniHarbor(c, PORT.x * k, PORT.y * k, u);
   return miniLiteCv;
 }

@@ -101,12 +101,13 @@ const eng = await ev(() => {
     const lead = makeEnemy(S, p.x, p.y, 5, T.faction, type === "patrol" ? "frigate" : "brig");
     lead.rot = Math.atan2(player.y - p.y, player.x - p.x);
     const ws = [0, 1, 2].map(i => { const q = slotWorld(lead, formationSlots(T.formation, 3)[i]); const e = makeEnemy(S, q.x, q.y, 5, T.faction, type === "patrol" ? "brig" : "cutter"); e.rot = lead.rot; return e; });
+    huntT = 1e9;   // no hunters on top of the patrol (#120: the Navy opens fire only from two stars, so heat is held up in the loop)
     const f = makeFleet(type, [lead, ...ws]);
     window["fleet_" + type] = f;
     const spread = () => { const a = f.ships.filter(s => s.alive).map(s => Math.atan2(s.y - player.y, s.x - player.x)); const m = a[0]; const d = a.map(x => angDiff(x, m)); return Math.max(...d) - Math.min(...d); };
     let best = 0;
     for (let i = 0; i < 12; i++) {
-      stepN(30);
+      heat = 100; heatQuiet = 0; stepN(30);
       best = Math.max(best, spread());
     }
     rows.push({ type, info: f.ships.map(s => (s.target === player ? 'T' : s.target ? 't:' + s.target.faction + s.target.cls + s.target.alive : '-') + (s.ignore.size ? 'i' : '') + (s.fleet ? 'f' : '') + Math.round(dist(s, player))).join(' '), targeted: f.ships.filter(s => s.alive && s.target === player).length, spread: +best.toFixed(2), alive: f.ships.filter(s => s.alive).length });

@@ -63,9 +63,13 @@ function playerFire(only, pick) {
 
 // Hold-to-fire (keyboard): once Space has been held AUTOFIRE_HOLD_MS, every frame fires the reloaded guns whose aim line
 // is red, i.e. would hit an enemy right now. A quick tap still fires the whole engaged broadside as before. Off in settings.
+// A Navy ship stays off auto-fire's list while the captain is not Wanted and it is not fighting him (#120): holding Space must not make him Wanted
+// by accident. A tap or a click still fires at it (manual aim), and a Navy ship already at war with him (isHostile, js/ships.js) is fair game.
+const autoSkips = (e, stars, hostile) => !!e && e.faction === "navy" && !e.isPlayer && stars === 0 && !hostile;
 function autoFire() {
   if (!SETTINGS.autoFire || !spaceDownAt || performance.now() - spaceDownAt < AUTOFIRE_HOLD_MS || paused || docked || !player.alive) return;
-  playerFire(null, (mount, g) => { const m = muzzle(player, mount, g.pi, g.pn); return !!lineHits(m.x, m.y, m.a, g.range); });
+  const stars = typeof heatStars === "function" ? heatStars(heatNow()) : 0;
+  playerFire(null, (mount, g) => { const m = muzzle(player, mount, g.pi, g.pn), e = lineHits(m.x, m.y, m.a, g.range); return !!e && !autoSkips(e, stars, isHostile(e, player)); });
 }
 // ship hit test: capsule along the hull axis, sized to the drawn hull by applyShipArt (s.hl / s.hw)
 function hitShip(s, x, y) {
