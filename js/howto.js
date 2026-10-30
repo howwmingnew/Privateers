@@ -68,7 +68,7 @@ Object.assign(STR.zh, {
   ht_replay: "重玩首航教學", ht_replayed: "下次出航時會開始教學。", ht_restarted: "首航教學已重新開始。",
   ht_controls: `<h3>操作方式</h3><dl class="ctl">
     <dt>鍵盤</dt><dd><kbd>A</kbd> <kbd>D</kbd> 或 <kbd>←</kbd> <kbd>→</kbd> 轉向。<kbd>W</kbd> <kbd>S</kbd> 或 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆（收帆、慢速、半帆、滿帆），船會維持這個速度。<kbd>空白鍵</kbd>讓所有對準目標且已裝填的火砲開火；<kbd>Q</kbd> / <kbd>E</kbd> 只開左舷／右舷。<kbd>M</kbd> 靜音。<kbd>Esc</kbd> 或 <kbd>P</kbd> 暫停。</dd>
-    <dt>滑鼠</dt><dd>按住右鍵，船會朝游標駛去（游標離船越遠，帆張得越滿），點左鍵開火。也可以只用左鍵：按住轉向，放開開火。滾輪可以縮放。</dd>
+    <dt>滑鼠</dt><dd>按住右鍵，船會朝游標駛去（游標離船越遠，帆張得越滿，按住時 W／S 暫時無效，放開後帆速維持原樣、W／S 恢復），點左鍵開火。也可以只用左鍵：按住轉向，放開開火。滾輪可以縮放。</dd>
     <dt>觸控</dt><dd>在任意位置拖曳，用浮動搖桿轉向，放開就開火。<b>−</b>／<b>+</b> 鈕降帆或升帆：收帆時搖桿仍能轉船，可以停著瞄準不衝過頭。按 <b>❚❚</b> 暫停。</dd>
     <dt>控制器</dt><dd>左搖桿轉向。十字鍵 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆。<kbd>A</kbd> 或 <kbd>RT</kbd> 開火。<kbd>Start</kbd> 暫停。在選單中用十字鍵或搖桿移動，<kbd>A</kbd> 確認，<kbd>B</kbd> 返回。</dd><dt>拍照模式</dt><dd>按 <kbd>H</kbd>（或在暫停選單選「拍照模式」）會凍結海面並隱藏介面。拖曳移動鏡頭、滾輪或兩指縮放，再把畫面存成明信片。按 <kbd>H</kbd> 或 <kbd>Esc</kbd> 回到遊戲，一切都和離開時一樣。</dd>
   </dl>`,

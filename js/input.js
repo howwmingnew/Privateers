@@ -4,14 +4,17 @@
 // Mouse: hold the left button to steer toward the cursor (its distance sets the sail), let go to fire;
 //   a quick click only fires. Holding the right button steers the same way but never fires, so the left button can be
 //   kept for shooting (the usual desktop split). Q / E fire only the larboard / starboard broadside.
+//   While a button steers, the cursor owns the sail (both buttons alike, and it may raise or lower it): W / S are ignored and
+//   the dial says "by cursor"; on release the sail stays where it was and W / S work again (#116).
 // Gamepad (Phaser plugin): left stick points the bow, A or RT fires, D-pad up/down steps the sail, Start pauses.
 Object.assign(STR.en, {
   hintDesk: "WASD or hold the right mouse button to steer · Space or left-click to fire · Esc pause",
   hint_keys: "A/D turn · W/S sail · Space fire (Q/E one side) · Esc pause",
-  hint_mouse: "Hold right (or left) button to steer · left-click or let go of left to fire · Esc pause",
+  hint_mouse: "Hold right (or left) button to steer, distance sets speed · left-click or let go of left to fire · Esc pause",
   hint_pad: "Left stick steer · D-pad sail · A / RT fire · Start pause",
   tip_keys: "Press Space to fire!", tip_pad: "Press A to fire!", tip_click: "Click to fire!", tip_desk: "Space or click to fire!",
   sl_lbl: "Sail", sl_0: "Stopped", sl_1: "Slow", sl_2: "Half", sl_3: "Full", sl_less: "Lower the sail", sl_more: "Raise the sail",
+  sl_cap: "Sail max", sl_cursor: "by cursor", sl_cursor_tip: "While you hold the mouse button the cursor sets the sail (farther = faster); W / S work again once you let go",
   // device-neutral wording for the ledger (it used to say "tap" everywhere)
   slotHint: "Choose a gun, then choose where it goes: a port swaps, an empty port takes it, the store keeps the spares.", shipArm: "Confirm purchase?",
   resetArm: "Press again to wipe all progress", bought: "Bought a <em>{gun}</em>. It is in the gun store: choose a gun port to mount it.",
@@ -20,10 +23,11 @@ Object.assign(STR.en, {
 Object.assign(STR.zh, {
   hintDesk: "WASD 或按住滑鼠右鍵轉向 · 空白鍵或左鍵開火 · Esc 暫停",
   hint_keys: "A/D 轉向 · W/S 升降帆 · 空白鍵開火（Q/E 單舷）· Esc 暫停",
-  hint_mouse: "按住右鍵（或左鍵）轉向 · 點左鍵或放開左鍵開火 · Esc 暫停",
+  hint_mouse: "按住右鍵（或左鍵）轉向，游標越遠越快 · 點左鍵或放開左鍵開火 · Esc 暫停",
   hint_pad: "左搖桿轉向 · 十字鍵升降帆 · A／RT 開火 · Start 暫停",
   tip_keys: "按空白鍵開火！", tip_pad: "按 A 開火！", tip_click: "點一下開火！", tip_desk: "按空白鍵或點一下開火！",
   sl_lbl: "船帆", sl_0: "收帆", sl_1: "慢速", sl_2: "半帆", sl_3: "滿帆", sl_less: "降帆", sl_more: "升帆",
+  sl_cap: "帆速上限", sl_cursor: "依游標", sl_cursor_tip: "按住滑鼠時帆速由游標距離決定（越遠越快），W / S 暫時無效；放開後 W / S 恢復",
   slotHint: "選一門砲，再選它要去的地方：砲位互換、空砲位直接移過去、庫存放備用的砲。", shipArm: "確認購買？",
   resetArm: "再按一次會清除所有進度", bought: "買下一門<em>{gun}</em>，放在火砲庫存。選擇一個砲位就能裝上。",
   welcome: "出港找一艘船，轉動船身讓瞄準線對準它，然後開火。擊沉敵船、撿起戰利品，再帶回這裡賣掉。離港口越遠，敵船越富有，也越危險。操作方式請看「玩法說明」。",
@@ -71,11 +75,13 @@ function setSailLevel(l) {
   if (l === sailLevel) return;
   sailLevel = l; refreshSailInd();
 }
+let sailByMouse = false;   // a held mouse button is steering: the cursor sets the sail, W / S are ignored
 function refreshSailInd() {
   const el = document.getElementById("sailInd");
   el.hidden = device === "touch";
+  el.classList.toggle("by-mouse", sailByMouse); el.title = sailByMouse ? t("sl_cursor_tip") : "";
   el.querySelectorAll(".pips i").forEach((p, i) => p.classList.toggle("on", i < sailLevel));
-  document.getElementById("sailTxt").textContent = t("sl_" + sailLevel);
+  document.getElementById("sailTxt").textContent = t("sl_" + sailLevel) + (sailByMouse ? " · " + t("sl_cursor") : "");
 }
 document.addEventListener("langchange", () => { refreshHint(); refreshSailInd(); });
 
@@ -84,6 +90,7 @@ window.addEventListener("keydown", e => {
   if (e.ctrlKey || e.altKey || e.metaKey) return;
   setDevice("keys");
   if (!sailing() || e.repeat) return;
+  if (sailByMouse && /^(KeyW|KeyS|ArrowUp|ArrowDown)$/.test(e.code)) { toast(t("sl_cursor_tip"), true, 2200); return; }   // the cursor owns the sail while a button is held
   if (e.code === "KeyW" || e.code === "ArrowUp") setSailLevel(sailLevel + 1);
   else if (e.code === "KeyS" || e.code === "ArrowDown") setSailLevel(inMoorRing() ? 0 : sailLevel - 1);   // in the dock ring S stops dead
   else if (e.code === "KeyQ") playerFire(["left"]);
@@ -121,6 +128,7 @@ window.addEventListener("keydown", e => {
 })();
 function cancelPointerInput() {
   mouseHold = null; padVec = { x: 0, y: 0, m: 0 }; joyVec = { x: 0, y: 0, m: 0 };
+  if (sailByMouse) { sailByMouse = false; refreshSailInd(); }
   document.getElementById("joy").hidden = true;
 }
 // Heading toward the cursor, and the sail step its on-screen distance asks for.
@@ -169,11 +177,13 @@ function padSea(s, pressed) {
 // ---------- Per-frame steering, called from step() ----------
 function playerInput(dt) {
   const K = S.keys, kx = (K.D.isDown || K.RIGHT.isDown) - (K.A.isDown || K.LEFT.isDown);
-  let desired = null, thr = SAIL_THR[sailLevel];
+  let desired = null, thr = SAIL_THR[sailLevel], byMouse = false;
   if (joyVec.m > 0.2) { desired = Math.atan2(joyVec.y, joyVec.x); thr = Math.min(1, joyVec.m * 1.25, SAIL_THR[touchCap]); }   // touch: the stick's pull, under the sail buttons' cap
-  else if (mouseHold) { desired = mouseSteer(); thr = SAIL_THR[sailLevel]; }
+  else if (mouseHold) { desired = mouseSteer(); thr = SAIL_THR[sailLevel]; byMouse = desired != null; }
   else if (padVec.m > 0) { desired = Math.atan2(padVec.y, padVec.x); thr = Math.max(thr, Math.min(1, padVec.m * 1.25)); }
   if (kx) desired = player.rot + kx;      // keys turn the bow at the ship's full turn rate; steer() clamps it
+  if (byMouse !== sailByMouse) { sailByMouse = byMouse; refreshSailInd(); }
+  player.furled = device !== "touch" && thr === 0;   // a deliberate stop (keys / mouse / pad): no coast, brakes harder (js/ships.js)
   player.wantThr = thr;   // what the helm asks for (js/aground.js tells a ship that asks and does not move)
   steer(player, desired, thr, dt);
   if (!moved && (desired != null || thr > 0)) { moved = true; document.getElementById("hint").style.opacity = 0; }
