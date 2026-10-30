@@ -80,7 +80,7 @@ await boot(saveWith({ campaign: { bounty: 1 }, escortGift: "", escorts: [], gold
 check(await ev(() => save.escortGift === "given" && save.escorts.length === 1 && readStored("privateers-save-v2") && JSON.parse(localStorage.getItem("privateers-save-v2")).escortGift === "given"), "an old save past bounty 1 with no escort gets it once on load, and it is saved");
 check(await ev(() => /first escort/.test(document.querySelector("#giftCard")?.innerText || "")), "the ledger shows the next-step card");
 await page.click('#giftCard [data-act="escGift"]');
-check(await ev(() => document.querySelector('#tabs .tab.sel')?.dataset.i === "1" && /Estimated fire: about [\d.]+ damage\/s, \d+% of the flagship/.test(document.getElementById("shead").innerText)), "its button opens Escort 1, which shows the estimated output against the flagship");
+check(await ev(() => document.querySelector('#tabs .tab.sel')?.dataset.i === "1" && /Estimated fire: about [\d.]+ damage\/s, \d+% of your flagship/.test(document.getElementById("shead").innerText)), "its button opens Escort 1, which shows the estimated output against the flagship");
 await page.screenshot({ path: `${out}/gift.png` });
 await boot(saveWith({ campaign: { bounty: 1 }, escortGift: "", escorts: [], gold: 100 }), "zh");
 check(await ev(() => /第一艘隨從已在船位 1 就位/.test(document.querySelector("#giftCard")?.innerText || "")), "the card is in Chinese too");
@@ -172,6 +172,9 @@ await page.evaluate(() => document.getElementById("fleet").scrollIntoView());
 await page.screenshot({ path: `${out}/ledger.png` });
 t = await ev(() => document.getElementById("shead").innerText);
 check(/Owes 40 gold/.test(t) && /Repair · 40/.test(t), "an escort that owes gold says so and offers Repair");
+await tabTo(0);
+check(/must be paid before they can sail/.test(await ev(() => document.getElementById("shead").innerText)), "the flagship page also says the repair fees must be paid before sailing (#121)");
+await tabTo(2);
 check(await ev(() => document.querySelector('#tabs [data-i="2"] .dot') && !document.querySelector('#tabs [data-i="2"] .dot.on') && document.querySelector('#tabs [data-i="1"] .dot.on')), "the tabs show who sails (green dot) and who waits");
 await page.click('#shead [data-act="escPay"]');
 check(await ev(() => save.escorts[1].owed === 0 && save.gold === 19960), "paying the debt takes exactly what was owed");
@@ -306,6 +309,20 @@ for (const st of ["active", "normal", "passive"]) {
 }
 // active still picks the far idle ship but no longer leaves its station (ESCORT_LEASH) to reach gun range, so it is not asked to fire there
 check(stanceRows.active.near.hit && stanceRows.normal.near.hit && stanceRows.passive.attacker.hit && !stanceRows.passive.near.hit && !stanceRows.normal.far.hit, `and only the engaged ones fire (${JSON.stringify(Object.fromEntries(Object.entries(stanceRows).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([q, x]) => [q, x.hit ? 1 : 0]))])))})`);
+// #121: a Normal escort turns down a ship far above it and a Navy ship while the captain is not wanted; Active still goes; a ship that hit it is fair
+const care = await ev(() => {
+  const rows = {};
+  for (const [name, stance, tweak] of [["strongN", "normal", d => { d.threatL = 40; }], ["strongA", "active", d => { d.threatL = 40; }], ["navyN", "normal", d => { d.faction = "navy"; }],
+    ["navyHurtN", "normal", d => { d.faction = "navy"; }], ["weakN", "normal", () => {}]]) {
+    const es = sailOut([cfg("s1", { stance })], 4), e = es[0], d = dummy(e.x, e.y + 230), hurt = name === "navyHurtN"; d.angry = 0; tweak(d);
+    if (hurt) { d.angry = 1e6; d.target = e; } else Object.defineProperty(d, "target", { get: () => null, set() {} });   // an idle ship: nothing may point it at anyone
+    let tgt = false;
+    for (let i = 0; i < 200; i++) { stepN(1); if (e.target === d) tgt = true; if (hurt) d.target = e; }
+    rows[name] = tgt ? 1 : 0;
+  }
+  return rows;
+});
+check(JSON.stringify(care) === JSON.stringify({ strongN: 0, strongA: 1, navyN: 0, navyHurtN: 1, weakN: 1 }), `Normal avoids a far stronger ship and a Navy ship while not wanted; Active still goes; a Navy ship attacking it is fair (${JSON.stringify(care)})`);
 const retreat = await ev(() => {
   const es = sailOut([cfg("s4", { stance: "passive" })], 4), e = es[0];
   const d = dummy(e.x + 300, e.y, e); d.angry = 1e6; e.hp = e.maxHp * 0.2;

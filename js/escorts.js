@@ -17,11 +17,11 @@ Object.assign(STR.en, {
   escNone: "No ship assigned", escShip: "Ship", escStance: "Stance", escOn: "Sails with you", escOff: "Stays in port",
   escStay: "Stand down", escDeploy: "Deploy", escRepair: "Repair · {n}", escGone: "Now your flagship: assign another ship",
   escNoSpare: "No spare ship in the yard. Buy another ship, then assign it here.", escChange: "Change",
-  escOwed: "Owes {n} gold: pay to sail", escFire: "Fires at 80% of the same ship's guns",
+  escOwed: "Owes {n} gold: pay to sail", escOwedAll: "Escort repair fees ({n} gold) must be paid before they can sail: see each Escort tab.",
   st_active: "Active", st_normal: "Normal", st_passive: "Passive",
-  stn_active: "Opens fire on enemy ships nearby, from its station", stn_normal: "Keeps station, fights what comes in range or attacks you", stn_passive: "Fires only when attacked, keeps clear when hurt",
+  stn_active: "Attacks any enemy it sees, even strong ones, then returns to formation", stn_normal: "Stays beside you and fights what comes close or attacks you; keeps away from much stronger ships and deadlier seas", stn_passive: "Never starts a fight: shoots back only when hit, and hides behind you when badly hurt",
   escReport: "Last sortie's escorts: {n} gold in repairs.", escReportSunk: " Lost: {names}.",
-  escSunkToast: "{name} went down!", escBought: "Escort slot {n} bought.", escSailed: "{n} escort(s) sail with you.",
+  escSunkToast: "{name} went down! Its repair fee is due before the next sortie.", escBought: "Escort slot {n} bought.", escSailed: "{n} escort(s) sail with you.",
   escAlly: "Escort", escNoGuns: "No guns aboard: mount one to deploy it",
 });
 Object.assign(STR.zh, {
@@ -30,11 +30,11 @@ Object.assign(STR.zh, {
   escNone: "尚未指派船", escShip: "船", escStance: "攻擊傾向", escOn: "跟你出航", escOff: "留在港裡",
   escStay: "停用", escDeploy: "出戰", escRepair: "修理 · {n}", escGone: "已成為你的主艦：請改派別艘",
   escNoSpare: "船塢裡沒有多餘的船。請先買一艘船，再來這裡指派。", escChange: "更換",
-  escOwed: "欠 {n} 金：付清才能出航", escFire: "火力是同一艘船主艦的 80%",
+  escOwed: "欠 {n} 金：付清才能出航", escOwedAll: "隨從的修理費（共 {n} 金）要付清才能出航：請到各隨從頁繳費。",
   st_active: "主動", st_normal: "一般", st_passive: "被動",
-  stn_active: "主動攻擊附近的敵船，但不離開隊形", stn_normal: "跟著你，打進入射程或攻擊你的敵人", stn_passive: "只在被攻擊時還擊，受傷就退到你身邊",
+  stn_active: "看到敵船就主動攻擊，再強也打，打完回到隊形", stn_normal: "跟在你旁邊，只打靠近或攻擊你的敵人；遇到強得多的船或更危險的海域會避開", stn_passive: "絕不主動開火，被打才還擊；傷重時躲到你身後",
   escReport: "上次出航的隨從：修理費 {n} 金。", escReportSunk: "沉沒：{names}。",
-  escSunkToast: "{name} 沉沒了！", escBought: "已購買隨從船位 {n}。", escSailed: "{n} 艘隨從跟你出航。",
+  escSunkToast: "{name} 沉沒了！下次出航前要先付修理費。", escBought: "已購買隨從船位 {n}。", escSailed: "{n} 艘隨從跟你出航。",
   escAlly: "隨從", escNoGuns: "船上沒有砲：先裝上一門才能出戰",
 });
 SAVE_DEFAULTS.push(() => ({ escorts: [] }));

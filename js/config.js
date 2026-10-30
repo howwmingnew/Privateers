@@ -168,6 +168,8 @@ const ESCORT_RETREAT = 0.3;          // a passive escort under this share of hul
 // Per attack stance: aggro = how close an enemy must be to the escort to be engaged (px for active, a multiple of the escort's gun range for normal), reach = how far from the flagship it
 // may fight. The stance picks targets only: every escort fights from its station and never strays more than ESCORT_LEASH from it (owner's call).
 const ESCORT_STANCE = { active: { aggro: 800, reach: 1000 }, normal: { aggro: 1.2, reach: 620 }, passive: { aggro: 0, reach: 420 } };
+const ESCORT_HIT_FLASH = 1.2;       // s a chip of the escort HUD pulses after its escort is hit (js/escort-hud.js)
+const ESCORT_OVER = 4;              // a normal-stance escort will not pick a fight with a ship rated this many levels above it, nor go after one in a sea rated this far above it (js/escort-pick.js)
 const ESCORT_LEASH = 120;            // px (about 60 m, EDGE_M_PER_PX) an escort may stray from its formation slot before it turns back to it
 // Wind, weather and the hour of day (js/weather-core.js is the maths, js/weather.js the sea). Every number here is gameplay:
 // the same for every player whatever the weather-effects setting says, so a daily sea plays the same everywhere.

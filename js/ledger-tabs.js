@@ -76,12 +76,13 @@ function escHeadHtml(i, e, ship) {
   const dps = escortDps(ship.ship, e.guns), main = flagshipDps();
   const out = dps > 0 ? `<p class="ds edps">${t("escDps", { d: dps.toFixed(1), p: main > 0 ? Math.round(dps / main * 100) : 0, m: main.toFixed(1) })}</p>` : "";   // js/escort-gift.js
   return `<div class="ctl"><div class="seg" role="group" aria-label="${t("escStance")}">${stances}</div><div class="seg" role="group">${go}</div>${pay}</div>
-    <p class="ds estatus">${t("stn_" + e.stance)} · ${t("escFire")} · ${status}</p>${out}`;
+    <p class="ds estatus">${t("stn_" + e.stance)} · ${status}</p>${out}`;
 }
 function stageHeadHtml(ship, i) {
   const role = i < 0 ? t("tabFlag") : t("tabEsc", { n: i + 1 }), e = i >= 0 ? save.escorts[i] : null;
   const name = ship ? `${shipNameOf(ship)}<small>${ship.name ? t("s_" + ship.ship) : ""}</small>` : "";
-  return `<div class="hl"><div class="role">${role}</div>${name ? `<div class="sname">${name}</div>` : ""}</div>` + (ship && e ? escHeadHtml(i, e, ship) : "");
+  const owed = i < 0 ? save.escorts.reduce((n, x) => n + (x.owed || 0), 0) : 0;   // the flagship page says it too: no escort sails with a debt (#121)
+  return `<div class="hl"><div class="role">${role}</div>${name ? `<div class="sname">${name}</div>` : ""}</div>` + (ship && e ? escHeadHtml(i, e, ship) : "") + (owed > 0 ? `<p class="ds estatus"><span class="lock">${t("escOwedAll", { n: fmt(owed) })}</span></p>` : "");
 }
 const shipFootHtml = e => Object.entries(YARD).map(([k, y]) => `<span>${t("y_" + k)} <b>${t("sfootLv", { n: e[k] })}</b> · ${y.show(yardVal(k, e[k], SHIPS[e.ship]))}</span>`).join("");
 // What a slot with no ship shows in the stage: why it is shut, the price, or the two choices.

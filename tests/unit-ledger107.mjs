@@ -91,7 +91,7 @@ test("stackLift pushes a box clear of the touch pad and of each box already plac
 test("escHudRows: the share of hull left, at least 1% while afloat, 0 and sunk once down", () => {
   const g = boot();
   const rows = g.json("escHudRows([{ slot: 0, e: { alive: true, hp: 55.4, maxHp: 100 } }, { slot: 2, e: { alive: true, hp: 0.1, maxHp: 100 } }, { slot: 1, e: { alive: false, hp: 0, maxHp: 100 } }])");
-  assert.deepEqual(rows, [{ n: 1, p: 55, sunk: false }, { n: 3, p: 1, sunk: false }, { n: 2, p: 0, sunk: true }]);
+  assert.deepEqual(rows, [{ n: 1, p: 55, sunk: false, hit: false }, { n: 3, p: 1, sunk: false, hit: false }, { n: 2, p: 0, sunk: true, hit: false }]);
 });
 
 test("the new strings exist in both languages", () => {
