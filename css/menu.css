@@ -144,6 +144,7 @@ body.scale-preview #title, body.scale-preview #pause { opacity: 0; pointer-event
 .sail-ind .pips i:nth-child(1) { height: 6px; } .sail-ind .pips i:nth-child(2) { height: 9px; } .sail-ind .pips i:nth-child(3) { height: 12px; }
 .sail-ind .pips i.on { background: #f0c766; }
 .sail-ind b { min-width: 4.2em; color: #f0c766; }
+.sail-ind.by-mouse { border-color: rgba(240,199,102,.7); }   /* the held mouse button owns the sail: W / S are ignored (js/input.js) */
 
 /* ---- ledger footer ---- */
 .foot-l { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }

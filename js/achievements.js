@@ -89,8 +89,10 @@ function nextAchToast() {
 
 // ---------- What earns them ----------
 onHook("hurt", (s, dmg, src) => { if (!s.isPlayer && src === player) unlockAch("first_hit"); });
+// "Someone else sank it": another ship's guns, not the flagship, its escort, or nobody (a ram, a wave, a fire with no culprit: killer null).
+const vultureKill = (killer, me) => !!killer && killer !== me && !killer.isPlayer && !killer.ally;
 onHook("sunk", (s, killer, loot) => {
-  if (loot && killer !== player) loot.vulture = true;   // someone else's prize, for the hidden one
+  if (loot && vultureKill(killer, player)) loot.vulture = true;   // someone else's prize, for the hidden one
   if (s.isPlayer || killer !== player) return;
   unlockAch("first_sink");
   if (sortie && !sortie.hurt) unlockAch("untouched");   // sortie: js/logbook.js

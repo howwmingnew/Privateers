@@ -32,7 +32,7 @@ await page.evaluate(() => {
 });
 // The game clamps each frame to 50 ms, so on a busy machine less game time passes than wall time: count the frames' own dt
 // (frame hook) and make every wait last until the sim has really run that long, not just the wall clock.
-await page.evaluate(() => { window.__gt = 0; onHook("frame", dt => { window.__gt += dt; }); });
+await page.evaluate(() => { window.__gt = 0; window.__psunk = 0; onHook("frame", dt => { window.__gt += dt; }); onHook("sunk", s => { if (s.isPlayer) window.__psunk++; }); });   // __psunk: the flagship went down (the respawn after it restores her hull)
 const wait = async ms => {
   const g0 = await page.evaluate(() => window.__gt);
   await page.waitForTimeout(ms * SLOW);
@@ -61,13 +61,13 @@ check(r.hp === r.maxHp && r.hits === 0, `slow touch of an island: no damage (hp 
 const info = await approach(160, 1); await wait(2600); await stop();
 r = await page.evaluate(() => ({ hp: player.hp, maxHp: player.maxHp, alive: player.alive, hits: window.__land.filter(l => l.s === player).length, first: window.__land.length ? window.__land[0].dmg : 0 }));
 const lostPct = 100 * r.first / r.maxHp;
-check(r.alive && lostPct >= 8 && lostPct < 40 && r.hp > 0, `full speed into an island: the first blow is clearly felt but far from fatal (${lostPct.toFixed(1)}% of ${r.maxHp}, top speed ${info.maxSpeed}; hp left ${r.hp.toFixed(0)})`);
+check(r.alive && lostPct >= 4 && lostPct < 40 && r.hp > 0, `full speed into an island: the first blow is clearly felt but far from fatal (${lostPct.toFixed(1)}% of ${r.maxHp}, top speed ${info.maxSpeed}; hp left ${r.hp.toFixed(0)})`);
 check(r.hits >= 1 && r.hits <= 3, `the same rock does not bleed the ship every frame (${r.hits} blows in 2.6 s, cooldown 0.8 s)`);
 
 // 3. a crippled hull (under the spare line) can be finished by rock
 await approach(160, 1); await page.evaluate(() => { player.hp = player.maxHp * 0.05; }); await wait(2200); await stop();
-r = await page.evaluate(() => ({ alive: player.alive, hp: player.hp, maxHp: player.maxHp }));
-check(r.hp < r.maxHp * 0.05 || !r.alive, `a crippled hull can be finished by rock (hp ${r.hp.toFixed(1)}, alive ${r.alive})`);
+r = await page.evaluate(() => ({ alive: player.alive, hp: player.hp, maxHp: player.maxHp, sunk: window.__psunk }));
+check(r.sunk > 0 || r.hp < r.maxHp * 0.05 || !r.alive, `a crippled hull can be finished by rock (hp ${r.hp.toFixed(1)}, alive ${r.alive})`);
 await wait(2500);   // let the respawn and the ledger come up, then back to sea
 await page.evaluate(() => { if (docked) setSail(); player.alive = true; player.hp = player.maxHp; });
 

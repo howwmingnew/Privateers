@@ -11,6 +11,8 @@ Object.assign(STR.en, {
   moor_go_pad: "D-pad down to drop sail and hold still: the ledger opens",
   fRepair: "Repairing",
   moor_arm: "Sail out of the ring to arm docking",
+  moor_sail_desk: "Sails are still up ({sail}): furl them (S) and hold still to open the ledger", moor_sail_keys: "Sails are still up ({sail}): furl them (S) and hold still to open the ledger",
+  moor_sail_mouse: "Sails are still up ({sail}): let go of the mouse, furl them (S) and hold still to open the ledger", moor_sail_pad: "Sails are still up ({sail}): D-pad down to furl them and hold still to open the ledger",
 });
 Object.assign(STR.zh, {
   moor_hold: "保持靜止，即可打開帳簿", moor_open: "正在打開帳簿…",
@@ -19,6 +21,8 @@ Object.assign(STR.zh, {
   moor_go_pad: "按十字鍵下收帆停穩，就會打開帳簿",
   fRepair: "修理中",
   moor_arm: "先駛出圓圈，回來才能靠港",
+  moor_sail_desk: "船帆還沒收（{sail}）：按 S 收帆並保持靜止，就會打開帳簿", moor_sail_keys: "船帆還沒收（{sail}）：按 S 收帆並保持靜止，就會打開帳簿",
+  moor_sail_mouse: "船帆還沒收（{sail}）：放開滑鼠、按 S 收帆並保持靜止，就會打開帳簿", moor_sail_pad: "船帆還沒收（{sail}）：按十字鍵下收帆並保持靜止，就會打開帳簿",
 });
 
 const MOOR_T = 3;          // seconds stopped inside the ring before the ledger opens
@@ -84,11 +88,12 @@ function drawMoor(still, dt) {
   // the floor on the first voyage.
   if (!still) moorMoved = true;
   moorStillT = still && !armed ? moorStillT + dt : 0;
+  const sailUp = device !== "touch" && sailLevel > 0;   // stopped (or nearly) with the sail still set: say which key furls it, not just "stop"
   const quiet = typeof firstVoyage === "function" && firstVoyage();
   const hint = !armed && still && !moorArmed && !quiet && (moorMoved || moorStillT > MOOR_ARM_WAIT);
   // a quick sale's tally is up: it already reports the sale, so the "stop to open the ledger" line waits for it to go
   const txt = hint ? t("moor_arm") : !armed ? "" : moor.t > 0 ? t(moor.t > MOOR_T * 0.5 ? "moor_open" : "moor_hold")
-    : typeof tallyShowing === "function" && tallyShowing() ? "" : t("moor_go_" + device);
+    : typeof tallyShowing === "function" && tallyShowing() ? "" : sailUp ? t("moor_sail_" + device, { sail: t("sl_" + sailLevel) }) : t("moor_go_" + device);
   if (moorEl.textContent !== txt) moorEl.textContent = txt;
   moorEl.classList.toggle("faint", hint);
   if (moorEl.hidden === !!txt) moorEl.hidden = !txt;

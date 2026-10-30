@@ -24,7 +24,7 @@ Object.assign(STR.en, {
     <li><i class="sw-badge" style="--c:#e88a3a">Lv 3</i><span>One level stronger</span></li>
     <li><i class="sw-badge dark" style="--c:#d9493a">Lv 4</i><span>Much stronger: keep your distance</span></li></ul>
     <p><b>The color says how strong a ship is next to you, not whose it is.</b> The icon in front of the level says which side she sails for: <b>⚓ Navy</b>, <b>☠ Pirate</b>, <b>$ Merchant</b>. A green Navy ship is still the Navy: sink one and you are Wanted.</p>
-    <p>Merchants never attack first and carry the most gold. Pirates attack everyone. The navy hunts pirates, and you, but until you claim your first bounty it leaves you alone unless you shoot first.</p>`,
+    <p>Merchants never attack first and carry the most gold. Pirates attack everyone. The navy hunts pirates. It leaves you alone while you are under 2 stars of Wanted, unless you shoot, ram or board it first; from 2 stars it hunts you too.</p>`,
   ht_terms: `<h3>Words you will meet</h3><ul>
     <li><b>Ship Lv</b> (under the map): how strong your ship is. It rises with stronger guns (upgrade or swap them), a better hull, sails or gear, or a bigger ship. A Wanted poster's <b>Ready at Ship Lv</b> is the level to be before you sail.</li>
     <li><b>Lv badge on an enemy</b>: that ship's strength, on the same scale as your Ship Lv.</li>
@@ -68,7 +68,7 @@ Object.assign(STR.zh, {
   ht_replay: "重玩首航教學", ht_replayed: "下次出航時會開始教學。", ht_restarted: "首航教學已重新開始。",
   ht_controls: `<h3>操作方式</h3><dl class="ctl">
     <dt>鍵盤</dt><dd><kbd>A</kbd> <kbd>D</kbd> 或 <kbd>←</kbd> <kbd>→</kbd> 轉向。<kbd>W</kbd> <kbd>S</kbd> 或 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆（收帆、慢速、半帆、滿帆），船會維持這個速度。<kbd>空白鍵</kbd>讓所有對準目標且已裝填的火砲開火；<kbd>Q</kbd> / <kbd>E</kbd> 只開左舷／右舷。<kbd>M</kbd> 靜音。<kbd>Esc</kbd> 或 <kbd>P</kbd> 暫停。</dd>
-    <dt>滑鼠</dt><dd>按住右鍵，船會朝游標駛去（游標離船越遠，帆張得越滿），點左鍵開火。也可以只用左鍵：按住轉向，放開開火。滾輪可以縮放。</dd>
+    <dt>滑鼠</dt><dd>按住右鍵，船會朝游標駛去（游標離船越遠，帆張得越滿，按住時 W／S 暫時無效，放開後帆速維持原樣、W／S 恢復），點左鍵開火。也可以只用左鍵：按住轉向，放開開火。滾輪可以縮放。</dd>
     <dt>觸控</dt><dd>在任意位置拖曳，用浮動搖桿轉向，放開就開火。<b>−</b>／<b>+</b> 鈕降帆或升帆：收帆時搖桿仍能轉船，可以停著瞄準不衝過頭。按 <b>❚❚</b> 暫停。</dd>
     <dt>控制器</dt><dd>左搖桿轉向。十字鍵 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆。<kbd>A</kbd> 或 <kbd>RT</kbd> 開火。<kbd>Start</kbd> 暫停。在選單中用十字鍵或搖桿移動，<kbd>A</kbd> 確認，<kbd>B</kbd> 返回。</dd><dt>拍照模式</dt><dd>按 <kbd>H</kbd>（或在暫停選單選「拍照模式」）會凍結海面並隱藏介面。拖曳移動鏡頭、滾輪或兩指縮放，再把畫面存成明信片。按 <kbd>H</kbd> 或 <kbd>Esc</kbd> 回到遊戲，一切都和離開時一樣。</dd>
   </dl>`,
@@ -87,7 +87,7 @@ Object.assign(STR.zh, {
     <li><i class="sw-badge" style="--c:#e88a3a">Lv 3</i><span>比你強一級</span></li>
     <li><i class="sw-badge dark" style="--c:#d9493a">Lv 4</i><span>強很多，最好保持距離</span></li></ul>
     <p><b>標籤顏色＝這艘船比你強弱，不代表陣營。</b>等級前面的圖示才是陣營：<b>⚓ 海軍</b>、<b>☠ 海盜</b>、<b>$ 商船</b>。綠色的海軍仍是海軍，打沉牠會被通緝。</p>
-    <p>商船從不主動攻擊，身上的金幣也最多。海盜見誰打誰。海軍會追捕海盜，也會追捕你；但在你領第 1 張懸賞前，除非你先開火，否則海軍不會主動攻擊你。</p>`,
+    <p>商船從不主動攻擊，身上的金幣也最多。海盜見誰打誰。海軍會追捕海盜；你的通緝低於 2 星時，除非你先開火、衝撞或登船，否則海軍不會主動攻擊你，從 2 星起才會連你一起追捕。</p>`,
   ht_terms: `<h3>會遇到的詞</h3><ul>
     <li><b>船艦 Lv</b>（地圖下方）：你這艘船有多強。換更強的砲（升級或對調）、升級船體、船帆、裝備，或換大一點的船都會提高。懸賞海報上的<b>船艦 Lv 即可迎戰</b>，就是出航前最好達到的等級。</li>
     <li><b>敵船上的 Lv 標籤</b>：那艘船的戰力，和你的船艦 Lv 用同一套標準。</li>
