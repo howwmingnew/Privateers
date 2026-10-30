@@ -123,8 +123,12 @@ console.log("Fresh campaign (desktop, en)");
     for (const e of enemies) { e.alive = false; e.spr.destroy(); e.badge?.destroy(); }
     enemies.length = 0;
     player.x = PORT.x + 1740; player.y = PORT.y;   // the Reef Straits
-    for (let i = 0; i < 600; i++) { player.hp = player.maxHp; step(0.05); }
-    const cap = noviceCap(shipRating()), near = enemies.filter(e => e.alive && isOrdinary(e) && dist(e, PORT) < NOVICE_PORT_R);
+    // The cap is for ships MADE inside the circle: a ship made out past NOVICE_PORT_R keeps its level when it sails in (js/novice.js), and in 30 s
+    // a Lv 4-8 one can drift a few hundred px over the line. So the census is by where each ship was made, not where it floats at the end.
+    const makeOrig = makeEnemy;
+    makeEnemy = function (...a) { const e = makeOrig(...a); e.madeD = Math.hypot(e.x - PORT.x, e.y - PORT.y); return e; };
+    try { for (let i = 0; i < 600; i++) { player.hp = player.maxHp; step(0.05); } } finally { makeEnemy = makeOrig; }
+    const cap = noviceCap(shipRating()), near = enemies.filter(e => e.alive && isOrdinary(e) && (e.madeD ?? dist(e, PORT)) < NOVICE_PORT_R);
     const out = { n: near.length, over: near.filter(e => (e.threatL ?? e.L) > cap).map(e => `Lv${e.threatL ?? e.L}@${Math.round(dist(e, PORT))}`), cap };
     save.campaign = { ...save.campaign, bounty: window.__bounty0 };
     return out;
