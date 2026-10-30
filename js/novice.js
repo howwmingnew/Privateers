@@ -7,11 +7,15 @@
 Object.assign(STR.en, {
   seaWarnTag: "Danger", seaWarn: "Ships here far out-fight your Lv {n}. Turn back toward the harbor, or be ready to run.",
   seaAhead: "Warning: {sea} lies just ahead, and its ships far out-fight you. Turn back now.",
+  practiceOut: "Beyond the practice waters: these ships dodge, flee and shoot back for real.",
+  practiceIn: "Back in the practice waters: only small ships that never flee or fire first.",
   navyAim: "That is a Navy ship (the ⚓ on its plate). Sinking Navy ships gets you Wanted. It will not attack you first for now.",
 });
 Object.assign(STR.zh, {
   seaWarnTag: "危險", seaWarn: "這裡的船遠比你的 Lv {n} 強。建議掉頭回港，或做好逃跑的準備。",
   seaAhead: "警告：前方就是{sea}，那裡的船遠比你強。現在掉頭還來得及。",
+  practiceOut: "已離開練習海域：這裡的船會閃避、會逃，也會認真還擊。",
+  practiceIn: "回到練習海域：只有不會逃、不會先開火的小船。",
   navyAim: "這是海軍（標籤上有 ⚓）。攻擊海軍會被通緝；在你領第 1 張懸賞前，牠不會先攻擊你。",
 });
 
@@ -24,12 +28,18 @@ const SEA_WARN_GAP = 3;       // a sea whose lowest level is this far above the 
 const NOVICE_PORT_R = 2400;   // until the first bounty is claimed, no ship made within this of the harbor (about two screens: the Shallows, the Reef Straits, the Lanes' edge) fights above noviceCap (#108)
 // Is a ship made d px from the harbor held to noviceCap? claimed: bounties claimed, ng: New Game+ cycles (a returning captain is no novice).
 const noviceHome = (claimed, ng, d) => claimed === 0 && !ng && d < NOVICE_PORT_R;
-// Practice waters (#113): the same circle, until the first bounty, outside New Game+ and the daily run. A ship made there is a practice
-// target (e.practice, set by tameFirstVoyage, js/notify-order.js): Lv 1, never runs (js/flee.js, js/ships.js), never opens fire on the
+// Two bands inside that circle (#115), until the first bounty, outside New Game+ and the daily run. INNER, the practice waters (#113): the first
+// 3 rings, out to PRACTICE_R = ringEdge(4) (js/world-seas.js; 1580 px; Red Ned's lair, ringMid(3), sits in it). A ship made there
+// is a practice target (e.practice, set by tameFirstVoyage, js/notify-order.js): Lv 1, never runs (js/flee.js, js/ships.js), never opens fire on the
 // captain (isHostile) - but once shot it fights back like any ship. Ships that sail in from outside keep their level.
+// OUTER, PRACTICE_R out to NOVICE_PORT_R: ordinary ships (they flee, fight back, may fire first) at outerLv: Lv 2 on ring 4, 3 on rings 5-6, capped at
+// noviceCap (Ship Lv + 1, never under 2, so the Lv 2 floor holds for every captain). Crossing the line is the graduation (a toast, noviceTick).
 const practiceAt = (claimed, ng, daily, d) => !daily && noviceHome(claimed, ng, d);
+const outerLv = (ring, rating) => Math.min(clamp(ring - 2, 2, 3), noviceCap(rating));
 const practiceOn = () => !!save && practiceAt(save.campaign.bounty, save.ngPlus, typeof runActive === "function" && runActive(), 0);
-const practiceZone = (x, y) => practiceOn() && noviceHome(save.campaign.bounty, save.ngPlus, Math.hypot(x - PORT.x, y - PORT.y));
+const homeD = (x, y) => Math.hypot(x - PORT.x, y - PORT.y);
+const practiceZone = (x, y) => practiceOn() && noviceHome(save.campaign.bounty, save.ngPlus, homeD(x, y)) && homeD(x, y) < PRACTICE_R;
+const outerZone = (x, y) => practiceOn() && noviceHome(save.campaign.bounty, save.ngPlus, homeD(x, y)) && homeD(x, y) >= PRACTICE_R;
 const practiceTarget = e => !!e.practice && practiceOn();   // never runs; the flag lapses with the first bounty: a leftover target fights as an ordinary Lv 1
 // Never fires first: false once the captain has hit it (e.practiceProvoked, js/combat.js), for good - till it sinks or the sortie ends. It still never runs.
 const practiceShip = e => practiceTarget(e) && !e.practiceProvoked;
@@ -43,6 +53,7 @@ const seaWarnGap = (seaLv, rating) => seaLv - rating >= SEA_WARN_GAP;
 // who cannot yet tell Navy from pirate must not be hunted for it. In the Shallows, a novice is also spared by every Navy ship rated over noviceCap. The later bounties keep their crowds: the difficulty bands are untouched.
 const PEACE_R = 1100, SEA_AHEAD_R = 380;
 const bountyPeace = (claimed, dLair) => claimed === 0 && dLair < PEACE_R;
+let bandWas = 0, bandT = 0;   // the band the captain was last in (the graduation cue), and its cooldown so the line's edge cannot spam
 let spare = { bounty: false, shallows: false, navy: false, cap: 0 }, aheadShown = false, navyTipShown = false;
 // Navy ships the captain has shot at this voyage stay hostile (cleared on sail): provoking one ends its peace for good, not for 8 s.
 let provoked = new WeakSet();
@@ -68,6 +79,9 @@ function noviceTick() {
     navyTipShown = true;   // a memory flag: tipOnce reads storage, and a blocked store must not toast every frame
     if (tipOnce("navyAim")) toast(t("navyAim"), false, 6000);
   }
+  const band = live && practiceOn() ? (practiceZone(player.x, player.y) ? 1 : outerZone(player.x, player.y) ? 2 : 0) : 0;   // 1 practice waters, 2 outer band, 0 neither
+  if (band && bandWas && band !== bandWas && bandT <= 0) { toast(t(band === 2 ? "practiceOut" : "practiceIn"), false, 4200); bandT = 6; }
+  if (live) bandWas = band || bandWas; else bandWas = 0;   // 0 = unknown: the first frame of a sortie toasts nothing
   if (!live || typeof seaIsDanger !== "function") return;
   const last = SEAS[SEAS.length - 1], edge = ringEdge(last.L0) - dist(player, PORT);
   if (aheadShown && edge > SEA_AHEAD_R * 2.5) aheadShown = false;   // sailed well clear: it may warn again
@@ -77,7 +91,8 @@ function noviceTick() {
   }
 }
 onHook("frame", () => { if (!paused) noviceTick(); });
-onHook("sail", () => { aheadShown = false; provoked = new WeakSet(); });
+onHook("frame", dt => { bandT -= dt; });
+onHook("sail", () => { bandWas = 0; aheadShown = false; provoked = new WeakSet(); });
 
 // shipRating() walks every gun and the power table: the ring quotas ask for it every frame, so it is read twice a second.
 let ratingNow = 1, ratingT = 0;

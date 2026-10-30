@@ -9,6 +9,7 @@ const ENEMY_COUNT = 30;     // ordinary ships at sea, shared out by ring quota (
 const BALL_SPEED = 480;
 const ARC = 0.62;           // half-angle (rad) of each broadside firing arc
 const ZONE_STEP = 320;      // every this many px from the harbor, enemy level +1: the axis edge reaches Lv 10
+const PRACTICE_R = SAFE_R + 3 * ZONE_STEP;   // the practice waters (js/novice.js) end here: = ringEdge(4), the first 3 rings (1580 px)
 const MAX_RING = 10;        // the outermost level ring; the corners past it belong to it too
 // Big gun decks (js/gundeck.js, js/combat.js): the most ports on one side, and the gun-bay layout that goes compact from DENSE_PORTS.
 // A broadside rolls off gun by gun, ROLL_GAP_MS apart but never longer than ROLL_MAX_MS in all; only about FX_GUNS guns of a

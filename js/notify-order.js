@@ -74,7 +74,7 @@ onHook("frame", () => {
 // the Shallows (js/ships.js makeEnemy) fights at most one level above that Ship Lv: no ▲▲ ship waits by the harbor
 // mouth. Re-roll its class, then drop its level. The player's own escorts (faction "ally", js/escort-ai.js; e.ally is only
 // set after makeEnemy returns) keep the class and level their yard entry gave them.
-// (Inside practiceZone, js/novice.js, the ships are Lv 1 targets instead, so the cap below only matters for the Shallows once the first
+// (Inside practiceZone, js/novice.js, the ships are Lv 1 targets instead, and in the outer band to NOVICE_PORT_R they are held to outerLv, 2-3, so the cap below only matters for the Shallows once the first
 // bounty is claimed, and for placed ships' neighbours at the edge of the circle.)
 // Until the first bounty is claimed the same cap holds anywhere within NOVICE_PORT_R of the harbor (#108: the Reef Straits and the
 // Lanes' edge are a screen or two out, and a Lv 4-7 crew there ended new captains' first sortie). `placed` ships (a bounty, its
@@ -89,7 +89,8 @@ function tameFirstVoyage(e, placed) {
   }
   const me = shipRating(), home = !placed && noviceHome(save.campaign.bounty, save.ngPlus, Math.hypot(e.x - PORT.x, e.y - PORT.y));
   if (!home && (seaOfRing(e.ring).id !== "shallows" || (save.tutorialDone && me >= NOVICE_LV))) return;
-  const cap = noviceCap(me), over = () => (e.threatL ?? e.L) > cap;
+  const outer = home && !(typeof heat === "number" && heat > 0) && outerZone(e.x, e.y);   // #115: the outer band holds ordinary Lv 2-3 ships (outerLv, js/novice.js)
+  const cap = outer ? outerLv(e.ring, me) : noviceCap(me), over = () => (e.threatL ?? e.L) > cap;
   for (let i = 0; i < 4 && over(); i++) outfitEnemy(e, i < 2 ? pickArch(e.L, e.faction) : e.merchant ? "fluyt" : "cutter");
   while (over() && e.L > 1) { e.L--; outfitEnemy(e, e.arch); }
 }

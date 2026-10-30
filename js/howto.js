@@ -17,7 +17,7 @@ Object.assign(STR.en, {
     <li><b>Auto-fire</b>: hold <kbd>Space</kbd> and every loaded gun whose line is red keeps firing as it reloads. A quick tap still fires the whole side. You can turn it off in Settings.</li>
     <li><b>Ramming hurts</b>: running into an island or another ship at speed damages your hull (a full-speed head-on costs about 15 to 20% of it). Lower the sail near rocks and enemies.</li>
     <li><b>Boarding</b>: a merchant that strikes her colors (a white flag, once her hull is under about a third) can be taken. Sail up slowly alongside her and stay close for about 2 seconds until the ring fills: you get part of her gold, and sometimes a gun. Bounty captains, escorts and fireships never surrender.</li>
-    <li><b>Practice waters</b>: near the harbor, before your first bounty, the sea is for practice: only small ships that never flee and never fire first.</li></ul>`,
+    <li><b>Practice waters</b>: before your first bounty, the sea near the harbor is for practice: the first few rings hold only small Lv 1 ships that never flee and never fire first. Farther out (to about two screens) ships are Lv 2-3 and fight for real.</li></ul>`,
   ht_badges: `<h3>Level badges</h3><p>Every ship's <b>Lv</b> is how hard it fights, on the same scale as your <b>Ship Lv</b> under the map; the color and mark compare the two. Ships close to you also show the gold they carry. A Wanted poster's <b>Ready at</b> level counts the bounty's escorts too.</p>
     <ul class="legend"><li><i class="sw-badge" style="--c:#86c46f">Lv 1</i><span>Weaker than you</span></li>
     <li><i class="sw-badge" style="--c:#e8c25a">Lv 2</i><span>About even</span></li>
@@ -80,7 +80,7 @@ Object.assign(STR.zh, {
     <li><b>自動開火</b>：按住<kbd>空白鍵</kbd>，每門已裝填且瞄準線是紅色的砲，裝填好就會自動開火。快速點一下還是整排齊射。可以在設定裡關掉。</li>
     <li><b>衝撞會受傷</b>：帶著速度撞上島或別的船，船體會受損（全速正面撞上大約損失 15% 到 20% 船體）。靠近礁石和敵船時先降帆減速。</li>
     <li><b>登船</b>：商船被打到船體剩約三分之一以下，會升白旗降旗投降，這時可以登船。放慢船速、貼緊她的船舷，停留約 2 秒、等圓環轉滿，就能拿到她一部分金幣，有時還會奪得一門砲。懸賞船長、他的護衛和火船不會投降。</li>
-    <li><b>練習海域</b>：港口附近、領第 1 張懸賞之前是練習海域，只有不會逃、不會先開火的小船。</li></ul>`,
+    <li><b>練習海域</b>：領第 1 張懸賞之前，港口附近是練習海域：最內側幾環只有不會逃、不會先開火的 Lv1 小船；再往外（約兩個螢幕內）是 Lv2～3 的船，會逃也會認真還擊。</li></ul>`,
   ht_badges: `<h3>等級標籤</h3><p>每艘船標示的 <b>Lv</b> 代表它的戰力，和地圖下方你的<b>船艦 Lv</b> 用同一套標準；顏色和符號就是兩者比較的結果。靠近你的船還會顯示船上的金幣。懸賞海報上的<b>目標等級</b>則把護衛艦也算進去。</p>
     <ul class="legend"><li><i class="sw-badge" style="--c:#86c46f">Lv 1</i><span>比你弱</span></li>
     <li><i class="sw-badge" style="--c:#e8c25a">Lv 2</i><span>旗鼓相當</span></li>
