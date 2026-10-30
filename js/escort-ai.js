@@ -56,7 +56,7 @@ function deployEscorts() {
 
 // ---------- Who an escort fights ----------
 // active: any enemy near it; normal: an enemy in gun range, one hunting the flagship or an escort, one that hit it;
-// passive: only one that hit it or is bearing down on it. Always inside the stance's reach of the flagship.
+// passive: only one that hit it or is bearing down on it. Always inside the stance's reach of the flagship. Normal also refuses fights it would lose (escortShuns).
 function escortRetarget(e, now) {
   const P = ESCORT_STANCE[e.stance] || ESCORT_STANCE.normal, lead = player;
   if (!lead.alive || docked) { e.target = null; return; }
@@ -68,10 +68,13 @@ function escortRetarget(e, now) {
     return hitMe(o) || on === e;
   };
   const ok = o => o && o.alive && !o.ally && isHostile(e, o) && !ignoring(e, o, now) && dist(o, lead) <= P.reach * 1.25;
-  if (ok(e.target) && wants(e.target)) return;   // stay on the one it has
+  // a Normal escort turns down a much stronger ship, one in a much deadlier sea, and a Navy ship while the captain is not wanted (js/escort-pick.js)
+  const shuns = o => escortShuns(e.stance, { mine: e.threatL ?? e.L, theirs: o.threatL ?? o.L, zone: levelAt(Math.hypot(o.x - PORT.x, o.y - PORT.y)),
+    provoked: hitMe(o) || o.target === lead || !!(o.target && o.target.ally), navyPeace: escortNavyPeace(o) });
+  if (ok(e.target) && wants(e.target) && !shuns(e.target)) return;   // stay on the one it has
   let best = null, bd = 1e9;
   for (const o of enemies) {
-    if (!ok(o) || dist(o, lead) > P.reach || !wants(o)) continue;
+    if (!ok(o) || dist(o, lead) > P.reach || !wants(o) || shuns(o)) continue;
     const d = dist(e, o); if (d < bd) { best = o; bd = d; }
   }
   if (best !== e.target) { e.target = best; if (best) e.chaseFrom = { x: e.x, y: e.y }; }
@@ -117,7 +120,7 @@ onHook("dock", () => {
   save = out.save; escortReport = { paid: out.paid, lost };
   escortLive = [];
 });
-onHook("sunk", s => { if (s.ally) toast(t("escSunkToast", { name: s.allyName })); });
+onHook("sunk", s => { if (s.ally) { toast(t("escSunkToast", { name: s.allyName }), true, 4500); sfx("bell", { pitch: 0.4 }); } });   // a loud one: the fee is due before the next sortie (js/escort-hud.js)
 // A bounty ship the escorts sink without the player's own hit in the last ASSIST_MS (js/campaign.js) still pays nothing: the captain
 // has to take part in that fight, so an escort's hit is not the player's assist.
 onHook("lang", () => { for (const { e } of escortLive) { const y = save.fleet.find(x => x.id === e.yardId); if (y) e.allyName = escortName(y); if (e.badge) refreshBadge(e); } });

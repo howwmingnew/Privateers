@@ -12,7 +12,7 @@ Object.assign(STR.en, {
   giftFull: "The yard is full, so no ship came with the bounty. <em>Escort slot 1</em> is open for free: tap the Escort 1 tab below and assign one of your idle ships.",
   giftToast: "Your first escort is in slot 1!", giftToastFull: "Escort slot 1 is open (yard full: no ship sent).", giftGo: "Open Escort 1",
   escCost: "Slot {n} gold, plus a ship if you have no spare (the {ship} from {s} gold) and guns ({g} gold each, or reuse the store's): {t} gold and up.",
-  escDps: "Estimated fire: about {d} damage/s, {p}% of the flagship's ({m}/s). Best case, every shot lands.",
+  escDps: "Estimated fire: about {d} damage/s, {p}% of your flagship's total fire ({m}/s). Best case, every shot lands.",
 });
 Object.assign(STR.zh, {
   pBonus: "贈禮", pGift: "免費隨從船位 1＋配好砲的單桅帆船",
@@ -20,7 +20,7 @@ Object.assign(STR.zh, {
   giftFull: "船塢已滿，所以這次沒有送船。<em>隨從船位 1</em> 已免費開通：點下方「隨從 1」頁籤，從閒置的船裡指派一艘。",
   giftToast: "你的第一艘隨從已在船位 1 就位！", giftToastFull: "隨從船位 1 已開通（船塢已滿，沒有送船）。", giftGo: "看隨從 1",
   escCost: "船位 {n} 金；沒有閒置的船還要買一艘（{ship} {s} 金起）和砲（每門 {g} 金，庫存裡的砲也能用）：總共 {t} 金起。",
-  escDps: "預估輸出：每秒約 {d} 傷害，約主艦火力的 {p}%（主艦約 {m}／秒）。這是每發都命中的最佳情況。",
+  escDps: "預估輸出：每秒約 {d} 傷害，約為你主艦總火力的 {p}%（主艦約 {m}／秒）。這是每發都命中的最佳情況。",
 });
 SAVE_DEFAULTS.push(() => ({ escortGift: "" }));
 const GIFT_STATES = ["given", "full", "had"], GIFT_SHIP = "sloop";

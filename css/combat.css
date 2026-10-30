@@ -23,6 +23,8 @@
 .eh span, .eh b { position: relative; }
 .eh.low i { background: linear-gradient(#e8745a, #b3321f); }
 .eh.low { border-color: #e2553f; }
+.eh.hit { border-color: #ffd24a; animation: ehHit .6s ease-in-out infinite alternate; }
+@keyframes ehHit { to { box-shadow: 0 0 6px 1px #ffd24a; } }
 .eh.sunk { opacity: .6; }
 .eh.sunk i { width: 0 !important; }
-@media (prefers-reduced-motion: reduce) { .eh i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .eh i { transition: none; } .eh.hit { animation: none; } }
