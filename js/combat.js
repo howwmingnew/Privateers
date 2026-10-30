@@ -9,6 +9,7 @@ function fire(s, targets, dt) { enemyFire(s, targets, dt); }
 // so the player aims by turning the ship.
 const AIM_SHOW_PAD = 1.15;   // aim lines appear when an enemy is within (range x this) of a mount's firing arc
 let engagedPrev = false, releaseTips = 0, spaceDownAt = 0;   // spaceDownAt: when Space went down, 0 when up
+let threatNow = 0;   // threatLevel this step: js/main.js sets it (and feeds the combat music), the bow chevron (js/read-marks.js) reads it
 function muzzle(s, m, i, n) {
   const g = (s.mounts && s.mounts[m.key]) || m;   // per-hull out/span from applyShipArt, else the MOUNTS defaults
   const a = s.rot + m.ang, p = s.rot + m.perp, off = n === 1 ? 0 : -g.span / 2 + g.span * i / (n - 1);

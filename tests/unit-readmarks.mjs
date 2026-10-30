@@ -62,3 +62,20 @@ test("rimAlpha: stronger at night and in rain, never above 1", () => {
   assert.ok(night > day && rain > day);
   assert.ok(run("rimAlpha(1, true)") <= 1);
 });
+
+test("bowFade: the chevron fades in during a fight, holds BOW_HOLD s after it, then fades out (#142)", () => {
+  const step = (st, fight, dt) => json(`bowFade(${JSON.stringify(st)}, ${fight}, ${dt})`);
+  const hold = run("BOW_HOLD"), tin = run("BOW_IN"), tout = run("BOW_OUT");
+  assert.equal(step({ a: 0, hold: 0 }, false, 0.1).a, 0, "no fight: stays hidden");
+  let st = step({ a: 0, hold: 0 }, true, tin / 2);
+  assert.ok(st.a > 0.4 && st.a < 0.6, "half way through the fade-in: " + st.a);
+  st = step(st, true, tin);
+  assert.equal(st.a, 1); assert.equal(st.hold, hold);
+  st = step(st, false, hold - 0.1);
+  assert.equal(st.a, 1, "still shown inside the hold, so it does not flicker between volleys");
+  st = step(step(st, false, 0.1), false, tout / 2);
+  assert.ok(st.a > 0.4 && st.a < 0.6, "half way through the fade-out: " + st.a);
+  st = step(st, false, tout);
+  assert.equal(st.a, 0);
+  assert.equal(step({ a: 0.3, hold: 0 }, true, 0).hold, hold, "a new fight restarts the hold");
+});
