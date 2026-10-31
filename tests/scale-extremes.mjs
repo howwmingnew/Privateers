@@ -179,6 +179,23 @@ async function main() {
       });
       if (m.w * m.h > m.vw * m.vh * 0.22) bad.push(`sea: chart covers ${Math.round(m.w * m.h * 100 / (m.vw * m.vh))}% of the screen (${Math.round(m.w)}px)`);
       if (m.w < 60) bad.push(`sea: chart is only ${Math.round(m.w)}px wide`);
+      // a boss close by on a badly hurt hull, the achievement card up: the bottom notices stack clear of the hint line and the way-home chip (#164)
+      const was = await page.evaluate(() => {
+        const was = { x: player.x, y: player.y, hp: player.hp, speed: player.speed };
+        Object.assign(player, { x: PORT.x + 1500, y: PORT.y, hp: player.maxHp * 0.2, speed: 0 });
+        const e = makeEnemy(S, player.x + 260, player.y - 60, 4, "pirate", "brig"); Object.assign(e, { maxSpeed: 0, speed: 0, boss: BOUNTIES[0].id }); bossShip = e;
+        return was;
+      });
+      await until(page, () => !homeChip.hidden && stackShown(document.getElementById("bossBar")));
+      const hits = await page.evaluate(() => {
+        renderAchToast(ACH[0].id); achToastEl.classList.add("on");   // the card from above may already be on its way out
+        stackTick();
+        const R = Object.fromEntries(["hint", "homeChip", "bossBar", "achToast", "touchSail", "abilityBtn"].map(id => { const el = document.getElementById(id); return [id, el && stackShown(el) ? el.getBoundingClientRect() : null]; })), out = [];
+        for (const a of ["hint", "homeChip"]) for (const b of ["bossBar", "achToast", "touchSail", "abilityBtn"]) if (R[a] && R[b] && stackHit(R[a], R[b])) out.push(`#${a} under #${b}`);
+        return out;
+      });
+      for (const h of hits) bad.push(`sea, boss + way home: ${h}`);
+      await page.evaluate(was => { const e = bossShip; clearBoss(); e.alive = false; e.spr.destroy(); e.badge && e.badge.destroy(); enemies.splice(enemies.indexOf(e), 1); achToastEl.classList.remove("on"); Object.assign(player, was); }, was);
       const markCss = 4 * m.unit / m.dpr * (m.w / (m.canvas / m.dpr));   // radius of a threat mark in CSS px
       if (markCss < 1.3) bad.push(`sea: chart marks are tiny (radius ${markCss.toFixed(2)}px)`);
       // pause, its panels and photo mode
