@@ -28,3 +28,10 @@
 .eh.sunk { opacity: .6; }
 .eh.sunk i { width: 0 !important; }
 @media (prefers-reduced-motion: reduce) { .eh i { transition: none; } .eh.hit { animation: none; } }
+/* the captain's masts (js/masts.js): one small mast per mast of the hull, in the hull bar between its label and its figure; gold while it stands, grey once it is shot away */
+.mast-ind { display: inline-flex; align-items: center; gap: 2px; font-style: normal; }
+.mast-ind[hidden] { display: none; }
+.mast-ind svg { height: min(calc(14px * var(--ts, 1)), 7.5cqw); width: auto; aspect-ratio: 10 / 14; fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 1px #000); }
+.mast-ind svg.up { stroke: #f0c766; } .mast-ind svg.up .cl { fill: rgba(246,241,227,.85); stroke: none; }
+.mast-ind svg.down { stroke: rgba(246,241,227,.4); } .mast-ind svg.down .cl { stroke: rgba(246,241,227,.4); }
+.mast-ind.hurt svg.down { stroke: #e2553f; } .mast-ind.hurt svg.down .cl { stroke: #e2553f; }

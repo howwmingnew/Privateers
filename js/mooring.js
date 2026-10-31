@@ -51,6 +51,7 @@ function moorTick(dt, hb, dPort) {
   if (cargo > 0 && svc.sell) quickSell(kind);
   if (svc.fee) stationHeal(hb, dt);
   else if (svc.heal && player.hp < player.maxHp) player.hp = Math.min(player.maxHp, player.hp + player.maxHp * MOOR_HEAL * dt);
+  if ((svc.heal || svc.fee) && typeof mastsMend === "function") mastsMend(player, dt);   // the masts go back up one by one (js/masts.js)
   player.burnT = 0;
   // the ledger: only once the ship has left the ring since it last set sail (canDock, js/main.js)
   const still = player.speed < player.maxSpeed * MOOR_STOP;

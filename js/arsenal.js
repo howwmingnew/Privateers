@@ -27,6 +27,7 @@ function onHit(s, dmg, burn, src, ball) {
     if (!(s.chainT > 0) && seen) floatText(s.x, s.y - 54, t("fChain"), "#d8e4e8", 14);
     s.chainT = ball.chainT || CHAIN_T;   // a gun's own affixes may lengthen it (js/gear-fx.js)
   }
+  if (ball && typeof mastHit === "function") mastHit(s, ball);   // a ball may bring a mast down (js/masts.js)
   if (!s.isPlayer && src && src !== s && src.alive !== false) {
     if (s.merchant && src.faction !== "merchant") panic(s, src);
     convoyAlarm(s, src);

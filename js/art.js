@@ -11,6 +11,7 @@
 //                              boss = pirate captains (Jolly Roger); bossNavy / admiral fly the Crown's ensign, never the skull.
 //   bossLivery(bounty)         "boss" | "bossNavy" | "admiral" for a BOUNTIES entry (js/campaign.js).
 //   shipArt(cls, livery, opt)  -> texture key ("ship:<cls>:<livery>"), drawn on first use and cached.
+//                              opt.lost: bit mask of masts shot away (js/masts.js), drawn as stumps, its own texture "<key>:m<mask>".
 //                              opt.furled: sails stowed (moored boats); opt.key: draw into a fixed key. Both keep the guns baked in; the sea hulls
 //                              are drawn without, and js/gun-art.js lays each ship's real guns over them as layers.
 //   applyShipArt(s, cls, liv)  sets s.spr's texture, s.cls / s.livery / s.art, the hit capsule s.hl / s.hw (hitShip) and
@@ -105,17 +106,18 @@ function texSize(a) {
 }
 function shipArt(cls, livery, opt = {}, sc = S) {
   const a = SHIP_ART[cls] || SHIP_ART.sloop, L = LIVERY[livery] || LIVERY.pirate;
-  const key = opt.key || `ship:${cls}:${livery}${opt.furled ? ":f" : ""}`;
+  const base = opt.key || `ship:${cls}:${livery}${opt.furled ? ":f" : ""}`, lost = opt.furled ? 0 : (opt.lost | 0) & ((1 << a.masts.length) - 1);
+  const key = lost ? `${base}:m${lost}` : base;   // a hull with masts shot away (js/masts.js): one texture per mask, baked when first needed
   if (sc.textures.exists(key)) return key;
   const { w, h } = texSize({ ...a, bigFlag: L.bigFlag || !!L.emblem });
-  return bakeCanvas(sc, key, w, h, opt.res || artRes(), c => drawShip(c, a, L, w / 2, h / 2, !!opt.furled, mulberry32(artSeed(key)), !opt.furled && !opt.key));   // at sea the guns are separate layers (js/gun-art.js); moored boats keep theirs
+  return bakeCanvas(sc, key, w, h, opt.res || artRes(), c => drawShip(c, a, L, w / 2, h / 2, !!opt.furled, mulberry32(artSeed(base)), !opt.furled && !opt.key, lost));   // at sea the guns are separate layers (js/gun-art.js); moored boats keep theirs
 }
 // per-texture rng seed, so a redraw of the same key (the harbor gun deck, js/deck-art.js) matches the sprite exactly
 function artSeed(key) { let seed = 7; for (const ch of key) seed = Math.imul(seed ^ ch.charCodeAt(0), 2654435761); return seed; }
 function applyShipArt(s, cls = enemyClassFor(s), livery = liveryFor(s)) {
   s.cls = SHIP_ART[cls] ? cls : "sloop"; s.livery = LIVERY[livery] ? livery : "pirate";
-  const a = s.art = SHIP_ART[s.cls];
-  if (s.spr) { const key = shipArt(s.cls, s.livery); s.artScale = 1 / artResOf(key); s.spr.setTexture(key).setScale(s.artScale); }
+  const a = s.art = SHIP_ART[s.cls]; s.artCls = s.cls;   // artCls: the hull the texture is drawn from (an enemy's s.cls is later set to its archetype)
+  if (s.spr) { const key = shipArt(s.cls, s.livery, { lost: (s.mastLost | 0) & ((1 << a.masts.length) - 1) }); s.artScale = 1 / artResOf(key); s.spr.setTexture(key).setScale(s.artScale); }
   // hit capsule: the drawn hull plus half a ball, so a ball that visibly touches the planking counts
   s.hw = a.beam / 2 + 1.5; s.hl = Math.max(4, a.len / 2 - s.hw);
   const side = { out: a.beam / 2 + 1, span: a.len * 0.48 }, end = { out: a.len / 2 + 2, span: a.beam * 0.36 };

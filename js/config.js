@@ -197,6 +197,11 @@ const FLEE = {
   pad: 320, windSpan: 1, windStep: 0.25, windBend: 0.35,   // px from a map edge where it veers inward; the rad either side of "straight away" it may bend to find fair wind, and how much each bit of bend costs (0 = none, 1 = as much as the lost range)
   tick: 0.25, dump: 0.5, boost: 1.1,       // s between decisions; a hurt merchant tips this share of its cargo and sails this much faster
 };
+// Shot-away masts (js/masts.js, #43). [PLACEHOLDER] until playtested. chance / chain: the odds that one ball breaks a mast, any gun / chain shot.
+// floor: top speed with every mast gone, x full; it climbs in equal steps per mast left (2 of 3 standing: 0.72). turnLoss: the turn lost with every
+// mast gone, in the same steps. bossFloor: a boss never sails slower than this for want of masts. cripple: an AI ship whose masts leave it under this
+// share of its speed stops chasing and turns its broadside on its target. fixT: seconds a dock ring or supply station takes to step one mast.
+const MAST = { chance: 0.03, chain: 0.25, floor: 0.15, turnLoss: 0.3, bossFloor: 0.55, cripple: 0.5, fixT: 1.2 };
 // Navy heat and the Admiral's fleet (js/heat.js). Heat is per sortie (not saved): sinking Navy ships raises it, quiet cools it, any harbor clears it.
 // [PLACEHOLDER] until playtested. Off in the daily sea and #seed voyages (their ships come from a fixed seed).
 const HEAT_STARS = 5, HEAT_STAR_SIZE = 20;   // heat 0..100; a star lights every 20
@@ -229,6 +234,11 @@ const FLAG_COLORS = ["red", "blue", "green", "black", "gold", "purple", "teal", 
 const FLAG_HEX = { red: "#b02626", blue: "#2f8ad6", green: "#3d8b4a", black: "#1a1618", gold: "#e0b44a", purple: "#7a3f98", teal: "#1f9aa0", orange: "#e07b2c", white: "#f4efe2", grey: "#6b6f78" };
 const FLAG_EMBLEMS = ["diag", "skull", "anchor", "swords", "star", "cross"];
 const DEFAULT_FLAG = { main: "blue", alt: "white", emblem: "diag" };   // what the player's ensign always looked like
+// Daily-sea rewards (js/daily-rewards.js, #39): extra flag colours and emblems and hull paints. Cosmetic only. The flag card offers
+// them once earned, but a flag that names one is always valid.
+const FLAG_REWARD_COLORS = ["navy", "rose", "lime"], FLAG_REWARD_EMBLEMS = ["crown", "moon", "wave"];
+Object.assign(FLAG_HEX, { navy: "#1d3a6b", rose: "#d9648a", lime: "#8cc63f" });
+const HULL_PAINTS = { ebony: "#3a3036", crimson: "#8c3a2e", sea: "#2f6b73", ivory: "#b9ad8a" };
 
 // Sea disasters (js/disasters-core.js is the plan and the maths, js/disasters.js the sea). Every figure is gameplay, the same
 // for every player whatever the weather-effects setting says. [PLACEHOLDER] until playtested.

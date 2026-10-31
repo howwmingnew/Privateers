@@ -138,6 +138,29 @@ console.log("Chinese UI");
   await done("zh", o);
 }
 
+console.log("Daily rewards (#39): earned cosmetics show on the card and can be equipped");
+{
+  const o = await open(OLD), { page } = o;
+  await unfold(page);
+  check(await page.locator("#flagbox [data-paint]").count() === 0 && await page.locator('#flagbox [data-id="crown"]').count() === 0, "nothing earned: no paint row, no reward emblem");
+  await page.evaluate(() => { saveRewards({ ...rewardClaim(rewardClaim(rewardClaim(freshRewards(), 1, true).store, 2, true).store, 3, true).store }); renderPort(); });
+  await unfold(page);
+  check(await page.locator("#flagbox [data-paint]").count() === 2 && await page.locator('#flagbox [data-k="emblem"][data-id="crown"]').count() === 1 && await page.locator('#flagbox [data-k="main"][data-id="navy"]').count() === 1,
+    "three wins earned a paint (plus the standard hull), the crown emblem and the navy colour");
+  await pick(page, "emblem", "crown"); await pick(page, "main", "navy");
+  await page.click('#flagbox [data-paint="ebony"]');
+  const st = await page.evaluate(() => ({ f: { ...save.flag }, paint: rewardPaint(), liv: player.livery, hull: LIVERY[player.livery].hull, key: localStorage.getItem("privateers-rewards-v1") }));
+  check(st.f.emblem === "crown" && st.f.main === "navy", "the reward emblem and colour are equipped on the flag");
+  check(st.paint === "ebony" && st.liv === "pf-navy-white-crown-ebony" && st.hull === "#3a3036", `the hull paint reaches the sea ship (${st.liv} ${st.hull})`);
+  check(JSON.parse(st.key).paint === "ebony", "the paint choice is saved under the rewards key");
+  await page.evaluate(() => persist());
+  check(await page.evaluate(() => !("paint" in save) && !("rewards" in save)), "the campaign save carries no reward data");
+  await page.click('#flagbox [data-paint=""]');
+  check(await page.evaluate(() => rewardPaint() === "" && LIVERY[player.livery].hull === LIVERY.player.hull), "the standard hull comes back");
+  await page.locator("#flagbox").screenshot({ path: join(out, "card-rewards.png") });
+  await done("rewards", o);
+}
+
 console.log("Phone width (390x844)");
 {
   const o = await open(OLD, { viewport: { width: 390, height: 844 }, mobile: true }), { page } = o;
