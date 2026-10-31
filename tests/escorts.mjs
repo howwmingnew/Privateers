@@ -309,20 +309,22 @@ for (const st of ["active", "normal", "passive"]) {
 }
 // active still picks the far idle ship but no longer leaves its station (ESCORT_LEASH) to reach gun range, so it is not asked to fire there
 check(stanceRows.active.near.hit && stanceRows.normal.near.hit && stanceRows.passive.attacker.hit && !stanceRows.passive.near.hit && !stanceRows.normal.far.hit, `and only the engaged ones fire (${JSON.stringify(Object.fromEntries(Object.entries(stanceRows).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([q, x]) => [q, x.hit ? 1 : 0]))])))})`);
-// #121: a Normal escort turns down a ship far above it and a Navy ship while the captain is not wanted; Active still goes; a ship that hit it is fair
+// #121 / #143: a Normal escort turns down a ship far above it; no stance starts on the Navy, even at two Wanted stars; Active still goes for a strong
+// pirate; a Navy ship that hit it is fair
 const care = await ev(() => {
   const rows = {};
   for (const [name, stance, tweak] of [["strongN", "normal", d => { d.threatL = 40; }], ["strongA", "active", d => { d.threatL = 40; }], ["navyN", "normal", d => { d.faction = "navy"; }],
-    ["navyHurtN", "normal", d => { d.faction = "navy"; }], ["weakN", "normal", () => {}]]) {
-    const es = sailOut([cfg("s1", { stance })], 4), e = es[0], d = dummy(e.x, e.y + 230), hurt = name === "navyHurtN"; d.angry = 0; tweak(d);
+    ["navyA", "active", d => { d.faction = "navy"; }], ["navyWantedA", "active", d => { d.faction = "navy"; heat = 40; }],
+    ["navyHurtN", "normal", d => { d.faction = "navy"; }], ["navyHurtA", "active", d => { d.faction = "navy"; }], ["weakN", "normal", () => {}]]) {
+    const es = sailOut([cfg("s1", { stance })], 4), e = es[0], d = dummy(e.x, e.y + 230), hurt = name.startsWith("navyHurt"); d.angry = 0; tweak(d);
     if (hurt) { d.angry = 1e6; d.target = e; } else Object.defineProperty(d, "target", { get: () => null, set() {} });   // an idle ship: nothing may point it at anyone
     let tgt = false;
     for (let i = 0; i < 200; i++) { stepN(1); if (e.target === d) tgt = true; if (hurt) d.target = e; }
-    rows[name] = tgt ? 1 : 0;
+    rows[name] = tgt ? 1 : 0; heat = 0;
   }
   return rows;
 });
-check(JSON.stringify(care) === JSON.stringify({ strongN: 0, strongA: 1, navyN: 0, navyHurtN: 1, weakN: 1 }), `Normal avoids a far stronger ship and a Navy ship while not wanted; Active still goes; a Navy ship attacking it is fair (${JSON.stringify(care)})`);
+check(JSON.stringify(care) === JSON.stringify({ strongN: 0, strongA: 1, navyN: 0, navyA: 0, navyWantedA: 0, navyHurtN: 1, navyHurtA: 1, weakN: 1 }), `Normal avoids a far stronger ship; no stance starts on the Navy, even when Wanted; Active still goes; a Navy ship attacking it is fair (${JSON.stringify(care)})`);
 const retreat = await ev(() => {
   const es = sailOut([cfg("s4", { stance: "passive" })], 4), e = es[0];
   const d = dummy(e.x + 300, e.y, e); d.angry = 1e6; e.hp = e.maxHp * 0.2;
