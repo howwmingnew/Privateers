@@ -4,9 +4,11 @@
 // (its "!" marker is js/notices.js; an off-screen one gets a flashing edge box, js/edge-marks.js), a chevron past your own bow
 // so the heading reads at a glance (the hull alone looks like it points up), and a dark + light rim behind every enemy plate so
 // it holds against night water and rain streaks. The effects quality (fxLevel, js/vfx.js) low: no pulsing or turning, same marks.
-// Pure helpers first (tests/unit-readmarks.mjs); the Navy aim warning (heatOn, js/heat.js) is used by js/main.js drawOverlays.
-const NAVY_AIM = 0xb98cff, AIM_RED = 0xff4a2e;   // aim line / bracket on a Navy ship: violet, so it never reads as the "go" red (#119)
-const navyAim = e => !!e && e.faction === "navy" && !e.ally && typeof heatOn === "function" && heatOn();   // shooting it makes you Wanted
+// Pure helpers first (tests/unit-readmarks.mjs); the aim colour is used by js/main.js drawOverlays.
+const AIM_RED = 0xff4a2e;
+// The aim line colour: faint while reloading, red when it would hit, yellow when it would miss. Every ship in the line is the
+// same red, Navy included (#141): the ⚓ on its plate tells it apart, and not hitting it is the player's call.
+const aimColor = (ready, tg) => !ready ? 0xf6f1e3 : tg ? AIM_RED : 0xffd76a;
 // The three corners of the heading chevron: tip `gap` px past the bow, wings `size` back and `size * 0.8` to each side.
 function bowChevron(x, y, rot, len, gap, size) {
   const c = Math.cos(rot), s = Math.sin(rot), bx = x + c * (len / 2 + gap), by = y + s * (len / 2 + gap), w = size * 0.8;

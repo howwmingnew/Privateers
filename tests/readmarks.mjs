@@ -1,5 +1,5 @@
 // #119 combat readability in headless Chrome: the shooter that just hit you is ringed (on screen) or gets a flashing edge box (off screen),
-// the aim line / bracket on a Navy ship is violet (and the ordinary hit colour on a pirate), the bow chevron is drawn ahead of your hull,
+// the aim line on a Navy ship is the same red as on a pirate (#141), the bow chevron is drawn ahead of your hull,
 // a rim sits behind each enemy plate at night and in rain, and an edge box never lands on a level plate. 0 page errors.
 // Usage: node tests/readmarks.mjs [url] [outDir]   (serve the repo first, e.g. `npm run serve`)
 import { chromium } from "playwright";
@@ -49,18 +49,18 @@ const put = (faction, dx, dy, L = 3) => page.evaluate(([faction, dx, dy, L]) => 
   return (window.__placed ||= []).push(e) - 1;   // a handle, not an index into enemies: the sea retires far ships (js/world-seas.js managePopulation) and shifts the indexes
 }, [faction, dx, dy, L]);
 
-// ---- 1. aim warning: a Navy ship in the line is violet, a pirate red
+// ---- 1. aim colour: a Navy ship in the line is the same red as a pirate (#141)
 const navy = await put("navy", 260, 0), pirate = await put("pirate", -260, 0);
 const aim = (idx, rot) => page.evaluate(([idx, rot]) => {
   Object.assign(player, { rot, speed: 0 });
   const e = window.__placed[idx], m = MOUNTS.find(m => m.key === "bow") || MOUNTS[0], gun = player.guns[m.key][0];
   const mz = muzzle(player, m, gun.pi, gun.pn); gun.cd = 0;
-  return { hit: lineHits(mz.x, mz.y, mz.a, gun.range * 3) === e, warn: navyAim(e), col: navyAim(e) ? NAVY_AIM : AIM_RED };
+  const tg = lineHits(mz.x, mz.y, mz.a, gun.range * 3);
+  return { hit: tg === e, col: aimColor(true, tg) };
 }, [idx, rot]);
-await page.evaluate(() => { save.tutorialDone = true; });
 const aN = await aim(navy, 0), aP = await aim(pirate, Math.PI);
-check(aN.warn && aN.col === 0xb98cff, "a Navy ship in the aim line gives the violet warning", aN);
-check(!aP.warn && aP.col === 0xff4a2e, "a pirate keeps the red", aP);
+check(aN.hit && aN.col === 0xff4a2e, "a Navy ship in the aim line is red, no violet", aN);
+check(aP.hit && aP.col === 0xff4a2e, "a pirate in the aim line is red", aP);
 
 // ---- 2. bow chevron + plate rim at night in rain: the layer draws without errors and has something in it
 await page.evaluate(() => { Object.assign(wx, { on: true }); wx.w = { kind: "storm", rain: 1, storm: 1, hour: "night", spell: 0 }; Object.assign(player, { rot: -Math.PI / 4 }); });
