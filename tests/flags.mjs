@@ -98,8 +98,9 @@ console.log("Ledger: change the flag and the name");
   check(tag.vis && tag.txt === "Dread Queen" && tag.near < 120, `the name sails beside the ship (${JSON.stringify(tag)})`);
   await page.evaluate(() => { for (const e of enemies) e.spr.setVisible(false); });
   await page.screenshot({ path: join(out, "sea-desktop.png") });
-  await page.evaluate(() => { dock("return"); });
-  check(await page.evaluate(() => !nameTag.visible), "the name tag hides while docked");
+  // the tag follows `docked` in the next frame hook (Phaser's postupdate, before that frame draws): read it in that same postupdate, just after the
+  // hook (a later listener), not after however many frames the round trip happened to allow (#166)
+  check(await page.evaluate(() => { dock("return"); return new Promise(r => S.events.once("postupdate", () => r(!nameTag.visible))); }), "the name tag hides while docked");
   // the chart mark draws the pennant without error
   check(await page.evaluate(() => { const cv = document.createElement("canvas"); cv.width = cv.height = 60; miniPlayer(cv.getContext("2d"), 30, 30, 0, 2); const d = cv.getContext("2d").getImageData(0, 0, 60, 60).data; let red = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200 && d[i] > 150 && d[i + 1] < 70 && d[i + 2] < 70) red++; return red > 3; }), "the chart's player mark flies the main colour");
   // reload keeps everything
