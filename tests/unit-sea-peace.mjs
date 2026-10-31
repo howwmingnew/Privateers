@@ -32,9 +32,9 @@ test("sea ahead: warns once within the edge distance, for a dangerous sea only",
   assert.equal(g.run("seaAheadDue(-5, 100, true, false)"), false, "already across: the red banner has it");
   assert.equal(g.run("seaAheadDue(100, 100, false, false)"), false, "a captain who can take the sea is not warned");
   assert.equal(g.run("seaAheadDue(100, 100, true, true)"), false, "once per approach");
-  // #114: about 15 s before the line at the ship's own speed, not 380 px (about 2 s) before it
-  assert.equal(g.run("seaAheadDue(SEA_AHEAD_S * 100, 100, true, false)"), true, "15 s out at 100 px/s");
-  assert.equal(g.run("seaAheadDue(SEA_AHEAD_S * 100 + 50, 100, true, false)"), false, "16 s out: not yet");
+  // #114: SEA_AHEAD_S before the line at the ship's own speed, not 380 px (about 2 s) before it
+  assert.equal(g.run("seaAheadDue(SEA_AHEAD_S * 100, 100, true, false)"), true, "SEA_AHEAD_S s out at 100 px/s");
+  assert.equal(g.run("seaAheadDue(SEA_AHEAD_S * 100 + 50, 100, true, false)"), false, "half a second further out: not yet");
   assert.equal(g.run("seaAheadDue(2000, -80, true, false)"), false, "sailing home: no warning");
 });
 

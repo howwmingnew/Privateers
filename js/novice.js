@@ -54,7 +54,7 @@ const seaWarnGap = (seaLv, rating) => seaLv - rating >= SEA_WARN_GAP;
 // Navy leaves the captain (and the escorts) alone anywhere unless provoked (#105, #120): a ship's colour is its strength, not its side, and a newcomer
 // who cannot yet tell Navy from pirate must not be hunted for it. One rule: while Wanted is under HEAT_HUNT_FROM stars (the first voyage counts as 0) the
 // Navy never opens fire. It replaces the old "until the first bounty" gate. Retaliation = js/combat.js hurt() made the ship's attacker the captain/escort within 8 s (ram and shots both go through hurt), or `provoked` below. In the Shallows, a novice is also spared by every Navy ship rated over noviceCap. The later bounties keep their crowds: the difficulty bands are untouched.
-const PEACE_R = 1100, SEA_AHEAD_R = 380, SEA_AHEAD_S = 15;   // the sea warning comes SEA_AHEAD_S s before the line at the ship's speed (#114), or inside SEA_AHEAD_R px whatever the speed
+const PEACE_R = 1100, SEA_AHEAD_R = 380, SEA_AHEAD_S = 10;   // the sea warning comes SEA_AHEAD_S s before the line at the ship's speed (#114), or inside SEA_AHEAD_R px whatever the speed
 const bountyPeace = (claimed, dLair) => claimed === 0 && dLair < PEACE_R;
 let bandWas = 0, bandT = 0;   // the band the captain was last in (the graduation cue), and its cooldown so the line's edge cannot spam
 let spare = { bounty: false, shallows: false, navy: false, cap: 0 }, aheadShown = {}, navyTipShown = false;   // aheadShown: sea id -> the distance (px) it warned at

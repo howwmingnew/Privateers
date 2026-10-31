@@ -1,5 +1,5 @@
 // #118 / #114 in headless Chrome: the top lane keeps clear of the ship and the tutorial card, warnings jump explanations in the toast queue,
-// the sea warning comes ~15 s early, the way-home chip under 40% hull, the edge-of-the-chart hint, 0 page errors.
+// the sea warning comes ~10 s early, the way-home chip under 25% hull (#144), the edge-of-the-chart hint, 0 page errors.
 // Usage: node tests/hud118.mjs [url]   (serve the repo first, e.g. `npm run serve`)
 import { chromium } from "playwright";
 const SLOW = +process.env.TEST_SLOW || 1;
@@ -69,22 +69,29 @@ console.log("desktop: priority, warnings, home chip, the edge");
   check(shown.now === "Hull alarm" && shown.queued.includes("A one-time explanation that runs long"), "a warning replaces a tip, and the tip waits its turn", shown);
   await sleep(3500);
 
-  // the sea warning: sailing out toward the Navy Lanes at speed warns well before the line
-  const t0 = await page.evaluate(() => { player.maxHp = player.hp = 1e6; player.x = PORT.x - 1000; player.y = PORT.y; player.rot = Math.PI; player.speed = player.maxSpeed; aheadShown = {}; return { d: dist(player, PORT), lowLv: seaLowLv("lanes"), rating: shipRating(), danger: seaIsDanger("lanes") }; });
+  // the sea warning: sailing out toward the Navy Lanes at speed warns well before the line (full sail, started inside SEA_AHEAD_S s of it
+  // but past the old 380 px, so only the time rule can be what fires)
+  const t0 = await page.evaluate(() => { player.maxHp = player.hp = 1e6; player.x = PORT.x - (ringEdge(SEAS[2].L0) - Math.max(600, SEA_AHEAD_S * player.maxSpeed * 0.7)); player.y = PORT.y; player.rot = Math.PI; player.speed = player.maxSpeed; setSailLevel(3); aheadShown = {}; return { d: dist(player, PORT), lowLv: seaLowLv("lanes"), rating: shipRating(), danger: seaIsDanger("lanes") }; });
   await sleep(1500);
   const w = await page.evaluate(() => ({ text: toastEl.textContent, d: dist(player, PORT), edge: ringEdge(SEAS[2].L0) }));
   check(/Navy Lanes/.test(w.text) && /Warning/.test(w.text), "the Navy Lanes warning shows while the line is still some way off", { t0, w });
   check(w.edge - w.d > 380, "...and it came earlier than the old 380 px", w);
+  await page.evaluate(() => setSailLevel(0));
   await sleep(6000);
 
-  // the way home under 40% hull
-  await page.evaluate(() => { player.x = PORT.x + 1500; player.y = PORT.y; player.maxHp = 100; player.hp = 30; });
+  // the way home under 25% hull (#144: 30% no longer shows it)
+  await page.evaluate(() => { player.x = PORT.x + 1500; player.y = PORT.y; player.maxHp = 100; player.hp = 30; streak = 3; });
   await sleep(700);
+  check(await page.evaluate(() => homeChip.hidden), "at 30% hull the way home stays hidden", null);
+  check(await page.evaluate(() => !byId("streak").hidden && !byId("streak").classList.contains("risk")), "...and a 3-ship streak is not yet flagged at risk", null);
+  await page.evaluate(() => { player.hp = 20; });
+  await page.waitForFunction(() => !homeChip.hidden, null, { timeout: 2000 * SLOW }).catch(() => {});   // the chip check below reports a miss
   const chip = await page.evaluate(() => ({ hidden: homeChip.hidden, text: homeChip.textContent, tf: homeChip.querySelector("i").style.transform }));
-  check(!chip.hidden && /Harbor \d+ m/.test(chip.text) && /rotate/.test(chip.tf), "under 40% hull the way home shows direction and distance", chip);
+  check(!chip.hidden && /Harbor \d+ m/.test(chip.text) && /rotate/.test(chip.tf), "under 25% hull the way home shows direction and distance", chip);
+  check(await page.evaluate(() => byId("streak").classList.contains("risk")), "...and the streak chip turns red at the same line (RISK_HULL = HOME_HULL)", null);
   const cr = await rect(page, "#homeChip"), tb = await page.evaluate(() => { const b = document.querySelector("#hud .bars").getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom }; });
   check(!hit(cr, tb), "the chip sits below the HUD bars", { cr, tb });
-  await page.evaluate(() => { player.hp = 90; });
+  await page.evaluate(() => { player.hp = 90; streak = 0; });
   await sleep(600);
   check(await page.evaluate(() => homeChip.hidden), "a healthy hull hides it again");
 
