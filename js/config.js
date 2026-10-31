@@ -107,7 +107,10 @@ const CRASH_COOLDOWN = 0.8;      // seconds before the same ship may be hurt by 
 const CRASH_SPARE = 0.15;        // above this share of max hull a crash never kills (it leaves 1 hp); an AI is never killed by rock
 const CRASH_GAP = 0.3;           // a blow needs this long without contact before it: pressing on or scraping along a rock is one blow, not many
 const CRASH_SHED = 0.6;          // share of its speed a ship keeps after a ship-on-ship blow
-const CRASH_BIG = 0.1;           // a blow this share of max hull or more shakes the screen hard and shows "Crash!"
+const RAM_PRICE = 450;           // gold for the bow ram (#149, js/ram.js): about a schooner's price, or a 6-pounder taken from Lv 1 to Lv 8
+const RAM_OUT_K = 1.5;           // the bow ram: a ship the flagship rams takes this many times the crash damage (js/collision.js ramHitK) ...
+const RAM_SELF_K = 0.7;          // ... and the flagship takes this many times what a ship or island crash would cost it
+const CRASH_BIG = 0.1;          // a blow this share of max hull or more shakes the screen hard and shows "Crash!"
 // Boarding (js/boarding.js): a struck ship can be boarded by lying alongside. [PLACEHOLDER] until playtested.
 const BOARD_T = 2;               // seconds alongside to finish boarding
 const BOARD_GAP = 26;            // px between the two hull circles that still counts as alongside

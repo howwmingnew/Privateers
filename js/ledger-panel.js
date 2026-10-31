@@ -110,6 +110,7 @@ function hullPanelHtml() {
   const e = tabShipOf(tab), slot = tab - 1, idle = idleRows(slot < 0 ? -1 : slot);
   return `<div class="cpanel hullp">${xBtn()}<h3>${roleTag()}${t("hullHead", { ship: shipNameOf(e) })}</h3><p class="sub">${t("hullSub")}</p>${emptyTipHtml()}
     <div class="list" id="yard">${yardRows(e)}</div>
+    ${slot < 0 && typeof ramRowHtml === "function" ? `<div class="list" id="ram">${ramRowHtml()}</div>` : ""}
     <h4>${t("changeHead")}</h4><p class="hint-s">${t(slot < 0 ? "shipsHint" : "escSwapHint")}</p>
     <div class="list" id="ships"><p class="hint-s">${t("shipsOwned")}</p>${idle || `<p class="hint-s">${t("idleNone")}</p>`}<p class="hint-s">${t("shipsBuy")}</p>${saleRows(slot < 0 ? -1 : slot, e)}</div>
     ${slot >= 0 ? `<button class="btn ghost evict" type="button" data-act="escEvict" data-id="${slot}">${t("evict")}</button>` : ""}</div>`;
