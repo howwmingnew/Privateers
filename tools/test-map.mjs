@@ -17,6 +17,7 @@ export const MAP = [
   [/^js\/(campaign|bounty|victory|postcard|sharecard)/, ["campaign"]],
   [/^js\/lv-path/, ["campaign", "harbor", "polish"]],   // Ship Lv progress: the HUD label, the upgrade buttons, the poster
   [/^js\/replay/, ["replay"]],
+  [/^js\/abilities/, ["abilities", "scale", "safety"]],   // #16: captain's abilities, their HUD button next to the touch sail buttons
   [/^js\/ram/, ["collision", "harbor"]],   // the bow ram: its ledger row, the crash damage and the save field (#149)
   [/^js\/(collision|ships|combat|strike|ai-nav|ambush|sea-guard)/, ["collision", "phase1"]],
   [/^js\/(plunder|ai-plunder)/, ["aiplunder"]],

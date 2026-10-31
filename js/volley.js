@@ -76,7 +76,7 @@ function releaseVolley(s, key, v, guns) {
   guns.forEach((g, i) => {
     if (!ballRoom()) return;
     const m = enemyMuzzle(s, key, i, n), aim = v.aims[i];
-    let ang = Math.atan2(aim.y - m.y, aim.x - m.x) + aim.err;
+    let ang = Math.atan2(aim.y - m.y, aim.x - m.x) + aim.err + (typeof abilityAimErr === "function" ? abilityAimErr(tg) : 0);   // the captain's smoke screen (js/abilities.js)
     if (m.a != null) ang = m.a + clamp(angDiff(ang, m.a), -ARC_FIRE, ARC_FIRE);   // a gun only trains so far
     const p = s.fixed ? fortMuzzle(s, ang) : m, life = g.range * 1.08 / g.speed;
     balls.push({ spr: ballSpr(p.x, p.y), x: p.x, y: p.y, vx: Math.cos(ang) * g.speed, vy: Math.sin(ang) * g.speed,

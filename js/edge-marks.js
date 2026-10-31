@@ -60,7 +60,7 @@ function edgeCandidates(v, kx, ky) {
 }
 function edgeHidden() { return !player || !player.alive || paused || docked || titleOpen || (typeof photoOn === "function" && photoOn()) || (typeof chartLite === "function" && chartLite()); }
 let edgeKeep = { top: 0, bottom: [] }, edgeKeepT = 0;
-function readEdgeKeepouts(dt) {   // the HUD strip (as one top limit) and the boss bar / hint (blocked spans along the bottom edge); read a few times a second
+function readEdgeKeepouts(dt) {   // the HUD strip (as one top limit) and the boss bar / hint / sail and ability buttons (blocked spans along the bottom edge); read a few times a second
   if ((edgeKeepT -= dt) > 0) return edgeKeep;
   edgeKeepT = 0.4;
   const box = el => el && !el.hidden && el.getBoundingClientRect().width > 0 ? el.getBoundingClientRect() : null;
@@ -68,7 +68,7 @@ function readEdgeKeepouts(dt) {   // the HUD strip (as one top limit) and the bo
   const over = ["seaBanner", "tally", "coach"].map(id => document.getElementById(id)).filter(el => el && !el.hidden && el.classList.contains(el.id === "coach" ? "up" : "on"))
     .map(el => el.getBoundingClientRect()).filter(r => r.width > 0).map(r => r.bottom);
   const top = Math.max(0, ...over, ...[...document.querySelectorAll("#hud .side, #hud .bars")].map(el => el.getBoundingClientRect().bottom));
-  return (edgeKeep = { top, bottom: ["bossBar", "hint", "touchSail"].map(id => box(document.getElementById(id))).filter(Boolean).map(r => [r.left, r.right]) });
+  return (edgeKeep = { top, bottom: ["bossBar", "hint", "touchSail", "abilityBtn"].map(id => box(document.getElementById(id))).filter(Boolean).map(r => [r.left, r.right]) });
 }
 function onScreenPlates(v, kx, ky) {   // each shown enemy plate as a css-px rect (origin 0.5, js/ships.js)
   const out = [];

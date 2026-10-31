@@ -35,6 +35,27 @@ body.on-title #aground, body.on-pause #aground { display: none; }
 #touchSail i::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 3.5px; margin-top: -1.75px; background: currentColor; border-radius: 2px; }
 #touchSail i.tsp::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 3.5px; margin-left: -1.75px; background: currentColor; border-radius: 2px; }
 
+/* The captain's ability (js/abilities.js, #16): a round button at the bottom right, above the hint; on a touch screen above or beside the sail
+   buttons, wherever it covers no HUD (abilityPlace sets left / top; right / bottom here are only the first frame's).
+   --p is the share of the recharge (or of the smoke) still to run, drawn as a dark pie over the icon. */
+#abilityBtn { position: fixed; right: calc(env(safe-area-inset-right, 0px) + 12px); bottom: calc(env(safe-area-inset-bottom, 0px) + 28px + var(--hintH, 36px)); z-index: 5;
+  width: 56px; height: 56px; padding: 0; border-radius: 50%; font-family: var(--f-ui); display: grid; place-items: center; cursor: pointer; touch-action: manipulation; user-select: none;
+  color: #f6f1e3; border: 2px solid rgba(246,241,227,.45); box-shadow: 0 2px 8px rgba(0,0,0,.45);
+  background: conic-gradient(rgba(4,16,22,.78) calc(var(--p, 0) * 360deg), transparent 0) , rgba(8,34,45,.85); }
+#abilityBtn[hidden], body.on-title #abilityBtn, body.on-pause #abilityBtn { display: none; }
+#abilityBtn .ab-ic { grid-area: 1 / 1; width: 30px; height: 30px; }
+#abilityBtn .ab-cd { grid-area: 1 / 1; font-size: 19px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px #000, 0 0 6px #000; font-variant-numeric: tabular-nums; }
+#abilityBtn .ab-key { position: absolute; right: -1px; bottom: -1px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 4px; font: 700 12px/20px var(--f-ui, sans-serif);
+  color: #1b1410; background: #f0c766; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+#abilityBtn .ab-key[hidden] { display: none; }
+#abilityBtn[data-state="ready"] { border-color: #f0c766; animation: abReady 1.6s ease-in-out infinite; }
+#abilityBtn[data-state="cool"] .ab-ic { opacity: .45; }
+#abilityBtn[data-state="on"] { border-color: #cfc9bb; }
+#abilityBtn[data-state="armed"] { border-color: #ff8a3a; color: #ffc27a; animation: abReady .8s ease-in-out infinite; }
+#abilityBtn:active { transform: scale(.94); }
+@keyframes abReady { 50% { box-shadow: 0 0 0 4px rgba(240,199,102,.35), 0 2px 8px rgba(0,0,0,.45); } }
+@media (prefers-reduced-motion: reduce) { #abilityBtn { animation: none !important; } }
+
 /* The red sea banner: a sea far above the captain's rating (SEA_WARN_GAP, js/novice.js) */
 #seaBanner[data-danger] small { color: #ff8a75; }
 #seaBanner[data-danger] b { border-block-color: rgba(255,110,90,.8); color: #ffe3dc; }

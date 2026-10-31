@@ -4,16 +4,17 @@
 Object.assign(STR.en, {
   ht_replay: "Replay the first-voyage tutorial", ht_replayed: "The tutorial starts on your next voyage.", ht_restarted: "First-voyage tutorial restarted.",
   ht_controls: `<h3>Controls</h3><dl class="ctl">
-    <dt>Keyboard</dt><dd><kbd>A</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>→</kbd> turn. <kbd>W</kbd> <kbd>S</kbd> or <kbd>↑</kbd> <kbd>↓</kbd> raise and lower the sail (stopped, slow, half, full); the ship holds that speed. <kbd>Space</kbd> fires every loaded gun that bears; <kbd>Q</kbd> / <kbd>E</kbd> fire only the larboard / starboard broadside. <kbd>M</kbd> mutes. <kbd>Esc</kbd> or <kbd>P</kbd> pauses.</dd>
+    <dt>Keyboard</dt><dd><kbd>A</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>→</kbd> turn. <kbd>W</kbd> <kbd>S</kbd> or <kbd>↑</kbd> <kbd>↓</kbd> raise and lower the sail (stopped, slow, half, full); the ship holds that speed. <kbd>Space</kbd> fires every loaded gun that bears; <kbd>Q</kbd> / <kbd>E</kbd> fire only the larboard / starboard broadside. <kbd>F</kbd> uses your captain's ability. <kbd>M</kbd> mutes. <kbd>Esc</kbd> or <kbd>P</kbd> pauses.</dd>
     <dt>Mouse</dt><dd>Hold the right button to steer toward the cursor (the farther the cursor, the more sail) and left-click to fire. Or use the left button alone: hold to steer, let go to fire. The wheel zooms.</dd>
-    <dt>Touch</dt><dd>Drag anywhere to steer with the floating stick, and let go to fire. The <b>−</b> / <b>+</b> buttons lower or raise the sail: at <b>Stopped</b> the stick still turns the ship, so you can aim without sailing past. The <b>❚❚</b> button pauses.</dd>
-    <dt>Controller</dt><dd>Left stick steers. D-pad <kbd>↑</kbd> <kbd>↓</kbd> sets the sail. <kbd>A</kbd> or <kbd>RT</kbd> fires. <kbd>Start</kbd> pauses. In menus the D-pad or stick moves, <kbd>A</kbd> selects and <kbd>B</kbd> goes back.</dd><dt>Photo mode</dt><dd><kbd>H</kbd> (or Photo mode in the pause menu) freezes the sea and hides the interface. Drag to move the camera, wheel or pinch to zoom, and save the shot as a postcard. <kbd>H</kbd> or <kbd>Esc</kbd> returns to the game exactly as it was.</dd>
+    <dt>Touch</dt><dd>Drag anywhere to steer with the floating stick, and let go to fire. The <b>−</b> / <b>+</b> buttons lower or raise the sail: at <b>Stopped</b> the stick still turns the ship, so you can aim without sailing past. The round button above them is your captain's ability. The <b>❚❚</b> button pauses.</dd>
+    <dt>Controller</dt><dd>Left stick steers. D-pad <kbd>↑</kbd> <kbd>↓</kbd> sets the sail. <kbd>A</kbd> or <kbd>RT</kbd> fires. <kbd>Y</kbd> uses the ability. <kbd>Start</kbd> pauses. In menus the D-pad or stick moves, <kbd>A</kbd> selects and <kbd>B</kbd> goes back.</dd><dt>Photo mode</dt><dd><kbd>H</kbd> (or Photo mode in the pause menu) freezes the sea and hides the interface. Drag to move the camera, wheel or pinch to zoom, and save the shot as a postcard. <kbd>H</kbd> or <kbd>Esc</kbd> returns to the game exactly as it was.</dd>
   </dl>`,
   ht_aim: `<h3>Aim lines</h3><p>When an enemy comes near your bow, stern or a broadside, that side shows one line per cannon. Each ball flies straight along its line, so you aim by turning the ship.</p>
     <ul class="legend"><li><i class="sw-aim hit"></i><span><b>Red</b>: loaded, and the shot will hit.</span></li>
     <li><i class="sw-aim miss"></i><span><b>Yellow</b>: loaded, but the shot will miss.</span></li>
     <li><i class="sw-aim reload"></i><span><b>Faint</b>: reloading. The line grows back as the gun reloads.</span></li></ul>`,
   ht_combat: `<h3>Fighting tips</h3><ul>
+    <li><b>Captain's ability</b> (<kbd>F</kbd>, pad <kbd>Y</kbd>, or the round button at the bottom right): fast ships lay a <b>smoke screen</b> that throws off enemy volleys for a few seconds, heavy ships load a <b>double shot</b> for their next broadside, and the sloop drops a <b>powder keg</b> astern for whoever chases it. The button shows the seconds until it is ready again. It helps a well-sailed fight; it does not replace turning out of a red fan.</li>
     <li><b>Auto-fire</b>: hold <kbd>Space</kbd> and every loaded gun whose line is red keeps firing as it reloads. A quick tap still fires the whole side. You can turn it off in Settings.</li>
     <li><b>Ramming hurts</b>: running into an island or another ship at speed damages your hull (a full-speed head-on costs about 15 to 20% of it). Lower the sail near rocks and enemies.</li>
     <li><b>Boarding</b>: a merchant that strikes her colors (a white flag, once her hull is under about a third) can be taken. Sail up slowly alongside her and stay close for about 2 seconds until the ring fills: you get part of her gold, and sometimes a gun. Bounty captains, escorts and fireships never surrender.</li>
@@ -67,16 +68,17 @@ Object.assign(STR.en, {
 Object.assign(STR.zh, {
   ht_replay: "重玩首航教學", ht_replayed: "下次出航時會開始教學。", ht_restarted: "首航教學已重新開始。",
   ht_controls: `<h3>操作方式</h3><dl class="ctl">
-    <dt>鍵盤</dt><dd><kbd>A</kbd> <kbd>D</kbd> 或 <kbd>←</kbd> <kbd>→</kbd> 轉向。<kbd>W</kbd> <kbd>S</kbd> 或 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆（收帆、慢速、半帆、滿帆），船會維持這個速度。<kbd>空白鍵</kbd>讓所有對準目標且已裝填的火砲開火；<kbd>Q</kbd> / <kbd>E</kbd> 只開左舷／右舷。<kbd>M</kbd> 靜音。<kbd>Esc</kbd> 或 <kbd>P</kbd> 暫停。</dd>
+    <dt>鍵盤</dt><dd><kbd>A</kbd> <kbd>D</kbd> 或 <kbd>←</kbd> <kbd>→</kbd> 轉向。<kbd>W</kbd> <kbd>S</kbd> 或 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆（收帆、慢速、半帆、滿帆），船會維持這個速度。<kbd>空白鍵</kbd>讓所有對準目標且已裝填的火砲開火；<kbd>Q</kbd> / <kbd>E</kbd> 只開左舷／右舷。<kbd>F</kbd> 使用船長技能。<kbd>M</kbd> 靜音。<kbd>Esc</kbd> 或 <kbd>P</kbd> 暫停。</dd>
     <dt>滑鼠</dt><dd>按住右鍵，船會朝游標駛去（游標離船越遠，帆張得越滿，按住時 W／S 暫時無效，放開後帆速維持原樣、W／S 恢復），點左鍵開火。也可以只用左鍵：按住轉向，放開開火。滾輪可以縮放。</dd>
-    <dt>觸控</dt><dd>在任意位置拖曳，用浮動搖桿轉向，放開就開火。<b>−</b>／<b>+</b> 鈕降帆或升帆：收帆時搖桿仍能轉船，可以停著瞄準不衝過頭。按 <b>❚❚</b> 暫停。</dd>
-    <dt>控制器</dt><dd>左搖桿轉向。十字鍵 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆。<kbd>A</kbd> 或 <kbd>RT</kbd> 開火。<kbd>Start</kbd> 暫停。在選單中用十字鍵或搖桿移動，<kbd>A</kbd> 確認，<kbd>B</kbd> 返回。</dd><dt>拍照模式</dt><dd>按 <kbd>H</kbd>（或在暫停選單選「拍照模式」）會凍結海面並隱藏介面。拖曳移動鏡頭、滾輪或兩指縮放，再把畫面存成明信片。按 <kbd>H</kbd> 或 <kbd>Esc</kbd> 回到遊戲，一切都和離開時一樣。</dd>
+    <dt>觸控</dt><dd>在任意位置拖曳，用浮動搖桿轉向，放開就開火。<b>−</b>／<b>+</b> 鈕降帆或升帆：收帆時搖桿仍能轉船，可以停著瞄準不衝過頭。上方的圓鈕是船長技能。按 <b>❚❚</b> 暫停。</dd>
+    <dt>控制器</dt><dd>左搖桿轉向。十字鍵 <kbd>↑</kbd> <kbd>↓</kbd> 升降船帆。<kbd>A</kbd> 或 <kbd>RT</kbd> 開火。<kbd>Y</kbd> 使用技能。<kbd>Start</kbd> 暫停。在選單中用十字鍵或搖桿移動，<kbd>A</kbd> 確認，<kbd>B</kbd> 返回。</dd><dt>拍照模式</dt><dd>按 <kbd>H</kbd>（或在暫停選單選「拍照模式」）會凍結海面並隱藏介面。拖曳移動鏡頭、滾輪或兩指縮放，再把畫面存成明信片。按 <kbd>H</kbd> 或 <kbd>Esc</kbd> 回到遊戲，一切都和離開時一樣。</dd>
   </dl>`,
   ht_aim: `<h3>瞄準線</h3><p>敵船靠近船首、船尾或舷側時，那一側的每門火砲都會顯示一條瞄準線。砲彈會沿著線直直飛出去，所以要靠轉動船身來瞄準。</p>
     <ul class="legend"><li><i class="sw-aim hit"></i><span><b>紅色</b>：已裝填，這一發會命中。</span></li>
     <li><i class="sw-aim miss"></i><span><b>黃色</b>：已裝填，但這一發會落空。</span></li>
     <li><i class="sw-aim reload"></i><span><b>淡色</b>：裝填中，線會隨著裝填進度慢慢變長。</span></li></ul>`,
   ht_combat: `<h3>戰鬥小技巧</h3><ul>
+    <li><b>船長技能</b>（<kbd>F</kbd>、手把 <kbd>Y</kbd>，或右下角的圓鈕）：快速線的船放<b>煙幕</b>，幾秒內敵艦齊射會大幅散開；重砲線的船裝填<b>雙發齊射</b>，下一輪舷側傷害加倍；單桅帆船從船尾丟下<b>火藥桶</b>，炸追在後面的船。圓鈕上的數字是再次可用前的秒數。技能能幫你打得更好，但看到紅色扇形還是要轉向閃開。</li>
     <li><b>自動開火</b>：按住<kbd>空白鍵</kbd>，每門已裝填且瞄準線是紅色的砲，裝填好就會自動開火。快速點一下還是整排齊射。可以在設定裡關掉。</li>
     <li><b>衝撞會受傷</b>：帶著速度撞上島或別的船，船體會受損（全速正面撞上大約損失 15% 到 20% 船體）。靠近礁石和敵船時先降帆減速。</li>
     <li><b>登船</b>：商船被打到船體剩約三分之一以下，會升白旗降旗投降，這時可以登船。放慢船速、貼緊她的船舷，停留約 2 秒、等圓環轉滿，就能拿到她一部分金幣，有時還會奪得一門砲。懸賞船長、他的護衛和火船不會投降。</li>
