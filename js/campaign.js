@@ -72,7 +72,7 @@ const BOUNTIES = [
   { id: "ned",    L: 3,  cls: "cutter",  faction: "pirate", hpMul: 2.5, speed: 0.9,  ang: Math.PI,        r: ringMid(3), reward: 400,   escorts: [], margin: 1, tether: BOSS_TETHER, stands: true },
   // #140: the fast smuggler between Ned and Carey. A cutter's kite plan (holds off at bow-gun range, sheers away when crowded) on a schooner
   // hull (b.art: the hull drawn; b.cls: how it fights), faster than any tier-1/2 hull the yard sells, so the lesson is the chase and the wind.
-  { id: "smuggler", L: 4, cls: "cutter", art: "schooner", faction: "pirate", hpMul: 3, speed: 1.15, ang: -Math.PI * 0.35, r: ringMid(4), reward: 2000, escorts: [], margin: 2, tether: RUNNER_TETHER },
+  { id: "smuggler", L: 4, cls: "cutter", art: "schooner", faction: "pirate", hpMul: 3, speed: 1.15, ang: -Math.PI * 0.35, r: ringMid(4), reward: 2000, escorts: [], margin: 2, tether: RUNNER_TETHER, lateLair: true },
   { id: "carey",  L: 5,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: -Math.PI / 2,   r: ringMid(5), reward: 1500,  escorts: [{ cls: "brig" }], margin: 2 },
   { id: "saint",  L: 7,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: Math.PI * 0.75, r: ringMid(7), reward: 4000,  escorts: [FIRE_RAIDER, FIRE_RAIDER, FIRE_RAIDER] },
   { id: "hale",   L: 9,  cls: "frigate", faction: "navy",   hpMul: 1.6,              ang: 0,              r: ringMid(9), reward: 10000, escorts: [{ cls: "brig" }, { cls: "brig" }] },

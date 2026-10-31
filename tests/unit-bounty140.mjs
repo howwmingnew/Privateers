@@ -171,3 +171,29 @@ test("strings: the smuggler and the new lines exist in both languages", () => {
   assert.match(g.run("STR.zh.achd_charmed"), /前四張/);
   assert.equal(g.json("ACH").length, 21);
 });
+
+test("islands: a saved seed keeps its map; only the islands on the smuggler's lair are taken away (owner, #157)", () => {
+  for (const seed of [424242, 1234567, 98765, 7]) {
+    const json = g.json(`(() => {
+      save.wrecks = [];
+      const now = genIslands(${seed}), i = BOUNTIES.findIndex(b => b.id === "smuggler"), b = BOUNTIES.splice(i, 1)[0];
+      const before = genIslands(${seed}); BOUNTIES.splice(i, 0, b);   // the generator as it was before the smuggler existed
+      const L = clearSpots().find(p => p.late), near = o => Math.hypot(o.x - L.x, o.y - L.y) < L.r + o.r;
+      return { now, kept: before.filter(o => !near(o)), gone: before.filter(near).length, onLair: now.filter(near).length };
+    })()`);
+    assert.deepEqual(json.now, json.kept, `seed ${seed}: every other island stays exactly where it was`);
+    assert.equal(json.onLair, 0, `seed ${seed}: nothing on the new lair`);
+    assert.ok(json.gone <= 4, `seed ${seed}: only a few islands give way (${json.gone})`);   // a 330 px lair fits a handful of 60-190 px islands at most
+  }
+});
+
+test("migration: a save moved past the smuggler gets his achievement, once (owner, #157)", () => {
+  const full = s => g.json(`sanitizeSave(${JSON.stringify({ v: 2, gold: 9, ...s })})`);
+  const past = full({ campaign: { bounty: 2 }, ach: { bounty_1: 111, bounty_2: 222 } });
+  assert.ok(past.ach.bounty_smuggler > 0, "past Carey: counted as sunk, so unlocked");
+  assert.equal(past.ach.bounty_2, 222, "the old ones are kept as they were");
+  assert.deepEqual(full(past).ach, past.ach, "loaded again: not granted twice, same unlock time");
+  assert.equal(full({ campaign: { bounty: 1 }, ach: { bounty_1: 111 } }).ach.bounty_smuggler, undefined, "only Ned: the smuggler is still ahead");
+  assert.equal(full({ campaign: { order: 2, bounty: 3 }, ach: {} }).ach.bounty_smuggler, undefined, "an order-2 save earns it by sinking him, not by loading");
+  assert.equal(full({ campaign: { bounty: 3 }, ach: { bounty_smuggler: 5 } }).ach.bounty_smuggler, 5, "an existing unlock keeps its time");
+});

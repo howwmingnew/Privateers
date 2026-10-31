@@ -346,8 +346,9 @@ console.log("Old saves");
   const s2 = await o2.page.evaluate(() => ({ seed: save.seed, camp: save.campaign.bounty }));
   check(s2.seed !== 7 && s2.camp === 0, `an untouched old save is a new game and rolls a map (${s2.seed})`);
   const junk = await o2.page.evaluate(() => sanitizeCampaignSave({ ...save, seed: "x", campaign: { bounty: 99, ships: ["galleon", "brig"], deaths: -3 }, stats: { time: "NaN", sunk: 5, byLevel: { 3: 2, __proto__: 1, x: 4 } }, ach: { first_hit: 1, "<b>": 3 }, ngPlus: 1e9 }));
-  check(junk.campaign.bounty === 6 && junk.campaign.deaths === 0 && junk.stats.time === 0 && JSON.stringify(junk.stats.byLevel) === '{"3":2}' && Object.keys(junk.ach).join() === "first_hit" && junk.ngPlus === 99,
+  check(junk.campaign.bounty === 6 && junk.campaign.deaths === 0 && junk.stats.time === 0 && JSON.stringify(junk.stats.byLevel) === '{"3":2}' && junk.ach.first_hit === 1 && !("<b>" in junk.ach) && junk.ngPlus === 99,
     "hostile campaign fields are coerced");
+check(junk.ach.bounty_smuggler > 0, "no campaign.order and past Carey: the migration grants the smuggler's achievement (#157)");
   await done("blank save", o2);
 }
 

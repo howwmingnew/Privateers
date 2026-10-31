@@ -45,11 +45,13 @@ function sanitizeCampaignSave(s) {
   const c = isObj(s.campaign) ? s.campaign : {};
   // v1 (5 bounties) -> v2: a count of 2+ is past Mother Carey, so the smuggler (index 1) lies behind it too; 1 (Red Ned only) is already "next: the smuggler".
   // Every load runs this, so the output always carries the marker and a migrated save is never shifted twice.
-  const stored = toInt(c.bounty, 0, BOUNTY_COUNT, 0), bounty = c.order === CAMPAIGN_ORDER || stored < 2 ? stored : Math.min(stored + 1, BOUNTY_COUNT);
+  const stored = toInt(c.bounty, 0, BOUNTY_COUNT, 0), migrated = c.order !== CAMPAIGN_ORDER && stored >= 2, bounty = migrated ? Math.min(stored + 1, BOUNTY_COUNT) : stored;
   const listed = Array.isArray(c.ships) ? c.ships : [];
   const st = isObj(s.stats) ? s.stats : {}, sunk = isObj(st.sunk) ? st.sunk : {};
   const byLevel = Object.fromEntries(safeEntries(st.byLevel).filter(([k]) => /^[1-9]\d?$/.test(k)).map(([k, v]) => [k, countOf(v)]));
-  const ach = Object.fromEntries(safeEntries(s.ach).filter(([k, v]) => /^[a-z0-9_]{1,40}$/.test(k) && toNum(v) > 0).map(([k, v]) => [k, toNum(v)]));
+  const kept = Object.fromEntries(safeEntries(s.ach).filter(([k, v]) => /^[a-z0-9_]{1,40}$/.test(k) && toNum(v) > 0).map(([k, v]) => [k, toNum(v)]));
+  // the migration counts the smuggler as sunk, so his achievement comes with it (owner, #157): unlocked now, no card (achievements show on the unlock hook only)
+  const ach = migrated && !kept.bounty_smuggler ? { ...kept, bounty_smuggler: Date.now() } : kept;
   const wrecks = legacy ? s.wrecks.map(w => ({ ...w, x: clamp(w.x + LEGACY_SHIFT, 60, W - 60), y: clamp(w.y + LEGACY_SHIFT, 60, H - 60) })) : s.wrecks;
   return { ...s, wrecks,
     seed: storedSeed || (legacy ? LEGACY_SEED : randomSeed()),

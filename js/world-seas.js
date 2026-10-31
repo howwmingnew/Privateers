@@ -49,14 +49,17 @@ const lootMul = () => NG_LOOT ** ngCycles();
 const ISLAND_COUNT = 85;   // ~1.3 per million px², the old map's density
 let islandSeed = null, islandImgs = [];
 function clearSpots() {
-  return [...BOUNTIES.map(b => ({ ...lairOf(b), r: 330 })), { ...OUTPOST, r: 320 }, ...STATIONS.map(p => ({ x: p.x, y: p.y, r: 320 })), ...save.wrecks.map(w => ({ x: w.x, y: w.y, r: 70 })),
+  return [...BOUNTIES.map(b => ({ ...lairOf(b), r: 330, late: !!b.lateLair })), { ...OUTPOST, r: 320 }, ...STATIONS.map(p => ({ x: p.x, y: p.y, r: 320 })), ...save.wrecks.map(w => ({ x: w.x, y: w.y, r: 70 })),
     ...(runActive() && runBounty() ? [{ ...lairOf(runBounty()), r: 330 }] : [])];   // the daily captain's lair (js/run.js)
 }
 function genIslands(seed = save.seed) {
-  const r = mulberry32(seed), keep = clearSpots(), legacy = seed === LEGACY_SEED;
+  // A lair added after a map could have been rolled (b.lateLair: the smuggler, #140) is not part of the draw, so every saved seed keeps its
+  // islands where they were; the few on that lair are taken away afterwards instead of reshuffling the whole map.
+  const spots = clearSpots(), keep = spots.filter(p => !p.late), late = spots.filter(p => p.late);
+  const r = mulberry32(seed), legacy = seed === LEGACY_SEED;
   const make = (x, y, R) => { const pts = []; for (let i = 0; i < 14; i++) pts.push(0.82 + r() * 0.28); return { x, y, r: R, pts, seed: r() }; };
   const open = (list, x, y, R) => Math.hypot(x - PORT.x, y - PORT.y) >= SAFE_R + R + 80 && !list.some(o => Math.hypot(o.x - x, o.y - y) < o.r + R + 160);
-  const clear = (x, y, R) => !keep.some(p => Math.hypot(p.x - x, p.y - y) < p.r + R);
+  const clear = (x, y, R, list = keep) => !list.some(p => Math.hypot(p.x - x, p.y - y) < p.r + R);
   const inOld = (x, y) => x > LEGACY_SHIFT && x < LEGACY_SHIFT + 5000 && y > LEGACY_SHIFT && y < LEGACY_SHIFT + 5000;
   const old = [];
   // the original generator, draw for draw, shifted onto the new harbor
@@ -69,7 +72,7 @@ function genIslands(seed = save.seed) {
     const R = 60 + r() * 130, x = 150 + r() * (W - 300), y = 150 + r() * (H - 300);
     if (!(legacy && inOld(x, y)) && open(out, x, y, R) && clear(x, y, R)) out.push(make(x, y, R));
   }
-  return out;
+  return out.filter(o => clear(o.x, o.y, o.r, late));
 }
 // Painted by js/scenery.js, one texture per island. On this map they bake at 1x even on HiDPI screens: 85 islands at 2x
 // would hold ~150 MB of canvas plus GPU memory (risky on iOS), 1x keeps the set below the old 34-island map at 2x.
