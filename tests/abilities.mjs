@@ -76,6 +76,8 @@ const btn = page => page.evaluate(() => { const b = document.getElementById("abi
 {
   const { ctx, page } = await open(SAVE());
   await sea(page);
+  // the button is shown by the next frame hook: wait for it rather than reading the very first frame (a busy machine is slow to tick)
+  await page.waitForFunction(() => { const el = document.getElementById("abilityBtn"); return !!el && !el.hidden; }, null, { timeout: 3000 * SLOW }).catch(() => {});
   let b = await btn(page);
   check(b.shown && b.kind === "keg" && b.state === "ready" && b.key === "F", "desktop at sea: the HUD button shows the sloop's keg, ready, key F", b);
   check(/Powder keg/.test(b.label), "the button names its ability", b.label);
@@ -134,6 +136,15 @@ const btn = page => page.evaluate(() => { const b = document.getElementById("abi
   check(await page.evaluate(() => kegs.length === 0), "F does nothing docked");
   await page.evaluate(() => setSail()); await page.waitForFunction(() => !docked && !paused); await sleep(200);
   check(await page.evaluate(() => abilityReady(abil)), "a new sortie starts with the ability ready");
+  // the first voyage's lesson: no button and no ability until it is over (owner, #158)
+  await page.evaluate(() => { tut.active = true; tut.doneT = 0; }); await sleep(300);
+  b = await btn(page);
+  check(!b.shown, "during the lesson the button is hidden", b);
+  await page.keyboard.press("KeyF"); await sleep(150);
+  check(await page.evaluate(() => kegs.length === 0 && abilityReady(abil)), "F does nothing during the lesson");
+  await page.evaluate(() => { tut.active = false; }); await sleep(300);
+  b = await btn(page);
+  check(b.shown && b.state === "ready", "after the lesson the button shows, ready", b);
   await ctx.close();
 }
 
@@ -204,6 +215,12 @@ const btn = page => page.evaluate(() => { const b = document.getElementById("abi
   await shot(page, "double-loaded.png");
   await page.keyboard.press("KeyF"); await sleep(100);
   check(await page.evaluate(() => abil.armed && abil.cd === 0), "F again while loaded changes nothing");
+  // auto-fire (playerFire with a `pick`, js/combat.js autoFire) neither spends the loaded charge nor doubles (owner, #158)
+  await page.waitForFunction(() => player.guns.right.every(g => g.cd <= 0), null, { timeout: 8000 * SLOW });
+  await page.evaluate(() => { window.__dmg = []; playerFire(null, () => true); }); await sleep(1300);
+  const auto = await page.evaluate(() => window.__dmg.slice());
+  check(await page.evaluate(() => abil.armed && abil.cd === 0), "auto-fire does not spend a loaded double shot");
+  check(auto.length >= 3 && Math.abs(per(auto) / per(plain) - 1) < 0.05, "...and the auto-fired broadside is 1x", { auto: auto.length, k: +(per(auto) / per(plain)).toFixed(3) });
   const dbl = await volley();
   b = await btn(page);
   const after = await page.evaluate(() => ({ armed: abil.armed, cd: abil.cd }));

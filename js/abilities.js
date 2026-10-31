@@ -61,7 +61,9 @@ function kegDamage(e, d) {
 // ---------- live state ----------
 let abil = abilityFresh(), kegs = [];
 const abilityKind = () => abilityOf(typeof save !== "undefined" && save ? save.ship : "sloop");
-const abilityAtSea = () => typeof player !== "undefined" && !!player && player.alive && !paused && !docked && !(typeof titleOpen !== "undefined" && titleOpen) && !(typeof photoOn === "function" && photoOn());
+// The first voyage's lesson (js/tutorial.js) has no ability: the button stays hidden and F / Y do nothing until it is over (owner, #158).
+const abLesson = () => typeof tutorialRunning === "function" && tutorialRunning();
+const abilityAtSea = () => typeof player !== "undefined" && !!player && player.alive && !paused && !docked && !(typeof titleOpen !== "undefined" && titleOpen) && !(typeof photoOn === "function" && photoOn()) && !abLesson();
 // For js/volley.js: extra aim error for a ball laid on `tg` now.
 const abilityAimErr = tg => (tg && tg.isPlayer ? smokeErr(abil.on, rand(-1, 1)) : 0);
 // For js/combat.js playerFire: the damage factor of this fire's side guns (spends a loaded double shot).
@@ -251,7 +253,7 @@ if (typeof document !== "undefined" && document.body) {
       kegTick(dt); smokeTick(dt); doubleTick();
     }
     kegRings();
-    const show = !!player && player.alive && !docked && !titleOpen && !(typeof photoOn === "function" && photoOn());   // css/safety.css hides it under the pause sheet
+    const show = !!player && player.alive && !docked && !titleOpen && !(typeof photoOn === "function" && photoOn()) && !abLesson();   // css/safety.css hides it under the pause sheet
     if (abShown !== show) { abShown = show; abBtn.hidden = !show; abPlaceT = 0; }
     if (!show) return;
     abilityRender(false);

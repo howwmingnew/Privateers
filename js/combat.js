@@ -44,8 +44,9 @@ function playerFire(only, pick) {
   let shots = 0, rx = 0, ry = 0;
   const vols = MOUNTS.filter(m => (!only || only.includes(m.key)) && mountEngaged(m))
     .map(mount => ({ mount, ready: player.guns[mount.key].filter(g => g.cd <= 0 && (!pick || pick(mount, g))), side: mount.key === "left" || mount.key === "right" }));
-  // a loaded double shot (js/abilities.js) is spent by the first fire that launches side guns, and known before any ball is scheduled
-  const boostK = typeof abilityShotK === "function" ? abilityShotK(vols.some(v => v.side && v.ready.length)) : 1;
+  // a loaded double shot (js/abilities.js) is spent by the first fire of the captain's own that launches side guns (Space, a click, Q/E, pad A/RT),
+  // never by auto-fire (`pick`, autoFire below: owner, #158), and is known before any ball is scheduled
+  const boostK = !pick && typeof abilityShotK === "function" ? abilityShotK(vols.some(v => v.side && v.ready.length)) : 1;
   for (const { mount, ready, side } of vols) {
     const plan = rollPlan(ready.length);   // a rolling broadside (js/gundeck.js)
     ready.forEach((g, k) => {
