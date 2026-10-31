@@ -48,7 +48,7 @@ function gearCompare(worn, it) {
 // What a gun does on this hull with its gear: damage per ball, range, shots per minute.
 function gunEff(gun) {
   const G = GUNS[gun.g], mod = gunMods(gun);
-  return { dmg: G.dmg * gunLvMul(gun.lv) * shipGunK() * (1 + mod.gdmg), range: G.range * (1 + mod.grange + gx("reach")), rpm: G.rpm * (1 + mod.greload) };
+  return { dmg: G.dmg * gunLvMul(gun.lv) * shipGunK() * (1 + mod.gdmg), range: G.range * (1 + mod.grange + gx("reach")), rpm: G.rpm * (1 + gunReloadK(gun)) };   // with the master gunner aboard, as the gun fires at sea
 }
 // The mounted gun a picked stored gun would most likely replace: the weakest of its type, else the weakest of all.
 function gunRef(s, gun) {

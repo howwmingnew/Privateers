@@ -86,6 +86,9 @@ document.getElementById("port").addEventListener("click", ev => {
   } else if (ESC_ACTS.includes(act)) {   // escort slots, ships, stance and the bill (js/escort-ui.js)
     snd = escortAct(act, b.dataset);
     if (!snd) return;
+  } else if (typeof CREW_ACTS !== "undefined" && CREW_ACTS.includes(act)) {   // hire, aboard or ashore (js/crew-ui.js)
+    snd = crewAct(act, b.dataset);
+    if (!snd) return;
   } else if (TAB_ACTS.includes(act)) {   // the ship tabs, a picked port or hull, closing the panel (js/ledger-tabs.js)
     snd = tabAct(act, b.dataset);
     if (!snd) return;

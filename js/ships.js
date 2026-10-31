@@ -7,8 +7,9 @@ function makeShip(sc, tex, x, y) {
 function playerGuns() {
   // pi / pn: the gun's port and the port count, so a muzzle sits at its port even with empty ports beside it
   const mk = (gun, pi, pn) => { const id = gun.g, g = GUNS[id], m = gunLvMul(gun.lv) * shipGunK();
-    return typeof gxGun === "function" ? { ...gxGun(gun, g, m), id, pi, pn }   // rarity and affixes shape the gun (js/gear-fx.js)
-      : { id, pi, pn, dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, chain: !!g.chain, range: g.range, speed: g.speed || BALL_SPEED, interval: 60 / g.rpm, cd: 0 }; };
+    const b = typeof gxGun === "function" ? { ...gxGun(gun, g, m), id, pi, pn }   // rarity and affixes shape the gun (js/gear-fx.js)
+      : { id, pi, pn, dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, chain: !!g.chain, range: g.range, speed: g.speed || BALL_SPEED, interval: 60 / g.rpm, cd: 0 };
+    return b; };
   return Object.fromEntries(MOUNTS.map(({ key }) => [key, save[key].flatMap((gun, i, ports) => gun ? [mk(gun, i, ports.length)] : [])]));
 }
 function applyPlayerStats(full) {

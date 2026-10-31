@@ -85,7 +85,7 @@ function escortBattery(ship, guns) {
   const sh = SHIPS[ship], k = Math.sqrt(ESCORT_FIRE);
   const one = gun => {
     const g = GUNS[gun.g], m = gunLvMul(gun.lv) * (sh.gunK || 1);
-    const b = typeof gxGun === "function" ? gxGun(gun, g, m)
+    const b = typeof gxGun === "function" ? gxGun(gun, g, m, false)   // false: the flagship's master gunner (js/crew.js) does not serve an escort
       : { dmg: g.dmg * m, burn: g.burn ? g.burn * m : 0, chain: !!g.chain, range: g.range, speed: g.speed || BALL_SPEED, interval: 60 / g.rpm, cd: 0 };
     return { ...b, gt: gun.g, interval: Math.max(0.3, b.interval - VOLLEY_WARN * k), cd: 0 };   // gt: the gun type js/gun-art.js draws
   };

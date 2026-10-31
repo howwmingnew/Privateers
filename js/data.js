@@ -115,7 +115,7 @@ function enemyPower(L) {
 // The gear's share (js/gear-fx.js): 1 + the effect, or 1 where no gear module is loaded (the older files' unit tests).
 const gearMul = k => (typeof gx === "function" ? 1 + gx(k) : 1), gearCut = k => (typeof gx === "function" ? 1 - gx(k) : 1);
 const gunBoost = gun => (typeof gunMods === "function" ? 1 + gunMods(gun).gdmg : 1);
-const gunReload = gun => (typeof gunMods === "function" ? 1 + gunMods(gun).greload : 1);
+const gunReload = gun => 1 + (typeof gunReloadK === "function" ? gunReloadK(gun) : 0);   // its reload affix + the master gunner aboard (js/gear-fx.js)
 // what (for "what if" previews, nothing is changed): { gun: gun => the gun to count in its place, hull: a hull level to count instead of the ship's, extra: guns to count besides the mounted ones }
 function playerPower(what = {}) {
   let dps = 0, fireRate = 0, fireDps = 0;

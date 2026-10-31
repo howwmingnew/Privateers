@@ -9,9 +9,14 @@
 Object.assign(STR.en, { gxMarked: "Weak point marked", gxStand: "Steady!", gxScatter: "Line broken!" });
 Object.assign(STR.zh, { gxMarked: "弱點已標記", gxStand: "穩住！", gxScatter: "隊形被打亂！" });
 
+// The crew aboard add to the same totals (js/crew.js crewMix: gear + crew, capped like gear), so the cache follows the roster and the hull too.
 const gxTotals = (() => {
-  let worn = null, tot = {};
-  return () => { const w = typeof save !== "undefined" && save && save.gear ? save.gear.worn : null; if (w !== worn) { worn = w; tot = w ? gearTotals(w) : {}; } return tot; };
+  let worn = null, crew = null, ship = null, tot = {};
+  return () => {
+    const s = typeof save !== "undefined" && save ? save : null, w = s && s.gear ? s.gear.worn : null, c = s ? s.crew : null, sh = s ? s.ship : null;
+    if (w !== worn || c !== crew || sh !== ship) { worn = w; crew = c; ship = sh; tot = w ? gearTotals(w) : {}; if (c && typeof crewMix === "function") tot = crewMix(tot, s); }
+    return tot;
+  };
 })();
 const gx = k => gxTotals()[k] || 0;
 const gxLegend = part => typeof save !== "undefined" && !!save && !!save.gear && gearLegend(save.gear.worn, part);
@@ -22,11 +27,15 @@ onHook("sail", () => { gxS = gxFresh(); });
 
 // ---------- the guns ----------
 // One player gun as combat reads it: `gun` the save item, G its type, m its Lv x hull factor.
-function gxGun(gun, G, m) {
+// One gun's reload share: its own reload affix plus the master gunner aboard, capped (js/crew.js crewReloadK). The one place it is worked out:
+// the gun at sea (gxGun), its rating (js/data.js gunReload) and the ledger's gun cards (js/gear-ui.js gunEff) all read it. crew false: an escort's gun
+// (js/escorts.js), which the flagship's gunner does not serve.
+const gunReloadK = (gun, crew = true) => { const r = gunMods(gun).greload; return crew && typeof crewReloadK === "function" ? crewReloadK(r) : r; };
+function gxGun(gun, G, m, crew = true) {
   const mod = gunMods(gun), plain = !G.burn && !G.chain;
   return { dmg: G.dmg * m * (1 + mod.gdmg), burn: G.burn ? G.burn * m * (1 + mod.gdmg) * (1 + mod.gtype) : 0, chain: !!G.chain, chainT: G.chain ? CHAIN_T * (1 + mod.gtype) : 0,
     drag: gun.lg ? GEAR_LEGX.drag.t : 0, range: G.range * (1 + mod.grange + gx("reach")), speed: (G.speed || BALL_SPEED) * (plain ? 1 + mod.gtype : 1),
-    interval: 60 / G.rpm / (1 + mod.greload), cd: 0 };
+    interval: 60 / G.rpm / (1 + gunReloadK(gun, crew)), cd: 0 };
 }
 
 // ---------- collisions ----------
