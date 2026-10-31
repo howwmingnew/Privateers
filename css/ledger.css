@@ -180,7 +180,7 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
   #port .sheet > #coach, #port .sheet > .msg { order: -4; }
   #port #pStats, #port #wanted { order: -3; }   /* the Wanted poster (folded) comes right after the stats, above the fleet (#124) */
   #port #fleet { order: -2; }
-  #port #fleet + section { order: -1; }
+  #port #fleet + section, #port #crewSec { order: -1; }   /* the crew page follows the gear */
   #port .sheet > footer { order: 99; }
 }
 /* a purchase waiting for its second tap (js/escort-ui.js armAttrs): it does not expire, so the button just stays marked until it is bought or put down */
@@ -194,3 +194,16 @@ body.pad-nav #sail::before { content: "Y"; display: inline-grid; place-items: ce
 #edgeMarks .em.atk .ptr { border-left-color: #ff5a3c; }
 @keyframes emAtk { 50% { background: rgba(200,50,31,.9); } }
 @media (prefers-reduced-motion: reduce) { #edgeMarks .em.atk { animation: none; } }
+
+/* ---- the Crew page (js/crew-ui.js): the seats line, a row per member, today's recruits ---- */
+#crew .lbl { margin-top: 12px; font-size: calc(12px * var(--ts)); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--ink-soft); }
+#crew .crew-seats { margin: 0; font-weight: 700; }
+#crew .crew-now { margin: 2px 0 0; color: var(--ink-soft); font-size: calc(13px * var(--ts)); }
+#crew .crew-note { margin-top: 8px; }
+#crew .lbl + .hint-s { margin: 2px 0 0; }
+#crew .item { padding: 8px 0; }
+#crew .item .nm { overflow-wrap: anywhere; min-width: 0; }
+#crew .item .ds { overflow-wrap: anywhere; min-width: 0; }
+#crew .item .btn { min-width: 0; min-height: 40px; padding: 7px 12px; font-size: calc(14px * var(--ts)); }   /* a finger-sized target on a phone, whatever the face */
+#crew .crew-m.on { border-left: 4px solid #3f6b2a; padding-left: 8px; }   /* who sails; the status text says it too, never colour alone */
+#crew .crew-m.vet .nm small { color: #6b4a12; font-weight: 700; }

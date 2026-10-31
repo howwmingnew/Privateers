@@ -74,7 +74,7 @@ function emptyPortsOf(n) {
 // the ledger redraws, and the greedy walk below is hundreds of playerPower calls.
 let lvPathMemo = { sig: "", want: 0, out: null };
 function lvPath(want) {
-  const sig = JSON.stringify([save.ship, save.hull, MOUNTS.map(({ key }) => save[key]), save.gear && save.gear.worn]);
+  const sig = JSON.stringify([save.ship, save.hull, MOUNTS.map(({ key }) => save[key]), save.gear && save.gear.worn, save.crew && save.crew.list]);   // the gunner and navigator move the rating
   if (lvPathMemo.sig !== sig || lvPathMemo.want !== want) lvPathMemo = { sig, want, out: lvPathCalc(want, emptyPortsOf(0)) };
   return lvPathMemo.out;
 }
@@ -115,7 +115,7 @@ function onSave(next, f) { const real = save; save = next; try { return f(); } f
 let lvRouteMemo = { sig: "", want: 0, out: null };
 function lvRoute(want) {
   const owned = Array.isArray(save.fleet) ? save.fleet : [], open = (save.campaign && save.campaign.ships) || [];
-  const sig = JSON.stringify([save.ship, save.hull, MOUNTS.map(({ key }) => save[key]), save.gear && save.gear.worn, owned, open, save.shipId]);
+  const sig = JSON.stringify([save.ship, save.hull, MOUNTS.map(({ key }) => save[key]), save.gear && save.gear.worn, save.crew && save.crew.list, owned, open, save.shipId]);
   if (lvRouteMemo.sig !== sig || lvRouteMemo.want !== want) lvRouteMemo = { sig, want, out: lvRouteCalc(want, owned, open) };
   return lvRouteMemo.out;
 }
