@@ -91,7 +91,7 @@ function refreshBadge(e) {
 // ---------- Steering & AI ----------
 // Letting go of the helm (which is also how touch fires) doesn't brake the player's ship at once: it holds its heading at
 // COAST_K of its speed for COAST_T s, then slows, so firing doesn't make you a sitting target. Chain shot (s.chainT)
-// costs a ship speed and turn while its rigging is torn.
+// costs a ship speed and turn while its rigging is torn, and a shot-away mast (js/masts.js) for good, whichever is worse.
 // A furled sail (keys / mouse / pad: s.furled, set by playerInput) is a deliberate stop: no coast, and the hull brakes FURL_BRAKE
 // times harder than normal slowing, so S at the ring edge does not carry the ship through the circle (#116).
 const COAST_T = 1.2, COAST_K = 0.8, FURL_BRAKE = 2;
@@ -104,11 +104,11 @@ function steer(s, desired, thr, dt) {
     s.helmThr = desired == null ? 0 : thr;
   }
   if (typeof disLost === "function" && disLost(s)) { s.rot += (s.disSpin || 1) * dt; desired = null; }   // a rogue wave has torn the helm away (js/disasters.js)
-  const torn = s.chainT > 0;
-  const turn = s.turnRate * (torn ? CHAIN_TURN : 1) * (typeof disTurn === "function" ? disTurn(s) : 1) * dt * (0.45 + 0.55 * Math.min(1, s.speed / Math.max(1, s.maxSpeed) + 0.2));
+  const rigT = typeof rigTurn === "function" ? rigTurn(s) : s.chainT > 0 ? CHAIN_TURN : 1, rigS = typeof rigSpeed === "function" ? rigSpeed(s) : s.chainT > 0 ? CHAIN_SPEED : 1;   // torn rigging and shot-away masts, the worse of the two (js/masts.js)
+  const turn = s.turnRate * rigT * (typeof disTurn === "function" ? disTurn(s) : 1) * dt * (0.45 + 0.55 * Math.min(1, s.speed / Math.max(1, s.maxSpeed) + 0.2));
   if (desired != null) s.rot += clamp(angDiff(desired, s.rot), -turn, turn);
   else if (typeof wxYaw === "function") s.rot += wxYaw(s) * dt;   // a storm slews a hull whose helm is let go (js/weather.js)
-  const target = thr * s.maxSpeed * (torn ? CHAIN_SPEED : 1) * (typeof gxSpeedK === "function" ? gxSpeedK(s) : 1);   // a legendary gun drags its target, a legendary sail speeds a hard turn (js/gear-fx.js)
+  const target = thr * s.maxSpeed * rigS * (typeof gxSpeedK === "function" ? gxSpeedK(s) : 1);   // a legendary gun drags its target, a legendary sail speeds a hard turn (js/gear-fx.js)
   let slow = s.isPlayer && s.furled && thr === 0 ? FURL_BRAKE : 1;   // only a furled sail brakes harder; every other slowdown is as before
   // A following wind drives the hull faster than s.speed (up to x3), so the same brake would carry it that much further past the harbor ring. A furled sail
   // loses the wind's push, so the brake grows with the following-wind factor: the stop takes 1/factor of the time and the run stays what it is in still air.
@@ -201,7 +201,10 @@ function think(e, dt) {
     const shoal = tg === player && !e.boss && !e.escortOf && e.ring && ringAt(dist(player, PORT)) <= e.ring - 2;
     const stands = typeof bossStands === "function" && bossStands(e);   // Red Ned keeps the fight on however far it has run (js/campaign.js, #108)
     if ((chased > LEASH && d > range && !stands) || d > GIVE_UP_DIST || shoal) giveUp(e, tg, now);
-    else { ({ desired, thr } = archTactic(e, tg, d, toT, now)); fd = d; fToT = toT; }   // each class's battle plan (js/archetypes.js)
+    else {
+      ({ desired, thr } = archTactic(e, tg, d, toT, now)); fd = d; fToT = toT;   // each class's battle plan (js/archetypes.js)
+      const crip = typeof mastTactic === "function" ? mastTactic(e, tg, toT) : null; if (crip) ({ desired, thr } = crip);   // too few masts left to chase: stand and fire the broadside (js/masts.js)
+    }
   }
   if (e.fleet) { const c = fleetSteer(e, tg, fd, fToT, now); if (c) ({ desired, thr } = c); }   // formation, flanking, a lost lead (js/fleet.js)
   const plunder = typeof aipSeek === "function" && (desired == null || (tg && dist(e, tg) >= AIP_BREAK)) ? aipSeek(e, tg ? dist(e, tg) : 0, dt) : null;   // loose loot (js/ai-plunder.js)

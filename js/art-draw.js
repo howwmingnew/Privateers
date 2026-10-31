@@ -3,25 +3,38 @@
 // Light is ambient (no baked direction) because the sprite rotates: hulls are lit along the centreline and shaded at
 // both sides, sails darken under the yard and brighten where they belly out, and soft shadows lift sails off the deck.
 function hexA(hex, al) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${al})`; }
-function drawShip(c, a, L, cx, cy, furled, rng, bare) {   // bare: no deck guns (js/gun-art.js lays them on as sprites)
+function drawShip(c, a, L, cx, cy, furled, rng, bare, lost = 0) {   // bare: no deck guns (js/gun-art.js lays them on as sprites) · lost: bit i set = mast i is shot away (js/masts.js)
   const di = a.rows >= 3 ? 5.2 : a.rows === 2 ? 3.8 : a.rows ? 2.9 : 2.3;   // deck inset: heavier bulwarks on the warships
   drawSprit(c, a, cx, cy);
   drawHull(c, a, L, cx, cy);
   drawDeck(c, a, L, cx, cy, di, rng, bare);
   if (a.gallery) drawGallery(c, a, L, cx, cy);
-  drawRigging(c, a, cx, cy);
-  if (furled) drawFurled(c, a, L, cx, cy); else drawSails(c, a, L, cx, cy, rng);
-  for (const u of a.masts) {
+  drawRigging(c, a, cx, cy, lost);
+  if (furled) drawFurled(c, a, L, cx, cy); else drawSails(c, a, L, cx, cy, rng, lost);
+  a.masts.forEach((u, i) => {
     const x = cx - a.len / 2 + u * a.len, r = 1.2 + a.len / 95;
+    if ((lost >> i) & 1) return drawStump(c, L, x, cy, r, i);
     dot(c, x, cy, r + 0.5, L.gold ? L.trim : "rgba(20,12,6,.6)"); dot(c, x, cy, r, WOOD); dot(c, x - 0.4, cy - 0.4, r * 0.4, "rgba(255,230,190,.45)");
-  }
-  drawFlags(c, a, L, cx, cy);
+  });
+  drawFlags(c, a, L, cx, cy, lost);
   const x0 = cx - a.len / 2 + 2.2;
   for (const k of L.gold ? [-0.55, 0.55] : [0]) {   // stern lantern(s)
     const y = cy + k * hullHalf(a, 0), g = c.createRadialGradient(x0, y, 0, x0, y, 5.5);
     g.addColorStop(0, "rgba(255,250,222,1)"); g.addColorStop(0.35, hexA(L.lamp, 0.65)); g.addColorStop(1, hexA(L.lamp, 0));
     c.fillStyle = g; c.fillRect(x0 - 6, y - 6, 12, 12); dot(c, x0, y, 1.1, "#fffbe8");
   }
+}
+// A shot-away mast: a splintered stump with pale broken wood showing, and a crumple of torn canvas on the deck beside it. No rng: the sails' own stream must not shift.
+function drawStump(c, L, x, cy, r, i) {
+  const sg = i % 2 ? -1 : 1;
+  c.save(); c.translate(x, cy);
+  c.beginPath(); c.moveTo(-r * 0.6, 0); c.bezierCurveTo(-r * 1.2, r * 3.4 * sg, r * 1.4, r * 5 * sg, r * 2.8, r * 3 * sg); c.bezierCurveTo(r * 2.2, r * 1.8 * sg, r * 1.2, r * 0.8 * sg, r * 0.6, 0); c.closePath();   // a rag of canvas draped over the rail
+  c.fillStyle = shade(L.sail, -0.08); c.fill(); c.lineWidth = 0.6; c.strokeStyle = "rgba(20,12,6,.7)"; c.stroke();
+  line(c, -r * 1.6, -r * 4 * sg, r * 1.4, r * 4.4 * sg, 1.1, WOOD);   // the broken yard, hanging across the deck
+  c.beginPath(); for (let k = 0; k < 10; k++) { const a = k / 10 * TAU + 0.3, q = k % 2 ? r * 1.15 : r * 2.2; c.lineTo(Math.cos(a) * q, Math.sin(a) * q); }
+  c.closePath(); c.fillStyle = "#ecd2a0"; c.fill(); c.lineWidth = 0.7; c.strokeStyle = "rgba(20,12,6,.85)"; c.stroke();   // the splintered stump, fresh pale wood
+  dot(c, 0, 0, r * 0.75, "#6b4423"); dot(c, 0, 0, r * 0.3, "#2a180c");
+  c.restore();
 }
 // A flagship's stern gallery: a gilded rail and a row of lit windows across the transom.
 function drawGallery(c, a, L, cx, cy) {
@@ -126,34 +139,37 @@ function deckGear(c, a, L, cx, cy, rng) {
     c.restore();
   }
 }
-function drawRigging(c, a, cx, cy) {
-  const len = a.len, x0 = cx - len / 2, tip = cx + len / 2 + a.sprit * len;
-  c.beginPath(); c.moveTo(tip, cy); for (const u of a.masts) c.lineTo(x0 + u * len, cy);   // stays down the centreline
+function drawRigging(c, a, cx, cy, lost = 0) {
+  const len = a.len, x0 = cx - len / 2, tip = cx + len / 2 + a.sprit * len, up = a.masts.filter((u, i) => !((lost >> i) & 1));   // only the masts still standing carry rigging
+  c.beginPath(); c.moveTo(tip, cy); for (const u of up) c.lineTo(x0 + u * len, cy);   // stays down the centreline
   c.lineWidth = 0.6; c.strokeStyle = ROPE; c.stroke();
-  for (const u of a.masts) {   // shrouds to the rails, splayed aft
+  for (const u of up) {   // shrouds to the rails, splayed aft
     const x = x0 + u * len;
     for (const sg of [-1, 1]) for (const k of [2.5, 5.5]) line(c, x, cy, x - k, cy + sg * (hullHalf(a, u - k / len) - 0.6), 0.55, ROPE);
   }
 }
-function drawSails(c, a, L, cx, cy, rng) {
+// A sail whose mast is gone is still "drawn", into this sink, so the rng stream (patch positions) of the sails that stay is the same as on the whole hull.
+const NULL_CTX = new Proxy(function () {}, { get: () => NULL_CTX, set: () => true, apply: () => NULL_CTX });
+function drawSails(c, a, L, cx, cy, rng, lost = 0) {
   const len = a.len, x0 = cx - len / 2, n = a.masts.length, sz = sailSizes(n), tip = cx + len / 2 + a.sprit * len, fore = x0 + a.masts[0] * len;
+  const on = i => ((lost >> i) & 1 ? NULL_CTX : c);   // the canvas for mast i's sails
   // head sails stay slim: they are thin triangles seen edge-on, and a fat one reads as a tusk off the bow
-  for (let j = (a.jibs || 1) - 1; j >= 0; j--) curvedSail(c, L, fore + 2, cy, tip - a.sprit * len * (0.12 + j * 0.42), cy, 0.09 + j * 0.02, rng, false, -0.04);
+  for (let j = (a.jibs || 1) - 1; j >= 0; j--) curvedSail(on(0), L, fore + 2, cy, tip - a.sprit * len * (0.12 + j * 0.42), cy, 0.09 + j * 0.02, rng, false, -0.04);
   if (a.rig === "fore") {
     for (let i = n - 1; i >= 0; i--) {   // boom sails swung out to leeward so they stand clear of the deck
       const mx = x0 + a.masts[i] * len, bl = boomLen(a, i), an = 0.3;
-      curvedSail(c, L, mx, cy, mx - Math.cos(an) * bl, cy + Math.sin(an) * bl, 0.32, rng, true, 0);
+      curvedSail(on(i), L, mx, cy, mx - Math.cos(an) * bl, cy + Math.sin(an) * bl, 0.32, rng, true, 0);
     }
     return;
   }
   const last = x0 + a.masts[n - 1] * len;
-  if (a.spanker) { const bl = (last - x0) * 1.04; curvedSail(c, L, last, cy, last - Math.cos(0.24) * bl, cy + Math.sin(0.24) * bl, 0.2, rng, true, 0); }
-  if (a.lateen) curvedSail(c, L, last + len * 0.1, cy, last - len * 0.17, cy + len * 0.07, 0.16, rng, true, 0);
+  if (a.spanker) { const bl = (last - x0) * 1.04; curvedSail(on(n - 1), L, last, cy, last - Math.cos(0.24) * bl, cy + Math.sin(0.24) * bl, 0.2, rng, true, 0); }
+  if (a.lateen) curvedSail(on(n - 1), L, last + len * 0.1, cy, last - len * 0.17, cy + len * 0.07, 0.16, rng, true, 0);
   for (let i = n - 1; i >= 0; i--) {
     if (a.lateen && i === n - 1) continue;   // the fluyt's mizzen carries only the lateen
     const x = x0 + a.masts[i] * len, Sx = a.beam * SAIL_SPAN * (a.sail || 1) * sz[i];
-    squareSail(c, a, L, x, cy, Sx, Sx * 0.55, rng, false);
-    if (!a.tattered) squareSail(c, a, L, x - 0.8, cy, Sx * 0.72, Sx * 0.4, rng, true);   // topsail, higher so it overlaps
+    squareSail(on(i), a, L, x, cy, Sx, Sx * 0.55, rng, false);
+    if (!a.tattered) squareSail(on(i), a, L, x - 0.8, cy, Sx * 0.72, Sx * 0.4, rng, true);   // topsail, higher so it overlaps
   }
 }
 // A square sail from above: the yard is straight, the cloth bellies forward toward the bow as a crescent.
@@ -219,7 +235,7 @@ function wavyFlag(c, x, y, w, h, wob) {   // a flag streaming aft (-x) from (x, 
   for (let i = 5; i >= 0; i--) c.lineTo(x - w * i / 5, y + h / 2 + Math.sin(i * 1.3) * wob);
   c.closePath();
 }
-function drawFlags(c, a, L, cx, cy) {
+function drawFlags(c, a, L, cx, cy, lost = 0) {
   const len = a.len, x0 = cx - len / 2, big = L.bigFlag ? 1.6 : L.emblem ? 1.3 : 1, fw = 9 * big, fh = 6 * big, fx = x0 - 1;
   line(c, x0 + 1.5, cy, fx, cy, 0.8, WOOD);   // ensign staff over the transom
   c.save(); blur(c, 2, "rgba(0,0,0,.4)"); wavyFlag(c, fx, cy, fw, fh, 0.7); c.fillStyle = L.flag; c.fill(); c.restore();
@@ -240,12 +256,14 @@ function drawFlags(c, a, L, cx, cy) {
   if (L.bigFlag) { wavyFlag(c, fx, cy, fw, fh, 0.7); c.lineWidth = 0.8; c.strokeStyle = L.trim; c.stroke(); }
   // a long pennant streams aft from the main masthead
   const mi = a.masts.length === 1 ? 0 : 1, px = x0 + a.masts[mi] * len, pl = len * 0.26 * big, pw = 1.4 * big;
+  if (!((lost >> mi) & 1)) {   // the pennant flew from this masthead: gone with it
   c.beginPath(); c.moveTo(px, cy - pw);
   for (let i = 1; i <= 6; i++) c.lineTo(px - pl * i / 6, cy - pw * (1 - i / 6.5) + Math.sin(i * 1.2) * 0.8 + i * 0.15);
   for (let i = 6; i >= 0; i--) c.lineTo(px - pl * i / 6, cy + pw * (1 - i / 6.5) + Math.sin(i * 1.2) * 0.8 + i * 0.15);
   c.closePath(); c.save(); blur(c, 2, "rgba(0,0,0,.45)"); c.fillStyle = L.pennant; c.fill(); c.restore();
   if (L.pennant2) { c.save(); c.clip(); c.fillStyle = L.pennant2; c.fillRect(px - pl, cy - pw * 2, pl, pw * 1.9); c.restore(); }   // navy pennant: white over red
-  if (L.admiral) {   // the admiral's flag at the foremast head: a square St George's cross, unlike any other ship's
+  }
+  if (L.admiral && !(lost & 1)) {   // the admiral's flag at the foremast head: a square St George's cross, unlike any other ship's
     const ax = x0 + a.masts[0] * len, s = 7;
     c.save(); blur(c, 2, "rgba(0,0,0,.45)"); wavyFlag(c, ax, cy, s * 1.3, s, 0.6); c.fillStyle = "#f4efe2"; c.fill(); c.restore();
     c.save(); wavyFlag(c, ax, cy, s * 1.3, s, 0.6); c.clip();

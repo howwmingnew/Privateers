@@ -194,6 +194,11 @@ const FLEE = {
   pad: 320, windSpan: 1, windStep: 0.25, windBend: 0.35,   // px from a map edge where it veers inward; the rad either side of "straight away" it may bend to find fair wind, and how much each bit of bend costs (0 = none, 1 = as much as the lost range)
   tick: 0.25, dump: 0.5, boost: 1.1,       // s between decisions; a hurt merchant tips this share of its cargo and sails this much faster
 };
+// Shot-away masts (js/masts.js, #43). [PLACEHOLDER] until playtested. chance / chain: the odds that one ball breaks a mast, any gun / chain shot.
+// floor: top speed with every mast gone, x full; it climbs in equal steps per mast left (2 of 3 standing: 0.72). turnLoss: the turn lost with every
+// mast gone, in the same steps. bossFloor: a boss never sails slower than this for want of masts. cripple: an AI ship whose masts leave it under this
+// share of its speed stops chasing and turns its broadside on its target. fixT: seconds a dock ring or supply station takes to step one mast.
+const MAST = { chance: 0.03, chain: 0.25, floor: 0.15, turnLoss: 0.3, bossFloor: 0.55, cripple: 0.5, fixT: 1.2 };
 // Navy heat and the Admiral's fleet (js/heat.js). Heat is per sortie (not saved): sinking Navy ships raises it, quiet cools it, any harbor clears it.
 // [PLACEHOLDER] until playtested. Off in the daily sea and #seed voyages (their ships come from a fixed seed).
 const HEAT_STARS = 5, HEAT_STAR_SIZE = 20;   // heat 0..100; a star lights every 20
