@@ -37,7 +37,7 @@ test("seats: tiers 1-2 small (2), 3 medium (3), 4-5 large (4), for every ship in
 
 test("bonuses: able / veteran values, best of each role counts, a second of the same role adds nothing", () => {
   run(`save = mk("frigate", [["gunner"], ["carpenter"], ["navigator", 2], ["surgeon"]])`);
-  assert.deepEqual(json("crewBest(save)"), { reload: 0.08, repair: 0.25, spd: 0.05, storm: 0.25, rest: 1 });
+  assert.deepEqual(json("crewBest(save)"), { reload: 0.08, repair: 0.25, spd: 0.05, storm: 0.25, rest: 1, douse: 0.2 });
   run(`save = mk("frigate", [["gunner"], ["gunner", 2], ["gunner"]])`);
   assert.deepEqual(json("crewBest(save)"), { reload: 0.12 }, "three gunners: the veteran's 12%, nothing summed");
   run(`save = mk("frigate", [["gunner", 1, false], ["carpenter", 1, true, 2]])`);
@@ -148,6 +148,27 @@ test("recovery: the hurt sit out exactly their rest in sorties, can't be sent ab
   run(`d = crewDock(mk("sloop", [["gunner"], ["surgeon", 1, false], ["carpenter", 1, false]]), true).save; d = crewSetOn(crewSetOn(d, 1, true), 2, true)`);
   run("for (let i = 0; i < 3; i++) d = crewDock(d, false).save");
   assert.deepEqual(json("d.crew.list.map(c => [c.rest, c.on])"), [[0, false], [0, true], [0, true]], "seats full: back but ashore");
+});
+
+test("a short sortie (under CREW_REST_SEA_S at sea) doesn't count toward the rest; a sinking hurts however short", () => {
+  assert.equal(run("CREW_REST_SEA_S"), 60);
+  run(`save = mk("brig", [["gunner"], ["carpenter", 1, false, 2]])`);
+  assert.deepEqual(json("crewDock(save, false, false).save.crew.list.map(c => c.rest)"), [0, 2], "straight back: the hurt one still has 2 to go");
+  assert.deepEqual(json("crewDock(save, false, true).save.crew.list.map(c => c.rest)"), [0, 1], "a real sortie: one less");
+  const sunk = json("crewDock(save, true, false)");
+  assert.deepEqual(sunk.hurt, [0], "sunk at once: the one aboard is still hurt");
+  assert.deepEqual(sunk.save.crew.list.map(c => c.rest), [3, 2], "and the one already resting doesn't gain a sortie");
+});
+
+test("the surgeon aboard shortens each fire on the flagship: able 20%, veteran 35%; ashore or hurt, no effect", () => {
+  near(run("BURN_T"), 4);
+  for (const [crew, t] of [[[], 4], [[["surgeon"]], 3.2], [[["surgeon", 2]], 2.6], [[["surgeon", 1], ["surgeon", 2]], 2.6], [[["surgeon", 2, false]], 4], [[["surgeon", 2, true, 2]], 4]]) {
+    run(`save = mk("brig", ${JSON.stringify(crew)})`);
+    near(run("crewBurnT()"), t);
+  }
+  run(`save = mk("brig", [["surgeon", 2]])`);
+  assert.equal(run("crewFxText(save.crew.list[0])"), "Hurt crew rest 2 sortie(s) less · fires aboard burn out 35% sooner");
+  assert.ok(!run("'douse' in crewMix({}, save)"), "douse is the crew's own, not a gear total");
 });
 
 test("smaller hull: the extras go ashore in roster order, stay on the roster, and the captain picks who sails", () => {

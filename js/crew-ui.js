@@ -2,7 +2,8 @@
 // ---------- The ledger's Crew page: who is aboard, who is ashore or resting, and today's recruits ----------
 // Rendered into #crew by the renderPort hook. Its buttons carry data-act "crew*" (CREW_ACTS), handled by harbor.js's click handler through crewAct(),
 // which edits `save` (the pure edits are js/crew.js) and returns the sound to play, or null. A move says what happened in a note at the top of the
-// page (not the ledger's message box up top, which would scroll the page away from the button).
+// page (not the ledger's message box up top, which would scroll the page away from the button). Hiring takes two taps (owner's call, #161): the first
+// arms the button as "Confirm · N gold" (js/escort-ui.js twoTap, the rule the escort and ship buys use), the second pays.
 Object.assign(STR.en, {
   crewSeats: "Aboard {n} / {max} · {size} ({ship})", csz_small: "small hull", csz_medium: "medium hull", csz_large: "large hull",
   crewNow: "Aboard now: {list}", crewNowOne: "{role} ({fx})", crewNoneOn: "No one aboard: no crew bonus at sea.",
@@ -10,7 +11,7 @@ Object.assign(STR.en, {
   crewToShore: "Send ashore", crewToShip: "Take aboard", crewFull: "Ship full", crewResting: "Resting",
   crewRoster: "Your crew {n} / {max}", crewEmpty: "No crew yet. Hire someone below.",
   crewRecruits: "Looking for a berth", crewRecruitsHint: "New faces after every sortie.", crewNoPool: "No one else today. New faces after your next sortie.",
-  crewHire: "Hire · {n}", crewHireShort: "Hire · {n} ({d} more)", crewRosterFull: "Your roster is full ({n}). Crew are never dismissed.",
+  crewHire: "Hire · {n}", crewHireArm: "Confirm · {n} gold", crewHireShort: "Hire · {n} ({d} more)", crewRosterFull: "Your roster is full ({n}). Crew are never dismissed.",
   crewHired: "{name} the {role} signed on.", crewHiredAshore: "{name} the {role} signed on and waits ashore: the ship is full.",
   crewMovedOn: "{name} is aboard.", crewMovedOff: "{name} went ashore.",
   crewNewsHurt: "Hurt when the ship went down: {names}. They rest in port, then come back.", crewNewsBack: "Back on duty: {names}.",
@@ -22,12 +23,13 @@ Object.assign(STR.zh, {
   crewToShore: "送上岸", crewToShip: "帶上船", crewFull: "船已滿", crewResting: "休養中",
   crewRoster: "你的船員 {n} / {max}", crewEmpty: "還沒有船員。從下面招募。",
   crewRecruits: "港口裡找差事的人", crewRecruitsHint: "每次出航回來會有新面孔。", crewNoPool: "今天沒有別人了。下次出航回來會有新面孔。",
-  crewHire: "招募 · {n}", crewHireShort: "招募 · {n}（還差 {d}）", crewRosterFull: "船員名冊已滿（{n} 位）。船員不會被解雇。",
+  crewHire: "招募 · {n}", crewHireArm: "確認 {n} 金", crewHireShort: "招募 · {n}（還差 {d}）", crewRosterFull: "船員名冊已滿（{n} 位）。船員不會被解雇。",
   crewHired: "{role}{name}加入了。", crewHiredAshore: "{role}{name}加入了，船已滿，先在岸上等。",
   crewMovedOn: "{name}上船了。", crewMovedOff: "{name}上岸了。",
   crewNewsHurt: "沉船時受傷：{names}。在港口休養後就會歸隊。", crewNewsBack: "歸隊：{names}。",
 });
 const CREW_ACTS = ["crewHire", "crewOn"];
+const crewHireKey = i => "crewHire" + i;   // the armed state of a recruit's Hire button
 let crewNote = null;   // the latest move [key, vars], shown until the next sortie
 onHook("sail", () => { crewNote = null; });
 
@@ -54,9 +56,9 @@ function crewPoolHtml(s) {
   if (full) return `<p class="hint-s">${t("crewRosterFull", { n: CREW_MAX })}</p>`;
   if (!s.crew.pool.length) return `<p class="hint-s">${t("crewNoPool")}</p>`;
   return `<div class="list crew-pool">` + s.crew.pool.map((p, i) => {
-    const short = s.gold < cost;
+    const short = s.gold < cost, arm = !short && armedNow(crewHireKey(i));
     return `<div class="item crew-p"><div class="nm">${crewWho(p)}</div><div class="ds">${crewFxText(p)}</div>` +
-      `<button class="btn" type="button" data-act="crewHire" data-i="${i}" ${short ? "disabled" : ""}>${t(short ? "crewHireShort" : "crewHire", { n: fmt(cost), d: fmt(cost - s.gold) })}</button></div>`;
+      `<button class="btn" type="button" data-act="crewHire" data-i="${i}" ${short ? "disabled" : ""}${arm ? armAttrs() : ""}>${t(short ? "crewHireShort" : arm ? "crewHireArm" : "crewHire", { n: fmt(cost), d: fmt(cost - s.gold) })}</button></div>`;
   }).join("") + `</div>`;
 }
 function crewNewsHtml() {
@@ -84,8 +86,9 @@ onHook("renderPort", renderCrew);
 
 function crewAct(act, d) {
   if (act === "crewHire") {
-    const p = save.crew.pool[+d.i], next = p ? crewHire(save, +d.i) : null;
+    const next = crewHire(save, +d.i);   // null when it can't buy: then the first tap arms nothing
     if (!next) return null;
+    crewNote = null; if (!confirmed(crewHireKey(+d.i))) return null;
     const m = next.crew.list[next.crew.list.length - 1];
     save = next; crewNote = [m.on ? "crewHired" : "crewHiredAshore", { name: crewName(m), role: t("cr_" + m.role) }];
     ledgerFocus = `#crew [data-crew="${m.id}"] [data-act="crewOn"]`;   // the hired one's row: the pool button it was pressed on is gone

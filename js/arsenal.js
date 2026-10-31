@@ -38,11 +38,12 @@ function onHit(s, dmg, burn, src, ball) {
 // respawning) puts them all out.
 function addBurn(s, dps, src) {
   if (s.isPlayer) dps *= gearCut("fire");   // fire-resistant planking and stores (js/gear-core.js)
+  const t = s.isPlayer && typeof crewBurnT === "function" ? crewBurnT() : BURN_T;   // a surgeon aboard puts fires out sooner (js/crew.js)
   const b = s.burns || (s.burns = []);
   if (!(s.burnT > 0)) b.length = 0;
   if (b.length >= BURN_MAX) b.shift();
-  b.push({ t: BURN_T, dps });
-  s.burnT = BURN_T; s.burnSrc = src;
+  b.push({ t, dps });
+  s.burnT = t; s.burnSrc = src;
 }
 function tickStatus(s, dt) {
   if (s.chainT > 0) s.chainT -= dt;

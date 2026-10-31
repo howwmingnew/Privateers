@@ -44,6 +44,15 @@ const crew = page => page.evaluate(() => ({ gold: save.gold, list: save.crew.lis
   aboard: crewAboard().map(c => c.role), interval: player.guns.left[0].interval, maxSpeed: player.maxSpeed }));
 const click = (page, sel) => page.evaluate(sel => { const b = document.querySelector(sel); if (!b || b.disabled) return false; b.click(); return true; }, sel);
 const hireBtn = (role) => `#crew .crew-p:nth-child(${POOL.findIndex(p => p.role === role) + 1}) [data-act="crewHire"]`;
+// Hiring takes two taps (#161): the first only arms the button ("Confirm · N gold"), the second pays. twoTap ignores a second tap inside 400 ms.
+async function hire(page, sel) {
+  const before = await page.evaluate(() => save.gold);
+  if (!(await click(page, sel))) return false;
+  await sleep(500);
+  const armed = await page.evaluate(sel => { const b = document.querySelector(sel); return { gold: save.gold, armed: !!b && b.hasAttribute("data-armed"), txt: b ? b.textContent : "" }; }, sel);
+  check(armed.gold === before && armed.armed && /^Confirm · [\d,]+ gold$|^確認 [\d,]+ 金$/.test(armed.txt), "the first tap on Hire only arms it", armed);
+  return click(page, sel);
+}
 const shoot = (page, name) => page.locator("#crewSec").screenshot({ path: join(out, name) });
 // Out to sea on calm, open water: no AI, fair weather, the flagship stopped.
 async function sea(page) {
@@ -80,12 +89,17 @@ async function topSpeed(page) {
   check(c.list.length === 0 && c.pool === 3, "the Crew page lists three recruits and no crew", c);
   await shoot(page, "desktop-en-recruits.png");
   const base = c;
-  check(await click(page, hireBtn("gunner")), "the gunner's Hire button is enabled");
+  check(await hire(page, hireBtn("gunner")), "the gunner's Hire button is enabled");
   await sleep(150);
   c = await crew(page);
   check(c.gold === 2800 && c.list.length === 1 && c.list[0].role === "gunner" && c.list[0].on, "hired for 200 gold, aboard at once", c);
   check(Math.abs(base.interval / c.interval - 1.08) < 1e-6, "the gunner shortens the flagship's reload by 8% (interval / 1.08)", { before: base.interval, after: c.interval });
-  check(await click(page, hireBtn("navigator").replace(/nth-child\(\d\)/, "nth-child(1)")), "the navigator's Hire button (now first in the pool)");
+  // a tap anywhere else puts an armed Hire down
+  await click(page, `#crew .crew-p:nth-child(1) [data-act="crewHire"]`); await sleep(500);
+  await page.evaluate(() => document.querySelector("#crew .crew-seats").click()); await sleep(200);
+  const down = await page.evaluate(() => ({ gold: save.gold, armed: !!document.querySelector('#crew [data-armed]') }));
+  check(down.gold === 2800 && !down.armed, "a tap elsewhere puts the armed Hire down, nothing paid", down);
+  check(await hire(page, hireBtn("navigator").replace(/nth-child\(\d\)/, "nth-child(1)")), "the navigator's Hire button (now first in the pool)");
   await sleep(150);
   c = await crew(page);
   check(c.gold === 2500 && c.list.length === 2, "the second hire costs 300", c);
@@ -108,6 +122,17 @@ async function topSpeed(page) {
   const v0 = await topSpeed(page);
   check(Math.abs(v1 / v0 - 1.03) < 0.01, "at sea: full sail with the navigator really goes ~3% faster", { with: v1, without: v0 });
   await page.evaluate(() => { save = crewSetOn(save, 1, true); applyPlayerStats(false); });
+  // the surgeon (#161): a fire on the flagship burns BURN_T without one, 20% shorter with an able one aboard
+  const burnT = await page.evaluate(() => {
+    const out = [];
+    for (const on of [false, true]) {
+      save = { ...save, crew: { ...save.crew, list: on ? [...save.crew.list, { id: 8, role: "surgeon", gr: 1, n: 4, on: true, rest: 0 }] : save.crew.list } };
+      player.burnT = 0; addBurn(player, 1, null); out.push(player.burns[0].t, player.burnT); player.burnT = 0; tickStatus(player, 0);
+    }
+    save = { ...save, crew: { ...save.crew, list: save.crew.list.filter(c => c.id !== 8) } };
+    return out;
+  });
+  check(Math.abs(burnT[0] - 4) < 1e-9 && Math.abs(burnT[2] - 3.2) < 1e-9 && burnT[3] === burnT[2], "a surgeon aboard: a fire on the flagship burns 3.2 s, not 4", burnT);
 
   // 2. Sinking: the two aboard are hurt; a third member ashore is not; they come back after three sorties.
   await page.evaluate(() => { save = { ...save, crew: { ...save.crew, list: [...save.crew.list, { id: 9, role: "surgeon", gr: 1, n: 5, on: false, rest: 0 }], seq: 10 } }; });
@@ -125,11 +150,18 @@ async function topSpeed(page) {
   check(!(await click(page, `#crew [data-crew="0"] [data-act="crewOn"]`)), "a hurt member's button is disabled");
   await shoot(page, "desktop-en-hurt.png");
   const rests = [];
+  // out and straight back (under CREW_REST_SEA_S at sea): the rest doesn't go down (#161)
+  await page.evaluate(() => setSail());
+  await page.waitForFunction(() => !docked, null, { timeout: 10000 * SLOW });
+  await page.evaluate(() => dock("return"));
+  await page.waitForFunction(() => docked, null, { timeout: 10000 * SLOW });
+  c = await crew(page);
+  check(c.list.filter(m => m.role !== "surgeon").every(m => m.rest === 3), "a sortie straight back to port doesn't count toward the rest", c.list);
   for (let i = 0; i < 3; i++) {
     await page.evaluate(() => setSail());
     await page.waitForFunction(() => !docked, null, { timeout: 10000 * SLOW });
     rests.push(await page.evaluate(() => crewAboard().map(c => c.role).join("+") || "-"));
-    await page.evaluate(() => dock("return"));
+    await page.evaluate(() => { crewSailAt = gameClock - CREW_REST_SEA_S; dock("return"); });   // a full minute at sea, without waiting one
     await page.waitForFunction(() => docked, null, { timeout: 10000 * SLOW });
   }
   c = await crew(page);
@@ -171,9 +203,12 @@ for (const [name, vp, lang] of [["desktop-zh", { width: 1280, height: 720 }, "zh
     const b = await page.locator(`#crew [data-act="crewHire"]`).first();
     await b.scrollIntoViewIfNeeded();
     await b.tap();
+    await sleep(500);
+    const armed = await crew(page);
+    await page.locator(`#crew [data-act="crewHire"][data-armed]`).tap();
     await sleep(200);
     const c = await crew(page);
-    check(c.list.length === 3 && c.gold === 3000 - 400, `${name}: a tap hires (the third costs 400)`, { n: c.list.length, gold: c.gold });
+    check(armed.list.length === 2 && armed.gold === 3000 && c.list.length === 3 && c.gold === 3000 - 400, `${name}: two taps hire (the third costs 400)`, { armed: armed.gold, n: c.list.length, gold: c.gold });
   }
   await ctx.close();
 }
