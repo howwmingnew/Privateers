@@ -236,7 +236,8 @@ const btn = page => page.evaluate(() => { const b = document.getElementById("abi
 
 // 4. Phones: the button sits clear of the sail buttons and the HUD in both orientations, and a tap uses it.
 const PHONES = [["390x844", { width: 390, height: 844 }, {}], ["844x390", { width: 844, height: 390 }, {}],
-  ["844x390-chart250", { width: 844, height: 390 }, { miniPct: 250 }], ["667x375-ui250", { width: 667, height: 375 }, { uiPct: 250 }], ["360x640-all250", { width: 360, height: 640 }, { uiPct: 250, miniPct: 250, markPct: 250 }]];
+  ["844x390-chart250", { width: 844, height: 390 }, { miniPct: 250 }], ["667x375-ui250", { width: 667, height: 375 }, { uiPct: 250 }], ["360x640-all250", { width: 360, height: 640 }, { uiPct: 250, miniPct: 250, markPct: 250 }],
+  ["932x430", { width: 932, height: 430 }, {}], ["932x430-ui250", { width: 932, height: 430 }, { uiPct: 250 }]];   // a large phone in landscape: wider than the old 900-px stack limit (#160)
 for (const [name, viewport, settings] of PHONES) {
   const { ctx, page } = await open(SAVE(), { viewport, mobile: true, settings });
   await sea(page);
@@ -255,6 +256,20 @@ for (const [name, viewport, settings] of PHONES) {
   check(lay.dev === "touch" && lay.ts, `${name}: a touch screen, the sail buttons are up`, lay);
   check(!!lay.me && lay.inside, `${name}: the ability button is on the screen`, lay.me);
   check(lay.hits.length === 0, `${name}: it overlaps nothing (sail buttons, hint, bars, chart column)`, lay.hits);
+  // a bounty captain close by: the boss bar stacks clear of the button and the sail pad (js/hud-stack.js, #160); the button stays where it was
+  const i = await foe(page, 260, -60, { boss: await page.evaluate(() => BOUNTIES[0].id) });
+  await page.evaluate(i => { bossShip = window.__foes[i]; }, i);
+  await sleep(600);
+  const bb = await page.evaluate(() => {
+    const r = sel => { const el = document.querySelector(sel); return el && !el.hidden && el.getClientRects().length ? el.getBoundingClientRect() : null; };
+    const me = r("#abilityBtn"), bar = r("#bossBar"), pad = r("#touchSail"), hit = (a, b) => !!a && !!b && stackHit(a, b);   // the game's own overlap test (js/hud-stack.js)
+    return { bar: !!bar, me: me && [me.left, me.top], hitMe: hit(bar, me), hitPad: hit(bar, pad), onScreen: !!bar && bar.top >= 0 };
+  });
+  check(bb.bar && !bb.hitMe && !bb.hitPad && bb.onScreen, `${name}: the boss bar shows clear of the ability button and the sail pad`, bb);
+  check(bb.me && Math.abs(bb.me[0] - lay.me.l) < 1 && Math.abs(bb.me[1] - lay.me.t) < 1, `${name}: the button keeps its spot (the bar gives way, not the button)`, { before: lay.me, now: bb.me });
+  await shot(page, `phone-${name}-boss.png`);
+  await page.evaluate(i => { const e = window.__foes[i]; bossShip = null; e.alive = false; e.spr.destroy(); e.badge && e.badge.destroy(); enemies.splice(enemies.indexOf(e), 1); }, i);
+  await sleep(300);
   const b = await btn(page);
   check(b.key === "", `${name}: no key badge on a touch screen`, b);
   await shot(page, `phone-${name}-ready.png`);

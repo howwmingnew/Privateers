@@ -13,6 +13,7 @@
 //   moment (kind)                a big moment worth a clip: "massacre" or "powder" (js/replay.js; a boss goes through sunk)
 //   lang ()                      after the language changed
 //   mini (ctx, k, u)             drawing the minimap: k = px per world px, u = size relative to the old 224-px chart
+//   hudPlace ()                  the HUD's movable controls take their spots, just before the bottom notices stack clear of them (js/hud-stack.js)
 const HOOKS = {};
 function onHook(name, fn) { (HOOKS[name] ||= []).push(fn); }
 function runHook(name, ...args) {
