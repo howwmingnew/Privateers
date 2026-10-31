@@ -85,8 +85,7 @@ test("admiral: his fleet type is navy, in a wedge, three ships or more, and neve
 });
 
 test("admiral: late-campaign gate, spacing, and what heat does to it", () => {
-  assert.equal(run("ADMIRAL_AFTER"), 4);
-  assert.ok(run("ADMIRAL_AFTER < 5"));   // before the last captain, not after
+  assert.equal(run("ADMIRAL_AFTER"), "hale");   // by id (#140): Commodore Hale, before the last captain, not after
   near(run("admiralWait(0, 0)"), run("ADMIRAL_EVERY[0]")); near(run("admiralWait(0, 1)"), run("ADMIRAL_EVERY[1]"));
   assert.ok(run("admiralWait(5, 0.5) < admiralWait(0, 0.5)"));
   assert.ok(run("admiralWait(5, 0)") > 100);   // he is an event, not a stream

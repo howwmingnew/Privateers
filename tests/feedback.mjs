@@ -52,7 +52,7 @@ await rig(); await sail();
 let r = await ev(() => {
   __gone(enemies.slice()); window.__hits = [];
   onHook("hurt", (s, dmg, src) => { if (bossSide(s) !== bossSide(src) && src && !src.isPlayer && !src.ally && !s.isPlayer && !s.ally) __hits.push((s.boss || s.escortOf || s.faction) + "<-" + (src.boss || src.escortOf || src.faction) + (src.A && src.A.boom ? "(boom)" : "")); });
-  const spot = { x: 2600, y: 2600 }, b = BOUNTIES[1];
+  const spot = { x: 2600, y: 2600 }, b = findBounty("carey");   // a captain with a guard (the smuggler, BOUNTIES[1], sails alone)
   const boss = spawnCaptain(b), navy = makeEnemy(S, spot.x + 220, spot.y, 3, "navy", "brig"), nav2 = makeEnemy(S, spot.x - 220, spot.y, 6, "navy", "frigate");
   for (const s of [boss, ...enemies.filter(e => e.escortOf)]) { s.x = spot.x + (s === boss ? 0 : 60); s.y = spot.y + (s === boss ? 0 : 80); s.spr.setPosition(s.x, s.y); }
   window.__q = { boss, navy, nav2, guards: enemies.filter(e => e.escortOf) };

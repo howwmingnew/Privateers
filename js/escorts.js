@@ -1,6 +1,6 @@
 "use strict";
 // ---------- Escorts: up to four yard ships that sail with the flagship ----------
-// A slot is paid for once (ESCORT_PRICES, opened by the bounties: slot n after bounty n); the ship in it is any ship waiting in
+// A slot is paid for once (ESCORT_PRICES, opened by the bounties: ESCORT_AFTER, by captain); the ship in it is any ship waiting in
 // the yard (js/shipyard.js), so the hull, sails and name are that ship's own. save.escorts is one entry per slot bought:
 //   { id: yard ship id or "", on: sails with you, stance: "active" | "normal" | "passive", guns: { bow, left, right, stern }, owed: gold still due }
 // The escort's guns are real gun items, exactly like the flagship's mounts: each of `guns.bow/left/right/stern` is an array as long as
@@ -41,8 +41,11 @@ SAVE_DEFAULTS.push(() => ({ escorts: [] }));
 
 const ESCORT_STANCES = ["active", "normal", "passive"];
 const escortPrice = i => ESCORT_PRICES[i] ?? Infinity;
-// Slot i (0-based) opens when bounty i + 1 has been claimed.
-const escortOpen = (s, i) => i >= 0 && i < ESCORT_SLOTS && s.campaign.bounty >= i + 1;
+// Slot i (0-based) opens when the captain ESCORT_AFTER[i] has been claimed (by id: the smuggler, #140, opens none, so each slot keeps its boss);
+// escortGateNo(i) is that captain's poster number, for the "Sink bounty {n}" lines.
+const ESCORT_AFTER = ["ned", "carey", "saint", "hale"];
+const escortOpen = (s, i) => i >= 0 && i < ESCORT_SLOTS && bountyDone(s.campaign, ESCORT_AFTER[i]);
+const escortGateNo = i => bountyIndex(ESCORT_AFTER[i]) + 1;
 // The yard ship in slot i, or null (nothing assigned, or it is the flagship now).
 const escortShipOf = (s, e) => (e && e.id ? s.fleet.find(x => x.id === e.id) : null) || null;
 // Yard ships a slot may take: spare ones not already in another slot (and the slot's own).

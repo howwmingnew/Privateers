@@ -23,8 +23,8 @@ const CHAIN_T = 4, CHAIN_SPEED = 0.6, CHAIN_TURN = 0.7;
 // Bigger ships carry more guns and start sturdier, but their yard upgrades begin again at Lv 1, so each one's base stats
 // beat the previous ship on its line at a typical refit (hull Lv 4-5, hold Lv 3-4; the fast line may dip to 80% of the
 // hull, tests/unit-shiplines.mjs). The yard pays back 60% of the old refit on purchase (js/plunder.js). refit scales yard
-// prices: a bigger hull costs more to refit. line: "fast" | "heavy" (the sloop is both); tier 1-5 is the Letter of Marque
-// step that opens it (SHIP_GATE, js/save-campaign.js). turn: the captain's turn rate x this (default 1). The brig,
+// prices: a bigger hull costs more to refit. line: "fast" | "heavy" (the sloop is both); tier 1-5 is the hull's step up
+// (SHIP_GATE, js/save-campaign.js, names the bounty that opens each tier). turn: the captain's turn rate x this (default 1). The brig,
 // frigate and ship of the line keep every number they had before the lines existed, so an old save loses nothing.
 const SHIPS = {
   sloop:      { tier: 1, slots: { bow: 1, left: 1, right: 1, stern: 0 }, hp: 100,  speed: 150, hold: 240,  cost: 0,     refit: 1 },

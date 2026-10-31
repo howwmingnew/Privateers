@@ -180,15 +180,15 @@ for (const [tag, viewport, mobile] of [["desktop", { width: 1280, height: 720 },
   const up = await ev(page, () => { const real = shipRating; shipRating = () => 99; try { renderPort(); } finally { shipRating = real; }
     const el = document.querySelector("#wanted .p-rec"); return { low: el.classList.contains("low"), warn: !!el.querySelector(".warn"), ok: el.querySelector(".goal").classList.contains("ok") }; });
   ok(`#33 ${tag}: at the asked level the warning is gone and the goal shows as ready`, !up.low && !up.warn && up.ok, up);
-  // all five captains: their own hull and livery are painted (non-empty, all different) and each class is the bounty's own
+  // all six captains: their own hull and livery are painted (non-empty, all different) and each class is the bounty's own
   const all = await ev(page, () => BOUNTIES.map((b, i) => { save.campaign.bounty = i; renderPort();
     const cv = document.querySelector("#wanted .p-ship"), px = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data;
     let lit = 0; for (let k = 3; k < px.length; k += 4) if (px[k] > 0) lit++;
-    return { id: b.id, art: artClass(b.cls), livery: bossLivery(b), lit, url: cv.toDataURL().length, sig: cv.toDataURL().slice(-60) }; }));
-  ok(`#33 ${tag}: each captain's own hull class and livery is painted on the poster (Carey and St. Ant share a brig, so four different pictures)`,
-    all.map(a => a.id).join() === "ned,carey,saint,hale,thorne" && all.every(a => a.lit > 3000) && new Set(all.map(a => a.sig + a.url)).size === 4
-      && all.map(a => a.livery).join() === "boss,boss,boss,bossNavy,admiral" && all[4].art === "manowar" && all[0].art === "cutter", all.map(a => ({ ...a, sig: undefined })));
-  for (const [i, a] of all.entries()) if (tag === "desktop" || i === 4) {
+    return { id: b.id, art: bossArt(b), livery: bossLivery(b), lit, url: cv.toDataURL().length, sig: cv.toDataURL().slice(-60) }; }));
+  ok(`#33 ${tag}: each captain's own hull class and livery is painted on the poster (Carey and St. Ant share a brig, so five different pictures; the smuggler sails a schooner, #140)`,
+    all.map(a => a.id).join() === "ned,smuggler,carey,saint,hale,thorne" && all.every(a => a.lit > 3000) && new Set(all.map(a => a.sig + a.url)).size === 5
+      && all.map(a => a.livery).join() === "boss,boss,boss,boss,bossNavy,admiral" && all[5].art === "manowar" && all[0].art === "cutter" && all[1].art === "schooner", all.map(a => ({ ...a, sig: undefined })));
+  for (const [i, a] of all.entries()) if (tag === "desktop" || i === all.length - 1) {
     await ev(page, i => { save.campaign.bounty = i; renderPort(); }, i);
     await page.locator("#wanted .poster").scrollIntoViewIfNeeded();
     await page.locator("#wanted .poster").screenshot({ path: join(out, `poster-${a.id}-${tag}.png`) });

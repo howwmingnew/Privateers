@@ -107,7 +107,7 @@ console.log("Ledger: change the flag and the name");
   const kept = await page.evaluate(() => ({ f: { ...save.flag }, n: save.shipName, liv: player.livery }));
   check(kept.f.main === "red" && kept.f.alt === "gold" && kept.f.emblem === "skull" && kept.n === "Dread Queen" && kept.liv === "pf-red-gold-skull", `reload keeps the flag, the name and the sea livery (${JSON.stringify(kept)})`);
   // names live on the ship, the flag on the captain: buy a brig (unnamed, same flag), name it, switch back
-  await page.evaluate(() => { save.gold = 99999; save.campaign = { ...save.campaign, bounty: 4, ships: SHIP_ORDER.slice() }; save.escortGift = "had"; renderPort(); });
+  await page.evaluate(() => { save.gold = 99999; save.campaign = { ...save.campaign, bounty: 5, ships: SHIP_ORDER.slice() }; save.escortGift = "had"; renderPort(); });
   await page.waitForTimeout(500 * SLOW);
   await page.evaluate(() => { resetLedgerPick(); hullOpen = true; renderPort(); });   // the ships are in the hull's panel
   await page.click('#ships [data-act="ship"][data-id="brig"]'); await page.waitForTimeout(500 * SLOW);

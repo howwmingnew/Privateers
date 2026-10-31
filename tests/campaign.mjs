@@ -178,16 +178,18 @@ console.log("Fresh campaign (desktop, en)");
   await page.evaluate(() => { const b = enemies.find(e => e.boss); b.x = player.x + 280; b.y = player.y; });
   await o.shot("desktop-en-4-boss");
 
-  const expect = [["ned", 3, "schooner"], ["carey", 5, "brig"], ["saint", 7, "frigate"], ["hale", 9, "line"], ["thorne", 10, null]];
-  for (let i = 0; i < 5; i++) {
-    const [id, L, ship] = expect[i];
+  // #140: the smuggler (poster 2) opens the brig tier and brings no rank; Mother Carey opens no hull. Ranks by bounty: BOUNTY_RANK (js/save-campaign.js)
+  const expect = [["ned", 3, "schooner", 1], ["smuggler", 4, "brig", 1], ["carey", 5, null, 2], ["saint", 7, "frigate", 3], ["hale", 9, "line", 4], ["thorne", 10, null, 4]];
+  for (let i = 0; i < expect.length; i++) {
+    const [id, L, ship, rank] = expect[i];
     const r = await claim(page, i);
     if (r.err) { check(false, r.err); break; }
     check(r.L === L && r.ring === L, `bounty ${i + 1} ${id}: Lv ${r.L} in ring ${r.ring}, ${r.hp} HP, escorts at Lv ${r.escorts.join("/") || "-"}`);
     check(r.escorts.every(e => e === L), `bounty ${i + 1}: escorts share the boss's level`);
     check(r.gold1 - r.gold0 === r.reward, `bounty ${i + 1}: chest pays ${r.reward} straight into gold (${r.gold0} -> ${r.gold1})`);
-    check(r.bounty === i + 1 && r.rank === Math.min(i + 1, 4), `bounty ${i + 1}: campaign ${r.bounty}/5, rank ${r.rank}`);
+    check(r.bounty === i + 1 && r.rank === rank, `bounty ${i + 1}: campaign ${r.bounty}/6, rank ${r.rank}`);
     if (ship) check(r.ships.includes(ship), `bounty ${i + 1}: unlocks the ${ship}`);
+    else check(r.ships.length === (id === "carey" ? 5 : 9), `bounty ${i + 1}: opens no hull (${r.ships})`);
     check(r.next === (expect[i + 1]?.[0] ?? null), `bounty ${i + 1}: next bounty is ${r.next}`);
     check(r.tagGone, `bounty ${i + 1}: name tag removed with the ship`);
     if (i === 0) {   // buy the schooner now that it is unlocked: the gate opened and the yard sells it
@@ -201,10 +203,17 @@ console.log("Fresh campaign (desktop, en)");
       await page.click('#ships [data-act="ship"][data-id="schooner"]'); await page.waitForTimeout(200 * SLOW);
       const own = await page.evaluate(() => (hullOpen = true, renderPort(), { ship: save.ship, ach: !!save.ach.own_schooner, brigLock: document.querySelector('#ships [data-id="brig"]')?.closest(".item").querySelector(".lock")?.textContent }));
       check(own.ship === "schooner" && own.ach, "schooner bought after bounty 1; its achievement unlocks");
-      check(/Mother Carey/.test(own.brigLock || ""), `brig still locked: "${own.brigLock}"`);
+      check(/Quicksilver Quinn/.test(own.brigLock || ""), `brig still locked, and the smuggler opens it: "${own.brigLock}"`);
     }
-    if (i === 2) {   // the outpost: sail in with cargo, sell, see the trimmed ledger, sail out under truce
-      check(r.outpost, "bounty 3 opens the Hulk Outpost");
+    if (i === 1) {   // the smuggler pays and opens the brig tier, but no new title: the toast and the harbor story say so
+      const sm = await page.evaluate(() => { sendHome(); dock("return"); return { story: document.querySelector("#wanted .story")?.textContent || "", rank: save.campaign.rank, outpost: save.campaign.outpost,
+        prize: document.querySelector("#wanted .poster")?.textContent || "" }; });
+      check(/brig/.test(sm.story) && sm.rank === 1 && !sm.outpost, `the smuggler's story names the brig, the rank stays Privateer: "${sm.story}"`);
+      check(/Mother Carey/.test(sm.prize) && /makes you Captain/.test(sm.prize) && !/unlocks the/.test(sm.prize), `Carey's poster offers a rank, not a hull: "${sm.prize}"`);
+    }
+    if (i === 2) check(!r.outpost, "Mother Carey does not open the outpost");
+    if (i === 3) {   // the outpost: sail in with cargo, sell, see the trimmed ledger, sail out under truce
+      check(r.outpost, "the Ashen Saint (bounty 4) opens the Hulk Outpost");
       // loose crates (struck merchants drop theirs afloat) would be magnetted in on the approach and sold too: clear them
       const o1 = await page.evaluate(() => { sendHome(), dock("return"); setSail(); for (const c of crates) if (!c.wreck) c.value = 0;
         player.x = OUTPOST.x + 420; player.y = OUTPOST.y; player.hp = player.maxHp; cargo = 120; return save.gold; });
@@ -250,7 +259,7 @@ console.log("Fresh campaign (desktop, en)");
     await wait(700);
     return save.ach;
   });
-  for (const id of ["first_hit", "first_sink", "full_hold", "salvage", "vulture", "bounty_1", "bounty_2", "bounty_3", "bounty_4", "bounty_5", "charmed", "own_schooner"])
+  for (const id of ["first_hit", "first_sink", "full_hold", "salvage", "vulture", "bounty_1", "bounty_smuggler", "bounty_2", "bounty_3", "bounty_4", "bounty_5", "charmed", "own_schooner"])
     check(!!ach[id], `achievement ${id}`);
 
   // New Game+ from the harbor poster, then levels +3, then New Game+ again from the victory screen
@@ -270,7 +279,7 @@ console.log("Fresh campaign (desktop, en)");
   const lv = await page.evaluate(() => { setSail(); const s = enemies.filter(e => e.alive && isOrdinary(e));
     return { bad: s.filter(e => e.L !== ringAt(dist(e, PORT)) + 3).length, min: Math.min(...s.map(e => e.L)), boss: enemies.find(e => e.boss)?.L }; });
   check(lv.bad === 0 && lv.min >= 4 && lv.boss === 6, `New Game+ enemies are ring level +3 (min Lv ${lv.min}, Red Ned Lv ${lv.boss})`);
-  for (let i = 0; i < 5; i++) await claim(page, i);
+  for (let i = 0; i < 6; i++) await claim(page, i);
   await page.evaluate(() => { player.maxHp = 100; hurt(player, 1e9, 0, null); });   // the Admiral's escorts sink us right after: the ending still comes
   await page.waitForFunction(() => !vicEl.hidden, null, { timeout: 20000 * SLOW });
   const die = await page.evaluate(() => ({ vic: !vicEl.hidden, docked }));
@@ -289,7 +298,7 @@ console.log("Fresh campaign (desktop, en)");
   check(after.ach === saved && after.ng === 2, `achievements and NG+ count persist across reload (${after.ach.split(",").length})`);
   await page.click("[data-camp=log]"); await page.waitForTimeout(200 * SLOW);
   const log = await page.evaluate(() => ({ open: !logEl.hidden, on: logEl.querySelectorAll(".achs li.on").length, all: logEl.querySelectorAll(".achs li").length, txt: logEl.textContent }));
-  check(log.open && log.on === after.ach.split(",").length && log.all === 20, `Captain's log lists ${log.on} of ${log.all} achievements`);
+  check(log.open && log.on === after.ach.split(",").length && log.all === 21, `Captain's log lists ${log.on} of ${log.all} achievements`);
   check(/Time played/.test(log.txt) && /Longest sortie/.test(log.txt) && /Pirates/.test(log.txt), "Captain's log shows the stats");
   await o.shot("desktop-en-9-log");
   await page.keyboard.press("Escape");
@@ -337,7 +346,7 @@ console.log("Old saves");
   const s2 = await o2.page.evaluate(() => ({ seed: save.seed, camp: save.campaign.bounty }));
   check(s2.seed !== 7 && s2.camp === 0, `an untouched old save is a new game and rolls a map (${s2.seed})`);
   const junk = await o2.page.evaluate(() => sanitizeCampaignSave({ ...save, seed: "x", campaign: { bounty: 99, ships: ["galleon", "brig"], deaths: -3 }, stats: { time: "NaN", sunk: 5, byLevel: { 3: 2, __proto__: 1, x: 4 } }, ach: { first_hit: 1, "<b>": 3 }, ngPlus: 1e9 }));
-  check(junk.campaign.bounty === 5 && junk.campaign.deaths === 0 && junk.stats.time === 0 && JSON.stringify(junk.stats.byLevel) === '{"3":2}' && Object.keys(junk.ach).join() === "first_hit" && junk.ngPlus === 99,
+  check(junk.campaign.bounty === 6 && junk.campaign.deaths === 0 && junk.stats.time === 0 && JSON.stringify(junk.stats.byLevel) === '{"3":2}' && Object.keys(junk.ach).join() === "first_hit" && junk.ngPlus === 99,
     "hostile campaign fields are coerced");
   await done("blank save", o2);
 }
@@ -364,6 +373,7 @@ console.log("Frame time");
 
 // ---------- 4. Screenshots: phone and both languages ----------
 console.log("Screenshots");
+// an order-1 campaign (no campaign.order): its count of 4 (past Hale) loads as 5 of 6 (#140, sanitizeCampaignSave), so the hunted captain is Thorne, BOUNTIES[5]
 const late = JSON.stringify({ v: 2, gold: 12000, ship: "frigate", hull: 5, sails: 3, hold: 4, unlocked: { six: true, long12: true, carronade: true }, gunLv: { six: 4, long12: 3, carronade: 2, fire: 1 },
   bow: ["long12", "long12"], left: ["carronade", "carronade", "six", "six"], right: ["carronade", "carronade", "six", "six"], stern: ["six"], sunk: 180, wrecks: [],
   seed: 424242, campaign: { bounty: 4, ships: ["sloop", "schooner", "brig", "frigate", "line"], deaths: 2 }, stats: { time: 7400, gold: 61000, sunk: { pirate: 80, navy: 60, merchant: 40 }, byLevel: { 1: 20, 2: 25, 3: 30, 4: 28, 5: 24, 6: 20, 7: 15, 8: 10, 9: 6, 10: 2 }, deaths: 2, longest: 412, sorties: 70, wrecks: 2, bounties: 4 },
@@ -383,7 +393,7 @@ for (const [tag, vp, mobile] of [["desktop", DESK, false], ["mobile", PHONE, tru
   await p2.click("[data-camp=log]"); await p2.waitForTimeout(200 * SLOW);
   await o2.shot(`${tag}-${lang}-4-log`);
   await p2.evaluate(() => closeLog());
-  await claim(p2, 4); await p2.waitForFunction(() => !vicEl.hidden, null, { timeout: 20000 * SLOW }).catch(() => {});
+  await claim(p2, 5); await p2.waitForFunction(() => !vicEl.hidden, null, { timeout: 20000 * SLOW }).catch(() => {});
   check(await p2.evaluate(() => !vicEl.hidden), `${tag} ${lang}: victory screen shows`);
   await o2.shot(`${tag}-${lang}-5-victory`);
   await done(`${tag} ${lang}`, o2);

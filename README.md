@@ -1,8 +1,8 @@
 # Privateers 私掠者
 
-一款俯視角的海盜海戰遊戲。轉動船身讓瞄準線對準敵船，打一輪舷側齊射，撿起戰利品帶回港口賣掉，再換更大的船、更好的砲，往更深、更危險的海域推進。拿下五張私掠許可狀上的懸賞，最後在大漩渦擊沉海軍上將的君權號。
+一款俯視角的海盜海戰遊戲。轉動船身讓瞄準線對準敵船，打一輪舷側齊射，撿起戰利品帶回港口賣掉，再換更大的船、更好的砲，往更深、更危險的海域推進。拿下六張私掠許可狀上的懸賞，最後在大漩渦擊沉海軍上將的君權號。
 
-A top-down pirate naval battle game. Turn your ship to lay the aim lines on an enemy, fire a rolling broadside, scoop up the plunder and sell it in port, then buy bigger ships and better guns and push into deeper, deadlier seas. Clear the five Letters of Marque and sink the Admiral's HMS *Sovereign* in the Maelstrom.
+A top-down pirate naval battle game. Turn your ship to lay the aim lines on an enemy, fire a rolling broadside, scoop up the plunder and sell it in port, then buy bigger ships and better guns and push into deeper, deadlier seas. Clear the six Letters of Marque and sink the Admiral's HMS *Sovereign* in the Maelstrom.
 
 用 [Phaser 3](https://phaser.io/) 製作。不需要安裝或建置，所有圖形都用程式繪製，所有音效和音樂都用 Web Audio 即時合成，沒有任何外部素材。唯一的例外是根目錄的 `og.png`（分享連結時顯示的 1200×630 預覽圖）：爬蟲不會執行 JavaScript，所以用遊戲自己的繪圖程式（`tools/og.html`）畫好、再用 Playwright 截圖存成檔案，`npm run og` 可以重新產生。
 
@@ -12,12 +12,12 @@ A top-down pirate naval battle game. Turn your ship to lay the aim lines on an e
 
 ## 遊戲內容
 
-- **戰役**：五張懸賞，各有一位有名有姓的船長和護衛艦隊，打完會升階級、解鎖新船，最後一張觸發結局。通關後可以繼續自由航行，或開始新遊戲+（敵人更強、戰利品更多、保留火砲）。
+- **戰役**：六張懸賞，各有一位有名有姓的船長（多半帶著護衛艦隊），打完會升階級或解鎖新船，最後一張觸發結局。通關後可以繼續自由航行，或開始新遊戲+（敵人更強、戰利品更多、保留火砲）。
 - **四片海域**：淺灘、暗礁海峽、海軍航道、大漩渦，敵人等級 1–10，離港口越遠越富有也越危險。外海有一座解鎖後可以賣貨、修船的前哨站。
 - **船與火砲**：五種可購買的船（單桅帆船到戰列艦），有船首、舷側和船尾砲位；多種火砲可以購買、升級、自由配置。換船時船體、船帆、貨艙的升級從 Lv 1 重新開始。
 - **勢力**：海盜攻擊所有人，海軍追捕海盜和你，商船逃跑。AI 之間也會互打，殘骸裡的戰利品誰都能撿。
 - **殘骸**：你的船沉了，貨物會留在沉沒處（地圖上的紅色 ✕），關掉遊戲也會保留，可以回去撈。
-- **其他**：首航互動教學、航海日誌與統計、20 個成就、標題畫面、暫停選單、設定（音量、語言、畫面震動、文字大小、全螢幕）、繁體中文 / English。
+- **其他**：首航互動教學、航海日誌與統計、21 個成就、標題畫面、暫停選單、設定（音量、語言、畫面震動、文字大小、全螢幕）、繁體中文 / English。
 
 ## 操作
 

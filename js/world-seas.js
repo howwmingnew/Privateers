@@ -35,11 +35,11 @@ const polarPt = (a, r) => ({ x: PORT.x + Math.cos(a) * r, y: PORT.y + Math.sin(a
 const NG_LEVELS = 3, NG_LOOT = 1.5, NG_CAP = 3;
 const ngCycles = () => Math.min(save.ngPlus || 0, NG_CAP);
 const levelBonus = () => NG_LEVELS * ngCycles();
-// The war escalates: once the Ashen Saint (bounty 3) and then Commodore Hale (bounty 4) are sunk, the Navy Lanes and the
+// The war escalates: once the Ashen Saint and then Commodore Hale are sunk (by id, js/save-campaign.js bountyDone), the Navy Lanes and the
 // Maelstrom (rings 6+) put out ships 1 and then 2 levels stronger, so the late game keeps something above the player.
-const WAR_RING = 6, WAR_FROM = 2, WAR_MAX = 2;
+const WAR_RING = 6, WAR_STEPS = ["saint", "hale"], WAR_MAX = WAR_STEPS.length;   // WAR_MAX: the most warLevels adds (js/heat.js heatMaxLevel)
 if (typeof onHook === "function") onHook("bounty", () => { if (typeof buildMiniBase === "function" && S) buildMiniBase(); });
-const warLevels = ring => ring >= WAR_RING ? clamp(((save.campaign && save.campaign.bounty) || 0) - WAR_FROM, 0, WAR_MAX) : 0;
+const warLevels = ring => ring >= WAR_RING ? WAR_STEPS.filter(id => bountyDone(save.campaign, id)).length : 0;
 const lootMul = () => NG_LOOT ** ngCycles();
 
 // ---------- Islands ----------
