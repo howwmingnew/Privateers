@@ -1,10 +1,11 @@
 "use strict";
-// ---------- Achievements: 20, kept in save.ach as { id: unlock time }, with a small toast that never blocks play ----------
-// The ids are stable so a Steamworks bridge can map them one to one.
+// ---------- Achievements: 21, kept in save.ach as { id: unlock time }, with a small toast that never blocks play ----------
+// The ids are stable so a Steamworks bridge can map them one to one: bounty_1..bounty_5 stay Ned, Carey, the Saint, Hale and Thorne
+// (saves already hold them), the smuggler added between Ned and Carey (#140) has his own (ACH_OF_BOUNTY).
 const ACH = [
   { id: "first_hit" }, { id: "first_sink" }, { id: "untouched" }, { id: "full_hold" }, { id: "salvage" },
   { id: "own_schooner" }, { id: "own_brig" }, { id: "own_frigate" }, { id: "own_line" },
-  { id: "bounty_1" }, { id: "bounty_2" }, { id: "bounty_3" }, { id: "bounty_4" }, { id: "bounty_5" },
+  { id: "bounty_1" }, { id: "bounty_smuggler" }, { id: "bounty_2" }, { id: "bounty_3" }, { id: "bounty_4" }, { id: "bounty_5" },
   { id: "sea_reef" }, { id: "sea_lanes" }, { id: "sea_maelstrom" },
   { id: "centurion" }, { id: "charmed" }, { id: "vulture", hidden: true },
 ];
@@ -20,6 +21,7 @@ Object.assign(STR.en, {
   ach_own_frigate: "Ship of War", achd_own_frigate: "Buy a frigate.",
   ach_own_line: "First Rate", achd_own_line: "Buy a Ship of the Line.",
   ach_bounty_1: "Red Ned's Colors", achd_bounty_1: "Claim the bounty on Red Ned.",
+  ach_bounty_smuggler: "Caught the Wind", achd_bounty_smuggler: "Claim the bounty on Quicksilver Quinn.",
   ach_bounty_2: "No More Boarders", achd_bounty_2: "Claim the bounty on Mother Carey.",
   ach_bounty_3: "Ashes to Ashes", achd_bounty_3: "Claim the bounty on the Ashen Saint.",
   ach_bounty_4: "Colors Struck", achd_bounty_4: "Claim the bounty on Commodore Hale.",
@@ -28,7 +30,7 @@ Object.assign(STR.en, {
   ach_sea_lanes: "Crown Waters", achd_sea_lanes: "Sail into the Navy Lanes.",
   ach_sea_maelstrom: "Off the Chart", achd_sea_maelstrom: "Sail into the Maelstrom.",
   ach_centurion: "Centurion", achd_centurion: "Sink 100 ships.",
-  ach_charmed: "Charmed Life", achd_charmed: "Claim the first three bounties without losing a ship.",
+  ach_charmed: "Charmed Life", achd_charmed: "Claim the first four bounties without losing a ship.",
   ach_vulture: "Vulture", achd_vulture: "Scoop up the plunder of a ship someone else sank.",
 });
 Object.assign(STR.zh, {
@@ -43,6 +45,7 @@ Object.assign(STR.zh, {
   ach_own_frigate: "戰艦之主", achd_own_frigate: "買下一艘巡防艦。",
   ach_own_line: "一級戰艦", achd_own_line: "買下一艘戰列艦。",
   ach_bounty_1: "紅鬍的旗", achd_bounty_1: "領取紅鬍奈德的懸賞。",
+  ach_bounty_smuggler: "追上了風", achd_bounty_smuggler: "領取水銀奎恩的懸賞。",
   ach_bounty_2: "不准跳幫", achd_bounty_2: "領取凱莉大娘的懸賞。",
   ach_bounty_3: "塵歸塵", achd_bounty_3: "領取灰燼聖徒的懸賞。",
   ach_bounty_4: "降旗投降", achd_bounty_4: "領取海爾准將的懸賞。",
@@ -51,7 +54,7 @@ Object.assign(STR.zh, {
   ach_sea_lanes: "皇家水域", achd_sea_lanes: "駛進海軍航道。",
   ach_sea_maelstrom: "海圖盡頭", achd_sea_maelstrom: "駛進大漩渦。",
   ach_centurion: "百船斬", achd_centurion: "擊沉 100 艘船。",
-  ach_charmed: "福星高照", achd_charmed: "一艘船都沒沉，就完成前三張懸賞。",
+  ach_charmed: "福星高照", achd_charmed: "一艘船都沒沉，就完成前四張懸賞。",
   ach_vulture: "禿鷹", achd_vulture: "撿走別人擊沉的船留下的戰利品。",
 });
 const ACH_IDS = new Set(ACH.map(a => a.id));
@@ -102,9 +105,11 @@ onHook("pickup", (c, taken) => {
   if (c.wreck && c.value <= 0) unlockAch("salvage");
   if (c.vulture && taken > 0) unlockAch("vulture");
 });
-onHook("bounty", n => {
-  unlockAch("bounty_" + n);
-  if (n === OUTPOST_BOUNTY && save.campaign.deaths === 0) unlockAch("charmed");
+// By the captain's id, not the count: the count moved when the smuggler joined the list (#140). Charmed Life stays the Saint's (the Hulk Outpost's opener).
+const ACH_OF_BOUNTY = { ned: "bounty_1", smuggler: "bounty_smuggler", carey: "bounty_2", saint: "bounty_3", hale: "bounty_4", thorne: "bounty_5" };
+onHook("bounty", (n, b) => {
+  if (b && ACH_OF_BOUNTY[b.id]) unlockAch(ACH_OF_BOUNTY[b.id]);
+  if (b && b.id === OUTPOST_AFTER && save.campaign.deaths === 0) unlockAch("charmed");
 });
 onHook("sea", id => { if (id !== "shallows") unlockAch("sea_" + id); });
 onHook("renderPort", () => { if (save.ship !== "sloop") unlockAch("own_" + save.ship); });

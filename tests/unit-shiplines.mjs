@@ -47,8 +47,9 @@ test("every tier 2-5 has one ship on each line, and the gates open both at once"
     const at = Object.keys(SHIPS).filter(id => SHIPS[id].tier === tier);
     assert.equal(at.length, 2, `tier ${tier}: ${at}`);
     assert.deepEqual(at.map(id => SHIPS[id].line).sort(), ["fast", "heavy"]);
-    for (const id of at) assert.equal(g.run(`SHIP_GATE.${id}`), tier - 1, `${id} gate`);
-    assert.deepEqual(g.json(`SHIP_ORDER.filter(id => SHIP_GATE[id] === ${tier - 1})`).sort(), at.sort(), `bounty ${tier - 2} opens both`);
+    const by = { 2: "ned", 3: "smuggler", 4: "saint", 5: "hale" }[tier];   // #140: the smuggler opens tier 3, Mother Carey none
+    for (const id of at) assert.equal(g.run(`SHIP_GATE.${id}`), by, `${id} gate`);
+    assert.deepEqual(g.json(`SHIP_ORDER.filter(id => SHIP_GATE[id] === "${by}")`).sort(), at.sort(), `${by} opens both`);
   }
   assert.equal(SHIPS.sloop.line, undefined, "the starter belongs to both lines");
   assert.equal(g.json("SHIP_ORDER").length, 9);

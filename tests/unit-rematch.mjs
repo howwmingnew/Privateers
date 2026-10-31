@@ -28,32 +28,35 @@ test("rematch: nobody beaten, nobody sails again", () => {
 test("rematch: only beaten captains, farthest lair first, capped at REMATCH_MAX", () => {
   assert.equal(run("REMATCH_MAX"), 2);
   assert.deepEqual(ids("rematchPicks(BOUNTIES, 1, REMATCH_MAX)"), ["ned"]);
-  assert.deepEqual(ids("rematchPicks(BOUNTIES, 2, REMATCH_MAX)"), ["carey", "ned"]);
-  assert.deepEqual(ids("rematchPicks(BOUNTIES, 4, REMATCH_MAX)"), ["hale", "saint"]);
-  assert.deepEqual(ids("rematchPicks(BOUNTIES, 5, REMATCH_MAX)"), ["thorne", "hale"]);   // the whole war won: the two farthest
-  assert.deepEqual(ids("rematchPicks(BOUNTIES, 5, 1)"), ["thorne"]);
-  assert.equal(json("rematchPicks(BOUNTIES, 5, 99)").length, 5);
+  assert.deepEqual(ids("rematchPicks(BOUNTIES, 2, REMATCH_MAX)"), ["smuggler", "ned"]);   // #140: the smuggler's lair (mid-ring 4) is past Ned's
+  assert.deepEqual(ids("rematchPicks(BOUNTIES, 3, REMATCH_MAX)"), ["carey", "smuggler"]);
+  assert.deepEqual(ids("rematchPicks(BOUNTIES, 5, REMATCH_MAX)"), ["hale", "saint"]);
+  assert.deepEqual(ids("rematchPicks(BOUNTIES, 6, REMATCH_MAX)"), ["thorne", "hale"]);   // the whole war won: the two farthest
+  assert.deepEqual(ids("rematchPicks(BOUNTIES, 6, 1)"), ["thorne"]);
+  assert.equal(json("rematchPicks(BOUNTIES, 6, 99)").length, 6);
   assert.deepEqual(ids("rematchPicks(BOUNTIES, 3, 0)"), []);
 });
 
 test("rematch: picking never reorders or shrinks the campaign list", () => {
-  run("rematchPicks(BOUNTIES, 5, 5)");
-  assert.deepEqual(ids("BOUNTIES"), ["ned", "carey", "saint", "hale", "thorne"]);
+  run("rematchPicks(BOUNTIES, 6, 6)");
+  assert.deepEqual(ids("BOUNTIES"), ["ned", "smuggler", "carey", "saint", "hale", "thorne"]);
 });
 
 test("rematch: pays REMATCH_PCT of the bounty, scaled by loot, never the full chest", () => {
   assert.equal(run("REMATCH_PCT"), 0.25);
   assert.equal(run("rematchReward(BOUNTIES[0])"), 100);
-  assert.equal(run("rematchReward(BOUNTIES[4])"), 5000);
+  assert.equal(run("rematchReward(BOUNTIES[1])"), 500);   // the smuggler's 2000
+  assert.equal(run("rematchReward(BOUNTIES[5])"), 5000);
   assert.equal(run("rematchReward(BOUNTIES[0], 1.5)"), 150);
-  for (let i = 0; i < 5; i++) assert.ok(run(`rematchReward(BOUNTIES[${i}]) < BOUNTIES[${i}].reward`));
+  for (let i = 0; i < 6; i++) assert.ok(run(`rematchReward(BOUNTIES[${i}]) < BOUNTIES[${i}].reward`));
 });
 
-test("rematch: an old save loads unchanged and its beaten captains come from the bounty count alone", () => {
+test("rematch: an old save's beaten captains come from the (migrated) bounty count alone", () => {
+  // a v1 save past Mother Carey (count 2 of 5) moves to 3 of 6 (#140, sanitizeCampaignSave): Ned, the smuggler it skipped, Carey
   const s = json(`sanitizeSave(JSON.parse('{"v":2,"gold":900,"sunk":40,"campaign":{"bounty":2}}'))`);
-  assert.equal(s.campaign.bounty, 2);
-  assert.deepEqual(Object.keys(s.campaign).sort(), ["bounty", "deaths", "outpost", "rank", "ships", "won"]);   // no new field to migrate
-  assert.deepEqual(ids(`rematchPicks(BOUNTIES, ${s.campaign.bounty}, REMATCH_MAX)`), ["carey", "ned"]);
+  assert.equal(s.campaign.bounty, 3);
+  assert.deepEqual(Object.keys(s.campaign).sort(), ["bounty", "deaths", "order", "outpost", "rank", "ships", "won"]);   // order: the bounty-list version
+  assert.deepEqual(ids(`rematchPicks(BOUNTIES, ${s.campaign.bounty}, REMATCH_MAX)`), ["carey", "smuggler"]);
 });
 
 test("rematch: a sinking never moves the campaign (claimBounty is not on its path)", () => {

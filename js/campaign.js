@@ -1,48 +1,52 @@
 "use strict";
 // ---------- Campaign: Letters of Marque ----------
-// Five bounties, one at a time, posted in the harbor ledger (poster: js/campaign-ui.js). A boss is an ordinary enemy
+// Six bounties, one at a time, posted in the harbor ledger (poster: js/campaign-ui.js). A boss is an ordinary enemy
 // (think / fire / hurt untouched) with a name, a gold skull, an HP multiplier, its own escorts and a fixed lair; `e.boss`
-// and `e.cls` let later systems (archetypes, AI) specialise it. Sinking one pays a Captain's Chest straight into gold,
-// raises the captain's rank and unlocks the next hull (the third also opens the Hulk Outpost). The fifth ends the war.
+// and `e.cls` let later systems (archetypes, AI) specialise it. Sinking one pays a Captain's Chest straight into gold and
+// what its id opens (js/save-campaign.js): a rank (BOUNTY_RANK), a hull tier (SHIP_GATE), the Hulk Outpost (the Saint). The last ends the war.
 Object.assign(STR.en, {
-  boss_ned: "Red Ned", boss_carey: "Mother Carey", boss_saint: "The Ashen Saint", boss_hale: "Commodore Hale", boss_thorne: "Admiral Thorne",
+  boss_ned: "Red Ned", boss_smuggler: "Quicksilver Quinn", boss_carey: "Mother Carey", boss_saint: "The Ashen Saint", boss_hale: "Commodore Hale", boss_thorne: "Admiral Thorne",
   rank_0: "Deckhand", rank_1: "Privateer", rank_2: "Captain", rank_3: "Commodore", rank_4: "Pirate Lord",
-  cls_cutter: "cutter", cls_brig: "brig", cls_frigate: "frigate", cls_manowar: "man-o'-war", cls_fireship: "fire-raider",
+  cls_cutter: "cutter", cls_schooner: "schooner", cls_brig: "brig", cls_frigate: "frigate", cls_manowar: "man-o'-war", cls_fireship: "fire-raider",
   intro_ned: "Burns fishing smacks in the Reef Straits and sells their crews' boots in the market. Fast, and fond of long shots.",
+  intro_smuggler: "Runs powder and stolen silver through the Reef Straits in the fastest schooner afloat. Quinn never trades broadsides: catch the wind before you catch him.",
   intro_carey: "Rules the northern reefs with a brig and a pack of cutthroats. She closes fast and boards anything that floats.",
   intro_saint: "A preacher turned pirate who sets ships ablaze and calls it mercy. Never sails without his fire-raiders.",
   intro_hale: "The Navy wants the free port for itself. Hale has orders to blockade it, and to hang you from his yardarm.",
   intro_thorne: "Admiral Thorne has brought HMS Sovereign, the greatest warship ever to sail these waters, to burn the free port. Meet her in the Maelstrom.",
   done_ned: "Red Ned's colors hang over the tavern door. The Harbormaster signs your Letter of Marque: you sail as a <em>Privateer</em> now, and the yard will sell you a <em>schooner</em>.",
-  done_carey: "Mother Carey's brig lies on the reef she ruled. The docks stand you drinks and call you <em>Captain</em>, and there's a <em>brig</em> at the yard with your name on it.",
+  done_smuggler: "Quinn's schooner finally ran out of wind, and his silver is yours. The yard has heard you can catch anything: it will sell you a <em>brig</em> now.",
+  done_carey: "Mother Carey's brig lies on the reef she ruled. The docks stand you drinks and call you <em>Captain</em> now.",
   done_saint: "The Saint's fires are out. The merchants have moored an old hulk on the Navy Lanes as the <em>Hulk Outpost</em>: sell and patch up there, far from home. They call you <em>Commodore</em> now, and a <em>frigate</em> waits at the yard.",
   done_hale: "Hale struck his colors. The Navy calls you a pirate; the harbor calls you <em>Pirate Lord</em>. A <em>Ship of the Line</em> waits at the yard. Admiral Thorne is coming.",
   done_thorne: "HMS Sovereign lies at the bottom of the Maelstrom, and the free port is free.",
   ngStory: "<em>New Game+ {n}.</em> A new sea, fiercer captains and richer prizes. Your guns came with you; your fortune did not.",
   huntToast: "Bounty: {name} · {sea}", bossSighted: "{name} sighted!", fChest: "Captain's Chest +{n}",
-  rankUp: "Bounty claimed! You are now a {rank}.",
+  rankUp: "Bounty claimed! You are now a {rank}.", bountyClaimed: "Bounty claimed!",
   bossEscaped: "{name}'s ship went down to other guns, but {name} got away in a longboat. Back next time you sail.",
   locked: "Locked", shipLock: "Sink {name} to unlock",
   outpostName: "Hulk Outpost", outpostMap: "HULK OUTPOST",
   outpostNote: "A trading post on an old hulk: it buys cargo and patches hulls. The shipyard and armory are back at Safe Harbor.",
 });
 Object.assign(STR.zh, {
-  boss_ned: "紅鬍奈德", boss_carey: "凱莉大娘", boss_saint: "灰燼聖徒", boss_hale: "海爾准將", boss_thorne: "索恩上將",
+  boss_ned: "紅鬍奈德", boss_smuggler: "水銀奎恩", boss_carey: "凱莉大娘", boss_saint: "灰燼聖徒", boss_hale: "海爾准將", boss_thorne: "索恩上將",
   rank_0: "見習水手", rank_1: "私掠者", rank_2: "船長", rank_3: "准將", rank_4: "海盜王",
-  cls_cutter: "快艇", cls_brig: "雙桅船", cls_frigate: "巡防艦", cls_manowar: "主力戰艦", cls_fireship: "縱火船",
+  cls_cutter: "快艇", cls_schooner: "縱帆船", cls_brig: "雙桅船", cls_frigate: "巡防艦", cls_manowar: "主力戰艦", cls_fireship: "縱火船",
   intro_ned: "在暗礁海峽放火燒漁船，還把船員的靴子拿到市場上賣。船快，愛從遠處開砲。",
+  intro_smuggler: "駕著這片海上最快的縱帆船，在暗礁海峽走私火藥和贓銀。奎恩從不跟人對轟舷砲：先抓住風，才抓得到他。",
   intro_carey: "帶著一艘雙桅船和一群亡命之徒稱霸北方礁區。逼近得很快，什麼船都敢跳上去搶。",
   intro_saint: "當了海盜的傳教士，放火燒船還說這是慈悲。身邊總跟著一群縱火船。",
   intro_hale: "海軍想把這座自由港據為己有。海爾奉命封鎖港口，還要把你吊死在他的帆桁上。",
   intro_thorne: "索恩上將帶著皇家海軍「君權號」來了。那是這片海域有史以來最強大的戰艦，要來燒掉自由港。到大漩渦去迎戰她。",
   done_ned: "紅鬍奈德的旗子掛在酒館門口。港務長簽下你的私掠許可狀：你現在是正式的<em>私掠者</em>，造船廠也願意賣你<em>縱帆船</em>了。",
-  done_carey: "凱莉大娘的船沉在她稱霸的礁石上。碼頭上的人搶著請你喝酒，改口叫你<em>船長</em>。造船廠替你留了一艘<em>雙桅橫帆船</em>。",
+  done_smuggler: "奎恩的縱帆船終於跑不動了，他的銀子歸你。造船廠聽說你什麼船都追得上，現在願意賣你<em>雙桅橫帆船</em>了。",
+  done_carey: "凱莉大娘的船沉在她稱霸的礁石上。碼頭上的人搶著請你喝酒，改口叫你<em>船長</em>。",
   done_saint: "聖徒的火終於熄了。商人們在海軍航道上停了一艘舊船殼，改成<em>廢船前哨站</em>，讓你在遠洋也能賣貨修船。大家現在叫你<em>准將</em>，造船廠也備好了一艘<em>巡防艦</em>。",
   done_hale: "海爾降旗投降了。海軍說你是海盜，港口的人則叫你<em>海盜王</em>。造船廠裡有一艘<em>戰列艦</em>在等你。索恩上將就要來了。",
   done_thorne: "君權號沉入了大漩渦的海底，自由港依然自由。",
   ngStory: "<em>新遊戲+ {n}。</em>新的海域，更兇狠的船長，更豐厚的戰利品。火砲跟著你來了，財富可沒有。",
   huntToast: "懸賞目標：{name} · {sea}", bossSighted: "發現{name}！", fChest: "船長寶箱 +{n}",
-  rankUp: "懸賞達成！你晉升為{rank}。",
+  rankUp: "懸賞達成！你晉升為{rank}。", bountyClaimed: "懸賞達成！",
   bossEscaped: "{name}的船被別人擊沉了，但{name}搭小艇逃走了。下次啟航還會再出現。",
   locked: "未解鎖", shipLock: "擊沉{name}後解鎖",
   outpostName: "廢船前哨站", outpostMap: "廢船前哨站",
@@ -57,18 +61,26 @@ Object.assign(STR.zh, {
 // #98: the first bounty is the newcomer's: Red Ned asks only one level above his badge (b.margin, js/bounty-rec.js), and a hurt Ned sheers
 // off no farther than b.tether from his lair, so chasing him never leads into the Navy Lanes (the lair is mid-ring 3: 480 px out ends 320 px short of the Navy Lanes, #105).
 const BOSS_TETHER = 480;
+// #140: the smuggler's lair is mid-ring 4, a ring farther out than Ned's, so his line is shorter: 360 px ends 120 px short of the Navy Lanes
+// (ringEdge(6)), and even the TETHER_SLACK beyond it stays in the Reef Straits. He runs, so the chase is the fight; it never leaves his waters.
+const RUNNER_TETHER = 360;
 // Lair: polar from the harbor (screen y points south), placed mid-ring so its level is the bounty's level.
 // Escort `guns`/`hpMul` were stand-ins from before the archetypes; js/archetypes.js campaignOutfit gives each escort
 // its real class (the fire-raiders are fireships), so only `cls` matters now.
 const FIRE_RAIDER = { cls: "fireship", hpMul: 0.6, guns: 1 };
 const BOUNTIES = [
   { id: "ned",    L: 3,  cls: "cutter",  faction: "pirate", hpMul: 2.5, speed: 0.9,  ang: Math.PI,        r: ringMid(3), reward: 400,   escorts: [], margin: 1, tether: BOSS_TETHER, stands: true },
+  // #140: the fast smuggler between Ned and Carey. A cutter's kite plan (holds off at bow-gun range, sheers away when crowded) on a schooner
+  // hull (b.art: the hull drawn; b.cls: how it fights), faster than any tier-1/2 hull the yard sells, so the lesson is the chase and the wind.
+  { id: "smuggler", L: 4, cls: "cutter", art: "schooner", faction: "pirate", hpMul: 3, speed: 1.15, ang: -Math.PI * 0.35, r: ringMid(4), reward: 2000, escorts: [], margin: 2, tether: RUNNER_TETHER, lateLair: true },
   { id: "carey",  L: 5,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: -Math.PI / 2,   r: ringMid(5), reward: 1500,  escorts: [{ cls: "brig" }], margin: 2 },
   { id: "saint",  L: 7,  cls: "brig",    faction: "pirate", hpMul: 3,              ang: Math.PI * 0.75, r: ringMid(7), reward: 4000,  escorts: [FIRE_RAIDER, FIRE_RAIDER, FIRE_RAIDER] },
   { id: "hale",   L: 9,  cls: "frigate", faction: "navy",   hpMul: 1.6,              ang: 0,              r: ringMid(9), reward: 10000, escorts: [{ cls: "brig" }, { cls: "brig" }] },
   { id: "thorne", L: 10, cls: "manowar", faction: "navy",   hpMul: 2, speed: 0.85, guns: 5, ang: Math.PI / 4, r: 3800, reward: 20000, final: true,
     escorts: [{ cls: "frigate" }, { cls: "brig" }, { cls: "brig" }] },
 ];
+// BOUNTY_ORDER (js/save-campaign.js, loaded first: the save is read before this file) must list these ids in this order
+if (BOUNTIES.map(b => b.id).join() !== BOUNTY_ORDER.join()) console.error("BOUNTIES and BOUNTY_ORDER disagree:", BOUNTIES.map(b => b.id), BOUNTY_ORDER);
 const LAIR_LEASH = 380;   // an idle boss (or escort) further than this from its lair heads back to it
 const ASSIST_MS = 20000;  // a boss someone else sinks still pays if the player hit it this recently
 const lairOf = b => polarPt(b.ang, b.r);
@@ -96,14 +108,16 @@ function bossTether(e, desired, thr) {
 }
 // Hull art for a spec class (js/art.js SHIP_ART; the man-o'-war has its own, bigger than anything the yard sells).
 const artClass = cls => SHIP_ART[cls] ? cls : "brig";
+const bossArt = b => artClass(b.art || b.cls);   // the hull a captain sails: his class's, or his own (the smuggler's schooner)
+const bossClsName = b => t("cls_" + (b.art || b.cls));
 const activeBounty = () => (runActive() && runBounty()) || BOUNTIES[save.campaign.bounty] || null;   // a daily run hunts its own captain (js/run.js)
 const findBounty = id => BOUNTIES.find(b => b.id === id) || (runActive() && runBounty() && runBounty().id === id ? runBounty() : null);
 const bossName = b => t("boss_" + b.id);
-const shipsFor = i => SHIP_ORDER.filter(id => SHIP_GATE[id] === i + 1);   // the hulls bounty i (0-based) unlocks: one per line
+const shipsFor = id => SHIP_ORDER.filter(s => SHIP_GATE[s] === id);   // the hulls a bounty (by id) unlocks: one per line, or none (Mother Carey)
 const bountyReward = b => Math.round(b.reward * lootMul());
 function shipLock(id) {
   if (save.campaign.ships.includes(id)) return null;
-  const b = BOUNTIES[SHIP_GATE[id] - 1];
+  const b = SHIP_GATE[id] && findBounty(SHIP_GATE[id]);
   return b ? t("shipLock", { name: bossName(b) }) : t("locked");
 }
 
@@ -145,7 +159,7 @@ function spawnCaptain(b) {
   const hp = boss.maxHp * b.hpMul;
   Object.assign(boss, { boss: b.id, cls: b.cls, lair, maxHp: hp, hp, maxSpeed: boss.maxSpeed * (b.speed || 1) });
   if (b.guns) setGuns(boss, b.guns);
-  applyShipArt(boss, artClass(b.cls), bossLivery(b));   // gold trim, big flag: the Jolly Roger or the Crown's ensign (js/art.js)
+  applyShipArt(boss, bossArt(b), bossLivery(b));   // gold trim, big flag: the Jolly Roger or the Crown's ensign (js/art.js)
   // escorts sail along the ring beside the boss, so they share its level
   const along = b.ang + Math.PI / 2;
   b.escorts.forEach((spec, i) => {
@@ -186,10 +200,9 @@ function placeBossTag(tag = bossTag, ship = bossShip) {
   tag.skull.setPosition(x + 11 * lk, y); tag.txt.setPosition(x + 25 * lk, y);
 }
 function claimBounty(b, s) {
-  const c = save.campaign, n = c.bounty + 1, reward = bountyReward(b), opened = shipsFor(c.bounty);
+  const c = save.campaign, n = c.bounty + 1, reward = bountyReward(b), rank = rankAfter(n);
   save.gold += reward;
-  save.campaign = { ...c, bounty: n, rank: Math.min(n, RANK_MAX), outpost: n >= OUTPOST_BOUNTY,
-    ships: SHIP_ORDER.filter(id => c.ships.includes(id) || opened.includes(id)) };
+  save.campaign = { ...c, ...campaignAt(n, id => c.ships.includes(id)) };
   save.stats = { ...save.stats, gold: save.stats.gold + reward, bounties: save.stats.bounties + 1 };
   persist();
   storyKey = "done_" + b.id;
@@ -197,7 +210,7 @@ function claimBounty(b, s) {
   else floatText(s.x, s.y - 60, t("fChest", { n: fmt(reward) }), "#f6d27a", 22);
   sfx("coin", { amount: reward, delay: 0.35 });
   if (b.final) S.time.delayedCall(2600, showVictory);   // js/victory.js
-  else { toast(t("rankUp", { rank: t("rank_" + save.campaign.rank) })); sfx("buy", { big: true, delay: 1.1 }); }
+  else { toast(rank > c.rank ? t("rankUp", { rank: t("rank_" + rank) }) : t("bountyClaimed")); sfx("buy", { big: true, delay: 1.1 }); }   // the smuggler brings no new title
   if (typeof claimEscortGift === "function") claimEscortGift();   // the first bounty pays a free escort slot and a ship (js/escort-gift.js)
   syncOutpost();
   hud(true);

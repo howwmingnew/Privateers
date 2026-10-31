@@ -30,17 +30,20 @@ const near = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} vs ${b
 const YARD2 = [{ id: "s1", ship: "sloop", hull: 2, sails: 1, hold: 1 }, { id: "s3", ship: "brig", hull: 1, sails: 1, hold: 1 }, { id: "s4", ship: "frigate", hull: 3, sails: 2, hold: 1 }];
 const withSave = (extra = {}) => boot({ [KEY]: JSON.stringify({ v: 2, gold: 10000, campaign: { bounty: 4 }, ship: "schooner", shipId: "s2", shipSeq: 5, fleet: YARD2, ...extra }) });
 
-test("slots: four, priced 200 / 800 / 2000 / 5000, slot n opens with bounty n", () => {
+test("slots: four, priced 200 / 800 / 2000 / 5000, opened by Ned, Carey, the Saint and Hale (#140: the smuggler opens none)", () => {
   const g = boot();
   assert.deepEqual(g.json("ESCORT_PRICES"), [200, 800, 2000, 5000]);
   assert.equal(g.run("ESCORT_SLOTS"), 4);
-  for (const [bounty, open] of [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 4]]) {
+  assert.deepEqual(g.json("ESCORT_AFTER"), ["ned", "carey", "saint", "hale"]);
+  assert.deepEqual(g.json("[0, 1, 2, 3].map(escortGateNo)"), [1, 3, 4, 5], "the lock line names that captain's poster number");
+  // claimed count (order: ned, smuggler, carey, saint, hale, thorne) -> slots open
+  for (const [bounty, open] of [[0, 0], [1, 1], [2, 1], [3, 2], [4, 3], [5, 4], [6, 4]]) {
     assert.deepEqual(g.json(`[0, 1, 2, 3, 4].map(i => escortOpen({ campaign: { bounty: ${bounty} } }, i))`), [0, 1, 2, 3, 4].map(i => i < open), `bounty ${bounty}`);
   }
 });
 
 test("buying: costs the price, needs the bounty and the gold, goes in order, never past four", () => {
-  const g = withSave({ campaign: { bounty: 2 }, gold: 1000 });
+  const g = withSave({ campaign: { order: 2, bounty: 3 }, gold: 1000 });   // past Carey: slots 1 and 2 open
   g.run("var s0 = save");
   assert.equal(g.run("buyEscortSlot({ ...s0, gold: 199 })"), null);
   assert.equal(g.run("buyEscortSlot({ ...s0, campaign: { ...s0.campaign, bounty: 0 } })"), null);
@@ -49,7 +52,7 @@ test("buying: costs the price, needs the bounty and the gold, goes in order, nev
   assert.deepEqual(s1.escorts[0], { id: "", on: true, stance: "normal", guns: { bow: [], left: [], right: [], stern: [] }, owed: 0 });
   const s2 = g.json("buyEscortSlot(buyEscortSlot(s0))");
   assert.equal(s2.gold, 1000 - 200 - 800);
-  assert.equal(g.run("buyEscortSlot(buyEscortSlot(buyEscortSlot(s0)))"), null, "slot 3 needs bounty 3");
+  assert.equal(g.run("buyEscortSlot(buyEscortSlot(buyEscortSlot(s0)))"), null, "slot 3 needs the Saint");
   const full = withSave({ campaign: { bounty: 5 }, gold: 99999, escorts: [{}, {}, {}, {}] });
   assert.equal(full.run("buyEscortSlot(save)"), null);
 });

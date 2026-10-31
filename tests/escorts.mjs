@@ -100,15 +100,15 @@ let t = await ev(() => document.getElementById("tabs").innerText);
 check(/Flagship/.test(t) && /Escort 1\s+200 gold/.test(t) && (t.match(/Locked/g) || []).length === 3, `slot 1 shows its price, slots 2-4 are locked (${t.replace(/\s+/g, " ")})`);
 const tabTo = i => page.click(`#tabs [data-act="tab"][data-i="${i}"]`);
 // #92: a locked tab is greyed and names what opens it
-check(await ev(() => { const l = [...document.querySelectorAll("#tabs .tab.lock")]; return l.length === 3 && l.every(b => getComputedStyle(b).filter.includes("grayscale") && b.querySelector(".tw")) && /Sink bounty 2/.test(l[0].textContent) && /Sink bounty 3/.test(l[1].textContent) && /Sink bounty 4/.test(l[2].textContent); }),
-  "locked tabs are grey and name the bounty that opens them");
+check(await ev(() => { const l = [...document.querySelectorAll("#tabs .tab.lock")]; return l.length === 3 && l.every(b => getComputedStyle(b).filter.includes("grayscale") && b.querySelector(".tw")) && /Sink bounty 3/.test(l[0].textContent) && /Sink bounty 4/.test(l[1].textContent) && /Sink bounty 5/.test(l[2].textContent); }),
+  "locked tabs are grey and name the bounty that opens them (Carey, the Saint, Hale: posters 3-5 since the smuggler joined, #140)");
 await tabTo(1);
 t = await stage();
 check(/Buy slot · 200/.test(t), `slot 1 offers to be bought for 200 (${t.replace(/\s+/g, " ").slice(0, 80)})`);
 await tabTo(2); t = await stage();
-check(/Sink bounty 2 to unlock · 800 gold/.test(t), "slot 2 says what unlocks it");
+check(/Sink bounty 3 to unlock · 800 gold/.test(t), "slot 2 says what unlocks it (Mother Carey, poster 3)");
 await tabTo(4); t = await stage();
-check(/Sink bounty 4 to unlock · 5,000 gold/.test(t), "slot 4 says what unlocks it and for how much");
+check(/Sink bounty 5 to unlock · 5,000 gold/.test(t), "slot 4 says what unlocks it and for how much (Commodore Hale, poster 5)");
 await tabTo(1);
 await page.click('#stage [data-act="escBuy"][data-id="0"]');
 check(await ev(() => save.gold === 500 && save.escorts.length === 0) && /Confirm purchase\?/.test(await stage()), "the first tap on a slot only arms the button");

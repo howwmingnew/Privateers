@@ -60,7 +60,8 @@ function tabsHtml() {
       const ship = escortShipOf(save, e), on = ship && escortReady(save, i), state = t(on ? "stOn" : "stOff");
       out.push(ship ? one(i + 1, role, shipNameOf(ship), "", `<span class="dot${on ? " on" : ""}" title="${state}"></span>`, state) : one(i + 1, role, t("tabEmpty"), " empty", ""));
     } else if (!escortOpen(save, i) || i > save.escorts.length) {   // greyed, and it says what opens it: a bounty, or the slot before it
-      out.push(one(i + 1, role, t("tabLock"), " empty lock", "", "", t(!escortOpen(save, i) ? "tabLockBounty" : "tabLockOrder", { n: !escortOpen(save, i) ? i + 1 : i })));
+      const shut = !escortOpen(save, i);
+      out.push(one(i + 1, role, t("tabLock"), " empty lock", "", "", t(shut ? "tabLockBounty" : "tabLockOrder", { n: shut ? escortGateNo(i) : i })));
     }
     else out.push(one(i + 1, role, t("tabBuy", { n: fmt(escortPrice(i)) }), " empty", ""));
   }
@@ -90,7 +91,7 @@ function slotBodyHtml(i) {
   const e = save.escorts[i], head = t("tabEsc", { n: i + 1 });
   if (e) return berthHtml(i);   // bought: assign an idle ship or buy one
   const price = escortPrice(i);
-  if (!escortOpen(save, i)) return `<div class="berth"><p class="role">${head}</p><p class="lock">${t("escLocked", { n: i + 1, price: fmt(price) })}</p></div>`;
+  if (!escortOpen(save, i)) return `<div class="berth"><p class="role">${head}</p><p class="lock">${t("escLocked", { n: escortGateNo(i), price: fmt(price) })}</p></div>`;
   if (i > save.escorts.length) return `<div class="berth"><p class="role">${head}</p><p class="lock">${t("escOrder", { n: i })}</p></div>`;
   const cost = escortStartCost(i), lbl = armedTap("escBuy" + i) ? t("escBuyArm") : t(save.gold < price ? "escBuyShort" : "escBuy", { n: fmt(price), d: fmt(price - save.gold) });
   return `<div class="berth"><p class="role">${head}</p><div class="card"><h3>${t("escSlot", { n: i + 1 })}</h3><p class="sub">${t("escHint")}</p>${cost ? `<p class="sub total">${t("escCost", cost)}</p>` : ""}` +

@@ -8,7 +8,8 @@ const fails = [];
 const check = (ok, msg) => { if (!ok) fails.push(msg); console.log((ok ? "  ok    " : "  FAIL  ") + msg); };
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 
-const save = bounty => JSON.stringify({ v: 2, gold: 500, sunk: 30, tutorialDone: true, seed: 424242, wrecks: [], campaign: { bounty } });   // no hall: an old save
+// no hall: an old save. No campaign.order: an order-1 campaign (5 bounties), whose count past Mother Carey moves up one on load (#140); cv 2: the six-bounty order
+const save = (bounty, cv) => JSON.stringify({ v: 2, gold: 500, sunk: 30, tutorialDone: true, seed: 424242, wrecks: [], campaign: cv ? { order: cv, bounty } : { bounty } });
 async function open(saveJson, lang = "en") {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await ctx.newPage(), errors = [];
@@ -29,16 +30,28 @@ const done = async (tag, o) => { check(o.errors.length === 0, `${tag}: no page e
 const sail = page => page.evaluate(() => { if (!docked) { sendHome(); dock("return"); } setSail(); });
 const bosses = page => page.evaluate(() => enemies.filter(e => e.boss && e.alive).map(e => ({ id: e.boss, rematch: !!e.rematch, escorts: enemies.filter(x => x.escortOf === e.boss && x.alive).length })));
 
-console.log("Old save, two captains beaten");
+console.log("Old (v1) save past Ned and Carey");
 {
   const o = await open(save(2)), { page } = o;
-  check(await page.evaluate(() => save.campaign.bounty === 2 && !!save.hall && save.hall.sunk === 0), "an old save with no hall loads (bounty 2)");
+  check(await page.evaluate(() => save.campaign.bounty === 3 && save.campaign.order === 2 && !!save.hall && save.hall.sunk === 0), "an old save with no hall loads; past Carey it counts the smuggler too (2 of 5 -> 3 of 6)");
   await sail(page);
   const b = await bosses(page);
   const re = b.filter(x => x.rematch).map(x => x.id).sort();
-  check(re.join() === "carey,ned", `Ned and Carey sail again (${re})`);
+  check(re.join() === "carey,smuggler", `the two farthest beaten lairs sail again: Carey and the smuggler (${re})`);
   check(b.filter(x => !x.rematch).map(x => x.id).join() === "saint", "the hunted captain is still the Ashen Saint");
   check(b.find(x => x.id === "carey").escorts === 1, "a rematch captain brings his escorts");
+  await done("old save", o);
+}
+
+console.log("Two captains beaten");
+{
+  const o = await open(save(2, 2)), { page } = o;
+  check(await page.evaluate(() => save.campaign.bounty === 2), "a v2 save keeps its count (Ned and the smuggler)");
+  await sail(page);
+  const b = await bosses(page);
+  const re = b.filter(x => x.rematch).map(x => x.id).sort();
+  check(re.join() === "ned,smuggler", `Ned and the smuggler sail again (${re})`);
+  check(b.filter(x => !x.rematch).map(x => x.id).join() === "carey", "the hunted captain is Mother Carey");
   check(await page.evaluate(() => rematches.length === 2 && rematches.every(r => /Rematch/.test(r.tag.txt.text))), "rematch name tags read “Rematch”");
 
   // sink Ned: pays 25% of 400, no campaign progress, hall records the time
@@ -48,18 +61,18 @@ console.log("Old save, two captains beaten");
     hurt(ned, 5, 0, player);   // the first landed hit starts the clock
     hurt(ned, ned.hp + 1, 0, player);
     return { gain: save.gold - g0, want: rematchReward(BOUNTIES[0], lootMul()), c0, c1: JSON.stringify(save.campaign), k0, k1: save.stats.bounties,
-      hall: save.hall.boss.ned, tags: rematches.length, bossStill: !!bossShip && bossShip.boss === "saint" };
+      hall: save.hall.boss.ned, tags: rematches.length, bossStill: !!bossShip && bossShip.boss === "carey" };
   });
   check(r.gain === r.want && r.want === 100, `rematch pays a quarter of the chest (+${r.gain})`);
   check(r.c0 === r.c1 && r.k0 === r.k1, "campaign progress, rank and bounty count unchanged");
   check(r.hall > 0, `hall records Ned's fastest sinking (${r.hall}s)`);
-  check(r.tags === 1 && r.bossStill, "only that tag goes; the hunt for the Saint carries on");
+  check(r.tags === 1 && r.bossStill, "only that tag goes; the hunt for Mother Carey carries on");
 
   // back to port and out again: Ned is back at his lair
   await page.evaluate(() => { sendHome(); dock("return"); });
   await sail(page);
   const b2 = await bosses(page);
-  check(b2.filter(x => x.rematch).map(x => x.id).sort().join() === "carey,ned", "next sailing both sail again");
+  check(b2.filter(x => x.rematch).map(x => x.id).sort().join() === "ned,smuggler", "next sailing both sail again");
   const lair = await page.evaluate(() => { const n = enemies.find(e => e.boss === "ned"); return dist(n, lairOf(BOUNTIES[0])) < 400; });
   check(lair, "Ned is back at his lair");
   await page.evaluate(() => { lang = "zh"; applyLang(); });
@@ -67,7 +80,7 @@ console.log("Old save, two captains beaten");
   await done("two beaten", o);
 }
 
-console.log("Four beaten: the cap");
+console.log("Four beaten (v1; five since the smuggler): the cap");
 {
   const o = await open(save(4)), { page } = o;
   await sail(page);
@@ -86,7 +99,7 @@ console.log("Fresh game and a daily run");
   await done("fresh", o);
   const o2 = await open(save(3)), p2 = o2.page;
   await sail(p2);
-  check((await bosses(p2)).filter(x => x.rematch).length === 2, "bounty 3 save: two rematches in the campaign");
+  check((await bosses(p2)).filter(x => x.rematch).length === 2, "a save past the Saint: two rematches in the campaign");
   await p2.evaluate(() => startRun("daily"));
   await p2.waitForTimeout(300 * SLOW);
   check((await bosses(p2)).every(x => !x.rematch) && await p2.evaluate(() => rematches.length === 0), "the daily sea spawns no rematch captain");

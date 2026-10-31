@@ -1,6 +1,6 @@
 "use strict";
 // ---------- Rematch: a beaten captain sails again from his lair every sortie ----------
-// "Beaten" is derived, not saved: the first save.campaign.bounty entries of BOUNTIES (js/campaign.js), so old saves just work.
+// "Beaten" is derived, not saved: the first save.campaign.bounty entries of BOUNTIES (js/campaign.js); a v1 save's count is moved onto the six-bounty order on load (js/save-campaign.js).
 // Each departure puts up to REMATCH_MAX of them back at their lairs (farthest from the harbor first, the rest take their
 // turn next sailing) with their escorts, tagged "rematch". Sinking one pays REMATCH_PCT of the bounty's chest plus the
 // usual spoils, never moves the campaign on (that is claimBounty's job, and only for the hunted captain), and still

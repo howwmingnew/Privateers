@@ -139,7 +139,7 @@ function heatTick(dt) {
     }
     if ((heatTickT -= dt) <= 0) { heatTickT = 0.5; heatKeepHunting(); }
   } else huntT = 0;
-  if (save.campaign.bounty >= ADMIRAL_AFTER && playerRing() >= ADMIRAL_RING && !inSafe(player)) {
+  if (bountyDone(save.campaign, ADMIRAL_AFTER) && playerRing() >= ADMIRAL_RING && !inSafe(player)) {
     admT -= dt * (1 + ADMIRAL_HEAT * st);
     if (admT <= 0) admT = fleetsLive().some(f => f.admiral) ? 20 : spawnAdmiral() ? admiralWait(st, Math.random()) : 15;
   }

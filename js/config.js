@@ -213,7 +213,7 @@ const HEAT_HUNT_EVERY = [0, 0, 70, 50, 36, 26];   // seconds between hunting fle
 const HEAT_HUNT_MAX = [0, 0, 1, 1, 2, 2];         // hunting fleets alive at once, by stars
 const HEAT_HUNT_LV = [0, 0, 0, 1, 1, 2];          // levels above the local ring a hunter's lead is, by stars (wingmen = stars - 1, up to the sea's size cap)
 const HEAT_HUNT_FIRST = 10, HEAT_HUNT_R = [850, 1250];   // s before the first hunter after heat 2; px from the player they come over the horizon
-const ADMIRAL_AFTER = 4;                   // bounties claimed before the Admiral's fleet patrols (after the 4th poster, ahead of the last)
+const ADMIRAL_AFTER = "hale";              // the bounty (by id: bountyDone, js/save-campaign.js) whose claim sets the Admiral's fleet patrolling: Commodore Hale, ahead of the last
 const ADMIRAL_EVERY = [190, 300];          // s between sightings; heat shortens it by ADMIRAL_HEAT per star
 const ADMIRAL_HEAT = 0.12, ADMIRAL_R = [1400, 2000], ADMIRAL_RING = 3;   // the player must be in at least this ring to meet him
 const ADMIRAL_GONE = 4500;                 // px: an Admiral's fleet left this far behind sails off for good

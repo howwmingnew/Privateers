@@ -136,10 +136,14 @@ const shot = (page, name, sel) => (sel ? page.locator(sel).first() : page).scree
 {
   const { ctx, page } = await open();
   const res = await page.evaluate(() => {
-    const rec = BOUNTIES.map(b => bountyRecLv(b)), rows = [];
+    const recOf = id => bountyRecLv(findBounty(id)), rows = [];
     const rate = (id, hull, g, gl) => { save = fitMounts({ ...defaultSave(), ship: id, hull, hold: 4, sails: 1 }); for (const { key } of MOUNTS) save[key] = save[key].map(() => gunItem(g, gl)); return shipRating(); };
-    const tiers = [["sloop"], ["schooner", "gunboat"], ["brigantine", "brig"], ["cruiser", "frigate"], ["corsair", "line"]];
-    tiers.forEach((ids, i) => { for (const id of ids) rows.push({ id, bounty: BOUNTIES[i].id, rec: rec[i], six5: rate(id, 5, "six", 3), carr8: rate(id, 8, "carronade", 6), max: rate(id, 15, "carronade", 10) }); });
+    // each tier faces the bounties hunted while it is the newest the yard sells (#140: Mother Carey opens no hull, so tier 3 meets her and the Saint): the hardest of them
+    const tiers = [[["sloop"], ["ned"]], [["schooner", "gunboat"], ["smuggler"]], [["brigantine", "brig"], ["carey", "saint"]], [["cruiser", "frigate"], ["hale"]], [["corsair", "line"], ["thorne"]]];
+    for (const [ids, faces] of tiers) {
+      const hard = faces.reduce((a, b) => (recOf(b) > recOf(a) ? b : a));
+      for (const id of ids) rows.push({ id, bounty: hard, rec: recOf(hard), six5: rate(id, 5, "six", 3), carr8: rate(id, 8, "carronade", 6), max: rate(id, 15, "carronade", 10) });
+    }
     return rows;
   });
   console.log("  ship        faces    goal  hull5+six3  hull8+carr6  hull15+carr10");
@@ -158,9 +162,13 @@ const shot = (page, name, sel) => (sel ? page.locator(sel).first() : page).scree
     await page.evaluate(([id, b]) => { save = { ...save, ship: id, hull: 1, sails: 1, hold: 1, campaign: { ...save.campaign, bounty: b } }; save = fitMounts(save); applyPlayerStats(true); renderPort(); }, [ship, bounty]);
     return page.evaluate(() => ({ rec: document.querySelector(".p-rec")?.textContent || "", speed: document.querySelector(".p-rec .speed")?.textContent || "", prize: [...document.querySelectorAll(".p-facts div")].pop()?.textContent || "" }));
   };
-  const open0 = await poster("sloop", 0), c3 = await poster("corsair", 3), l3 = await poster("line", 3), s3 = await poster("frigate", 2);
+  // the count is the poster index (#140): 0 Ned, 1 the smuggler, 2 Carey, 3 the Saint, 4 Hale
+  const open0 = await poster("sloop", 0), c3 = await poster("corsair", 4), l3 = await poster("line", 4), s3 = await poster("frigate", 3);
   check(/unlocks the Schooner \/ Gunboat/.test(open0.prize), `poster 1 names both hulls it opens: ${open0.prize}`);
-  check(/unlocks the Cruiser \/ Frigate and the Hulk Outpost/.test((await poster("sloop", 2)).prize), "poster 3 names tier 4 on both lines, and the outpost");
+  check(/unlocks the Brigantine \/ Brig/.test((await poster("sloop", 1)).prize), "poster 2 (the smuggler) names tier 3 on both lines");
+  const carey = (await poster("sloop", 2)).prize;
+  check(/makes you Captain/.test(carey) && !/unlocks/.test(carey), `poster 3 (Mother Carey) offers a rank, no hull: ${carey}`);
+  check(/unlocks the Cruiser \/ Frigate and the Hulk Outpost/.test((await poster("sloop", 3)).prize), "poster 4 names tier 4 on both lines, and the outpost");
   check(/You outrun it by \d+%/.test(c3.speed), `fast ship vs Hale: ${c3.speed}`);
   check(/It outruns you by \d+%/.test(l3.speed), `heavy ship vs Hale: ${l3.speed}`);
   check(s3.speed === "" || /outrun/.test(s3.speed), `a boss near your speed adds no line: "${s3.speed}"`);

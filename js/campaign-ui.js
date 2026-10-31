@@ -4,7 +4,7 @@ Object.assign(STR.en, {
   wanted: "Wanted", marque: "Letter of Marque {n} of {m}", sunkOrTaken: "Sunk or taken",
   pTarget: "Target", pSeen: "Last seen", pReward: "Reward",
   pEscort1: "1 escort", pEscorts: "{n} escorts", pWhere: "{sea}, {dir} of the harbor", pGold: "{n} gold",
-  pUnlocks: "unlocks the {ship}", pUnlocksOutpost: "unlocks the {ship} and the Hulk Outpost", pFinal: "ends the war",
+  pUnlocks: "unlocks the {ship}", pUnlocksOutpost: "unlocks the {ship} and the Hulk Outpost", pPromotes: "makes you {rank}", pFinal: "ends the war",
   dir_0: "east", dir_1: "south-east", dir_2: "south", dir_3: "south-west", dir_4: "west", dir_5: "north-west", dir_6: "north", dir_7: "north-east",
   rankLbl: "Rank", ngLbl: "New Game+ {n}", logBtn: "Captain's log",
   allDoneT: "The seas are yours",
@@ -16,7 +16,7 @@ Object.assign(STR.zh, {
   wanted: "懸賞通緝", marque: "私掠許可狀 {n}/{m}", sunkOrTaken: "擊沉或擒獲",
   pTarget: "目標", pSeen: "最後目擊", pReward: "賞金",
   pEscort1: "另有 1 艘護衛", pEscorts: "另有 {n} 艘護衛", pWhere: "{sea}，港口{dir}方", pGold: "{n} 金幣",
-  pUnlocks: "解鎖{ship}", pUnlocksOutpost: "解鎖{ship}與廢船前哨站", pFinal: "結束這場戰爭",
+  pUnlocks: "解鎖{ship}", pUnlocksOutpost: "解鎖{ship}與廢船前哨站", pPromotes: "晉升為{rank}", pFinal: "結束這場戰爭",
   dir_0: "東", dir_1: "東南", dir_2: "南", dir_3: "西南", dir_4: "西", dir_5: "西北", dir_6: "北", dir_7: "東北",
   rankLbl: "階級", ngLbl: "新遊戲+ {n}", logBtn: "航海日誌",
   allDoneT: "大海是你的了",
@@ -36,7 +36,7 @@ function drawSkull(c, x, y, r, fill = "#f0c766", hole = "#1b1410") {
 }
 
 // ---------- Flags: each captain flies their own colours on the poster ----------
-const FLAGS = { ned: { base: "#8e1f1a", mark: "skull" }, carey: { base: "#1f1b19", mark: "bones" }, saint: { base: "#463d37", mark: "halo" },
+const FLAGS = { ned: { base: "#8e1f1a", mark: "skull" }, smuggler: { base: "#1f4a4f", mark: "skull" }, carey: { base: "#1f1b19", mark: "bones" }, saint: { base: "#463d37", mark: "halo" },
   hale: { base: "#22375a", mark: "anchor", navy: true }, thorne: { base: "#7c1c1a", mark: "crown", navy: true } };
 function drawEmblem(c, mark, x, y, s) {
   const bone = "#efe3c4", gold = "#e0b44a";
@@ -84,9 +84,11 @@ let ngArmed = false, ngArmT;
 let posterOpen = false;   // the poster starts folded to its head, the goal and the reward (css/ledger.css .poster.min); the toggle is per visit, not saved
 const dirWord = a => t("dir_" + (Math.round(((a % TAU) + TAU) % TAU / (Math.PI / 4)) % 8));
 function posterHtml(b) {
-  const i = BOUNTIES.indexOf(b), sea = t("sea_" + seaOfRing(b.L).id), ship = shipsFor(i).map(id => t("s_" + id)).join(" / ");
+  const i = BOUNTIES.indexOf(b), sea = t("sea_" + seaOfRing(b.L).id), ship = shipsFor(b.id).map(id => t("s_" + id)).join(" / ");
   const escorts = b.escorts.length ? " · " + t(b.escorts.length === 1 ? "pEscort1" : "pEscorts", { n: b.escorts.length }) : "";
-  const prize = b.final ? t("pFinal") : t(i + 1 === OUTPOST_BOUNTY ? "pUnlocksOutpost" : "pUnlocks", { ship });
+  // a captain who opens no hull (Mother Carey, #140) is worth her rank instead; a daily run's captain (js/daily.js) opens nothing
+  const prize = b.final ? t("pFinal") : ship ? t(b.id === OUTPOST_AFTER ? "pUnlocksOutpost" : "pUnlocks", { ship })
+    : BOUNTY_RANK[b.id] ? t("pPromotes", { rank: t("rank_" + BOUNTY_RANK[b.id]) }) : "";
   return `<div class="poster${posterOpen ? "" : " min"}" data-boss="${b.id}">
     <div class="p-marque">${t("marque", { n: i + 1, m: BOUNTIES.length })}</div>
     <div class="p-head"><canvas class="p-flag" width="240" height="170" aria-hidden="true"></canvas>
@@ -94,10 +96,10 @@ function posterHtml(b) {
     ${posterShipHtml(b)}
     <p class="p-story">${t("intro_" + b.id)}</p>
     <dl class="p-facts">
-      <div class="p-tgt"><dt>${t("pTarget")}</dt><dd>${t("cls_" + b.cls)}${escorts}</dd></div>
+      <div class="p-tgt"><dt>${t("pTarget")}</dt><dd>${bossClsName(b)}${escorts}</dd></div>
       ${recLine(b)}
       <div class="p-seen"><dt>${t("pSeen")}</dt><dd>${t("pWhere", { sea, dir: dirWord(b.ang) })}</dd></div>
-      <div><dt>${t("pReward")}</dt><dd><b>${t("pGold", { n: fmt(bountyReward(b)) })}</b> · ${prize}</dd></div>
+      <div><dt>${t("pReward")}</dt><dd><b>${t("pGold", { n: fmt(bountyReward(b)) })}</b>${prize ? ` · ${prize}` : ""}</dd></div>
       ${i === 0 && !save.escortGift ? `<div class="p-bonus"><dt>${t("pBonus")}</dt><dd>${t("pGift")}</dd></div>` : ""}
     </dl>
     <button class="p-toggle" type="button" data-camp="poster" aria-expanded="${posterOpen}">${t(posterOpen ? "pLess" : "pMore")}</button></div>`;

@@ -223,7 +223,7 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
   const { ctx, page } = await open(D, { tag: "read" });
   await toLedger(page);
   const rec = await ev(page, () => ({ txt: document.querySelector(".poster .p-rec")?.textContent || "", ned: bountyRecLv(BOUNTIES[0]), all: BOUNTIES.map(bountyRecLv), me: shipRating() }));
-  ok("poster: a goal ship level from the boss's real threat (Red Ned: Ready at Ship Lv 3, his badge Lv 2 + 1: #98; Carey: +2 in all, Lv 8: #122)", rec.ned === 3 && rec.all.slice(1).join() === "8,11,13,17" && /Goal/.test(rec.txt) && /Ready/.test(rec.txt) && new RegExp(`Lv ${rec.ned}`).test(rec.txt) && /you: Lv/.test(rec.txt), rec);
+  ok("poster: a goal ship level from the boss's real threat (Red Ned: Ready at Ship Lv 3, his badge Lv 2 + 1: #98; the smuggler Lv 6: #140; Carey: +2 in all, Lv 8: #122)", rec.ned === 3 && rec.all.slice(1).join() === "6,8,11,13,17" && /Goal/.test(rec.txt) && /Ready/.test(rec.txt) && new RegExp(`Lv ${rec.ned}`).test(rec.txt) && /you: Lv/.test(rec.txt), rec);
   // #91 #92: the poster is folded to head, goal and reward; its goal line shows the badge number it adds to; the toggle opens the rest
   const fold = await ev(page, () => { const p = document.querySelector("#wanted .poster"), vis = s => { const el = p.querySelector(s); return !!el && getComputedStyle(el).display !== "none"; };
     return { min: p.classList.contains("min"), story: vis(".p-story"), ship: vis(".p-ship"), goal: vis(".p-rec .goal"), calc: p.querySelector(".p-rec .calc")?.textContent || "", badge: bountyThreat(BOUNTIES[0]), h: Math.round(p.getBoundingClientRect().height) }; });
@@ -297,11 +297,11 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
   });
   ok("aim lines and fire ignore a ship in range but off screen, and engage it once it is in view", !aim.offEng && aim.offShots === 0 && aim.onEng, aim);
   // boss liveries: navy bosses fly the ensign, Thorne's flagship is its own, bigger hull
-  const liv = await ev(page, () => BOUNTIES.map(b => ({ id: b.id, liv: bossLivery(b), cls: artClass(b.cls), len: SHIP_ART[artClass(b.cls)].len })));
+  const liv = await ev(page, () => BOUNTIES.map(b => ({ id: b.id, liv: bossLivery(b), cls: bossArt(b), len: SHIP_ART[bossArt(b)].len })));
   const bigBuy = await ev(page, () => Math.max(...SHIP_ORDER.map(id => SHIP_ART[id].len)));
   const by = Object.fromEntries(liv.map(l => [l.id, l]));
   ok("liveries: pirate bosses keep the skull livery, Hale flies navy colours, Thorne's man-o'-war is larger than any buyable hull",
-    by.ned.liv === "boss" && by.carey.liv === "boss" && by.saint.liv === "boss" && by.hale.liv === "bossNavy" && by.thorne.liv === "admiral" &&
+    by.ned.liv === "boss" && by.smuggler.liv === "boss" && by.smuggler.cls === "schooner" && by.carey.liv === "boss" && by.saint.liv === "boss" && by.hale.liv === "bossNavy" && by.thorne.liv === "admiral" &&
     by.thorne.cls === "manowar" && by.thorne.len > bigBuy, { liv, bigBuy });
   // a staged lineup to look at: the player's line ship, Hale, Thorne, a pirate boss
   await ev(page, () => {
@@ -309,8 +309,9 @@ for (const [vp, tag, mobile] of [[D, "720", false], [HD, "1080", false], [M, "ph
     hitLayer.innerHTML = ""; hitMarks = [];
     player.x = 2000; player.y = 2000; player.rot = 0; save.ship = "line"; applyPlayerStats(true);
     const put = (b, dx, dy) => { const e = enemies.find(x => x.alive && !x.boss && !x.staged); e.staged = true; e.boss = b.id; e.faction = b.faction;
-      applyShipArt(e, artClass(b.cls), bossLivery(b)); e.x = player.x + dx; e.y = player.y + dy; e.rot = 0; e.speed = 0; e.maxSpeed = 0.001; e.spr.setPosition(e.x, e.y).setRotation(0); };
-    put(BOUNTIES[4], 0, -150); put(BOUNTIES[3], 230, 110); put(BOUNTIES[1], -230, 110);
+      applyShipArt(e, bossArt(b), bossLivery(b)); e.x = player.x + dx; e.y = player.y + dy; e.rot = 0; e.speed = 0; e.maxSpeed = 0.001; e.spr.setPosition(e.x, e.y).setRotation(0); };
+    const of = findBounty;
+    put(of("thorne"), 0, -150); put(of("hale"), 230, 110); put(of("carey"), -230, 110); put(of("smuggler"), 0, 230);
     S.cameras.main.stopFollow(); S.cameras.main.centerOn(player.x, player.y); S.cameras.main.setZoom(S.cameras.main.zoom * 1.6);
   });
   await page.waitForTimeout(200 * SLOW);

@@ -1,6 +1,6 @@
 // Navy heat and the Admiral's fleet in headless Chrome (js/heat.js): heat rises with Navy sinkings only, pays more per star,
 // the third star brings hunting fleets that hold formation and grow with the stars, heat cools by itself and any harbor
-// clears it (hunters give up), the Admiral's fleet patrols only after the fourth bounty, the daily sea and a first voyage
+// clears it (hunters give up), the Admiral's fleet patrols only after Commodore Hale's bounty, the daily sea and a first voyage
 // switch it all off, the HUD scales with the UI size slider, and no page errors. Saves pictures to <outDir>
 // (default .review/heat, not committed).
 // Usage: node tests/heat.mjs [url] [outDir]   (serve the repo first, e.g. `npm run serve`)
@@ -159,12 +159,12 @@ check(r5b === 0, "the Hulk Outpost clears heat too");
 console.log("The Admiral's fleet");
 const adm = await ev(() => {
   const res = {};
-  fresh(5); save.campaign = { ...save.campaign, bounty: 3 };
+  fresh(5); save.campaign = { ...save.campaign, bounty: 4 };   // past the Saint, Hale still to come (#140: the smuggler is poster 2)
   admT = 0; stepN(60 * 40); res.early = fleetsLive().filter(f => f.admiral).length;
-  clearSea(); save.campaign = { ...save.campaign, bounty: 4 };
-  fresh(2); save.campaign = { ...save.campaign, bounty: 4 };
+  clearSea(); save.campaign = { ...save.campaign, bounty: 5 };
+  fresh(2); save.campaign = { ...save.campaign, bounty: 5 };
   admT = 0; stepN(60 * 40); res.shallow = fleetsLive().filter(f => f.admiral).length;
-  fresh(9); save.campaign = { ...save.campaign, bounty: 4 };   // deep enough that the fleet (1400-2000 px from the player) never spawns in the Shallows, where a novice rating tames it into a cutter (js/notify-order.js tameFirstVoyage)
+  fresh(9); save.campaign = { ...save.campaign, bounty: 5 };   // deep enough that the fleet (1400-2000 px from the player) never spawns in the Shallows, where a novice rating tames it into a cutter (js/notify-order.js tameFirstVoyage)
   admT = 0; stepN(30);
   const fs = fleetsLive().filter(f => f.admiral), f = fs[0];
   res.n = fs.length;
@@ -185,9 +185,9 @@ const adm = await ev(() => {
   }
   return res;
 });
-check(adm.early === 0, "after only three bounties no Admiral patrols");
+check(adm.early === 0, "past the Saint but not Hale (four bounties): no Admiral patrols");
 check(adm.shallow === 0, "the shallows are never visited, even after four bounties");
-check(adm.n === 1 && adm.info && adm.info.type === "admiral", "after the fourth bounty the Admiral's fleet appears in the deep");
+check(adm.n === 1 && adm.info && adm.info.type === "admiral", "after Commodore Hale's bounty the Admiral's fleet appears in the deep");
 const ai = adm.info || {};
 check(ai.arch === "manowar" && ai.size >= 3 && ai.navy && !ai.boss, `a man-of-war flagship leads ${ai.size - 1} Navy ships (a fleet, not a bounty captain)`);
 check(ai.formation === "wedge" && ai.slotErr < 260, `...in a wedge (wingmen ${Math.round(ai.slotErr)} px from their slots)`);

@@ -72,7 +72,14 @@ const held = await ev(() => {
   const rows = [];
   for (const type of ["wolfpack", "patrol", "convoy"]) {
     park(openAt(5, 900)); depart(); clearSea();
-    const p = openAt(5, 500, 3), face = Math.atan2(PORT.y - p.y, PORT.x - p.x) + Math.PI / 2;
+    // the spot on ring 5 whose 15 s run (the lead sails the ring's tangent, ~1200 px at most) passes farthest from any island, whatever the map:
+    // #140's new lair reshuffled seed 424242's islands, and the old pick (openAt(5, 500, 3)) then ran the convoy onto them
+    const faceAt = q => Math.atan2(PORT.y - q.y, PORT.x - q.x) + Math.PI / 2;
+    const runClear = q => { const f = faceAt(q); let c = Infinity;
+      for (let d = -300; d <= 1200; d += 100) { const x = q.x + Math.cos(f) * d, y = q.y + Math.sin(f) * d; for (const i of islands) c = Math.min(c, Math.hypot(i.x - x, i.y - y) - i.r); }
+      return c; };
+    const p = Array.from({ length: 200 }, (_, a) => polarPt(a * 0.37, ringMid(5))).filter(q => !inSafe(q)).reduce((b, q) => (runClear(q) > runClear(b) ? q : b));
+    const face = faceAt(p);
     const T = FLEET_TYPES[type], classes = type === "convoy" ? ["fluyt", "fluyt", "brig"] : type === "patrol" ? ["brig", "brig", "brig"] : ["cutter", "cutter", "cutter"];
     const lead = makeEnemy(S, p.x, p.y, 5, T.faction, type === "convoy" ? "fluyt" : type === "patrol" ? "frigate" : "brig");
     lead.rot = face; lead.speed = lead.maxSpeed * 0.5;
