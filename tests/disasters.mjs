@@ -269,7 +269,9 @@ console.log("AI answers a disaster: most hulls in the way sail clear after their
         return ok / herdShips.length;
       };
       // The AI's "did it notice?" roll is Math.random: seed it per trial and average several trials so the ratio never rides on one lucky roll.
-      const seeded = sd => { Math.random = () => { sd = (sd + 0x6D2B79F5) | 0; let t = Math.imul(sd ^ (sd >>> 15), 1 | sd); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+      // Never replay a stream: Phaser names every Text's canvas texture with a UUID built from Math.random, so two runs on one seed hand out the same
+      // keys, and a float text still fading from the last run makes the next `new Text` get a null texture ("reading 'context'"). Each call gets its own stream.
+      const seeded = sd => { sd += 7919 * (window.seedRuns = (window.seedRuns || 0) + 1); Math.random = () => { sd = (sd + 0x6D2B79F5) | 0; let t = Math.imul(sd ^ (sd >>> 15), 1 | sd); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
       const run = (nd, sd) => { seeded(sd); herd(kind, nd, warn); stepN(Math.round((warn - 0.05) * 60)); return meas(); };
       const seeds = [101, 202, 303, 404, 505, 606];
       const free = seeds.reduce((a, sd) => a + run(true, sd), 0) / seeds.length, withDodge = seeds.reduce((a, sd) => a + run(false, sd), 0) / seeds.length;
