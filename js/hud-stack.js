@@ -8,10 +8,11 @@
 // a large phone in landscape or a big UI size can (#160). On a big screen the overlays are CSS-zoomed (css/style.css): the lift is converted to the
 // element's own px, as laneTick does.
 // The controls (STACK_FIXED) never move for a notice: the captain's ability button picks its own spot among the fixed HUD first (the "hudPlace" hook,
-// js/abilities.js, at every width), and the notices then stack clear of it as they do of the sail pad (#160).
+// js/abilities.js, at every width), and the notices then stack clear of it as they do of the sail pad (#160). The hint line and the way-home chip
+// (js/safety-hints.js) stay put too: a big UI size put the boss bar over the hint and the achievement card over the chip (#164).
 const STACK_GAP = 8;
 const STACK_ORDER = ["bossBar", "coach", "achToast", "postcardChip", "shareChip", "replayChip"];
-const STACK_FIXED = ["touchSail", "abilityBtn"];   // controls take input: the notices give way to them
+const STACK_FIXED = ["touchSail", "abilityBtn", "hint", "homeChip"];   // the controls (they take input), the hint line and the way home: the notices give way to them
 const STACK_KEEP = ["bossBar", "coach"];   // these always show; the chips after them hide when pushing them up would leave the screen
 let stackT = 0, stackMoved = [];
 // Pure: the lift that keeps a box whose top edge is at `top` inside the screen (a margin of STACK_GAP).
