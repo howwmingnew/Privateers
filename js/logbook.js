@@ -25,11 +25,13 @@ function fmtDur(sec) {
 
 // ---------- Tracking ----------
 // Time is summed locally each frame and folded into the save at quiet moments (dock, sail, the log, the victory screen).
-let sortie = null, unsavedTime = 0;   // sortie: { t: seconds at sea, hurt: took a hit yet }
+let sortie = null, lastSortieT = 0, unsavedTime = 0;   // sortie: { t: seconds at sea, hurt: took a hit yet }; lastSortieT: the one that closed last
 const addStats = patch => { save.stats = { ...save.stats, ...patch }; };
 const bump = (o, k) => ({ ...o, [k]: (o[k] || 0) + 1 });
 function flushTime() { if (unsavedTime > 0) { addStats({ time: save.stats.time + unsavedTime }); unsavedTime = 0; } }
-function endSortie() { if (sortie) addStats({ longest: Math.max(save.stats.longest, sortie.t) }); sortie = null; }
+function endSortie() { if (sortie) { addStats({ longest: Math.max(save.stats.longest, sortie.t) }); lastSortieT = sortie.t; } sortie = null; }
+// This sortie's length so far, or the last one's once it closed (a sinking closes it at "sunk", before the dock: #162). The share card reads it (js/sharecard.js).
+const sortieSecs = () => (sortie ? sortie.t : lastSortieT);
 onHook("sail", () => { flushTime(); sortie = { t: 0, hurt: false }; addStats({ sorties: save.stats.sorties + 1 }); });
 onHook("dock", (kind, hold) => { flushTime(); endSortie(); if (hold > 0) addStats({ gold: save.stats.gold + hold }); });
 onHook("hurt", s => { if (s.isPlayer && sortie) sortie.hurt = true; });

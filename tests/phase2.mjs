@@ -92,6 +92,24 @@ const freshSnap = (page, kind, seed = 0) => ev(page, ([kind, seed]) => {
   await ctx.close();
 }
 
+// ============ 1b. the sortie's length survives a sinking (#162): the log closes the sortie at "sunk", before the dock ============
+{
+  const { ctx, page } = await open({ seedStore: { [SAVE_KEY]: OLD_SAVE } });
+  await toSea(page);
+  await calm(page);
+  await ev(page, () => { sortie.t = 42; sink(player, null); });
+  await page.waitForFunction(() => docked, null, { timeout: 12000 * SLOW });
+  const sunkSecs = await ev(page, () => ({ secs: sortieSecs(), open: !!sortie }));
+  ok("after the flagship sank: sortieSecs() is the sortie's length, not 0", !sunkSecs.open && Math.abs(sunkSecs.secs - 42) < 1, sunkSecs);
+  await ev(page, () => setSail());
+  await page.waitForFunction(() => !docked && !paused, null, { timeout: 8000 * SLOW });
+  await ev(page, () => { sortie.t = 17; dock("return"); });
+  await page.waitForFunction(() => docked, null, { timeout: 8000 * SLOW });
+  const backSecs = await ev(page, () => sortieSecs());
+  ok("...and after a plain return it is that sortie's length", Math.abs(backSecs - 17) < 1, backSecs);
+  await ctx.close();
+}
+
 // ============ 2. boss: the chip after the card, the hall of fame, the log, the language switch ============
 {
   const { ctx, page } = await open({});
