@@ -137,8 +137,8 @@ function sortieTally({ sunk, cargo: c, bonus, gold }) {
   clearTimeout(el.timer); el.timer = setTimeout(() => el.classList.remove("on"), TALLY_SHOW_MS);
 }
 
-// ---------- streak at risk: a streak worth banking (3+) on a hull under 40% pulses the chip red ----------
-const RISK_STREAK = 3, RISK_HULL = 0.4;
+// ---------- streak at risk: a streak worth banking (3+) on a hull under 25% pulses the chip red ----------
+const RISK_STREAK = 3, RISK_HULL = 0.25;   // = HOME_HULL (js/safety-hints.js): one "badly hurt" line (#144)
 let riskOn = false;
 onHook("frame", () => {
   const el = byId("streak");
