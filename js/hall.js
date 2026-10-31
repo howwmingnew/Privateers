@@ -44,7 +44,7 @@ function hallApply(hall, ev) {
 const HALL_MIN_CHAIN = 3;
 
 // ---------- tracking ----------
-let gameClock = 0, lastKillAt = -1e9, chain = 0, boutAt = {}, lastSortieSecs = 0;   // boutAt: { bountyId: when the player first hit that captain }
+let gameClock = 0, lastKillAt = -1e9, chain = 0, boutAt = {};   // boutAt: { bountyId: when the player first hit that captain }
 const recordable = () => !runActive();   // a daily or seeded run keeps its own books
 function hallBump(ev, line) {
   if (!recordable()) return;
@@ -55,9 +55,6 @@ function hallBump(ev, line) {
   if (line && !first) toast(t("hallNew", { what: line }));
 }
 onHook("frame", dt => { if (!paused && !docked) gameClock += dt; });
-// Capture the sortie's length before the log's own "dock" hook closes it (this file loads first): the share card wants it.
-onHook("dock", () => { lastSortieSecs = typeof sortie !== "undefined" && sortie ? sortie.t : 0; });
-const sortieSecs = () => (typeof sortie !== "undefined" && sortie ? sortie.t : lastSortieSecs);
 onHook("sail", () => { chain = 0; lastKillAt = -1e9; boutAt = {}; });
 onHook("hurt", (s, dmg, src) => { if (s.boss && src === player && boutAt[s.boss] === undefined) boutAt = { ...boutAt, [s.boss]: gameClock }; });
 onHook("sunk", (s, killer) => {

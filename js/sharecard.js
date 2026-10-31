@@ -177,7 +177,7 @@ function mountPortShare() {
 }
 onHook("tally", d => {
   if (!(d.gold > 0)) return;
-  lastTally = { sunk: d.sunk, gold: d.gold, secs: sortieSecs() };   // js/hall.js
+  lastTally = { sunk: d.sunk, gold: d.gold, secs: sortieSecs() };   // js/logbook.js
   if (docked) mountPortShare();
   else if (d.sunk > 0 && !(runActive() && runKind() === "daily")) { const snap = lastTally; shareOffer(() => shareSpec("sortie", snap), undefined, true); }
 });
