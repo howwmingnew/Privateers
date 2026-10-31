@@ -111,7 +111,7 @@ const forcedRoll = (page, fn, arg) => ev(page, ([src, arg]) => {
     for (const o of islands.filter(i => Math.hypot(i.x - PORT.x, i.y - PORT.y) > 1500))
       for (let k = 0; k < 8; k++) {
         const a = k * Math.PI / 4; player.x = o.x + Math.cos(a) * (o.r + 500); player.y = o.y + Math.sin(a) * (o.r + 500);
-        if (ambushIsland()) { window.__spot = { x: player.x, y: player.y }; return true; }
+        if (!inSafe(player) && ambushIsland()) { window.__spot = { x: player.x, y: player.y }; return true; }   // not in a station's truce: the ambush never comes there
       }
     return false;
   });
