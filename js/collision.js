@@ -10,7 +10,10 @@ Object.assign(STR.en, { fCrash: "Crash!" });
 Object.assign(STR.zh, { fCrash: "撞擊！" });
 
 // The gear's say (js/gear-fx.js): damage taken by `s` from `o`, and the share of speed `s` keeps after a blow.
-const hitOf = (s, o) => (typeof gxHitK === "function" ? gxHitK(s, o) : 1);
+// The bow ram (#149, js/ram.js): the flagship's own hull takes RAM_SELF_K of a crash (ship or island), a ship it rams takes RAM_OUT_K. Both multiply the CRASH_*_K blow; a crash never had the wind bonus.
+const ramHitK = (has, s, o) => (!has ? 1 : s.isPlayer ? RAM_SELF_K : o && o.isPlayer ? RAM_OUT_K : 1);
+const ramFitted = () => typeof save !== "undefined" && !!save && save.ram === true;
+const hitOf = (s, o) => (typeof gxHitK === "function" ? gxHitK(s, o) : 1) * ramHitK(ramFitted(), s, o);
 const shedOf = (s, o) => (typeof gxShed === "function" ? gxShed(s, o) : CRASH_SHED);
 // Share of max hull a blow at closing speed vn takes, before hull-size weighting; 0 under the threshold.
 function crashFrac(vn, k) {

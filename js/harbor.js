@@ -89,6 +89,9 @@ document.getElementById("port").addEventListener("click", ev => {
   } else if (TAB_ACTS.includes(act)) {   // the ship tabs, a picked port or hull, closing the panel (js/ledger-tabs.js)
     snd = tabAct(act, b.dataset);
     if (!snd) return;
+  } else if (act === "ram") {   // the bow ram, bought for the flagship (js/ram.js)
+    snd = ramAct();
+    if (!snd) return;
   } else if (act === "yard") {   // one level of the picked ship's hull, sails or hold: the flagship's own, or a yard ship's (js/shipyard.js)
     const next = upgradeShipPart(save, b.dataset.id || save.shipId, b.dataset.k);
     if (!next) return;
