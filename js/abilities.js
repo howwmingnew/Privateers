@@ -205,7 +205,8 @@ function abilityRender(force) {
   const label = key ? t("ab_tip", { name: t("ab_" + kind), key, state }) : t("ab_" + kind) + " · " + state;
   abBtn.setAttribute("aria-label", label); abBtn.title = label + "\n" + abilityDesc(kind);
 }
-// Where the button goes (pure, CSS px): the first spot of a short list that covers none of the HUD's rects, else the one that covers least.
+// Where the button goes (pure, CSS px): the first spot of a short list that covers none of the HUD's fixed rects, else the one that covers least.
+// Only the fixed HUD: the bottom notices (boss bar, coach card, chips) stack clear of the button instead (js/hud-stack.js, #160).
 // ts: the touch sail buttons' rect (null off a touch screen), side: the chart column's, hintTop: where the hint line starts. A phone in
 // landscape has its chart column right above the sail buttons, so there the button moves up and to their left instead of on top (#16).
 const AB_SIZE = 56, AB_GAP = 8;
@@ -229,10 +230,10 @@ function abilitySpot(vw, vh, { ts, side, hintTop }, obstacles) {
   return best || cands[0];
 }
 const abRect = sel => { const el = document.querySelector(sel); if (!el || el.hidden || getComputedStyle(el).display === "none") return null; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 ? r : null; };
-let abPlaceT = 0;
+// Run by js/hud-stack.js (the "hudPlace" hook) on every stack tick, before the notices are stacked, and when the button appears.
 function abilityPlace() {
   const ts = abRect("#touchSail"), side = abRect("#hud .side"), hint = abRect("#hint");
-  const obstacles = ["#touchSail", "#hud .side", "#hud .bars", "#hint", "#bossBar", "#homeChip", "#runClock"].map(abRect).filter(Boolean);
+  const obstacles = [ts, side, hint, ...["#hud .bars", "#homeChip", "#runClock"].map(abRect)].filter(Boolean);
   const c = abilitySpot(innerWidth, innerHeight, { ts, side, hintTop: hint ? hint.top : null }, obstacles);
   const l = Math.round(c.left) + "px", tp = Math.round(c.top) + "px";
   if (abBtn.style.left !== l) abBtn.style.left = l;
@@ -246,6 +247,7 @@ if (typeof document !== "undefined" && document.body) {
   abilityUi();
   onHook("sail", () => { abil = abilityFresh(); kegsClear(); abilityRender(true); });
   onHook("dock", () => { abil = { ...abil, on: 0 }; kegsClear(); abShown = false; abBtn.hidden = true; });
+  onHook("hudPlace", () => { if (abShown) abilityPlace(); });
   onHook("frame", dt => {
     const sea = abilityAtSea();
     if (sea) {   // paused, docked and the title freeze the clock (photo mode is a pause)
@@ -254,10 +256,9 @@ if (typeof document !== "undefined" && document.body) {
     }
     kegRings();
     const show = !!player && player.alive && !docked && !titleOpen && !(typeof photoOn === "function" && photoOn()) && !abLesson();   // css/safety.css hides it under the pause sheet
-    if (abShown !== show) { abShown = show; abBtn.hidden = !show; abPlaceT = 0; }
+    if (abShown !== show) { abShown = show; abBtn.hidden = !show; if (show) abilityPlace(); }
     if (!show) return;
     abilityRender(false);
-    if ((abPlaceT -= dt) <= 0) { abPlaceT = 0.25; abilityPlace(); }   // a layout read: 4 times a second, like the hint's height (js/notify-order.js)
   });
   document.addEventListener("langchange", () => abilityRender(true));
   document.addEventListener("devicechange", () => abilityRender(true));
