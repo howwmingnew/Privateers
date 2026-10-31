@@ -27,6 +27,19 @@ const REPAIR_STILL = 0.08;       // "stopped": below this share of top speed (th
 const POWDER_CHANCE = 1 / 12, POWDER_R = 230;   // blast radius, px
 const POWDER_BOSS_FRAC = 0.25;     // a boss takes this share of its max hull and never dies of the crit itself
 const POWDER_SPLASH = { ai: 0.3, player: 0.15, boss: 0.08 };   // share of max hull at the centre of the blast; fades to 40% at the rim
+// Captain's abilities (#16, js/abilities.js): one per ship line, on F / pad Y / the HUD button. Every one is a few seconds of help on a
+// 20-35 s recharge, so it rewards timing a fight and never stands in for sailing out of a red fan. Every sortie starts with it ready.
+// Smoke (fast line): for SMOKE_T s every enemy gun firing at you is thrown off by up to +/- SMOKE_SPREAD rad on top of its crew's own error
+// (an elite L8 crew's is 0.1): on a 50 px broadside-on hull an elite crew lands ~27% instead of ~95% at 260 px and ~47% instead of all at
+// 150 px (tests/unit-abilities.mjs), so closing in still hurts. It covers about two volleys of each ship that is on you; dodging still matters.
+const SMOKE_T = 5, SMOKE_CD = 30, SMOKE_SPREAD = 0.35;
+// Double shot (heavy line): the next broadside (the first fire that launches side guns) does DOUBLE_K x damage. The recharge only starts
+// once it has fired, so holding the charge buys nothing: one extra broadside every ~25 s, next to the 5-8 a heavy ship fires in that time (1.7-3 s reloads).
+const DOUBLE_K = 2, DOUBLE_CD = 24;
+// Powder keg (the sloop): dropped astern, it blows when a ship comes within KEG_TRIGGER px (plus its own beam) or after KEG_FUSE s,
+// hurting every ship in KEG_R (ordinary ships KEG_K of max hull at the centre, fading to 40% at the rim like the magazine blast; bosses
+// only KEG_BOSS_K). Never the flagship, an escort, a fort, a ship that struck, or a calm Navy ship (the auto-fire rule, js/combat.js).
+const KEG_CD = 22, KEG_FUSE = 10, KEG_TRIGGER = 46, KEG_R = 120, KEG_K = 0.3, KEG_BOSS_K = 0.06;
 // VFX upgrade (#76): the effects the owner picked in tools/vfx-lab.html, with the sliders' values (size, count = particle share, dur = duration x).
 // blast: powder-magazine C chain blast · muzzle: C powder smoke and haze bank · fire: A flame tongues + smoke column (and the fire patch an incendiary
 // leaves on the water) · spout: A spiral column · vortex: A funnel · wave: A foam wall · storm: B pre-flash strike with violet ball, and swirling fog.

@@ -95,7 +95,7 @@ function saleRows(slot, vs) {
   const open = line => line.filter(id => !shipLock(id)).sort((a, b) => !!count[b] - !!count[a]);   // stable: the yard's own order inside each group
   // a line with nothing on sale yet gets no bare heading; with nothing on sale at all, one line says why and the locked list starts open
   const none = !lines.some((l, i) => open(l).length);
-  return SHIP_LINE_KEYS.map((line, i) => open(lines[i]).length ? `<p class="hint-s line-${line}">${t("line_" + line)}</p>` + open(lines[i]).map(row).join("") : "").join("") +
+  return SHIP_LINE_KEYS.map((line, i) => open(lines[i]).length ? `<p class="hint-s line-${line}">${t("line_" + line)}${typeof abilityOf === "function" ? " · " + t("ab_line", { name: t("ab_" + abilityOf(lines[i][0])) }) : ""}</p>` + open(lines[i]).map(row).join("") : "").join("") +
     (none ? `<p class="hint-s">${t("saleNone")}</p>` : "") +
     (locked.length ? `<details class="lockedships"${none ? " open" : ""}><summary>${t("lockedShips", { n: locked.length })}</summary>${locked.map(row).join("")}</details>` : "");
 }
@@ -111,6 +111,7 @@ function hullPanelHtml() {
   return `<div class="cpanel hullp">${xBtn()}<h3>${roleTag()}${t("hullHead", { ship: shipNameOf(e) })}</h3><p class="sub">${t("hullSub")}</p>${emptyTipHtml()}
     <div class="list" id="yard">${yardRows(e)}</div>
     ${slot < 0 && typeof ramRowHtml === "function" ? `<div class="list" id="ram">${ramRowHtml()}</div>` : ""}
+    ${slot < 0 && typeof abilityRowHtml === "function" ? `<div class="list" id="ability">${abilityRowHtml()}</div>` : ""}
     <h4>${t("changeHead")}</h4><p class="hint-s">${t(slot < 0 ? "shipsHint" : "escSwapHint")}</p>
     <div class="list" id="ships"><p class="hint-s">${t("shipsOwned")}</p>${idle || `<p class="hint-s">${t("idleNone")}</p>`}<p class="hint-s">${t("shipsBuy")}</p>${saleRows(slot < 0 ? -1 : slot, e)}</div>
     ${slot >= 0 ? `<button class="btn ghost evict" type="button" data-act="escEvict" data-id="${slot}">${t("evict")}</button>` : ""}</div>`;

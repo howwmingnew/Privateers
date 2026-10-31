@@ -16,7 +16,7 @@ const powderSelfDmg = (s, dmg) => s.boss ? Math.max(dmg, Math.min(s.maxHp * POWD
 // The player is never killed by it (their own gunnery shouldn't end the run).
 function powderSplash(t, d) {
   const share = t.isPlayer ? POWDER_SPLASH.player : t.boss ? POWDER_SPLASH.boss : POWDER_SPLASH.ai;
-  const dmg = t.maxHp * share * (1 - 0.6 * clamp(d / POWDER_R, 0, 1));
+  const dmg = t.maxHp * share * blastFalloff(d, POWDER_R);
   return t.isPlayer || t.boss ? Math.min(dmg, t.hp - 1) : dmg;
 }
 

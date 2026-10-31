@@ -99,6 +99,16 @@ function audit({ top, hud }) {
       if (w > 2 && h > 2) issues.push(`${tag(els[i])} and ${tag(els[j])} overlap (${Math.round(w)}x${Math.round(h)})`);
     }
     for (const e of els) { const r = e.getBoundingClientRect(); if (r.bottom > vh + 1 || r.right > vw + 1 || r.left < -1) issues.push(`${tag(e)} is off the screen (${Math.round(r.left)},${Math.round(r.top)} to ${Math.round(r.right)},${Math.round(r.bottom)} of ${vw}x${vh})`); }
+    // the captain's ability button (#16, js/abilities.js) and the touch sail buttons: clear of the HUD, the hint and each other (the passing toasts may draw over it)
+    const ab = document.getElementById("abilityBtn");
+    if (ab && shown(ab)) {
+      const r = ab.getBoundingClientRect();
+      if (r.top < -1 || r.bottom > vh + 1 || r.right > vw + 1 || r.left < -1) issues.push(`#abilityBtn is off the screen (${Math.round(r.left)},${Math.round(r.top)} of ${vw}x${vh})`);
+      for (const o of [".bars", ".purse", "#mini", "#lv", "#hint", "#touchSail", "#scaleBadge"].map(s => document.querySelector(s)).filter(e => e && shown(e))) {
+        const b = o.getBoundingClientRect(), w = Math.min(r.right, b.right) - Math.max(r.left, b.left), h = Math.min(r.bottom, b.bottom) - Math.max(r.top, b.top);
+        if (w > 2 && h > 2) issues.push(`#abilityBtn and ${tag(o)} overlap (${Math.round(w)}x${Math.round(h)})`);
+      }
+    }
   }
   return [...new Set(issues)];
 }

@@ -42,9 +42,12 @@ function lineHits(x, y, a, len) {
 function playerFire(only, pick) {
   if (paused || docked || !player.alive) return;
   let shots = 0, rx = 0, ry = 0;
-  for (const mount of MOUNTS) {
-    if ((only && !only.includes(mount.key)) || !mountEngaged(mount)) continue;
-    const ready = player.guns[mount.key].filter(g => g.cd <= 0 && (!pick || pick(mount, g))), plan = rollPlan(ready.length);   // a rolling broadside (js/gundeck.js)
+  const vols = MOUNTS.filter(m => (!only || only.includes(m.key)) && mountEngaged(m))
+    .map(mount => ({ mount, ready: player.guns[mount.key].filter(g => g.cd <= 0 && (!pick || pick(mount, g))), side: mount.key === "left" || mount.key === "right" }));
+  // a loaded double shot (js/abilities.js) is spent by the first fire that launches side guns, and known before any ball is scheduled
+  const boostK = typeof abilityShotK === "function" ? abilityShotK(vols.some(v => v.side && v.ready.length)) : 1;
+  for (const { mount, ready, side } of vols) {
+    const plan = rollPlan(ready.length);   // a rolling broadside (js/gundeck.js)
     ready.forEach((g, k) => {
       const { delay, loud } = plan[k];
       g.cd = g.interval; shots++; rx -= Math.cos(player.rot + mount.ang); ry -= Math.sin(player.rot + mount.ang);
@@ -52,7 +55,7 @@ function playerFire(only, pick) {
         if (!player.alive || paused || !ballRoom()) return;
         const m = muzzle(player, mount, g.pi, g.pn), life = g.range / g.speed;   // each gun has its own ball speed
         balls.push({ spr: ballSpr(m.x, m.y), x: m.x, y: m.y,
-          vx: Math.cos(m.a) * g.speed, vy: Math.sin(m.a) * g.speed, life, life0: life, dmg: g.dmg, burn: g.burn, chain: g.chain, chainT: g.chainT, drag: g.drag, fromPlayer: true, owner: player });
+          vx: Math.cos(m.a) * g.speed, vy: Math.sin(m.a) * g.speed, life, life0: life, dmg: g.dmg * (side ? boostK : 1), burn: g.burn, chain: g.chain, chainT: g.chainT, drag: g.drag, fromPlayer: true, owner: player });
         vfxMuzzle(m.x, m.y, m.a, !loud);
         gunFired(player, mount.key, g.pi, g.pn);   // the mount recoils, a flash at the gun (js/gun-art.js)
         if (loud) Snd.play("cannon", { pan: Math.cos(m.a) * 0.35 });

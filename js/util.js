@@ -2,6 +2,8 @@
 // ---------- Helpers ----------
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// A blast's share at d px from its centre, out to radius R: full at the centre, 40% at the rim (the powder magazine, js/powder.js; the keg, js/abilities.js).
+const blastFalloff = (d, R) => 1 - 0.6 * clamp(d / R, 0, 1);
 const angDiff = (a, b) => { let d = (a - b) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; };
 const dist = (a, b) => { const dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy); };   // not Math.hypot: a builtin call V8 won't inline, and the AI asks this hundreds of times a frame
 const rand = (a, b) => a + Math.random() * (b - a);
