@@ -105,7 +105,8 @@ function step(dt) {
   // --- audio: ears on the player, combat music while a hostile ship is close ---
   Snd.setListener(player.x, player.y);
   Snd.setMotion(player.alive ? player.speed / player.maxSpeed : 0);
-  Snd.setIntensity(player.alive ? threatLevel(living, engaged) : 0);
+  threatNow = player.alive ? threatLevel(living, engaged) : 0;
+  Snd.setIntensity(threatNow);
   if (player.alive && player.hp < player.maxHp * 0.3) Snd.play("lowHull");   // rate-limited inside Snd
   for (const m of MOUNTS) {   // a soft knock when a whole mount has reloaded
     const arr = player.guns[m.key], ready = arr.every(g => g.cd <= 0);

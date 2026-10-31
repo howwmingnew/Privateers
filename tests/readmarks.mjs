@@ -94,6 +94,19 @@ const clash = await page.evaluate(() => {
 check(clash.plates >= 3 && clash.boxes >= 1 && clash.hits === 0, "no edge box sits on a level plate", clash);
 await page.screenshot({ path: out + "/edge-vs-plates.png" });
 
+// ---- 5. the bow chevron only in a fight (#142): every ship sent far away, it fades out; a pirate close by, it fades back in
+await page.evaluate(() => { for (const e of enemies) { e.x = player.x + 6000; e.y = player.y; } for (const h of hitMarks) h.t = 0; });   // the frame hook (js/notices.js) drops them and their DOM
+await sleep(await page.evaluate(() => BOW_HOLD + BOW_OUT) * 1000 + 600);   // the hold, then the fade-out, then a margin
+const calm = await page.evaluate(() => ({ a: bowSt.a, threat: threatNow, hits: hitMarks.length }));
+check(calm.a === 0 && calm.threat === 0, "out of combat the bow chevron is hidden", calm);
+await page.screenshot({ path: out + "/bow-calm.png" });
+const foe = await put("pirate", 380, 120);
+await page.evaluate(i => runHook("hurt", player, 5, window.__placed[i]), foe);   // it just hit us: a fight (the Shallows spare a newcomer, so no threat by distance alone)
+await sleep(700);
+const fight = await page.evaluate(() => ({ a: bowSt.a, hits: hitMarks.length }));
+check(fight.a === 1 && fight.hits > 0, "in combat the bow chevron is shown", fight);
+await page.screenshot({ path: out + "/bow-fight.png" });
+
 check(errors.length === 0, "0 page errors", errors);
 await browser.close();
 if (fails.length) { console.log("\nFAILED:\n" + fails.join("\n")); process.exit(1); }
